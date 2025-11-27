@@ -326,6 +326,186 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 px-6 bg-white border-t border-slate-100">
+        <div className="max-w-6xl mx-auto">
+          {/* Section Header */}
+          <div className="text-center mb-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D1FAE5] border border-[#A7F3D0] text-[11px] font-bold text-[#065F46] mb-4">
+                <Zap size={12} fill="currentColor" />
+                SIMPLE PRICING
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4 tracking-tight">
+                Start free. Scale when ready.
+              </h2>
+              <p className="text-slate-500 text-lg max-w-xl mx-auto">
+                No hidden fees. No credit card required. Cancel anytime.
+              </p>
+            </motion.div>
+          </div>
+
+          {/* Pricing Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Pro Plan */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0 }}
+              className="relative rounded-2xl bg-white border border-[#0EA5E9] shadow-xl shadow-blue-100/50 flex flex-col overflow-hidden"
+            >
+              {/* Popular Badge */}
+              <div className="bg-[#0F4C5C] text-white text-xs font-bold tracking-wider uppercase text-center py-2 flex items-center justify-center gap-1.5">
+                <Zap size={12} fill="currentColor" />
+                Most Popular
+              </div>
+
+              <div className="p-6 flex-1 flex flex-col">
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-medium text-slate-900 mb-1">Pro</h3>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For serious affiliate program growth</p>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-3xl font-medium tracking-tight text-[#0F4C5C]">$99</span>
+                    <span className="text-base font-serif italic text-[#0EA5E9]">/month</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onLoginClick}
+                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] border border-[#A7F3D0] shadow-sm hover:shadow-md"
+                >
+                  Start 7-day free trial
+                </button>
+
+                <div className="space-y-3 flex-1">
+                  {[
+                    'Unlimited Affiliate Discovery',
+                    '150 Verified Emails/month',
+                    '150 AI Outreach Emails',
+                    'Advanced Search & Filtering',
+                    '2 Team Seats',
+                    'Priority Support'
+                  ].map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5">
+                      <div className="mt-0.5 w-3.5 h-3.5 rounded-full bg-[#0F4C5C] text-white flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={8} strokeWidth={3} />
+                      </div>
+                      <span className="text-xs leading-relaxed text-slate-600">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Business Plan */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="relative rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow flex flex-col"
+            >
+              <div className="p-6 flex-1 flex flex-col">
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-medium text-slate-900 mb-1">Business</h3>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For teams managing multiple programs</p>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-3xl font-medium tracking-tight text-slate-900">$249</span>
+                    <span className="text-base font-serif italic text-[#0F4C5C]">/month</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onLoginClick}
+                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-sm hover:shadow-md"
+                >
+                  Start 7-day free trial
+                </button>
+
+                <div className="space-y-3 flex-1">
+                  {[
+                    'Everything in Pro +',
+                    '500 Verified Emails/month',
+                    '5 Brands',
+                    '5 Team Seats',
+                    'Advanced Analytics',
+                    'Dedicated Account Manager'
+                  ].map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#0F4C5C] text-white'}`}>
+                        {idx !== 0 && <CheckCircle2 size={8} strokeWidth={3} />}
+                      </div>
+                      <span className={`text-xs leading-relaxed ${idx === 0 ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Enterprise Plan */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="relative rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow flex flex-col"
+            >
+              <div className="p-6 flex-1 flex flex-col">
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-medium text-slate-900 mb-1">Enterprise</h3>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For large organizations with custom requirements</p>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-3xl font-medium tracking-tight text-slate-900">Custom</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onLoginClick}
+                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-sm hover:shadow-md"
+                >
+                  Let's Talk
+                </button>
+
+                <div className="space-y-3 flex-1">
+                  {[
+                    'Everything in Business +',
+                    'Unlimited Verified Emails',
+                    'Unlimited Brands',
+                    'Unlimited Team Access',
+                    'Custom AI Training',
+                    'API Access & Webhooks'
+                  ].map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#0F4C5C] text-white'}`}>
+                        {idx !== 0 && <CheckCircle2 size={8} strokeWidth={3} />}
+                      </div>
+                      <span className={`text-xs leading-relaxed ${idx === 0 ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Trust Note */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="text-center text-sm text-slate-500 mt-8"
+          >
+            💳 No credit card required • Cancel anytime • 30-day money-back guarantee
+          </motion.p>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 px-6">
          <div className="max-w-4xl mx-auto bg-slate-900 rounded-[2rem] p-10 md:p-16 text-center relative overflow-hidden">
