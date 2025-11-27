@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Motion, spring, presets } from 'react-motion';
 import { 
   ArrowRight, 
   Search, 
@@ -105,58 +104,58 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           
           {/* Hero Content */}
           <div className="relative z-10 max-w-xl">
-            <Motion defaultStyle={{ y: 20, opacity: 0 }} style={{ y: spring(0, presets.stiff), opacity: spring(1) }}>
-              {(style: { y: number; opacity: number }) => (
-                <div style={{ transform: `translateY(${style.y}px)`, opacity: style.opacity }}>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm text-[11px] font-medium text-slate-600 mb-6 cursor-default hover:border-blue-300 transition-colors">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                    </span>
-                    v2.0 is now live
-                  </div>
-                  
-                  <h1 className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight mb-6 leading-[1]">
-                    Scout affiliates <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600">faster than humanly possible.</span>
-                  </h1>
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 shadow-sm text-[11px] font-medium text-slate-600 mb-6 cursor-default hover:border-blue-300 transition-colors">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                v2.0 is now live
+              </div>
+              
+              <h1 className="text-5xl md:text-6xl font-bold text-slate-900 tracking-tight mb-6 leading-[1]">
+                Scout affiliates <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600">faster than humanly possible.</span>
+              </h1>
 
-                  <p className="text-lg text-slate-500 mb-8 leading-relaxed max-w-md">
-                    Automate your recruitment pipeline. Find, vet, and contact high-converting creators in seconds—not days.
-                  </p>
+              <p className="text-lg text-slate-500 mb-8 leading-relaxed max-w-md">
+                Automate your recruitment pipeline. Find, vet, and contact high-converting creators in seconds—not days.
+              </p>
 
-                  <div className="flex flex-col sm:flex-row items-center gap-3">
-                    <button 
-                      onClick={onLoginClick}
-                      className="w-full sm:w-auto px-6 py-3 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
-                    >
-                      Start Scouting
-                      <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                    <button 
-                      className="w-full sm:w-auto px-6 py-3 bg-white text-slate-700 text-sm font-bold rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2"
-                    >
-                      <Play size={14} fill="currentColor" className="opacity-50" />
-                      View Demo
-                    </button>
-                  </div>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <button 
+                  onClick={onLoginClick}
+                  className="w-full sm:w-auto px-6 py-3 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
+                >
+                  Start Scouting
+                  <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                </button>
+                <button 
+                  className="w-full sm:w-auto px-6 py-3 bg-white text-slate-700 text-sm font-bold rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2"
+                >
+                  <Play size={14} fill="currentColor" className="opacity-50" />
+                  View Demo
+                </button>
+              </div>
 
-                  <div className="mt-8 flex items-center gap-3 text-xs text-slate-500 font-medium">
-                    <div className="flex -space-x-2">
-                      {[1,2,3,4].map(i => (
-                        <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200" />
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1">
-                       <div className="flex text-yellow-400">
-                         {[1,2,3,4,5].map(i => <Star key={i} size={12} fill="currentColor" />)}
-                       </div>
-                       <span className="text-slate-700 ml-1">500+ active teams</span>
-                    </div>
-                  </div>
+              <div className="mt-8 flex items-center gap-3 text-xs text-slate-500 font-medium">
+                <div className="flex -space-x-2">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200" />
+                  ))}
                 </div>
-              )}
-            </Motion>
+                <div className="flex items-center gap-1">
+                   <div className="flex text-yellow-400">
+                     {[1,2,3,4,5].map(i => <Star key={i} size={12} fill="currentColor" />)}
+                   </div>
+                   <span className="text-slate-700 ml-1">500+ active teams</span>
+                </div>
+              </div>
+            </motion.div>
           </div>
 
           {/* Hero Visual */}
