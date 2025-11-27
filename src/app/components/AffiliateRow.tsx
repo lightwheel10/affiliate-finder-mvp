@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, MessageCircle, MoreHorizontal, Mail, ChevronDown } from 'lucide-react';
+import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, MessageCircle, MoreHorizontal, Mail, ChevronDown, CheckCircle2, Users, Play } from 'lucide-react';
 import { Modal } from './Modal';
-import { ResultItem } from '../types';
+import { ResultItem, YouTubeChannelInfo } from '../types';
 
 interface AffiliateRowProps {
   title: string;
@@ -26,6 +26,16 @@ interface AffiliateRowProps {
   isAlreadyAffiliate?: boolean;
   isNew?: boolean;
   subItems?: ResultItem[];
+  // YouTube-specific props
+  channel?: YouTubeChannelInfo;
+  duration?: string;
+  
+  /**
+   * TODO: Future YouTube analytics enhancements:
+   * - engagementRate?: number;    // Display as "5.51% engagement"
+   * - uploadFrequency?: string;   // Display as "4/m uploads"
+   * - viewToSubRatio?: number;    // Display as "51.64% view/subs"
+   */
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
@@ -47,7 +57,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   discoveryMethod = { type: 'keyword', value: keyword || 'Keyword' },
   isAlreadyAffiliate = false,
   isNew = true,
-  subItems = []
+  subItems = [],
+  channel,
+  duration
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -175,25 +187,57 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       {/* Affiliate Info */}
       <div className="pr-6">
         <div className="flex items-center gap-3">
-           <div className={`${thumbnail ? 'w-8 h-8 rounded-md' : 'w-8 h-8 rounded-full'} bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden`}>
+           {/* Thumbnail - use channel thumbnail for YouTube if available */}
+           <div className={`${thumbnail || channel?.thumbnail ? 'w-8 h-8 rounded-md' : 'w-8 h-8 rounded-full'} bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden`}>
             <img 
-              src={thumbnail || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
+              src={channel?.thumbnail || thumbnail || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
               alt="" 
-              className={`${thumbnail ? 'w-full h-full object-cover' : 'w-4 h-4 opacity-90'}`}
+              className={`${thumbnail || channel?.thumbnail ? 'w-full h-full object-cover' : 'w-4 h-4 opacity-90'}`}
               onError={(e) => (e.currentTarget.style.display = 'none')}
             />
           </div>
-          <div className="min-w-0 flex items-center gap-2">
-             <h4 className="font-bold text-sm text-slate-900 truncate">{domain}</h4>
-             <a href={`https://${domain}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-blue-600 transition-colors">
-               <ExternalLink size={12} />
-             </a>
-             {isNew && !isAlreadyAffiliate && (
-               <span className="px-1.5 py-[1px] bg-[#FF4500] text-white text-[9px] font-bold rounded-[3px] shadow-sm">NEW</span>
-             )}
-             {isAlreadyAffiliate && (
-               <span className="px-1.5 py-[1px] bg-slate-200 text-slate-600 text-[9px] font-bold rounded-[3px] shadow-sm">ALREADY</span>
-             )}
+          <div className="min-w-0">
+            {/* Row 1: Name + badges */}
+            <div className="flex items-center gap-2">
+               <h4 className="font-bold text-sm text-slate-900 truncate">
+                 {channel?.name || domain}
+               </h4>
+               {channel?.verified && (
+                 <CheckCircle2 size={12} className="text-blue-500 shrink-0" />
+               )}
+               <a href={channel?.link || `https://${domain}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-blue-600 transition-colors shrink-0">
+                 <ExternalLink size={12} />
+               </a>
+               {isNew && !isAlreadyAffiliate && (
+                 <span className="px-1.5 py-[1px] bg-[#FF4500] text-white text-[9px] font-bold rounded-[3px] shadow-sm shrink-0">NEW</span>
+               )}
+               {isAlreadyAffiliate && (
+                 <span className="px-1.5 py-[1px] bg-slate-200 text-slate-600 text-[9px] font-bold rounded-[3px] shadow-sm shrink-0">ALREADY</span>
+               )}
+            </div>
+            {/* Row 2: Stats (subs, views) - only for YouTube */}
+            {source.toLowerCase() === 'youtube' && (channel?.subscribers || views) && (
+              <div className="flex items-center gap-3 mt-1">
+                {channel?.subscribers && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-600">
+                    <Users size={11} className="text-slate-400" />
+                    <span className="font-medium">{channel.subscribers}</span>
+                  </span>
+                )}
+                {views && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-600">
+                    <Eye size={11} className="text-slate-400" />
+                    <span className="font-medium">{views}</span>
+                  </span>
+                )}
+                {/* 
+                  TODO: Future YouTube analytics to display here:
+                  - engagementRate: <span>📈 5.51% engagement</span>
+                  - uploadFrequency: <span>📅 4/m uploads</span>
+                  - viewToSubRatio: <span>📊 51.64% view/subs</span>
+                */}
+              </div>
+            )}
           </div>
         </div>
       </div>

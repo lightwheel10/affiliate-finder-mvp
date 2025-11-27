@@ -500,28 +500,30 @@ export default function Home() {
                            animationFillMode: 'backwards'
                          }}
                        >
-                         <AffiliateRow 
-                           title={group.main.title}
-                           domain={group.main.domain}
-                           link={group.main.link}
-                           source={group.main.source}
-                           rank={group.main.rank}
-                           keyword={group.main.keyword}
-                           isSaved={savedLinks.has(group.main.link)}
-                           onSave={() => toggleSave(group.main)}
-                           thumbnail={group.main.thumbnail}
-                           views={group.main.views}
-                           date={group.main.date}
-                           snippet={group.main.snippet}
-                           highlightedWords={group.main.highlightedWords}
-                           discoveryMethod={group.main.discoveryMethod}
-                           email={group.main.email}
-                           subItems={group.subItems}
-                         />
-                       </div>
-                     ))}
-                     
-                     {/* Skeletons for upcoming results (show 3 max) */}
+                        <AffiliateRow 
+                          title={group.main.title}
+                          domain={group.main.domain}
+                          link={group.main.link}
+                          source={group.main.source}
+                          rank={group.main.rank}
+                          keyword={group.main.keyword}
+                          isSaved={savedLinks.has(group.main.link)}
+                          onSave={() => toggleSave(group.main)}
+                          thumbnail={group.main.thumbnail}
+                          views={group.main.views}
+                          date={group.main.date}
+                          snippet={group.main.snippet}
+                          highlightedWords={group.main.highlightedWords}
+                          discoveryMethod={group.main.discoveryMethod}
+                          email={group.main.email}
+                          subItems={group.subItems}
+                          channel={group.main.channel}
+                          duration={group.main.duration}
+                        />
+                      </div>
+                    ))}
+                    
+                    {/* Skeletons for upcoming results (show 3 max) */}
                      {Array.from({ length: Math.min(3, Math.max(0, expectedResultsCount - results.length)) }).map((_, idx) => (
                        <div
                          key={`skeleton-${animationKey}-${idx}`}
@@ -541,29 +543,31 @@ export default function Home() {
                          animationDelay: `${idx * 60}ms`
                        }}
                      >
-                       <AffiliateRow 
-                         title={group.main.title}
-                         domain={group.main.domain}
-                         link={group.main.link}
-                         source={group.main.source}
-                         rank={group.main.rank}
-                         keyword={group.main.keyword}
-                         isSaved={savedLinks.has(group.main.link)}
-                         onSave={() => toggleSave(group.main)}
-                         thumbnail={group.main.thumbnail}
-                         views={group.main.views}
-                         date={group.main.date}
-                         snippet={group.main.snippet}
-                         highlightedWords={group.main.highlightedWords}
-                         discoveryMethod={group.main.discoveryMethod}
-                         email={group.main.email}
-                         subItems={group.subItems}
-                       />
-                     </div>
-                   ))
-                 )}
-               </div>
-             ) : hasSearched && !loading && groupedResults.length === 0 ? (
+                      <AffiliateRow 
+                        title={group.main.title}
+                        domain={group.main.domain}
+                        link={group.main.link}
+                        source={group.main.source}
+                        rank={group.main.rank}
+                        keyword={group.main.keyword}
+                        isSaved={savedLinks.has(group.main.link)}
+                        onSave={() => toggleSave(group.main)}
+                        thumbnail={group.main.thumbnail}
+                        views={group.main.views}
+                        date={group.main.date}
+                        snippet={group.main.snippet}
+                        highlightedWords={group.main.highlightedWords}
+                        discoveryMethod={group.main.discoveryMethod}
+                        email={group.main.email}
+                        subItems={group.subItems}
+                        channel={group.main.channel}
+                        duration={group.main.duration}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : hasSearched && !loading && groupedResults.length === 0 ? (
                <div className="py-20 text-center text-slate-400 text-sm">
                  No results found for this filter.
                </div>
