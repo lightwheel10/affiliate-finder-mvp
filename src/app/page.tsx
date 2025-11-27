@@ -231,16 +231,37 @@ export default function Home() {
     setSavedLinks(newSaved);
   };
 
-  // Calculate real counts from results
+  // Group results by domain (used for display and counts)
+  const groupResultsByDomain = (items: ResultItem[]) => {
+    const groups: { [key: string]: ResultItem[] } = {};
+    items.forEach(item => {
+      if (!groups[item.domain]) {
+        groups[item.domain] = [];
+      }
+      groups[item.domain].push(item);
+    });
+    return Object.values(groups).map(items => ({
+      main: items[0],
+      subItems: items.slice(1)
+    }));
+  };
+
+  // Calculate real counts from results (grouped by domain for accurate display)
   const counts = useMemo(() => {
     if (!hasSearched) return { All: 0, Web: 0, YouTube: 0, Instagram: 0, Reddit: 0 };
     
+    // Count unique domains per source for accurate badge numbers
+    const webResults = results.filter(r => r.source === 'Web');
+    const youtubeResults = results.filter(r => r.source === 'YouTube');
+    const instagramResults = results.filter(r => r.source === 'Instagram');
+    const redditResults = results.filter(r => r.source === 'Reddit');
+    
     return {
-      All: results.length,
-      Web: results.filter(r => r.source === 'Web').length,
-      YouTube: results.filter(r => r.source === 'YouTube').length,
-      Instagram: results.filter(r => r.source === 'Instagram').length,
-      Reddit: results.filter(r => r.source === 'Reddit').length,
+      All: groupResultsByDomain(results).length,
+      Web: groupResultsByDomain(webResults).length,
+      YouTube: groupResultsByDomain(youtubeResults).length,
+      Instagram: groupResultsByDomain(instagramResults).length,
+      Reddit: groupResultsByDomain(redditResults).length,
     };
   }, [results, hasSearched]);
 
@@ -276,19 +297,9 @@ export default function Home() {
     return filtered;
   }, [results, activeFilter, searchQuery]);
 
-  // Group results by domain
+  // Group filtered results by domain
   const groupedResults = useMemo(() => {
-    const groups: { [key: string]: ResultItem[] } = {};
-    filteredResults.forEach(item => {
-      if (!groups[item.domain]) {
-        groups[item.domain] = [];
-      }
-      groups[item.domain].push(item);
-    });
-    return Object.values(groups).map(items => ({
-      main: items[0],
-      subItems: items.slice(1)
-    }));
+    return groupResultsByDomain(filteredResults);
   }, [filteredResults]);
 
   // Pagination calculations (based on groups now)
@@ -448,23 +459,76 @@ export default function Home() {
           <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm min-h-[400px]">
              {hasSearched && (loading || groupedResults.length > 0) ? (
                <div>
-                 {/* Unified rendering: show results (with animation) or skeletons */}
                  {loading ? (
-                   // During loading: Show results as they stream in, with skeletons for pending
-                   Array.from({ length: itemsPerPage }).map((_, idx) => {
-                     // Note: We can't easily show streaming groups perfectly without complex logic, 
-                     // so we'll just show skeletons while loading or basic results if needed.
-                     // For now, just show skeletons if loading is true for simplicity/cleanliness
-                     return <AffiliateRowSkeleton key={`skeleton-${animationKey}-${idx}`} />;
-                   })
+                   // STREAMING MODE: Show results as they arrive + skeletons for pending
+                   <>
+                     {/* Loading progress indicator at top */}
+                     <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                       <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                       <div className="flex-1">
+                         <p className="text-sm font-semibold text-blue-900">
+                           Discovering affiliates...
+                         </p>
+                         <p className="text-xs text-blue-600">
+                           {results.length > 0 
+                             ? `${results.length} affiliates found • Analyzing more results...`
+                             : 'Searching across platforms...'}
+                         </p>
+                       </div>
+                       <div className="text-xs font-mono text-blue-500 bg-blue-100 px-2 py-1 rounded">
+                         {results.length}/{expectedResultsCount}
+                       </div>
+                     </div>
+                     
+                     {/* Streamed results */}
+                     {groupedResults.map((group, idx) => (
+                       <div
+                         key={`stream-${animationKey}-${group.main.link}`}
+                         className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                         style={{ 
+                           animationDelay: `${Math.min(idx, 3) * 60}ms`,
+                           animationFillMode: 'backwards'
+                         }}
+                       >
+                         <AffiliateRow 
+                           title={group.main.title}
+                           domain={group.main.domain}
+                           link={group.main.link}
+                           source={group.main.source}
+                           rank={group.main.rank}
+                           keyword={group.main.keyword}
+                           isSaved={savedLinks.has(group.main.link)}
+                           onSave={() => toggleSave(group.main)}
+                           thumbnail={group.main.thumbnail}
+                           views={group.main.views}
+                           date={group.main.date}
+                           snippet={group.main.snippet}
+                           highlightedWords={group.main.highlightedWords}
+                           discoveryMethod={group.main.discoveryMethod}
+                           email={group.main.email}
+                           subItems={group.subItems}
+                         />
+                       </div>
+                     ))}
+                     
+                     {/* Skeletons for upcoming results (show 3 max) */}
+                     {Array.from({ length: Math.min(3, Math.max(0, expectedResultsCount - results.length)) }).map((_, idx) => (
+                       <div
+                         key={`skeleton-${animationKey}-${idx}`}
+                         className="opacity-50"
+                       >
+                         <AffiliateRowSkeleton />
+                       </div>
+                     ))}
+                   </>
                  ) : (
-                   // After loading: Show paginated results with animation
+                   // COMPLETE MODE: Show paginated results
                    paginatedGroups.map((group, idx) => (
                      <div
-                       key={`anim-${animationKey}-result-${group.main.link}-${idx}`}
+                       key={`result-${animationKey}-${group.main.link}-${idx}`}
                        className="row-appear"
                        style={{ 
-                         animationDelay: `${idx * 80}ms`
+                         animationDelay: `${idx * 60}ms`
                        }}
                      >
                        <AffiliateRow 
