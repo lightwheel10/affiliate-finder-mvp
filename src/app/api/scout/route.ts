@@ -2,6 +2,26 @@ import { searchMultiPlatform, Platform, SearchResult } from '../../services/sear
 import { analyzeContent } from '../../services/analysis';
 import { enrichContact } from '../../services/enrichment';
 
+/**
+ * Quick name extraction from title for parallel enrichment
+ * Looks for common patterns like "by John Doe" or "John Doe's Review"
+ */
+function extractNameFromTitle(title: string): string | null {
+  // Pattern: "by Name" at the end
+  const byMatch = title.match(/by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*$/i);
+  if (byMatch) return byMatch[1];
+  
+  // Pattern: "Name's" at the start (possessive)
+  const possessiveMatch = title.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)'s/i);
+  if (possessiveMatch) return possessiveMatch[1];
+  
+  // Pattern: "Name -" or "Name |" at start (common YouTube format)
+  const dashMatch = title.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*[-|]/i);
+  if (dashMatch) return dashMatch[1];
+  
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     const { keyword, sources } = await req.json();
@@ -30,9 +50,9 @@ export async function POST(req: Request) {
         // 1. Search Step - get all results first
         const searchResults = await searchMultiPlatform(keyword, activeSources);
         
-        // 2. Process results in PARALLEL batches (3 at a time for speed)
-        const BATCH_SIZE = 3;
-        const resultsToProcess = searchResults.slice(0, 25);
+        // 2. Process results in PARALLEL batches (5 at a time for speed)
+        const BATCH_SIZE = 5;
+        const resultsToProcess = searchResults.slice(0, 50); // Process up to 50 results
         
         for (let i = 0; i < resultsToProcess.length; i += BATCH_SIZE) {
           // Check if stream is still open before processing batch
@@ -43,17 +63,34 @@ export async function POST(req: Request) {
           
           const batch = resultsToProcess.slice(i, i + BATCH_SIZE);
           
-          // Process batch in parallel
+          // Process batch in parallel - run analysis and enrichment concurrently
           const batchPromises = batch.map(async (item) => {
             try {
-              // Analyze content
-              const analysis = await analyzeContent(item, keyword);
+              // Start analysis immediately
+              const analysisPromise = analyzeContent(item, keyword);
               
-              // Enrich with email if applicable
+              // Start email enrichment in parallel (we'll use it if isAffiliate)
+              // Extract potential name from title for early enrichment attempt
+              const potentialName = extractNameFromTitle(item.title);
+              const enrichmentPromise = potentialName 
+                ? enrichContact(potentialName, item.domain).catch(() => ({ email: null }))
+                : Promise.resolve({ email: null });
+              
+              // Wait for both in parallel
+              const [analysis, enrichment] = await Promise.all([analysisPromise, enrichmentPromise]);
+              
+              // Only use enrichment if it's actually an affiliate
               let email = null;
-              if (analysis.isAffiliate && analysis.personName) {
-                const contact = await enrichContact(analysis.personName, analysis.company || item.domain);
-                email = contact.email || null;
+              if (analysis.isAffiliate) {
+                // If we got email from parallel enrichment, use it
+                // Otherwise, try with the AI-extracted name
+                if (enrichment.email) {
+                  email = enrichment.email;
+                } else if (analysis.personName && analysis.personName !== potentialName) {
+                  // AI found a different name, try enrichment with that
+                  const contact = await enrichContact(analysis.personName, analysis.company || item.domain);
+                  email = contact.email || null;
+                }
               }
 
               return {

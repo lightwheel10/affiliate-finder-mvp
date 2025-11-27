@@ -52,7 +52,7 @@ async function searchPlatform(keyword: string, platform: Platform): Promise<Sear
       engine: "google",
       api_key: SERPAPI_KEY,
       q: q,
-      num: 5, // Fetch top 5 results per platform
+      num: 10, // Fetch top 10 results per platform for more coverage
       gl: "us",
       hl: "en"
     }, (json: any) => {
