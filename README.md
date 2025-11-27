@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Affiliate Finder
 
-## Getting Started
+**Discover high-converting affiliate partners for your brand — in minutes, not months.**
 
-First, run the development server:
+## 🎯 What is Affiliate Finder?
+
+Affiliate Finder is an AI-powered platform that helps SaaS companies and e-commerce brands discover, qualify, and connect with affiliate marketers who are already active in their niche.
+
+Instead of spending hours manually searching for potential partners, our intelligent discovery engine surfaces relevant affiliates across the web — complete with verified contact information and performance insights.
+
+## ✨ Key Features
+
+- **🔍 Smart Discovery** — Find affiliates actively promoting products in your industry
+- **📊 Performance Insights** — See traffic estimates, engagement metrics, and content quality
+- **📧 Verified Contacts** — Get accurate email addresses for direct outreach
+- **🔄 Continuous Monitoring** — Fresh affiliate prospects delivered regularly
+- **🎯 Multi-Platform Search** — Discover partners across websites, YouTube, Instagram, and more
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Styling**: Tailwind CSS 4
+- **Animation**: Framer Motion
+- **Language**: TypeScript
+- **Deployment**: Vercel
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/lightwheel10/affiliate-finder-mvp.git
+
+# Navigate to project directory
+cd affiliate-finder-mvp
+
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## 📁 Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── api/           # API routes (serverless functions)
+│   ├── components/    # Reusable UI components
+│   ├── context/       # React context providers
+│   ├── services/      # Business logic & external integrations
+│   ├── discovered/    # Discovered affiliates page
+│   ├── pipeline/      # Affiliate pipeline page
+│   ├── saved/         # Saved affiliates page
+│   └── settings/      # User settings page
+├── lib/               # Utility functions
+└── types/             # TypeScript type definitions
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🌐 Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This app is optimized for deployment on [Vercel](https://vercel.com):
 
-## Deploy on Vercel
+1. Push your code to GitHub
+2. Import the repository in Vercel
+3. Deploy with one click
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📄 License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private - All rights reserved.
+
+---
+
+Built with ❤️ for affiliate marketers who value their time.
