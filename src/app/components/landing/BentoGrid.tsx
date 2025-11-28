@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, cloneElement, isValidElement } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, cloneElement, isValidElement, useRef, useEffect } from 'react';
+import { motion, useInView } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface BentoCardProps {
@@ -21,6 +21,7 @@ export const BentoCard = ({
   graphic,
 }: BentoCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isTapped, setIsTapped] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(() => {
     if (typeof window !== 'undefined') {
       return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -28,12 +29,35 @@ export const BentoCard = ({
     return false;
   });
 
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: false, amount: 0.3 });
+
+  // Auto-play animation on viewport entry for mobile
+  useEffect(() => {
+    if (isTouchDevice && isInView && !isTapped) {
+      const timer = setTimeout(() => {
+        setIsHovered(true);
+        const resetTimer = setTimeout(() => setIsHovered(false), 2000);
+        return () => clearTimeout(resetTimer);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isInView, isTouchDevice, isTapped]);
+
+  const handleTap = () => {
+    if (isTouchDevice) {
+      setIsTapped(true);
+      setIsHovered(!isHovered);
+    }
+  };
+
   return (
     <motion.div
+      ref={ref}
       className={cn(
         "relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-slate-100 p-4 sm:p-5 md:p-6",
-        "flex flex-col justify-between h-full",
-        !isTouchDevice && "cursor-pointer",
+        "flex flex-col justify-between h-full touch-manipulation",
+        "cursor-pointer",
         className
       )}
       initial={{ scale: 1, y: 0 }}
@@ -41,6 +65,9 @@ export const BentoCard = ({
         scale: 1.03,
         y: -8,
         boxShadow: "0 20px 40px -10px rgba(0,0,0,0.2)"
+      } : {}}
+      whileTap={isTouchDevice ? {
+        scale: 0.98
       } : {}}
       transition={{
         type: "spring",
@@ -53,6 +80,7 @@ export const BentoCard = ({
       }}
       onMouseEnter={() => !isTouchDevice && setIsHovered(true)}
       onMouseLeave={() => !isTouchDevice && setIsHovered(false)}
+      onTap={handleTap}
     >
       {/* Background Graphic Layer */}
       {graphic && (
@@ -87,7 +115,7 @@ export const BentoCard = ({
 
 export const BentoGrid = ({ children, className }: { children: React.ReactNode, className?: string }) => {
   return (
-    <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 max-w-5xl mx-auto auto-rows-[minmax(180px,auto)] sm:auto-rows-[minmax(200px,auto)] md:auto-rows-[minmax(210px,auto)]", className)}>
+    <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto auto-rows-[minmax(220px,auto)] sm:auto-rows-[minmax(240px,auto)] md:auto-rows-[minmax(210px,auto)]", className)}>
       {children}
     </div>
   );

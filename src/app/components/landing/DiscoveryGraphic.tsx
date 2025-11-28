@@ -42,7 +42,7 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
       />
       
       {/* Search Status Indicator */}
-      <div className="absolute top-2 right-5 flex items-center gap-2 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 z-30">
+      <div className="absolute top-2 right-3 sm:right-5 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 z-30">
         {isHovered ? (
           <motion.div
             initial={{ scale: 0 }}
@@ -53,7 +53,7 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             >
-                <RotateCw size={10} className="text-blue-500" />
+                <RotateCw size={11} className="text-blue-500 sm:w-3 sm:h-3" />
             </motion.div>
           </motion.div>
         ) : (
@@ -66,17 +66,17 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             >
-                 <Loader2 size={10} className="text-slate-400" />
+                 <Loader2 size={11} className="text-slate-400 sm:w-3 sm:h-3" />
             </motion.div>
           </motion.div>
         )}
-        <span className="text-[9px] font-semibold text-slate-600 uppercase tracking-wider">
+        <span className="text-[10px] sm:text-[9px] font-semibold text-slate-600 uppercase tracking-wider">
           {isHovered ? 'Scanning...' : 'Indexing'}
         </span>
       </div>
 
       {/* Content Container - Spanning full width properly */}
-      <div className="absolute inset-x-0 top-2 bottom-0 p-5 flex flex-col gap-2.5 mask-image-gradient-wide">
+      <div className="absolute inset-x-0 top-2 bottom-0 p-5 flex flex-col gap-2.5 mask-linear-fade">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/90 z-10 pointer-events-none" />
         
         {candidates.map((candidate, index) => (
@@ -115,7 +115,7 @@ const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered:
       <div className="flex-1 space-y-1.5 min-w-0">
         <div className="flex items-center justify-between">
              <div className="h-2 w-20 bg-slate-100 rounded-full" />
-             <span className="text-[8px] font-medium text-slate-400 uppercase tracking-wider">{candidate.platform}</span>
+             <span className="text-[10px] sm:text-[9px] font-medium text-slate-400 uppercase tracking-wider">{candidate.platform}</span>
         </div>
         <div className="flex items-center gap-2">
             <div className="h-1.5 w-12 bg-slate-50 rounded-full" />
@@ -125,15 +125,15 @@ const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered:
 
       {/* Match Score Badge */}
       <div className="flex items-center gap-1 shrink-0 pl-2">
-         <motion.div 
+         <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.8 + (index * 0.1) }}
          >
             <div className={cn(
-                "px-2 py-0.5 rounded text-[10px] font-bold border transition-all duration-300",
-                isHovered 
-                    ? "bg-green-50 text-green-600 border-green-200" 
+                "px-2 py-0.5 rounded text-[11px] sm:text-[10px] font-bold border transition-all duration-300",
+                isHovered
+                    ? "bg-green-50 text-green-600 border-green-200"
                     : "bg-slate-50 text-slate-400 border-slate-100"
             )}>
                 {isHovered ? `${candidate.score}%` : '--'}
