@@ -61,11 +61,11 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
             <div className="grid grid-cols-2 gap-px bg-slate-100">
                 {verificationSteps.map((item, i) => (
                     <div key={item.id} className="bg-white p-2 flex items-center justify-between">
-                        <span className="text-[9px] font-medium text-slate-500">{item.label}</span>
-                        <div className="w-3 h-3 flex items-center justify-center">
+                        <span className="text-[11px] sm:text-[10px] font-medium text-slate-500">{item.label}</span>
+                        <div className="w-4 h-4 sm:w-3 sm:h-3 flex items-center justify-center">
                             {isHovered && step > i ? (
                                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                    <Check size={10} className="text-green-500" strokeWidth={3} />
+                                    <Check size={11} className="text-green-500 sm:w-[10px] sm:h-[10px]" strokeWidth={3} />
                                 </motion.div>
                             ) : (
                                 <div className="w-1.5 h-1.5 rounded-full bg-slate-100" />
@@ -80,8 +80,8 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
                 "bg-green-50 p-2 flex items-center justify-center gap-1.5 transition-all duration-300",
                 isHovered && step >= 4 ? "opacity-100" : "opacity-0 h-0 overflow-hidden p-0"
             )}>
-                <ShieldCheck size={12} className="text-green-600" />
-                <span className="text-[10px] font-bold text-green-700">Verified Deliverable</span>
+                <ShieldCheck size={13} className="text-green-600 sm:w-3 sm:h-3" />
+                <span className="text-[11px] sm:text-[10px] font-bold text-green-700">Verified Deliverable</span>
             </div>
         </motion.div>
 
