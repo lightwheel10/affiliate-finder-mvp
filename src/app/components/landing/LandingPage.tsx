@@ -351,12 +351,52 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                     <p className="text-base sm:text-lg text-slate-500 leading-relaxed">{item.desc}</p>
 
                     <ul className="space-y-2 sm:space-y-3 pt-1 sm:pt-2">
-                      {[1, 2, 3].map((_, i) => (
-                        <li key={i} className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <span>Key feature point or benefit goes here</span>
-                        </li>
-                      ))}
+                      {idx === 0 ? (
+                        <>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>AI analyzes competitor affiliates and content themes</span>
+                          </li>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>Scan across YouTube, Instagram, TikTok, and blogs</span>
+                          </li>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>Filter by follower count, niche, and engagement rate</span>
+                          </li>
+                        </>
+                      ) : idx === 1 ? (
+                        <>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>View audience demographics and location data</span>
+                          </li>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>Track previous brand partnerships and sponsored content</span>
+                          </li>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>Score creators based on authenticity and conversion potential</span>
+                          </li>
+                        </>
+                      ) : (
+                        <>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>AI-generated personalized pitch templates</span>
+                          </li>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>Automated follow-ups and response tracking</span>
+                          </li>
+                          <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                            <span>Integration with Gmail, Outlook, and custom SMTP</span>
+                          </li>
+                        </>
+                      )}
                     </ul>
                   </div>
 
