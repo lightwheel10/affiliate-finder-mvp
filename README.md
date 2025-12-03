@@ -19,6 +19,8 @@ Instead of spending hours manually searching for potential partners, our intelli
 ## 🛠️ Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
+- **Backend**: [Convex](https://convex.dev) — Real-time database & serverless functions
+- **Authentication**: [Clerk](https://clerk.com) — User authentication & session management
 - **Styling**: Tailwind CSS 4
 - **Animation**: Framer Motion
 - **Language**: TypeScript
@@ -30,6 +32,8 @@ Instead of spending hours manually searching for potential partners, our intelli
 
 - Node.js 18+ 
 - npm or yarn
+- Convex account (for backend)
+- Clerk account (for authentication)
 
 ### Installation
 
@@ -43,8 +47,35 @@ cd affiliate-finder-mvp
 # Install dependencies
 npm install
 
-# Start development server
+# Set up environment variables (see .env.example)
+cp .env.example .env.local
+
+# Start Convex development server (in a separate terminal)
+npx convex dev
+
+# Start Next.js development server
 npm run dev
+```
+
+### Environment Variables
+
+Create a `.env.local` file with the following:
+
+```env
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+
+# Convex Backend
+NEXT_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
+
+# Serper.dev - Search API (https://serper.dev)
+SERPER_API_KEY=your_serper_api_key
+
+# Google AI - Content Analysis
+GOOGLE_API_KEY=your_google_ai_key
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.

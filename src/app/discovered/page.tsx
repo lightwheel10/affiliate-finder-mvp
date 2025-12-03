@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AffiliateRow } from '../components/AffiliateRow';
 import { SearchInput } from '../components/Input';
-import { getDiscoveredAffiliates, DiscoveredAffiliate, saveAffiliate, removeAffiliate, getSavedAffiliates } from '../services/storage';
+import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { 
   Filter, 
@@ -17,52 +17,36 @@ import {
   Download,
   Users
 } from 'lucide-react';
+import { ResultItem } from '../types';
 
 // This page shows ALL discovered affiliates from all searches
 export default function DiscoveredPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
-  const [loading, setLoading] = useState(true);
-  const [allDiscovered, setAllDiscovered] = useState<DiscoveredAffiliate[]>([]);
-  const [savedLinks, setSavedLinks] = useState<Set<string>>(new Set());
 
-  // Load all discovered affiliates on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const discovered = getDiscoveredAffiliates();
-      setAllDiscovered(discovered);
-      
-      const saved = getSavedAffiliates();
-      setSavedLinks(new Set(saved.map(s => s.link)));
-      
-      setLoading(false);
-    }
+  // Convex hooks
+  const { 
+    discoveredAffiliates, 
+    isLoading: loading 
+  } = useDiscoveredAffiliates();
+  
+  const { 
+    saveAffiliate, 
+    removeAffiliate, 
+    isAffiliateSaved 
+  } = useSavedAffiliates();
 
-    // Listen for updates
-    const handleUpdate = () => {
-      const discovered = getDiscoveredAffiliates();
-      setAllDiscovered(discovered);
-    };
-
-    window.addEventListener('discovered-update', handleUpdate);
-    return () => window.removeEventListener('discovered-update', handleUpdate);
-  }, []);
-
-  const toggleSave = (item: DiscoveredAffiliate) => {
-    const newSaved = new Set(savedLinks);
-    if (newSaved.has(item.link)) {
+  const toggleSave = (item: ResultItem) => {
+    if (isAffiliateSaved(item.link)) {
       removeAffiliate(item.link);
-      newSaved.delete(item.link);
     } else {
       saveAffiliate(item);
-      newSaved.add(item.link);
     }
-    setSavedLinks(newSaved);
   };
 
   // Filter and Search Logic
   const filteredResults = useMemo(() => {
-    return allDiscovered.filter(item => {
+    return discoveredAffiliates.filter(item => {
       // Filter by Source
       if (activeFilter !== 'All' && item.source !== activeFilter) return false;
       
@@ -78,18 +62,18 @@ export default function DiscoveredPage() {
       
       return true;
     });
-  }, [allDiscovered, activeFilter, searchQuery]);
+  }, [discoveredAffiliates, activeFilter, searchQuery]);
 
   // Calculate counts
   const counts = useMemo(() => {
     return {
-      All: allDiscovered.length,
-      Web: allDiscovered.filter(r => r.source === 'Web').length,
-      YouTube: allDiscovered.filter(r => r.source === 'YouTube').length,
-      Instagram: allDiscovered.filter(r => r.source === 'Instagram').length,
-      Reddit: allDiscovered.filter(r => r.source === 'Reddit').length,
+      All: discoveredAffiliates.length,
+      Web: discoveredAffiliates.filter(r => r.source === 'Web').length,
+      YouTube: discoveredAffiliates.filter(r => r.source === 'YouTube').length,
+      Instagram: discoveredAffiliates.filter(r => r.source === 'Instagram').length,
+      Reddit: discoveredAffiliates.filter(r => r.source === 'Reddit').length,
     };
-  }, [allDiscovered]);
+  }, [discoveredAffiliates]);
 
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
@@ -210,7 +194,7 @@ export default function DiscoveredPage() {
                     source={item.source}
                     rank={item.rank}
                     keyword={item.keyword}
-                    isSaved={savedLinks.has(item.link)}
+                    isSaved={isAffiliateSaved(item.link)}
                     onSave={() => toggleSave(item)}
                     thumbnail={item.thumbnail}
                     views={item.views}

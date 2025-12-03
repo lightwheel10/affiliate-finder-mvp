@@ -1,22 +1,34 @@
-import { getJson } from "serpapi";
+/**
+ * Serper.dev Search Service
+ * Fast, affordable Google search API
+ * Docs: https://serper.dev
+ */
 
-const SERPAPI_KEY = process.env.SERPAPI_KEY;
+const SERPER_API_KEY = process.env.SERPER_API_KEY;
 
-if (!SERPAPI_KEY) {
-  console.warn("Missing SERPAPI_KEY in environment variables");
+// Serper.dev endpoints
+const SERPER_ENDPOINTS = {
+  search: 'https://google.serper.dev/search',
+  videos: 'https://google.serper.dev/videos',
+  images: 'https://google.serper.dev/images',
+  news: 'https://google.serper.dev/news',
+};
+
+if (!SERPER_API_KEY) {
+  console.warn("⚠️ Missing SERPER_API_KEY in environment variables");
 }
 
 export type Platform = 'Web' | 'Reddit' | 'LinkedIn' | 'Twitter' | 'Instagram' | 'YouTube';
 
 /**
- * YouTube Channel Info - returned from SerpAPI YouTube engine
+ * YouTube Channel Info
  */
 export interface YouTubeChannelInfo {
   name: string;
   link: string;
   thumbnail?: string;
   verified?: boolean;
-  subscribers?: string;  // e.g., "1.9K subscribers"
+  subscribers?: string;
 }
 
 export interface SearchResult {
@@ -26,106 +38,86 @@ export interface SearchResult {
   source: Platform;
   domain: string;
   thumbnail?: string;
-  views?: string;        // e.g., "5.7K views" or number
-  date?: string;         // e.g., "8 months ago" or "8/15/2025"
+  views?: string;
+  date?: string;
   highlightedWords?: string[];
   position?: number;
   searchQuery?: string;
-  
-  // YouTube-specific fields (from engine=youtube)
   channel?: YouTubeChannelInfo;
-  duration?: string;     // e.g., "12:34"
-  
-  /**
-   * TODO: Future enhancements - these require additional API calls or calculations:
-   * - engagementRate: Calculate from (likes + comments) / views - needs YouTube Data API
-   * - uploadFrequency: Calculate from channel's recent videos - needs multiple API calls
-   * - viewToSubRatio: Calculate from avgViews / subscribers - can be done client-side
-   */
+  duration?: string;
 }
 
 /**
- * Maps internal Platform identifiers to Google Search Operators
- * Used for platforms that don't have dedicated SerpAPI engines
+ * Makes a request to Serper.dev API
  */
-const PLATFORM_QUERIES: Record<Platform, string> = {
-  'Web': '', // No special operator
-  'Reddit': 'site:reddit.com',
-  'LinkedIn': 'site:linkedin.com/in/',
-  'Twitter': 'site:twitter.com',
-  'Instagram': 'site:instagram.com',
-  'YouTube': 'site:youtube.com' // Fallback only - we use engine=youtube instead
-};
+async function serperFetch(endpoint: string, query: string, options: Record<string, any> = {}): Promise<any> {
+  if (!SERPER_API_KEY) {
+    console.error('❌ SERPER_API_KEY is not configured');
+    return { error: 'API key not configured' };
+  }
 
-/**
- * Dedicated YouTube Search using SerpAPI's native YouTube engine
- * Returns rich data: views, subscribers, channel info, publish dates
- */
-async function searchYouTube(keyword: string): Promise<SearchResult[]> {
-  if (!SERPAPI_KEY) return [];
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-  return new Promise((resolve) => {
-    getJson({
-      engine: "youtube",           // Native YouTube engine!
-      api_key: SERPAPI_KEY,
-      search_query: keyword,       // YouTube uses search_query, not q
-      gl: "us",
-      hl: "en"
-    }, (json: any) => {
-      if (json.error) {
-        console.error(`SerpApi YouTube Error:`, json.error);
-        resolve([]);
-        return;
-      }
-      
-      const video_results = json.video_results || [];
-      
-      // Debug: Log first result to see available data structure
-      if (video_results.length > 0) {
-        console.log('🎬 YouTube API Response Sample:', JSON.stringify(video_results[0], null, 2));
-      }
-      
-      const mapped = video_results.slice(0, 10).map((r: any, index: number) => {
-        // Parse views - can be "5.7K views" or number or "37.9K views" string
-        let views = r.views;
-        if (typeof views === 'number') {
-          views = formatNumber(views) + ' views';
-        }
-        // If views is already a string with "views", keep it as is
-        // If it's just a number string, add "views"
-        if (views && typeof views === 'string' && !views.includes('view')) {
-          views = views + ' views';
-        }
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`🔍 Serper request (attempt ${attempt}/${MAX_RETRIES}): ${endpoint.split('/').pop()} - "${query}"`);
 
-        // Extract channel info with subscriber count
-        // Note: SerpAPI video_results may not include subscriber count - that's in channel_results
-        const channel: YouTubeChannelInfo | undefined = r.channel ? {
-          name: r.channel.name,
-          link: r.channel.link,
-          thumbnail: r.channel.thumbnail,
-          verified: r.channel.verified || false,
-          subscribers: r.channel.subscribers || undefined // May not be available in video results
-        } : undefined;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-        return {
-          title: r.title,
-          link: r.link,
-          snippet: r.description || '',
-          source: 'YouTube' as Platform,
-          domain: 'youtube.com',
-          thumbnail: r.thumbnail?.static || r.thumbnail,
-          views,
-          date: r.published_date,
-          duration: r.length,
-          channel,
-          position: index + 1,
-          searchQuery: keyword
-        };
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': SERPER_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          q: query,
+          num: 25, // Get 25 results per request
+          ...options,
+        }),
+        signal: controller.signal,
       });
 
-      resolve(mapped);
-    });
-  });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Serper HTTP ${response.status}: ${errorText}`);
+
+        // Retry on server errors or rate limits
+        if (response.status >= 500 || response.status === 429) {
+          lastError = new Error(`HTTP ${response.status}`);
+          await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+          continue;
+        }
+
+        return { error: `HTTP ${response.status}: ${errorText}` };
+      }
+
+      const data = await response.json();
+      const resultCount = data.organic?.length || data.videos?.length || 0;
+      console.log(`✅ Serper success: ${endpoint.split('/').pop()} (${resultCount} results returned)`);
+      return data;
+
+    } catch (error: any) {
+      lastError = error;
+
+      if (error.name === 'AbortError') {
+        console.warn(`⏱️ Serper timeout (attempt ${attempt}/${MAX_RETRIES})`);
+      } else {
+        console.error(`❌ Serper fetch error (attempt ${attempt}/${MAX_RETRIES}):`, error.message);
+      }
+
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+      }
+    }
+  }
+
+  console.error(`❌ Serper failed after ${MAX_RETRIES} attempts:`, lastError?.message);
+  return { error: lastError?.message || 'Request failed after retries' };
 }
 
 /**
@@ -142,73 +134,182 @@ function formatNumber(num: number): string {
 }
 
 /**
- * Performs a Google Search using SerpApi
- * Used for Web, Reddit, Instagram, and other platforms
+ * Search YouTube videos using Serper's videos endpoint
+ */
+async function searchYouTube(keyword: string): Promise<SearchResult[]> {
+  // Use the videos endpoint for YouTube-specific results
+  // Search exactly what the user typed - no modifications
+  const json = await serperFetch(SERPER_ENDPOINTS.videos, keyword);
+
+  if (json.error) {
+    return [];
+  }
+
+  const videos = json.videos || [];
+  console.log('🎬 YouTube/Video results:', videos.length);
+
+  return videos.slice(0, 25).map((v: any, index: number) => {
+    // Parse channel info
+    const channel: YouTubeChannelInfo | undefined = v.channel ? {
+      name: v.channel,
+      link: v.channelLink || `https://www.youtube.com/results?search_query=${encodeURIComponent(v.channel)}`,
+      verified: false,
+    } : undefined;
+
+    // Extract domain from link
+    let domain = 'youtube.com';
+    try {
+      domain = new URL(v.link).hostname;
+    } catch {}
+
+    return {
+      title: v.title,
+      link: v.link,
+      snippet: v.snippet || v.description || '',
+      source: 'YouTube' as Platform,
+      domain,
+      thumbnail: v.imageUrl || v.thumbnail,
+      views: v.views,
+      date: v.date || v.publishedDate,
+      duration: v.duration,
+      channel,
+      position: index + 1,
+      searchQuery: keyword,
+    };
+  });
+}
+
+/**
+ * Search Google for web results, with optional site: operator for platforms
+ */
+async function searchWeb(keyword: string, siteOperator?: string): Promise<SearchResult[]> {
+  // Search exactly what the user typed - no modifications
+  const query = siteOperator 
+    ? `${keyword} ${siteOperator}`
+    : `${keyword} affiliate`;
+
+  const json = await serperFetch(SERPER_ENDPOINTS.search, query);
+
+  if (json.error) {
+    return [];
+  }
+
+  const organic = json.organic || [];
+  console.log(`🌐 Web results:`, organic.length);
+
+  return organic.map((r: any, index: number) => {
+    let domain = '';
+    try {
+      domain = new URL(r.link).hostname;
+    } catch {
+      domain = r.displayedLink || 'unknown';
+    }
+
+    return {
+      title: r.title,
+      link: r.link,
+      snippet: r.snippet || '',
+      source: 'Web' as Platform,
+      domain,
+      thumbnail: r.thumbnail,
+      date: r.date,
+      highlightedWords: r.snippetHighlightedWords,
+      position: index + 1,
+      searchQuery: keyword,
+    };
+  });
+}
+
+/**
+ * Search a specific platform using site: operator
+ * Falls back to platform name search if site: operator is blocked
  */
 async function searchPlatform(keyword: string, platform: Platform): Promise<SearchResult[]> {
-  if (!SERPAPI_KEY) return [];
-
-  // Use dedicated YouTube search for YouTube platform
+  // YouTube gets special treatment with videos endpoint
   if (platform === 'YouTube') {
     return searchYouTube(keyword);
   }
 
-  const operator = PLATFORM_QUERIES[platform];
-  // If platform is Web, just search keyword + "review" or "affiliate"
-  // If social, use site: operator + keyword
-  const q = platform === 'Web' 
-    ? `${keyword} review affiliate`
-    : `${keyword} ${operator}`;
+  // Map platforms to site operators
+  const siteOperators: Record<Platform, string> = {
+    'Web': '',
+    'Reddit': 'site:reddit.com',
+    'LinkedIn': 'site:linkedin.com/in/',
+    'Twitter': 'site:twitter.com OR site:x.com',
+    'Instagram': 'site:instagram.com',
+    'YouTube': 'site:youtube.com',
+  };
 
-  return new Promise((resolve) => {
-    getJson({
-      engine: "google",
-      api_key: SERPAPI_KEY,
-      q: q,
-      num: 10, // Fetch top 10 results per platform for more coverage
-      gl: "us",
-      hl: "en"
-    }, (json: any) => {
-      if (json.error) {
-        console.error(`SerpApi Error [${platform}]:`, json.error);
-        resolve([]);
-        return;
-      }
-      
-      const organic_results = json.organic_results || [];
-      
-      const mapped = organic_results.map((r: any, index: number) => {
-        // Attempt to extract stats from rich_snippet
-        let views, date;
-        if (r.rich_snippet?.top?.extensions) {
-           const exts = r.rich_snippet.top.extensions;
-           views = exts.find((e: string) => e.includes('views'));
-           date = exts.find((e: string) => e.includes('ago') || /\d{4}/.test(e));
-        }
+  // Fallback queries (without site: operator) - used when Serper blocks the query
+  const fallbackQueries: Record<Platform, string> = {
+    'Web': keyword,
+    'Reddit': `${keyword} reddit.com`,
+    'LinkedIn': `${keyword} linkedin`,
+    'Twitter': `${keyword} twitter`,
+    'Instagram': `${keyword} instagram`,
+    'YouTube': keyword,
+  };
 
-        return {
-          title: r.title,
-          link: r.link,
-          snippet: r.snippet || '',
-          source: platform,
-          domain: new URL(r.link).hostname,
-          thumbnail: r.thumbnail,
-          views,
-          date,
-          highlightedWords: r.snippet_highlighted_words,
-          position: index + 1,
-          searchQuery: keyword
-        };
-      });
+  const siteOp = siteOperators[platform];
+  const query = siteOp ? `${keyword} ${siteOp}` : keyword;
 
-      resolve(mapped);
-    });
+  let json = await serperFetch(SERPER_ENDPOINTS.search, query);
+
+  // If blocked (400 error with "Query not allowed"), try fallback query
+  if (json.error && json.error.includes('400')) {
+    console.log(`⚠️ site: operator blocked for ${platform}, trying fallback...`);
+    const fallbackQuery = fallbackQueries[platform];
+    json = await serperFetch(SERPER_ENDPOINTS.search, fallbackQuery);
+  }
+
+  if (json.error) {
+    return [];
+  }
+
+  const organic = json.organic || [];
+  console.log(`🌐 ${platform} results:`, organic.length);
+
+  return organic.map((r: any, index: number) => {
+    let domain = '';
+    try {
+      domain = new URL(r.link).hostname;
+    } catch {
+      domain = r.displayedLink || 'unknown';
+    }
+
+    return {
+      title: r.title,
+      link: r.link,
+      snippet: r.snippet || '',
+      source: platform,
+      domain,
+      thumbnail: r.thumbnail,
+      date: r.date,
+      highlightedWords: r.snippetHighlightedWords,
+      position: index + 1,
+      searchQuery: keyword,
+    };
   });
 }
 
+/**
+ * Search across multiple platforms in parallel
+ */
 export async function searchMultiPlatform(keyword: string, sources: Platform[]): Promise<SearchResult[]> {
-  const promises = sources.map(source => searchPlatform(keyword, source));
-  const results = await Promise.all(promises);
-  return results.flat();
-}
+  console.log(`\n🚀 Starting multi-platform search for "${keyword}"`);
+  console.log(`📡 Platforms: ${sources.join(', ')}\n`);
 
+  // Run all searches in parallel
+  const promises = sources.map(source =>
+    searchPlatform(keyword, source).catch(err => {
+      console.error(`❌ ${source} search failed:`, err);
+      return [] as SearchResult[];
+    })
+  );
+
+  const results = await Promise.all(promises);
+  const flatResults = results.flat();
+
+  console.log(`\n✅ Total results: ${flatResults.length}\n`);
+  return flatResults;
+}

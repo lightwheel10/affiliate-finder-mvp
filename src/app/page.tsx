@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { SearchInput } from './components/Input';
 import { AffiliateRow } from './components/AffiliateRow';
 import { AffiliateRowSkeleton } from './components/AffiliateRowSkeleton';
 import { Sidebar } from './components/Sidebar';
 import { Modal } from './components/Modal';
+import { LandingPage } from './components/landing/LandingPage';
 import { 
   Plus, 
   Filter, 
@@ -22,12 +25,54 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ResultItem } from './types';
-import { saveAffiliate, removeAffiliate, getSavedAffiliates, isAffiliateSaved, saveDiscoveredAffiliates, getDiscoveredAffiliates, saveDiscoveredAffiliate } from './services/storage';
-import { useEffect } from 'react';
+import { useSavedAffiliates, useDiscoveredAffiliates } from './hooks/useAffiliates';
 
 const MAX_KEYWORDS = 5;
 
 export default function Home() {
+  const { isSignedIn, isLoaded } = useUser();
+  const router = useRouter();
+
+  // Show loading state while Clerk is loading
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-2 border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // Show landing page for unauthenticated users
+  if (!isSignedIn) {
+    return (
+      <LandingPage 
+        onLoginClick={() => router.push('/sign-in')}
+        onSignupClick={() => router.push('/sign-up')}
+      />
+    );
+  }
+
+  // Authenticated users see the dashboard
+  return <Dashboard />
+}
+
+function Dashboard() {
+  // Convex hooks for data management
+  const { 
+    savedAffiliates, 
+    saveAffiliate, 
+    removeAffiliate, 
+    isAffiliateSaved,
+    isLoading: savedLoading 
+  } = useSavedAffiliates();
+  
+  const { 
+    discoveredAffiliates, 
+    saveDiscoveredAffiliate, 
+    saveDiscoveredAffiliates,
+    isLoading: discoveredLoading 
+  } = useDiscoveredAffiliates();
+
   // Multiple keywords support
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
@@ -35,7 +80,6 @@ export default function Home() {
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [savedLinks, setSavedLinks] = useState<Set<string>>(new Set());
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFindModalOpen, setIsFindModalOpen] = useState(false);
@@ -44,6 +88,7 @@ export default function Home() {
   const [itemsPerPage] = useState(10); // Show 10 results per page
   const [showWarning, setShowWarning] = useState(false);
   const [animationKey, setAnimationKey] = useState(0); // Force animation retrigger
+  const [groupByDomain, setGroupByDomain] = useState(false); // Toggle for grouping results
 
   // Add keyword to list
   const addKeyword = () => {
@@ -59,29 +104,23 @@ export default function Home() {
     setKeywords(keywords.filter(k => k !== keywordToRemove));
   };
 
-  // Load saved state on mount
+  // Load previously discovered affiliates from Convex (on mount)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Load saved affiliates for the save button state
-      const saved = getSavedAffiliates();
-      setSavedLinks(new Set(saved.map(s => s.link)));
-      
-      // Load previously discovered affiliates (from last session)
-      const discovered = getDiscoveredAffiliates();
-      if (discovered.length > 0) {
-        // Only show most recent search results (filter by last keyword used)
-        const lastKeyword = discovered[0]?.searchKeyword;
-        if (lastKeyword) {
-          const lastSearchResults = discovered.filter(d => d.searchKeyword === lastKeyword);
-          setResults(lastSearchResults);
-          // Restore keywords (could be comma-separated for multi-keyword searches)
-          const restoredKeywords = lastKeyword.split(' | ').filter(Boolean);
-          setKeywords(restoredKeywords);
-          setHasSearched(true);
-        }
+    if (!discoveredLoading && discoveredAffiliates.length > 0 && !hasSearched) {
+      // Only show most recent search results (filter by last keyword used)
+      const lastKeyword = discoveredAffiliates[0]?.searchKeyword;
+      if (lastKeyword) {
+        const lastSearchResults = discoveredAffiliates.filter(
+          (d: { searchKeyword: string }) => d.searchKeyword === lastKeyword
+        );
+        setResults(lastSearchResults as ResultItem[]);
+        // Restore keywords (could be comma-separated for multi-keyword searches)
+        const restoredKeywords = lastKeyword.split(' | ').filter(Boolean);
+        setKeywords(restoredKeywords);
+        setHasSearched(true);
       }
     }
-  }, []);
+  }, [discoveredAffiliates, discoveredLoading, hasSearched]);
 
   const handleFindAffiliates = async () => {
     if (keywords.length === 0) return;
@@ -108,6 +147,7 @@ export default function Home() {
     // Combined keyword string for storage
     const combinedKeyword = keywords.join(' | ');
     const streamedResults: ResultItem[] = [];
+    const resultsToSave: ResultItem[] = []; // Batch for Convex
 
     try {
       // Search all keywords in parallel for speed!
@@ -163,7 +203,10 @@ export default function Home() {
                   };
 
                   streamedResults.push(enhancedResult);
+                  resultsToSave.push(enhancedResult);
                   setResults([...streamedResults]);
+                  
+                  // Save to Convex in real-time (one at a time during streaming)
                   saveDiscoveredAffiliate(enhancedResult, combinedKeyword);
                   
                 } catch (parseError) {
@@ -198,6 +241,7 @@ export default function Home() {
               };
               
               streamedResults.push(enhancedResult);
+              resultsToSave.push(enhancedResult);
             });
             setResults([...streamedResults]);
           }
@@ -206,13 +250,14 @@ export default function Home() {
 
       await Promise.all(searchPromises);
       
-      // Save final results
-      if (streamedResults.length > 0) {
-        saveDiscoveredAffiliates(streamedResults, combinedKeyword);
+      // Batch save final results to Convex (for non-streaming mode)
+      if (resultsToSave.length > 0 && !streamedResults.length) {
+        saveDiscoveredAffiliates(resultsToSave, combinedKeyword);
       }
       
-    } catch (e: any) {
-      if (e.name === 'AbortError') {
+    } catch (e: unknown) {
+      const error = e as Error;
+      if (error.name === 'AbortError') {
         console.log('🛑 Search cancelled by user');
       } else {
         console.error('❌ Search error:', e);
@@ -223,15 +268,11 @@ export default function Home() {
   };
 
   const toggleSave = (item: ResultItem) => {
-    const newSaved = new Set(savedLinks);
-    if (newSaved.has(item.link)) {
+    if (isAffiliateSaved(item.link)) {
       removeAffiliate(item.link);
-      newSaved.delete(item.link);
     } else {
       saveAffiliate(item);
-      newSaved.add(item.link);
     }
-    setSavedLinks(newSaved);
   };
 
   // Group results by domain (used for display and counts)
@@ -249,22 +290,17 @@ export default function Home() {
     }));
   };
 
-  // Calculate real counts from results (grouped by domain for accurate display)
+  // Calculate real counts from results
   const counts = useMemo(() => {
     if (!hasSearched) return { All: 0, Web: 0, YouTube: 0, Instagram: 0, Reddit: 0 };
     
-    // Count unique domains per source for accurate badge numbers
-    const webResults = results.filter(r => r.source === 'Web');
-    const youtubeResults = results.filter(r => r.source === 'YouTube');
-    const instagramResults = results.filter(r => r.source === 'Instagram');
-    const redditResults = results.filter(r => r.source === 'Reddit');
-    
+    // Count all results per source (no grouping - show actual counts)
     return {
-      All: groupResultsByDomain(results).length,
-      Web: groupResultsByDomain(webResults).length,
-      YouTube: groupResultsByDomain(youtubeResults).length,
-      Instagram: groupResultsByDomain(instagramResults).length,
-      Reddit: groupResultsByDomain(redditResults).length,
+      All: results.length,
+      Web: results.filter(r => r.source === 'Web').length,
+      YouTube: results.filter(r => r.source === 'YouTube').length,
+      Instagram: results.filter(r => r.source === 'Instagram').length,
+      Reddit: results.filter(r => r.source === 'Reddit').length,
     };
   }, [results, hasSearched]);
 
@@ -300,10 +336,17 @@ export default function Home() {
     return filtered;
   }, [results, activeFilter, searchQuery]);
 
-  // Group filtered results by domain
+  // Group filtered results by domain OR show all individually
   const groupedResults = useMemo(() => {
-    return groupResultsByDomain(filteredResults);
-  }, [filteredResults]);
+    if (groupByDomain) {
+      return groupResultsByDomain(filteredResults);
+    }
+    // Show all results individually (no grouping)
+    return filteredResults.map(item => ({
+      main: item,
+      subItems: []
+    }));
+  }, [filteredResults, groupByDomain]);
 
   // Pagination calculations (based on groups now)
   const totalPages = Math.ceil(groupedResults.length / itemsPerPage);
@@ -433,8 +476,16 @@ export default function Home() {
 
               {/* Right: View Actions */}
               <div className="flex items-center gap-2">
-                 <button className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-sm flex items-center gap-1.5 transition-all">
-                    <Filter size={12} /> Filters
+                 <button 
+                   onClick={() => setGroupByDomain(!groupByDomain)}
+                   className={cn(
+                     "px-3 py-2 border rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all",
+                     groupByDomain 
+                       ? "bg-[#D4E815] border-[#D4E815] text-[#1A1D21]"
+                       : "bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300"
+                   )}
+                 >
+                    <List size={12} /> {groupByDomain ? 'Grouped' : 'All Results'}
                   </button>
                   <button className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-sm flex items-center gap-1.5 transition-all">
                     <ArrowUpDown size={12} /> Sort by: Most Content
@@ -501,7 +552,7 @@ export default function Home() {
                           source={group.main.source}
                           rank={group.main.rank}
                           keyword={group.main.keyword}
-                          isSaved={savedLinks.has(group.main.link)}
+                          isSaved={isAffiliateSaved(group.main.link)}
                           onSave={() => toggleSave(group.main)}
                           thumbnail={group.main.thumbnail}
                           views={group.main.views}
@@ -544,7 +595,7 @@ export default function Home() {
                         source={group.main.source}
                         rank={group.main.rank}
                         keyword={group.main.keyword}
-                        isSaved={savedLinks.has(group.main.link)}
+                        isSaved={isAffiliateSaved(group.main.link)}
                         onSave={() => toggleSave(group.main)}
                         thumbnail={group.main.thumbnail}
                         views={group.main.views}

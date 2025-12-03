@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AffiliateRow } from '../components/AffiliateRow';
 import { SearchInput } from '../components/Input';
-import { getSavedAffiliates, removeAffiliate, SavedAffiliate } from '../services/storage';
+import { useSavedAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { 
   Filter, 
@@ -19,31 +19,18 @@ import {
 } from 'lucide-react';
 
 export default function PipelinePage() {
-  const [savedAffiliates, setSavedAffiliates] = useState<SavedAffiliate[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Load saved affiliates
-    const loadData = () => {
-      const data = getSavedAffiliates();
-      // Sort by savedAt desc
-      data.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
-      setSavedAffiliates(data);
-      setLoading(false);
-    };
-
-    loadData();
-    
-    // Listen for storage events (in case changes happen in another tab)
-    window.addEventListener('storage', loadData);
-    return () => window.removeEventListener('storage', loadData);
-  }, []);
+  // Convex hook for saved affiliates
+  const { 
+    savedAffiliates, 
+    removeAffiliate, 
+    isLoading: loading 
+  } = useSavedAffiliates();
 
   const handleRemove = (link: string) => {
     removeAffiliate(link);
-    setSavedAffiliates(prev => prev.filter(item => item.link !== link));
   };
 
   // Filter and Search Logic

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { Check, Zap, Loader2, Star, ShieldCheck, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from './Modal';
@@ -12,23 +11,18 @@ interface PricingModalProps {
 }
 
 export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
-  const { completeSubscription } = useAuth();
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('annual');
   const [isLoading, setIsLoading] = useState<string | null>(null);
 
   const handleSubscribe = async (planName: string) => {
     setIsLoading(planName);
     try {
-      // Simulate Stripe/Checkout delay
+      // Simulate Stripe/Checkout delay - TODO: Integrate with actual payment
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const planId = planName.toLowerCase().includes('pro') ? 'pro' : 
-                     planName.toLowerCase().includes('business') ? 'business' : 'enterprise';
-      
-      if (planId !== 'enterprise') {
-        await completeSubscription(planId as 'pro' | 'business');
-        onClose();
-      }
+      // For now, just close the modal
+      // In production, this would redirect to Stripe Checkout
+      onClose();
     } catch (error) {
       console.error('Subscription failed', error);
     } finally {

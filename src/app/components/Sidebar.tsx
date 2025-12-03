@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
   Search, 
@@ -16,56 +16,33 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth, getTrialDaysRemaining } from '../context/AuthContext';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { Modal } from './Modal';
 import { PricingModal } from './PricingModal';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { getSavedAffiliates, getDiscoveredAffiliates } from '../services/storage';
+import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffiliates';
 
 export const Sidebar: React.FC = () => {
-  const { logout, user } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const pathname = usePathname();
-  const [pipelineCount, setPipelineCount] = useState(0);
-  const [discoveredCount, setDiscoveredCount] = useState(0);
-
-  useEffect(() => {
-    const updateSavedCount = () => {
-      const count = getSavedAffiliates().length;
-      setPipelineCount(count);
-    };
-
-    const updateDiscoveredCount = () => {
-      const count = getDiscoveredAffiliates().length;
-      setDiscoveredCount(count);
-    };
-
-    // Initialize counts
-    updateSavedCount();
-    updateDiscoveredCount();
-    
-    // Listen for storage changes from other tabs
-    window.addEventListener('storage', updateSavedCount);
-    window.addEventListener('storage', updateDiscoveredCount);
-    
-    // Listen for internal updates
-    window.addEventListener('pipeline-update', updateSavedCount);
-    window.addEventListener('discovered-update', updateDiscoveredCount);
-
-    return () => {
-      window.removeEventListener('storage', updateSavedCount);
-      window.removeEventListener('pipeline-update', updateSavedCount);
-      window.removeEventListener('discovered-update', updateDiscoveredCount);
-    };
-  }, []);
+  
+  // Convex hooks for real-time counts
+  const { count: pipelineCount } = useSavedAffiliates();
+  const { count: discoveredCount } = useDiscoveredAffiliates();
 
   const handleLogout = async () => {
-    await logout();
+    await signOut({ redirectUrl: '/sign-in' });
     setIsLogoutModalOpen(false);
   };
+
+  // Get user display info from Clerk
+  const userName = user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User';
+  const userImageUrl = user?.imageUrl;
 
   return (
     <>
@@ -125,51 +102,36 @@ export const Sidebar: React.FC = () => {
         {/* Bottom Actions */}
         <div className="p-3 space-y-3 bg-white/50">
           
-          {/* Upgrade Plan CTA for Free Trial Users */}
-          {user?.plan === 'free_trial' && user?.trialEndDate && (
-            <>
-              {(() => {
-                const daysRemaining = getTrialDaysRemaining(user.trialEndDate);
-                const isUrgent = daysRemaining <= 2;
-                const trialPlanName = user.trialPlan ? user.trialPlan.charAt(0).toUpperCase() + user.trialPlan.slice(1) : 'Pro';
-                
-                return (
-                  <div className="bg-[#1A1D21] rounded-xl p-3.5 text-white relative overflow-hidden group cursor-pointer shadow-lg shadow-[#1A1D21]/20" onClick={() => setIsPricingModalOpen(true)}>
-                    {/* Dot pattern background - matching landing page CTA */}
-                    <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[radial-gradient(#D4E815_1px,transparent_1px)] [background-size:12px_12px]"></div>
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <div className={cn("p-1 rounded-md backdrop-blur-sm", isUrgent ? "bg-red-500/20" : "bg-[#D4E815]/20")}>
-                          <Clock size={12} className={isUrgent ? "text-red-400" : "text-[#D4E815]"} />
-                        </div>
-                        <span className={cn("text-[10px] font-bold tracking-wide uppercase", isUrgent ? "text-red-400" : "text-white/90")}>
-                          {daysRemaining === 0 ? 'Trial Ends Today!' : daysRemaining === 1 ? '1 Day Left' : `${daysRemaining} Days Left`}
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-bold text-white mb-1 leading-tight">
-                        {trialPlanName} Plan Trial
-                      </h4>
-                      <p className="text-[10px] text-slate-300 leading-relaxed mb-3 opacity-90">
-                        {isUrgent 
-                          ? "Upgrade now to keep your data and continue growing." 
-                          : "Enjoying the trial? Upgrade anytime to unlock full access."
-                        }
-                      </p>
-                      <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-2 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
-                        Upgrade Now <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                      </button>
-                    </div>
-                    {/* Decorative blur elements */}
-                    <div className={cn("absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full blur-2xl transition-all duration-500", isUrgent ? "bg-red-500/10 group-hover:bg-red-500/20" : "bg-[#D4E815]/20 group-hover:bg-[#D4E815]/30")} />
-                    <div className={cn("absolute bottom-0 left-0 -mb-6 -ml-6 w-20 h-20 rounded-full blur-xl", isUrgent ? "bg-red-500/10" : "bg-[#D4E815]/10")} />
-                  </div>
-                );
-              })()}
-            </>
-          )}
+          {/* Upgrade Plan CTA - simplified for now */}
+          <div className="bg-[#1A1D21] rounded-xl p-3.5 text-white relative overflow-hidden group cursor-pointer shadow-lg shadow-[#1A1D21]/20" onClick={() => setIsPricingModalOpen(true)}>
+            {/* Dot pattern background */}
+            <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[radial-gradient(#D4E815_1px,transparent_1px)] [background-size:12px_12px]"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="p-1 rounded-md backdrop-blur-sm bg-[#D4E815]/20">
+                  <Zap size={12} className="text-[#D4E815]" />
+                </div>
+                <span className="text-[10px] font-bold tracking-wide uppercase text-white/90">
+                  Free Plan
+                </span>
+              </div>
+              <h4 className="text-xs font-bold text-white mb-1 leading-tight">
+                Upgrade to Pro
+              </h4>
+              <p className="text-[10px] text-slate-300 leading-relaxed mb-3 opacity-90">
+                Unlock unlimited searches and premium features.
+              </p>
+              <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-2 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
+                Upgrade Now <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+            {/* Decorative blur elements */}
+            <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full blur-2xl transition-all duration-500 bg-[#D4E815]/20 group-hover:bg-[#D4E815]/30" />
+            <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-20 h-20 rounded-full blur-xl bg-[#D4E815]/10" />
+          </div>
 
-          {/* Divider - now below the trial indicator */}
+          {/* Divider */}
           <div className="border-t border-slate-100"></div>
 
           <div className="relative">
@@ -179,16 +141,16 @@ export const Sidebar: React.FC = () => {
             >
               <div className="relative shrink-0">
                  <img 
-                  src={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=0f172a&color=fff`}
+                  src={userImageUrl || `https://ui-avatars.com/api/?name=${userName}&background=0f172a&color=fff`}
                   alt="User" 
-                  className="w-7 h-7 rounded-full border border-white shadow-sm"
+                  className="w-7 h-7 rounded-full border border-white shadow-sm object-cover"
                 />
                 <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border-2 border-white rounded-full"></span>
               </div>
               
               <div className="flex-1 text-left min-w-0">
-                <p className="text-xs font-semibold text-slate-900 truncate">{user?.name || 'Jamie Founder'}</p>
-                <p className="text-[10px] text-slate-500 truncate capitalize">{user?.plan?.replace('_', ' ') || 'Free Trial'}</p>
+                <p className="text-xs font-semibold text-slate-900 truncate">{userName}</p>
+                <p className="text-[10px] text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress || 'Free Plan'}</p>
               </div>
 
               <MoreHorizontal size={16} className="text-slate-400 group-hover:text-slate-600 transition-colors shrink-0 ml-1" />
