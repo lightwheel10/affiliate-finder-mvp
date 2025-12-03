@@ -32,7 +32,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       
       <main 
@@ -63,19 +63,19 @@ export default function SettingsPage() {
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                       activeTab === tab.id
-                        ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200"
+                        ? "bg-[#D4E815]/10 text-[#1A1D21] shadow-sm ring-1 ring-[#D4E815]/30"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     )}
                   >
                     <span className={cn(
                       "shrink-0",
-                      activeTab === tab.id ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+                      activeTab === tab.id ? "text-[#1A1D21]" : "text-slate-400 group-hover:text-slate-600"
                     )}>
                       {tab.icon}
                     </span>
                     <span className="flex-1 text-left">{tab.label}</span>
                     {activeTab === tab.id && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4E815]" />
                     )}
                   </button>
                 ))}
@@ -147,7 +147,7 @@ function ProfileSettings({ user }: { user: any }) {
             <input 
               type="text" 
               defaultValue={user?.name?.split(' ')[0] || ''}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815] transition-all"
             />
           </div>
           <div className="space-y-1.5">
@@ -155,7 +155,7 @@ function ProfileSettings({ user }: { user: any }) {
             <input 
               type="text" 
               defaultValue={user?.name?.split(' ').slice(1).join(' ') || ''}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815] transition-all"
             />
           </div>
         </div>
@@ -167,7 +167,7 @@ function ProfileSettings({ user }: { user: any }) {
             <input 
               type="email" 
               defaultValue={user?.email || ''}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815] transition-all"
             />
           </div>
         </div>
@@ -177,13 +177,13 @@ function ProfileSettings({ user }: { user: any }) {
           <textarea 
             rows={4}
             defaultValue="Building the future of content generation at Jasper."
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815] transition-all resize-none"
           />
         </div>
       </div>
 
       <div className="pt-4 border-t border-slate-100 flex justify-end">
-        <button className="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm hover:shadow">
+        <button className="px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-sm font-semibold rounded-lg hover:bg-[#c5d913] transition-colors shadow-sm hover:shadow">
           Save Changes
         </button>
       </div>
@@ -200,29 +200,29 @@ function PlanSettings({ user, onUpgrade }: { user: any, onUpgrade: () => void })
       {/* Current Plan */}
       <div className={cn(
         "p-4 rounded-xl border space-y-4 transition-all",
-        isFreeTrial ? "bg-slate-50 border-slate-200" : "bg-blue-50/50 border-blue-100"
+        isFreeTrial ? "bg-slate-50 border-slate-200" : "bg-[#D4E815]/10 border-[#D4E815]/30"
       )}>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className={cn("text-sm font-bold", isFreeTrial ? "text-slate-900" : "text-blue-900")}>
+              <span className={cn("text-sm font-bold", isFreeTrial ? "text-slate-900" : "text-[#1A1D21]")}>
                 {planName} Plan
               </span>
               <span className={cn(
                 "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border",
-                isFreeTrial ? "bg-slate-200 text-slate-600 border-slate-300" : "bg-blue-100 text-blue-700 border-blue-200"
+                isFreeTrial ? "bg-slate-200 text-slate-600 border-slate-300" : "bg-[#D4E815]/20 text-[#1A1D21] border-[#D4E815]/40"
               )}>
                 Current
               </span>
             </div>
-            <p className={cn("text-xs", isFreeTrial ? "text-slate-500" : "text-blue-700")}>
+            <p className={cn("text-xs", isFreeTrial ? "text-slate-500" : "text-[#1A1D21]")}>
               {isFreeTrial ? "Trial ends in 3 days" : "Billed monthly • Next billing date: Dec 24, 2024"}
             </p>
           </div>
           {isFreeTrial ? (
             <button 
               onClick={onUpgrade}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-lg hover:shadow-lg hover:shadow-blue-500/20 transition-all flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-bold rounded-lg hover:shadow-lg hover:shadow-[#D4E815]/20 transition-all flex items-center gap-1.5"
             >
               <Zap size={14} />
               Upgrade Now
@@ -238,7 +238,7 @@ function PlanSettings({ user, onUpgrade }: { user: any, onUpgrade: () => void })
             <span className="font-semibold">150 / 150 used</span>
           </div>
           <div className="h-2 bg-slate-200/60 rounded-full overflow-hidden">
-            <div className={cn("h-full w-full rounded-full", isFreeTrial ? "bg-slate-400" : "bg-blue-500")} />
+            <div className={cn("h-full w-full rounded-full", isFreeTrial ? "bg-slate-400" : "bg-[#D4E815]")} />
           </div>
         </div>
       </div>
@@ -262,7 +262,7 @@ function PlanSettings({ user, onUpgrade }: { user: any, onUpgrade: () => void })
         ) : (
           <div className="p-8 border border-dashed border-slate-200 rounded-lg text-center">
             <p className="text-sm text-slate-500 mb-2">No payment method added</p>
-            <button className="text-xs font-semibold text-blue-600 hover:text-blue-700">Add Payment Method</button>
+            <button className="text-xs font-semibold text-[#1A1D21] hover:text-[#2a2f35]">Add Payment Method</button>
           </div>
         )}
       </div>
@@ -285,7 +285,7 @@ function PlanSettings({ user, onUpgrade }: { user: any, onUpgrade: () => void })
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-slate-900">{invoice.amount}</span>
-                  <button className="text-xs font-semibold text-blue-600 hover:text-blue-700">Download</button>
+                  <button className="text-xs font-semibold text-[#1A1D21] hover:text-[#2a2f35]">Download</button>
                 </div>
               </div>
             ))}
@@ -326,7 +326,7 @@ function NotificationSettings({ user, updateProfile }: { user: any, updateProfil
                 type="checkbox" 
                 checked={user?.notifications?.[item.id] ?? true}
                 onChange={(e) => handleToggle(item.id, e.target.checked)}
-                className="peer h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer" 
+                className="peer h-4 w-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" 
               />
             </div>
             <div className="flex-1">
@@ -351,7 +351,7 @@ function NotificationSettings({ user, updateProfile }: { user: any, updateProfil
                 type="checkbox" 
                 checked={user?.notifications?.[item.id] ?? true}
                 onChange={(e) => handleToggle(item.id, e.target.checked)}
-                className="peer h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer" 
+                className="peer h-4 w-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" 
               />
             </div>
             <div className="flex-1">
@@ -373,11 +373,11 @@ function SecuritySettings() {
         <div className="grid gap-4">
           <div className="space-y-1.5">
              <label className="text-xs font-semibold text-slate-700">Current Password</label>
-             <input type="password" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+             <input type="password" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815]" />
           </div>
           <div className="space-y-1.5">
              <label className="text-xs font-semibold text-slate-700">New Password</label>
-             <input type="password" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+             <input type="password" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815]" />
           </div>
         </div>
         <div className="pt-2">
