@@ -96,7 +96,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl text-slate-900 font-bold tracking-tight mb-4">
-            Supercharge your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">affiliate growth</span>
+            Supercharge your <span className="text-[#1A1D21]">affiliate growth</span>
           </h1>
           <p className="text-slate-500 text-lg max-w-2xl mx-auto mb-8">
             Stop wasting hours searching manually. Get instant access to thousands of high-converting affiliates tailored to your niche.
@@ -121,7 +121,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
               )}
             >
               Annual
-              <span className="bg-green-100 text-green-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide">Save 20%</span>
+              <span className="bg-[#D4E815]/20 text-[#1A1D21] text-[10px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide">Save 20%</span>
             </button>
           </div>
         </div>
@@ -138,13 +138,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                 className={cn(
                   "relative rounded-2xl bg-white flex flex-col",
                   isPopular 
-                    ? "border-2 border-indigo-600 shadow-xl shadow-indigo-100 z-10" 
+                    ? "border-2 border-[#D4E815] shadow-xl shadow-[#D4E815]/20 z-10" 
                     : "border border-slate-200 shadow-lg"
                 )}
               >
                 {isPopular && (
                   <div className="absolute -top-4 left-0 right-0 flex justify-center">
-                    <div className="bg-indigo-600 text-white text-xs font-bold tracking-wide uppercase px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
+                    <div className="bg-[#1A1D21] text-[#D4E815] text-xs font-bold tracking-wide uppercase px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
                       <Star size={12} fill="currentColor" />
                       Best Value
                     </div>
@@ -153,7 +153,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
 
                 <div className="p-6 lg:p-8 flex-1 flex flex-col">
                   <div className="mb-6">
-                    <h3 className={cn("text-xl font-bold mb-2", isPopular ? "text-indigo-700" : "text-slate-900")}>
+                    <h3 className={cn("text-xl font-bold mb-2", isPopular ? "text-[#1A1D21]" : "text-slate-900")}>
                       {plan.name}
                     </h3>
                     <p className="text-xs text-slate-500 leading-relaxed min-h-[40px]">{plan.description}</p>
@@ -171,7 +171,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                       )}
                     </div>
                     {!plan.priceLabel && billingInterval === 'annual' && (
-                       <p className="text-xs text-green-600 font-medium mt-1">Billed ${price! * 12} yearly</p>
+                       <p className="text-xs text-[#1A1D21] font-medium mt-1">Billed ${price! * 12} yearly</p>
                     )}
                   </div>
 
@@ -181,8 +181,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                     className={cn(
                       "w-full py-3 rounded-xl text-sm font-bold mb-8 transition-all duration-200 shadow-sm flex items-center justify-center gap-2",
                       isPopular 
-                        ? "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-500/25" 
-                        : "bg-slate-900 text-white hover:bg-slate-800"
+                        ? "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] hover:shadow-[#D4E815]/25" 
+                        : "bg-[#1A1D21] text-white hover:bg-[#2a2f35]"
                     )}
                   >
                      {isLoading === plan.name ? (
@@ -190,7 +190,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                      ) : (
                        <>
                          {plan.cta}
-                         {isPopular && <Zap size={14} fill="currentColor" className="text-yellow-300" />}
+                         {isPopular && <Zap size={14} fill="currentColor" className="text-[#1A1D21]" />}
                        </>
                      )}
                   </button>
@@ -201,7 +201,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                       <div key={idx} className="flex items-start gap-3">
                         <div className={cn(
                           "mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0",
-                          isPopular ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-600"
+                          isPopular ? "bg-[#1A1D21] text-[#D4E815]" : "bg-slate-100 text-slate-600"
                         )}>
                            <Check size={10} strokeWidth={4} />
                         </div>
@@ -221,11 +221,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
         <div className="mt-12 text-center border-t border-slate-100 pt-8">
           <div className="flex items-center justify-center gap-6 text-sm text-slate-500">
             <div className="flex items-center gap-2">
-               <ShieldCheck size={16} className="text-green-600" />
+               <ShieldCheck size={16} className="text-[#D4E815]" />
                <span>Secure SSL Payment</span>
             </div>
             <div className="flex items-center gap-2">
-               <TrendingUp size={16} className="text-blue-600" />
+               <TrendingUp size={16} className="text-[#1A1D21]" />
                <span>Cancel Anytime</span>
             </div>
           </div>
