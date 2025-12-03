@@ -95,11 +95,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
         {/* Brand / Logo Area */}
         <div className={cn("h-14 flex items-center mt-1 mb-6 transition-all duration-300", isCollapsed ? "px-0 justify-center" : "px-4")}>
           <div className="flex items-center gap-2 text-slate-900">
-            <div className="w-7 h-7 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-blue-600/10 shrink-0">
-              <Sparkles size={14} fill="currentColor" className="opacity-90" />
+            <div className="w-7 h-7 bg-[#1A1D21] rounded-lg flex items-center justify-center shadow-md shadow-[#1A1D21]/10 shrink-0">
+              <Sparkles size={14} fill="currentColor" className="text-[#D4E815] opacity-90" />
             </div>
             <div className={cn("flex flex-col transition-all duration-300 overflow-hidden whitespace-nowrap", isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
-              <span className="font-bold text-sm tracking-tight leading-none">Affiliate<span className="text-blue-600">Finder</span></span>
+              <span className="font-bold text-sm tracking-tight leading-none">Affiliate<span className="text-[#1A1D21]">Finder</span></span>
               <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">Intelligence</span>
             </div>
           </div>
@@ -151,25 +151,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
           {/* Upgrade Plan CTA for Free Trial Users */}
           {(!user?.plan || user?.plan === 'free_trial') && (
             <div className={cn("mb-3 transition-all duration-300", isCollapsed ? "hidden" : "block")}>
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-3.5 text-white relative overflow-hidden group cursor-pointer shadow-lg shadow-blue-900/20" onClick={() => setIsPricingModalOpen(true)}>
+              <div className="bg-[#1A1D21] rounded-xl p-3.5 text-white relative overflow-hidden group cursor-pointer shadow-lg shadow-[#1A1D21]/20" onClick={() => setIsPricingModalOpen(true)}>
                 <div className="relative z-10">
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <div className="p-1 bg-white/10 rounded-md backdrop-blur-sm">
-                      <Zap size={12} className="text-yellow-300" fill="currentColor" />
+                    <div className="p-1 bg-[#D4E815]/20 rounded-md backdrop-blur-sm">
+                      <Zap size={12} className="text-[#D4E815]" fill="currentColor" />
                     </div>
                     <span className="text-[10px] font-bold text-white/90 tracking-wide uppercase">Trial Ending Soon</span>
                   </div>
                   <h4 className="text-xs font-bold text-white mb-1 leading-tight">Unlock Full Access</h4>
-                  <p className="text-[10px] text-blue-100 leading-relaxed mb-3 opacity-90">
+                  <p className="text-[10px] text-slate-300 leading-relaxed mb-3 opacity-90">
                     Don't lose your saved affiliates. Upgrade now to keep growing.
                   </p>
-                  <button className="w-full bg-white text-blue-600 text-[10px] font-bold py-2 rounded-lg shadow-sm hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
+                  <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-2 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
                     View Plans <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 </div>
                 {/* Decorative elements */}
-                <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-500" />
-                <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-20 h-20 bg-indigo-500/30 rounded-full blur-xl" />
+                <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-[#D4E815]/10 rounded-full blur-2xl group-hover:bg-[#D4E815]/20 transition-all duration-500" />
+                <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-20 h-20 bg-[#D4E815]/10 rounded-full blur-xl" />
               </div>
             </div>
           )}
@@ -290,7 +290,7 @@ interface NavItemProps {
 const NavItem = ({ icon, label, active, badge, isCollapsed, onClick, href }: NavItemProps) => {
   const content = (
     <>
-      <span className={cn("transition-colors shrink-0", active ? "text-blue-600" : "group-hover:text-slate-700")}>
+      <span className={cn("transition-colors shrink-0", active ? "text-[#1A1D21]" : "group-hover:text-slate-700")}>
         {icon}
       </span>
       <span 
@@ -304,13 +304,13 @@ const NavItem = ({ icon, label, active, badge, isCollapsed, onClick, href }: Nav
       {badge && !isCollapsed && (
         <span className={cn(
           "px-1.5 py-0.5 rounded-md text-[9px] font-bold min-w-[20px] text-center transition-opacity duration-300",
-          active ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+          active ? "bg-[#D4E815]/20 text-[#1A1D21]" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
         )}>
           {badge}
         </span>
       )}
       {badge && isCollapsed && (
-        <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-blue-500 rounded-full ring-1 ring-white" />
+        <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#D4E815] rounded-full ring-1 ring-white" />
       )}
     </>
   );
@@ -318,7 +318,7 @@ const NavItem = ({ icon, label, active, badge, isCollapsed, onClick, href }: Nav
   const className = cn(
     "w-full flex items-center rounded-lg text-[13px] font-medium transition-all duration-200 group relative",
     active 
-      ? "bg-blue-50 text-blue-700" 
+      ? "bg-[#D4E815]/10 text-[#1A1D21]" 
       : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
     isCollapsed ? "justify-center px-0 py-2" : "justify-start px-2.5 py-1.5 gap-2.5"
   );
