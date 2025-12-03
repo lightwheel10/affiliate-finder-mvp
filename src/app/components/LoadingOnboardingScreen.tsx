@@ -11,20 +11,20 @@ export const LoadingOnboardingScreen = () => {
         {/* Animated Loader Icon */}
         <div className="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center">
           {/* Outer Glow Ring */}
-          <div className="absolute inset-0 bg-[#FEF3C7]/50 rounded-full blur-xl animate-pulse" />
+          <div className="absolute inset-0 bg-[#D4E815]/20 rounded-full blur-xl animate-pulse" />
           
           {/* Middle Ring */}
-          <div className="absolute inset-3 bg-[#FEF3C7]/80 rounded-full opacity-60" />
+          <div className="absolute inset-3 bg-[#D4E815]/30 rounded-full opacity-60" />
           
           {/* Inner Circle with Spinner */}
-          <div className="relative w-12 h-12 bg-[#FDE68A] rounded-full flex items-center justify-center shadow-inner">
-             <Loader2 className="w-6 h-6 text-[#92400E] animate-spin" />
+          <div className="relative w-12 h-12 bg-[#D4E815] rounded-full flex items-center justify-center shadow-inner">
+             <Loader2 className="w-6 h-6 text-[#1A1D21] animate-spin" />
           </div>
         </div>
 
         {/* Main Heading */}
         <h1 className="text-xl text-slate-900 font-medium tracking-tight mb-3">
-          Creating your <span className="text-[#065F46] font-serif italic">space!</span>
+          Creating your <span className="text-[#1A1D21] font-serif italic">space!</span>
         </h1>
 
         {/* Description Text */}

@@ -188,7 +188,7 @@ export const OnboardingScreen = () => {
           Thanks for joining AffiliateFinder.ai
         </p>
         <h1 className="text-xl md:text-2xl text-slate-900 font-medium tracking-tight">
-          Let's <span className="text-[#0EA5E9] font-serif italic">get to know</span> each other
+          Let's <span className="text-[#1A1D21] font-serif italic">get to know</span> each other
         </h1>
       </div>
 
@@ -200,7 +200,7 @@ export const OnboardingScreen = () => {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0EA5E9] focus:ring-1 focus:ring-[#0EA5E9] transition-all text-sm"
+            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm"
             placeholder="Enter your full name"
           />
         </div>
@@ -212,7 +212,7 @@ export const OnboardingScreen = () => {
             type="button"
             onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
             className={cn(
-              "w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#0EA5E9] focus:ring-1 focus:ring-[#0EA5E9] transition-all text-sm",
+              "w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
               !role ? "text-slate-400" : "text-slate-800"
             )}
           >
@@ -233,7 +233,7 @@ export const OnboardingScreen = () => {
                   className="w-full text-left px-3.5 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
                 >
                   {r}
-                  {role === r && <Check size={14} className="text-[#0EA5E9]" />}
+                  {role === r && <Check size={14} className="text-[#D4E815]" />}
                 </button>
               ))}
             </div>
@@ -247,7 +247,7 @@ export const OnboardingScreen = () => {
             type="text"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0EA5E9] focus:ring-1 focus:ring-[#0EA5E9] transition-all text-sm"
+            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm"
             placeholder="e.g. spectrumailabs.com"
           />
           <p className="text-slate-500 text-xs leading-relaxed px-1 pt-0.5">
@@ -263,10 +263,10 @@ export const OnboardingScreen = () => {
       {/* Header */}
       <div className="text-center mb-4">
         <div className="flex items-center justify-center gap-1.5 mb-3">
-            <div className="w-5 h-5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-md flex items-center justify-center text-white shadow-md shadow-blue-600/10">
+            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-blue-600">Finder.ai</span></span>
+            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
         </div>
         
         <h1 className="text-lg md:text-xl text-slate-900 font-medium tracking-tight mb-1">
@@ -284,8 +284,8 @@ export const OnboardingScreen = () => {
             key={i} 
             className={cn(
               "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 1 ? "bg-blue-300" : "bg-slate-100",
-              i === 1 && "bg-[#0EA5E9]"
+              i <= 1 ? "bg-[#D4E815]/50" : "bg-slate-100",
+              i === 1 && "bg-[#D4E815]"
             )} 
            />
         ))}
@@ -298,7 +298,7 @@ export const OnboardingScreen = () => {
       {/* Question Block */}
       <div className="space-y-4">
         <div className="flex gap-2.5 items-start">
-          <div className="w-7 h-7 rounded-full bg-[#FDE68A]/30 flex items-center justify-center shrink-0 text-[#D97706]">
+          <div className="w-7 h-7 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
              <Globe size={14} />
           </div>
           <p className="text-slate-900 font-medium text-sm leading-relaxed pt-0.5">
@@ -313,7 +313,7 @@ export const OnboardingScreen = () => {
             type="button"
             onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
             className={cn(
-              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#0EA5E9] focus:ring-1 focus:ring-[#0EA5E9] transition-all text-sm",
+              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
               !targetCountry ? "text-slate-900" : "text-slate-900"
             )}
           >
@@ -333,7 +333,7 @@ export const OnboardingScreen = () => {
                   className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
                 >
                   {c}
-                  {targetCountry === c && <Check size={14} className="text-[#0EA5E9]" />}
+                  {targetCountry === c && <Check size={14} className="text-[#D4E815]" />}
                 </button>
               ))}
             </div>
@@ -347,7 +347,7 @@ export const OnboardingScreen = () => {
             type="button"
             onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
             className={cn(
-              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#0EA5E9] focus:ring-1 focus:ring-[#0EA5E9] transition-all text-sm",
+              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
               !targetLanguage ? "text-slate-400" : "text-slate-900"
             )}
           >
@@ -367,7 +367,7 @@ export const OnboardingScreen = () => {
                   className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
                 >
                   {l}
-                  {targetLanguage === l && <Check size={14} className="text-[#0EA5E9]" />}
+                  {targetLanguage === l && <Check size={14} className="text-[#D4E815]" />}
                 </button>
               ))}
             </div>
@@ -382,10 +382,10 @@ export const OnboardingScreen = () => {
       {/* Header */}
       <div className="text-center mb-4">
         <div className="flex items-center justify-center gap-1.5 mb-3">
-            <div className="w-5 h-5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-md flex items-center justify-center text-white shadow-md shadow-blue-600/10">
+            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-blue-600">Finder.ai</span></span>
+            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
         </div>
         
         <h1 className="text-lg md:text-xl text-slate-900 font-medium tracking-tight mb-1">
@@ -403,8 +403,8 @@ export const OnboardingScreen = () => {
             key={i} 
             className={cn(
               "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 2 ? "bg-blue-300" : "bg-slate-100",
-              i === 2 && "bg-[#0EA5E9]"
+              i <= 2 ? "bg-[#D4E815]/50" : "bg-slate-100",
+              i === 2 && "bg-[#D4E815]"
             )} 
            />
         ))}
@@ -417,7 +417,7 @@ export const OnboardingScreen = () => {
       {/* Question Block */}
       <div className="space-y-4">
         <div className="flex gap-2.5 items-start">
-           <div className="w-7 h-7 rounded-full bg-[#FDE68A]/30 flex items-center justify-center shrink-0 text-[#D97706]">
+           <div className="w-7 h-7 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
              <Sparkles size={14} />
           </div>
           <div className="space-y-0.5">
@@ -439,13 +439,13 @@ export const OnboardingScreen = () => {
               onChange={(e) => setCompetitorInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomCompetitor())}
               placeholder="Example: theordinary.com..."
-              className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#0EA5E9] focus:ring-1 focus:ring-[#0EA5E9] transition-all placeholder:text-slate-300"
+              className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all placeholder:text-slate-300"
             />
              <button 
               type="button"
               onClick={addCustomCompetitor}
               disabled={!competitorInput.trim() || competitors.length >= 5}
-              className="w-9 h-9 rounded-full bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-9 h-9 rounded-full bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Plus size={16} />
             </button>
@@ -469,7 +469,7 @@ export const OnboardingScreen = () => {
                   key={comp}
                   type="button"
                   onClick={() => toggleCompetitor(comp)}
-                  className="group relative flex items-center gap-2 p-2 rounded-lg bg-blue-50 border border-blue-200 text-left hover:border-blue-300 transition-all"
+                  className="group relative flex items-center gap-2 p-2 rounded-lg bg-[#D4E815]/10 border border-[#D4E815]/50 text-left hover:border-[#D4E815] transition-all"
                 >
                   <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
                     {suggestion ? (
@@ -520,10 +520,10 @@ export const OnboardingScreen = () => {
       {/* Header */}
       <div className="text-center mb-4">
         <div className="flex items-center justify-center gap-1.5 mb-3">
-            <div className="w-5 h-5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-md flex items-center justify-center text-white shadow-md shadow-blue-600/10">
+            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-blue-600">Finder.ai</span></span>
+            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
         </div>
         
         <h1 className="text-lg md:text-xl text-slate-900 font-medium tracking-tight mb-1">
@@ -541,8 +541,8 @@ export const OnboardingScreen = () => {
             key={i} 
             className={cn(
               "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 3 ? "bg-blue-300" : "bg-slate-100",
-              i === 3 && "bg-[#0EA5E9]"
+              i <= 3 ? "bg-[#D4E815]/50" : "bg-slate-100",
+              i === 3 && "bg-[#D4E815]"
             )} 
            />
         ))}
@@ -555,7 +555,7 @@ export const OnboardingScreen = () => {
       {/* Question Block */}
       <div className="space-y-4">
         <div className="flex gap-2.5 items-start">
-           <div className="w-7 h-7 rounded-full bg-[#FDE68A]/30 flex items-center justify-center shrink-0 text-[#D97706]">
+           <div className="w-7 h-7 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
              <MessageSquare size={14} />
           </div>
           <div className="space-y-0.5">
@@ -577,13 +577,13 @@ export const OnboardingScreen = () => {
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTopic())}
               placeholder="Example: best CRMs, best marine collagen, forex brokers..."
-              className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#0EA5E9] focus:ring-1 focus:ring-[#0EA5E9] transition-all placeholder:text-slate-300"
+              className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all placeholder:text-slate-300"
             />
              <button 
               type="button"
               onClick={addCustomTopic}
               disabled={!topicInput.trim() || topics.length >= 10}
-              className="w-9 h-9 rounded-full bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-9 h-9 rounded-full bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Plus size={16} />
             </button>
@@ -605,10 +605,10 @@ export const OnboardingScreen = () => {
                   key={topic}
                   type="button"
                   onClick={() => toggleTopic(topic)}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-50 border border-blue-200 text-[11px] font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all text-left"
+                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#D4E815]/10 border border-[#D4E815]/50 text-[11px] font-medium text-[#1A1D21] hover:bg-[#D4E815]/20 hover:border-[#D4E815] transition-all text-left"
                 >
                   {topic}
-                   <div className="w-3.5 h-3.5 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center group-hover:bg-red-100 group-hover:text-red-600 transition-colors">
+                   <div className="w-3.5 h-3.5 rounded-full bg-[#D4E815]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-100 group-hover:text-red-600 transition-colors">
                      <X size={8} />
                    </div>
                 </button>
@@ -637,10 +637,10 @@ export const OnboardingScreen = () => {
       {/* Header */}
       <div className="text-center mb-4">
         <div className="flex items-center justify-center gap-1.5 mb-3">
-            <div className="w-5 h-5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-md flex items-center justify-center text-white shadow-md shadow-blue-600/10">
+            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-blue-600">Finder.ai</span></span>
+            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
         </div>
         
         <h1 className="text-lg md:text-xl text-slate-900 font-medium tracking-tight mb-1">
@@ -658,8 +658,8 @@ export const OnboardingScreen = () => {
             key={i} 
             className={cn(
               "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 4 ? "bg-blue-300" : "bg-slate-100",
-              i === 4 && "bg-[#0EA5E9]"
+              i <= 4 ? "bg-[#D4E815]/50" : "bg-slate-100",
+              i === 4 && "bg-[#D4E815]"
             )} 
            />
         ))}
@@ -672,7 +672,7 @@ export const OnboardingScreen = () => {
       {/* Question Block */}
       <div className="space-y-4">
         <div className="flex gap-2.5 items-start">
-           <div className="w-7 h-7 rounded-full bg-[#FDE68A]/30 flex items-center justify-center shrink-0 text-[#D97706]">
+           <div className="w-7 h-7 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
              <MousePointerClick size={14} />
           </div>
           <div className="space-y-0.5">
@@ -697,15 +697,15 @@ export const OnboardingScreen = () => {
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all text-left group",
                   isSelected 
-                    ? "bg-white border-[#0EA5E9] shadow-sm ring-1 ring-[#0EA5E9] text-slate-900" 
+                    ? "bg-white border-[#D4E815] shadow-sm ring-1 ring-[#D4E815]/30 text-slate-900" 
                     : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
                 )}
               >
                 <div className={cn(
                   "w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors",
                   isSelected 
-                    ? "bg-[#0EA5E9] border-[#0EA5E9] text-white" 
-                    : "border-slate-300 group-hover:border-[#0EA5E9]"
+                    ? "bg-[#D4E815] border-[#D4E815] text-[#1A1D21]" 
+                    : "border-slate-300 group-hover:border-[#D4E815]"
                 )}>
                   {isSelected && <Check size={8} strokeWidth={3} />}
                 </div>
@@ -743,8 +743,8 @@ export const OnboardingScreen = () => {
               className={cn(
                 "py-2.5 px-6 rounded-full font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 min-w-[120px]",
                 step === 1 
-                   ? (!name || !role || !brand ? "bg-slate-100 text-slate-400 cursor-not-allowed w-full py-3 rounded-full" : "bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] w-full py-3 rounded-full")
-                   : (!targetCountry || !targetLanguage || isLoading ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0]")
+                   ? (!name || !role || !brand ? "bg-slate-100 text-slate-400 cursor-not-allowed w-full py-3 rounded-full" : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] w-full py-3 rounded-full")
+                   : (!targetCountry || !targetLanguage || isLoading ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]")
               )}
             >
               {isLoading ? (

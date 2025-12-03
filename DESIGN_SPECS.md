@@ -89,3 +89,65 @@
 - **Labels:** SemiBold, Slate-700
 - **Links:** SemiBold, Electric Lime (`#D4E815`)
 
+## Onboarding Screens
+
+### Layout
+- Centered card layout on off-white background (`#F0F2F5`)
+- Card: White with subtle shadow, rounded corners (`1rem`)
+- Max width: `420px`
+- Multi-step wizard with progress indicators
+
+### Colors
+- **Background:** Off-white (`#F0F2F5`)
+- **Logo Icon:** Deep Slate (`#1A1D21`) background with Electric Lime (`#D4E815`) icon
+- **Progress Bar (Active):** Electric Lime (`#D4E815`)
+- **Progress Bar (Completed):** Electric Lime at 50% opacity
+- **Progress Bar (Inactive):** Slate-100
+- **Question Icons:** Electric Lime at 20% opacity background, Deep Slate (`#1A1D21`) icon
+
+### Form Elements
+- **Input Fields:**
+  - Background: White (`#FFFFFF`)
+  - Border: Slate-200
+  - Focus Border: Electric Lime (`#D4E815`)
+  - Focus Ring: Electric Lime at 20% opacity
+  - Border Radius: Full pill (`rounded-full`) for most inputs, `rounded-xl` for multi-line
+
+- **Dropdown Menus:**
+  - Background: White with shadow
+  - Selected Item Checkmark: Electric Lime (`#D4E815`)
+
+- **Add Button (Plus):**
+  - Background: Electric Lime (`#D4E815`)
+  - Icon: Deep Slate (`#1A1D21`)
+  - Hover: Darker Electric Lime (`#c5d913`)
+
+### Selection States
+- **Selected Items (Competitors/Topics):**
+  - Background: Electric Lime at 10% opacity
+  - Border: Electric Lime at 50% opacity
+  - Hover Border: Electric Lime solid
+
+- **Checkbox (Selected):**
+  - Background: Electric Lime (`#D4E815`)
+  - Border: Electric Lime (`#D4E815`)
+  - Checkmark: Deep Slate (`#1A1D21`)
+
+- **Checkbox (Unselected):**
+  - Border: Slate-300
+  - Hover Border: Electric Lime (`#D4E815`)
+
+### Buttons
+- **Primary (Continue/Next):**
+  - Background: Electric Lime (`#D4E815`)
+  - Text: Deep Slate (`#1A1D21`)
+  - Hover: Darker Electric Lime (`#c5d913`)
+  - Disabled: Slate-100 background, Slate-400 text
+
+### Loading Screen
+- **Loader Ring (Outer):** Electric Lime at 20% opacity with blur
+- **Loader Ring (Middle):** Electric Lime at 30% opacity
+- **Loader Circle:** Electric Lime (`#D4E815`) solid
+- **Spinner Icon:** Deep Slate (`#1A1D21`)
+- **Accent Text:** Deep Slate (`#1A1D21`) italic
+
