@@ -3,15 +3,16 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { SearchInput } from './components/Input';
 import { AffiliateRow } from './components/AffiliateRow';
 import { AffiliateRowSkeleton } from './components/AffiliateRowSkeleton';
 import { Sidebar } from './components/Sidebar';
 import { Modal } from './components/Modal';
 import { LandingPage } from './components/landing/LandingPage';
+import { OnboardingScreen } from './components/OnboardingScreen';
+import { LoadingOnboardingScreen } from './components/LoadingOnboardingScreen';
+import { useConvexUser } from './hooks/useConvexUser';
 import { 
   Plus, 
-  Filter, 
   Search, 
   Globe, 
   Youtube, 
@@ -31,10 +32,23 @@ const MAX_KEYWORDS = 5;
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useUser();
+  const { userId, isOnboarded, isLoading: convexLoading, userName, user } = useConvexUser();
   const router = useRouter();
+  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
-  // Show loading state while Clerk is loading
-  if (!isLoaded) {
+  // Debug logging - remove after testing
+  console.log('Auth State:', { 
+    isSignedIn, 
+    isLoaded, 
+    convexLoading, 
+    userId: userId?.toString(), 
+    isOnboarded,
+    userName,
+    userFromConvex: user 
+  });
+
+  // Show loading state while Clerk or Convex is loading
+  if (!isLoaded || (isSignedIn && convexLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="w-8 h-8 border-2 border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
@@ -52,7 +66,29 @@ export default function Home() {
     );
   }
 
-  // Authenticated users see the dashboard
+  // Show loading screen after onboarding completion
+  if (showLoadingScreen) {
+    return <LoadingOnboardingScreen />;
+  }
+
+  // Show onboarding for users who haven't completed it
+  if (!isOnboarded && userId) {
+    return (
+      <OnboardingScreen 
+        userId={userId}
+        userName={userName}
+        onComplete={() => {
+          setShowLoadingScreen(true);
+          // Show loading screen for 2 seconds, then redirect to dashboard
+          setTimeout(() => {
+            setShowLoadingScreen(false);
+          }, 2000);
+        }}
+      />
+    );
+  }
+
+  // Authenticated and onboarded users see the dashboard
   return <Dashboard />
 }
 
@@ -546,7 +582,7 @@ function Dashboard() {
                      {/* Streamed results */}
                      {groupedResults.map((group, idx) => (
                        <div
-                         key={`stream-${animationKey}-${group.main.link}`}
+                         key={`stream-${animationKey}-${idx}-${group.main.link}`}
                          className="animate-in fade-in slide-in-from-bottom-2 duration-300"
                          style={{ 
                            animationDelay: `${Math.min(idx, 3) * 60}ms`,

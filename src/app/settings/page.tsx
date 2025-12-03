@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Sidebar } from '../components/Sidebar';
+import { AuthGuard } from '../components/AuthGuard';
 import { cn } from '@/lib/utils';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { PricingModal } from '../components/PricingModal';
@@ -23,6 +24,14 @@ import {
 type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
 
 export default function SettingsPage() {
+  return (
+    <AuthGuard>
+      <SettingsContent />
+    </AuthGuard>
+  );
+}
+
+function SettingsContent() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const { user } = useUser();
   const { openUserProfile } = useClerk();

@@ -6,6 +6,23 @@ import { useUser } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
 import { Id } from '../../../convex/_generated/dataModel';
 
+// User data type from Convex
+export interface ConvexUserData {
+  _id: Id<"users">;
+  email: string;
+  name: string;
+  isOnboarded: boolean;
+  hasSubscription: boolean;
+  role?: string;
+  brand?: string;
+  plan: "free_trial" | "pro" | "business" | "enterprise";
+  targetCountry?: string;
+  targetLanguage?: string;
+  competitors?: string[];
+  topics?: string[];
+  affiliateTypes?: string[];
+}
+
 /**
  * Hook to get or create the current user in Convex using Clerk identity
  */
@@ -62,8 +79,11 @@ export function useConvexUser() {
   
   return {
     userId: convexUserId,
+    user: existingUser as ConvexUserData | null | undefined,
     isLoading: !clerkLoaded || (isSignedIn && email && existingUser === undefined),
     isAuthenticated: isSignedIn && !!convexUserId,
+    isOnboarded: existingUser?.isOnboarded ?? false,
     clerkUser,
+    userName: name,
   };
 }

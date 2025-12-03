@@ -4,10 +4,10 @@ import { useState, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AffiliateRow } from '../components/AffiliateRow';
 import { SearchInput } from '../components/Input';
+import { AuthGuard } from '../components/AuthGuard';
 import { useSavedAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { 
-  Filter, 
   Search, 
   Globe, 
   Youtube, 
@@ -15,10 +15,18 @@ import {
   ArrowUpDown,
   MessageCircle,
   Download,
-  Users
+  Users,
 } from 'lucide-react';
 
 export default function PipelinePage() {
+  return (
+    <AuthGuard>
+      <PipelineContent />
+    </AuthGuard>
+  );
+}
+
+function PipelineContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 

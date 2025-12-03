@@ -20,6 +20,12 @@ export default defineSchema({
     trialStartDate: v.optional(v.string()),
     trialEndDate: v.optional(v.string()),
     bio: v.optional(v.string()),
+    // Onboarding data
+    targetCountry: v.optional(v.string()),
+    targetLanguage: v.optional(v.string()),
+    competitors: v.optional(v.array(v.string())),
+    topics: v.optional(v.array(v.string())),
+    affiliateTypes: v.optional(v.array(v.string())),
     // Billing info
     billingLast4: v.optional(v.string()),
     billingBrand: v.optional(v.string()),

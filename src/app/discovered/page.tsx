@@ -4,10 +4,10 @@ import { useState, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AffiliateRow } from '../components/AffiliateRow';
 import { SearchInput } from '../components/Input';
+import { AuthGuard } from '../components/AuthGuard';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { 
-  Filter, 
   Search, 
   Globe, 
   Youtube, 
@@ -15,12 +15,19 @@ import {
   ArrowUpDown,
   MessageCircle,
   Download,
-  Users
 } from 'lucide-react';
 import { ResultItem } from '../types';
 
 // This page shows ALL discovered affiliates from all searches
 export default function DiscoveredPage() {
+  return (
+    <AuthGuard>
+      <DiscoveredContent />
+    </AuthGuard>
+  );
+}
+
+function DiscoveredContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 

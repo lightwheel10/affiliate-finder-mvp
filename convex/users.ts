@@ -92,6 +92,12 @@ export const updateProfile = mutation({
     trialPlan: v.optional(v.union(v.literal("pro"), v.literal("business"))),
     trialStartDate: v.optional(v.string()),
     trialEndDate: v.optional(v.string()),
+    // Onboarding data
+    targetCountry: v.optional(v.string()),
+    targetLanguage: v.optional(v.string()),
+    competitors: v.optional(v.array(v.string())),
+    topics: v.optional(v.array(v.string())),
+    affiliateTypes: v.optional(v.array(v.string())),
     // Billing
     billingLast4: v.optional(v.string()),
     billingBrand: v.optional(v.string()),
@@ -110,6 +116,56 @@ export const updateProfile = mutation({
       Object.entries(updates).filter(([_, v]) => v !== undefined)
     );
     await ctx.db.patch(id, cleanUpdates);
+  },
+});
+
+// Complete onboarding
+export const completeOnboarding = mutation({
+  args: {
+    id: v.id("users"),
+    name: v.string(),
+    role: v.string(),
+    brand: v.string(),
+    targetCountry: v.string(),
+    targetLanguage: v.string(),
+    competitors: v.array(v.string()),
+    topics: v.array(v.string()),
+    affiliateTypes: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...data } = args;
+    await ctx.db.patch(id, {
+      ...data,
+      isOnboarded: true,
+    });
+  },
+});
+
+// Reset onboarding (for testing purposes)
+export const resetOnboarding = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+    
+    if (user) {
+      await ctx.db.patch(user._id, {
+        isOnboarded: false,
+        role: undefined,
+        brand: undefined,
+        targetCountry: undefined,
+        targetLanguage: undefined,
+        competitors: undefined,
+        topics: undefined,
+        affiliateTypes: undefined,
+      });
+      return { success: true, message: "Onboarding reset for " + args.email };
+    }
+    return { success: false, message: "User not found" };
   },
 });
 
