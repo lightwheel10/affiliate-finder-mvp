@@ -69,7 +69,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       case 'youtube': return <Youtube size={14} className="text-red-600" />;
       case 'instagram': return <Instagram size={14} className="text-pink-600" />;
       case 'reddit': return <MessageCircle size={14} className="text-orange-600" />;
-      default: return <Globe size={14} className="text-blue-600" />;
+      default: return <Globe size={14} className="text-[#1A1D21]" />;
     }
   };
 
@@ -153,15 +153,15 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     
     const textColor = discoveryMethod.type === 'competitor' ? 'text-amber-600' : 
                      discoveryMethod.type === 'tagged' ? 'text-orange-600' : 
-                     discoveryMethod.type === 'topic' ? 'text-purple-600' : 'text-blue-600';
+                     discoveryMethod.type === 'topic' ? 'text-purple-600' : 'text-[#1A1D21]';
                      
     const bgColor = discoveryMethod.type === 'competitor' ? 'bg-amber-50' :
                    discoveryMethod.type === 'tagged' ? 'bg-orange-50' : 
-                   discoveryMethod.type === 'topic' ? 'bg-purple-50' : 'bg-blue-50';
+                   discoveryMethod.type === 'topic' ? 'bg-purple-50' : 'bg-[#D4E815]/10';
 
     const borderColor = discoveryMethod.type === 'competitor' ? 'border-amber-100' :
                        discoveryMethod.type === 'tagged' ? 'border-orange-100' : 
-                       discoveryMethod.type === 'topic' ? 'border-purple-100' : 'border-blue-100';
+                       discoveryMethod.type === 'topic' ? 'border-purple-100' : 'border-[#D4E815]/30';
 
     return (
       <div>
@@ -181,7 +181,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     <div className={`group ${gridClass} items-center p-4 bg-white border-b border-slate-50 hover:bg-slate-50/80 transition-all duration-200`}>
       {/* Checkbox */}
       <div className="flex justify-center">
-        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer" />
+        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" />
       </div>
 
       {/* Affiliate Info */}
@@ -203,9 +203,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                  {channel?.name || domain}
                </h4>
                {channel?.verified && (
-                 <CheckCircle2 size={12} className="text-blue-500 shrink-0" />
+                 <CheckCircle2 size={12} className="text-[#D4E815] shrink-0" />
                )}
-               <a href={channel?.link || `https://${domain}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-blue-600 transition-colors shrink-0">
+               <a href={channel?.link || `https://${domain}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-[#1A1D21] transition-colors shrink-0">
                  <ExternalLink size={12} />
                </a>
                {isNew && !isAlreadyAffiliate && (
@@ -249,7 +249,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             href={link}
             target="_blank"
             rel="noreferrer"
-            className="text-sm font-semibold text-blue-600 hover:underline decoration-blue-200 underline-offset-2 cursor-pointer truncate block"
+            className="text-sm font-semibold text-[#1A1D21] hover:underline decoration-[#D4E815] underline-offset-2 cursor-pointer truncate block"
           >
             {title}
           </a>
@@ -344,11 +344,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         <div className="space-y-4">
           {/* Render the current item first */}
           <div className="p-5 border border-slate-200 rounded-xl hover:bg-slate-50/50 transition-colors group relative bg-white shadow-sm">
-             <a href={`https://${domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-slate-300 hover:text-blue-600 transition-colors">
+             <a href={`https://${domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-slate-300 hover:text-[#1A1D21] transition-colors">
                <ExternalLink size={16} />
              </a>
              
-             <a href={link} target="_blank" rel="noreferrer" className="text-base font-semibold text-blue-600 hover:underline decoration-blue-200 underline-offset-2 mb-3 block pr-10">
+             <a href={link} target="_blank" rel="noreferrer" className="text-base font-semibold text-[#1A1D21] hover:underline decoration-[#D4E815] underline-offset-2 mb-3 block pr-10">
                {title}
              </a>
              
@@ -356,8 +356,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-md border border-slate-200">
                  Ranking: <span className="text-slate-900 font-bold bg-white px-1.5 rounded shadow-sm border border-slate-100">{rank}</span>
                </span>
-               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-md border border-blue-100">
-                 Keyword: <span className="font-bold bg-white px-1.5 rounded shadow-sm border border-blue-100">{keyword}</span>
+               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#D4E815]/10 text-[#1A1D21] text-xs font-medium rounded-md border border-[#D4E815]/30">
+                 Keyword: <span className="font-bold bg-white px-1.5 rounded shadow-sm border border-[#D4E815]/30">{keyword}</span>
                </span>
              </div>
              
@@ -373,11 +373,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           {/* Render subItems */}
           {subItems?.map((item, idx) => (
              <div key={idx} className="p-5 border border-slate-200 rounded-xl hover:bg-slate-50/50 transition-colors group relative bg-white shadow-sm">
-                <a href={`https://${item.domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-slate-300 hover:text-blue-600 transition-colors">
+                <a href={`https://${item.domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-slate-300 hover:text-[#1A1D21] transition-colors">
                   <ExternalLink size={16} />
                 </a>
 
-                <a href={item.link} target="_blank" rel="noreferrer" className="text-base font-semibold text-blue-600 hover:underline decoration-blue-200 underline-offset-2 mb-3 block pr-10">
+                <a href={item.link} target="_blank" rel="noreferrer" className="text-base font-semibold text-[#1A1D21] hover:underline decoration-[#D4E815] underline-offset-2 mb-3 block pr-10">
                   {item.title}
                 </a>
 
@@ -385,8 +385,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-md border border-slate-200">
                     Ranking: <span className="text-slate-900 font-bold bg-white px-1.5 rounded shadow-sm border border-slate-100">{item.rank || '-'}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-md border border-blue-100">
-                    Keyword: <span className="font-bold bg-white px-1.5 rounded shadow-sm border border-blue-100">{item.keyword || keyword}</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#D4E815]/10 text-[#1A1D21] text-xs font-medium rounded-md border border-[#D4E815]/30">
+                    Keyword: <span className="font-bold bg-white px-1.5 rounded shadow-sm border border-[#D4E815]/30">{item.keyword || keyword}</span>
                   </span>
                 </div>
 

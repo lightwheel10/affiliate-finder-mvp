@@ -23,14 +23,14 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 }) => {
   return (
     <div className={cn("relative w-full group", className)}>
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
         <Search className="h-4 w-4" />
       </div>
       <input
         className={cn(
           "w-full pl-10 pr-24 py-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-xl text-sm font-medium text-slate-900 shadow-[0_1px_2px_rgb(0,0,0,0.05)] transition-all duration-200",
           "placeholder:text-slate-400 placeholder:font-normal",
-          "focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:shadow-[0_4px_12px_rgb(37,99,235,0.05)]",
+          "focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:shadow-[0_4px_12px_rgb(212,232,21,0.05)]",
           "disabled:opacity-50 disabled:cursor-not-allowed"
         )}
         type="text"
@@ -47,8 +47,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         <button 
           className={cn(
             "h-7 px-3 rounded-lg font-semibold text-xs transition-all duration-200",
-            "bg-slate-900 text-white hover:bg-blue-600 hover:shadow-md hover:shadow-blue-600/10",
-            "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-slate-900 flex items-center gap-1.5"
+            "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] hover:shadow-md hover:shadow-[#D4E815]/20",
+            "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-[#D4E815] flex items-center gap-1.5"
           )}
           onClick={onSearch}
           disabled={isLoading}
@@ -85,7 +85,7 @@ export const SourceToggle: React.FC<SourceToggleProps> = ({ sources, selected, o
             className={cn(
               "px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all duration-200 border select-none",
               isSelected 
-                ? "bg-slate-800 text-white border-slate-800 shadow-sm" 
+                ? "bg-[#1A1D21] text-white border-[#1A1D21] shadow-sm" 
                 : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
             )}
             onClick={() => onToggle(source)}
