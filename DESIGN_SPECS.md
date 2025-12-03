@@ -151,3 +151,47 @@
 - **Spinner Icon:** Deep Slate (`#1A1D21`)
 - **Accent Text:** Deep Slate (`#1A1D21`) italic
 
+## Pricing Screen (Post-Onboarding)
+
+### Layout
+- Full-screen layout on off-white background (`#FDFDFD`)
+- 3-column grid for pricing cards (responsive)
+- Max width: `6xl` for card grid
+
+### Header
+- **Logo Icon:** Deep Slate (`#1A1D21`) background with Electric Lime (`#D4E815`) icon
+- **Heading Accent:** Deep Slate (`#1A1D21`) italic for "free 7-day"
+- **Billing Toggle:**
+  - Active: White background with shadow
+  - Discount Badge: Electric Lime at 20% opacity, Deep Slate text
+
+### Pricing Cards
+- **Default Card:**
+  - Background: White
+  - Border: Slate-200
+  - Shadow: Small, grows on hover
+
+- **Highlighted Card (Pro/Popular):**
+  - Border: Electric Lime (`#D4E815`)
+  - Shadow: Electric Lime at 20% opacity
+  - Scale: 1.02 (slightly larger)
+  - "Most Popular" Badge: Deep Slate (`#1A1D21`) background, Electric Lime (`#D4E815`) text
+
+### Pricing Card Elements
+- **Price (Highlighted):** Deep Slate (`#1A1D21`)
+- **Price Period:** Dark Gray (`#333333`) italic
+
+- **CTA Button (Highlighted):**
+  - Background: Electric Lime (`#D4E815`)
+  - Text: Deep Slate (`#1A1D21`)
+  - Hover: Darker Electric Lime (`#c5d913`)
+
+- **CTA Button (Default):**
+  - Background: White with border
+  - Text: Slate-900
+  - Hover: Slate-50 background
+
+- **Feature Checkmarks:**
+  - Background: Deep Slate (`#1A1D21`)
+  - Checkmark: Electric Lime (`#D4E815`)
+

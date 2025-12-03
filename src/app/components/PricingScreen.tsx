@@ -93,14 +93,14 @@ export const PricingScreen = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-md flex items-center justify-center text-white shadow-md shadow-blue-600/10">
-              <Sparkles size={12} fill="currentColor" className="opacity-90" />
+            <div className="w-6 h-6 bg-[#1A1D21] rounded-md flex items-center justify-center shadow-md shadow-[#1A1D21]/10">
+              <Sparkles size={12} fill="currentColor" className="text-[#D4E815] opacity-90" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-slate-900">Affiliate<span className="text-blue-600">Finder.ai</span></span>
+            <span className="font-bold text-lg tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
           </div>
           
           <h1 className="text-2xl md:text-3xl text-slate-900 font-medium tracking-tight mb-6">
-            Select a plan to start your <span className="text-[#065F46] font-serif italic">free 7-day</span> trial
+            Select a plan to start your <span className="text-[#1A1D21] font-serif italic">free 7-day</span> trial
           </h1>
 
           {/* Billing Toggle */}
@@ -122,7 +122,7 @@ export const PricingScreen = () => {
               )}
             >
               Annual
-              <span className="bg-[#D1FAE5] text-[#065F46] text-[10px] font-bold px-1.5 py-0.5 rounded">30% discount</span>
+              <span className="bg-[#D4E815]/20 text-[#1A1D21] text-[10px] font-bold px-1.5 py-0.5 rounded">30% discount</span>
             </button>
           </div>
         </div>
@@ -135,12 +135,12 @@ export const PricingScreen = () => {
               className={cn(
                 "relative rounded-2xl bg-white border transition-all duration-300 flex flex-col",
                 plan.highlight 
-                  ? "border-[#0EA5E9] shadow-xl shadow-blue-100/50 scale-[1.02] z-10" 
+                  ? "border-[#D4E815] shadow-xl shadow-[#D4E815]/20 scale-[1.02] z-10" 
                   : "border-slate-200 shadow-sm hover:shadow-md"
               )}
             >
               {plan.popular && (
-                <div className="bg-[#0F4C5C] text-white text-xs font-bold tracking-wider uppercase text-center py-2 rounded-t-xl flex items-center justify-center gap-1.5">
+                <div className="bg-[#1A1D21] text-[#D4E815] text-xs font-bold tracking-wider uppercase text-center py-2 rounded-t-xl flex items-center justify-center gap-1.5">
                   <Zap size={12} fill="currentColor" />
                   Most Popular
                 </div>
@@ -151,10 +151,10 @@ export const PricingScreen = () => {
                   <h3 className="text-lg font-medium text-slate-900 mb-1">{plan.name}</h3>
                   <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">{plan.description}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className={cn("text-3xl font-medium tracking-tight", plan.highlight ? "text-[#0F4C5C]" : "text-slate-900")}>
+                    <span className={cn("text-3xl font-medium tracking-tight", plan.highlight ? "text-[#1A1D21]" : "text-slate-900")}>
                       {plan.price}
                     </span>
-                    <span className={cn("text-base font-serif italic", plan.highlight ? "text-[#0EA5E9]" : "text-[#0F4C5C]")}>
+                    <span className={cn("text-base font-serif italic", plan.highlight ? "text-[#333333]" : "text-[#333333]")}>
                       {plan.period}
                     </span>
                   </div>
@@ -166,7 +166,7 @@ export const PricingScreen = () => {
                   className={cn(
                     "w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 shadow-sm hover:shadow-md",
                     plan.highlight 
-                      ? "bg-[#D1FAE5] text-[#065F46] hover:bg-[#A7F3D0] border border-[#A7F3D0]" 
+                      ? "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]" 
                       : "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50"
                   )}
                 >
@@ -182,7 +182,7 @@ export const PricingScreen = () => {
                       <div key={idx} className="flex items-start gap-2.5">
                         <div className={cn(
                           "mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0",
-                          isHeader ? "bg-transparent" : "bg-[#0F4C5C] text-white"
+                          isHeader ? "bg-transparent" : "bg-[#1A1D21] text-[#D4E815]"
                         )}>
                            {!isHeader && <Check size={8} strokeWidth={3} />}
                         </div>
