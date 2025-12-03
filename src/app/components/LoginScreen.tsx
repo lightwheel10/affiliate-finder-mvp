@@ -3,25 +3,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ArrowRight, Loader2, Lock, Mail, User, CheckCircle, ArrowLeft } from 'lucide-react';
-
-// Selecdoo "S" Logo Icon
-const SelecdooIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    className={className}
-  >
-    <path 
-      d="M12 4C8.5 4 6 6 6 8.5C6 11 8 12.5 12 13.5C16 14.5 18 16 18 18.5C18 21 15.5 23 12 23C8.5 23 6 21 6 18.5M12 1V4M12 23V20" 
-      stroke="currentColor" 
-      strokeWidth="2.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 import { cn } from '@/lib/utils';
 
 type AuthView = 'signin' | 'signup' | 'forgot-password';
@@ -118,9 +99,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onBackToHome, initialV
 
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="w-10 h-10 bg-[#1A1D21] rounded-xl flex items-center justify-center shadow-lg shadow-[#1A1D21]/20">
-              <SelecdooIcon size={20} className="text-[#D4E815]" />
-            </div>
+            <img 
+              src="/logo.jpg" 
+              alt="CrewCast Studio" 
+              className="w-10 h-10 rounded-xl shadow-lg shadow-[#1A1D21]/20 object-cover"
+            />
           </div>
 
           <div className="text-center mb-6">

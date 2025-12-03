@@ -15,25 +15,6 @@ import {
   Clock,
   ChevronRight
 } from 'lucide-react';
-
-// Selecdoo "S" Logo Icon
-const SelecdooIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    className={className}
-  >
-    <path 
-      d="M12 4C8.5 4 6 6 6 8.5C6 11 8 12.5 12 13.5C16 14.5 18 16 18 18.5C18 21 15.5 23 12 23C8.5 23 6 21 6 18.5M12 1V4M12 23V20" 
-      stroke="currentColor" 
-      strokeWidth="2.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 import { cn } from '@/lib/utils';
 import { useAuth, getTrialDaysRemaining } from '../context/AuthContext';
 import { Modal } from './Modal';
@@ -91,10 +72,12 @@ export const Sidebar: React.FC = () => {
       <aside className="min-h-screen w-60 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
         {/* Brand / Logo Area */}
         <div className="h-14 flex items-center mt-1 mb-6 px-4">
-          <div className="flex items-center gap-2 text-slate-900">
-            <div className="w-7 h-7 bg-[#1A1D21] rounded-lg flex items-center justify-center shadow-md shadow-[#1A1D21]/10 shrink-0">
-              <SelecdooIcon size={14} className="text-[#D4E815]" />
-            </div>
+          <div className="flex items-center gap-2.5 text-slate-900">
+            <img 
+              src="/logo.jpg" 
+              alt="CrewCast Studio" 
+              className="w-7 h-7 rounded-lg shadow-md shadow-[#1A1D21]/10 shrink-0 object-cover"
+            />
             <div className="flex flex-col">
               <span className="font-bold text-sm tracking-tight leading-none">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
               <span className="text-[9px] font-medium text-slate-400 tracking-wide mt-0.5">backed by selecdoo AI</span>

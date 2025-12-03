@@ -3,25 +3,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Check, Zap, Building2, Loader2, ArrowRight } from 'lucide-react';
-
-// Selecdoo "S" Logo Icon
-const SelecdooIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    className={className}
-  >
-    <path 
-      d="M12 4C8.5 4 6 6 6 8.5C6 11 8 12.5 12 13.5C16 14.5 18 16 18 18.5C18 21 15.5 23 12 23C8.5 23 6 21 6 18.5M12 1V4M12 23V20" 
-      stroke="currentColor" 
-      strokeWidth="2.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 import { cn } from '@/lib/utils';
 
 export const PricingScreen = () => {
@@ -122,9 +103,11 @@ export const PricingScreen = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-[#1A1D21] rounded-md flex items-center justify-center shadow-md shadow-[#1A1D21]/10">
-              <SelecdooIcon size={12} className="text-[#D4E815]" />
-            </div>
+            <img 
+              src="/logo.jpg" 
+              alt="CrewCast Studio" 
+              className="w-6 h-6 rounded-md shadow-md shadow-[#1A1D21]/10 object-cover"
+            />
             <span className="font-bold text-lg tracking-tight text-slate-900">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
           </div>
           

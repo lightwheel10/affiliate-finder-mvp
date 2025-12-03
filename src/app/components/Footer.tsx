@@ -1,25 +1,6 @@
 import React from 'react';
 import { Globe, Users, Twitter, Linkedin, Github } from 'lucide-react';
 
-// Selecdoo "S" Logo Icon
-const SelecdooIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    className={className}
-  >
-    <path 
-      d="M12 4C8.5 4 6 6 6 8.5C6 11 8 12.5 12 13.5C16 14.5 18 16 18 18.5C18 21 15.5 23 12 23C8.5 23 6 21 6 18.5M12 1V4M12 23V20" 
-      stroke="currentColor" 
-      strokeWidth="2.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
 export const Footer = () => {
   return (
     <footer className="bg-white border-t border-[#E5E7EB] pt-16 pb-8">
@@ -27,9 +8,11 @@ export const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
           <div className="col-span-2">
             <div className="flex items-center gap-2 font-bold text-lg text-[#111827] mb-4">
-              <div className="w-6 h-6 bg-[#1A1D21] rounded-md flex items-center justify-center">
-                <SelecdooIcon size={14} className="text-[#D4E815]" />
-              </div>
+              <img 
+                src="/logo.jpg" 
+                alt="CrewCast Studio" 
+                className="w-6 h-6 rounded-md object-cover"
+              />
               <span>CrewCast Studio</span>
             </div>
             <p className="text-slate-500 text-xs leading-relaxed max-w-xs mb-6">
