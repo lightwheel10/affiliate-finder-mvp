@@ -114,16 +114,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4E815] opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D4E815]"></span>
                 </span>
-                v2.0 is now live
+                Trusted by 1,300+ brands
               </div>
               
               <h1 className="text-5xl md:text-6xl font-bold text-[#111827] tracking-tight mb-6 leading-[1]">
-                Scout affiliates <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4E815] to-[#a8bc10]">faster than humanly possible.</span>
+                Find Affiliates Already <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4E815] to-[#a8bc10]">Promoting Your Competitors</span>
               </h1>
 
               <p className="text-lg text-slate-500 mb-8 leading-relaxed max-w-md">
-                Automate your recruitment pipeline. Find, vet, and contact high-converting creators in seconds—not days.
+                Get 500+ active affiliates with verified contacts in minutes. Stop wasting 20 hours a week on manual research. Land your first new partner in 7 days.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -131,14 +131,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   onClick={onLoginClick}
                   className="w-full sm:w-auto px-6 py-3 bg-[#D4E815] text-[#1A1D21] text-sm font-bold rounded-lg hover:bg-[#c5d913] transition-all shadow-xl shadow-[#D4E815]/30 hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
                 >
-                  Start Scouting
+                  Try for Free
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </button>
                 <button 
                   className="w-full sm:w-auto px-6 py-3 bg-[#333333] text-white text-sm font-bold rounded-lg hover:bg-[#444444] transition-all shadow-sm flex items-center justify-center gap-2"
                 >
                   <Play size={14} fill="currentColor" className="opacity-50" />
-                  View Demo
+                  Get a Demo
                 </button>
               </div>
 
@@ -152,7 +152,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                    <div className="flex text-yellow-400">
                      {[1,2,3,4,5].map(i => <Star key={i} size={12} fill="currentColor" />)}
                    </div>
-                   <span className="text-slate-700 ml-1">500+ active teams</span>
+                   <span className="text-slate-700 ml-1">Loved by 1,300+ SaaS & e-commerce brands</span>
                 </div>
               </div>
             </motion.div>
@@ -170,7 +170,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       {/* Logo Cloud */}
       <section className="border-y border-slate-200 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap mr-8">Trusted by market leaders</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap mr-8">Trusted by top brands</span>
           <div className="scale-90 origin-right">
             <LogoMarquee />
           </div>
@@ -181,37 +181,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       <section id="features" className="py-20 bg-white border-b border-[#E5E7EB]">
         <div className="max-w-7xl mx-auto px-6">
            <div className="mb-16 max-w-2xl">
-             <h2 className="text-2xl md:text-3xl font-bold text-[#111827] mb-4 tracking-tight">Everything you need to scale.</h2>
+             <h2 className="text-2xl md:text-3xl font-bold text-[#111827] mb-4 tracking-tight">How Smart Brands 3X Their Affiliate Growth</h2>
              <p className="text-base text-slate-500 leading-relaxed">
-               We've stripped away the complexity of traditional affiliate tools. No more spreadsheets, no more manual vetting. Just results.
+               Stop wasting 20+ hours a week manually searching for affiliates. Find every creator and publisher in your niche in minutes.
              </p>
            </div>
 
            <BentoGrid>
               {/* Large Main Feature */}
               <BentoCard 
-                title="AI Discovery Engine"
-                description="Our proprietary algorithms scan millions of data points across YouTube, TikTok, and Instagram to find creators who actually convert."
+                title="Reverse-Engineer Competitor Programs"
+                description="Enter your competitors and we'll find all their top affiliates across 100+ networks — even the ones you don't know about. No more digging through Ahrefs or Semrush."
                 className="md:col-span-2 md:row-span-2 bg-white border-[#E5E7EB]"
                 fade="bottom"
                 graphic={<DiscoveryGraphic />}
               >
                 <div className="mt-4 flex gap-2">
-                  <div className="px-3 py-1 rounded-full bg-[#D4E815]/20 text-[#1A1D21] text-xs font-medium border border-[#D4E815]/40">High Engagement</div>
-                  <div className="px-3 py-1 rounded-full bg-[#1A1D21]/10 text-[#1A1D21] text-xs font-medium border border-[#1A1D21]/20">Verified Growth</div>
+                  <div className="px-3 py-1 rounded-full bg-[#D4E815]/20 text-[#1A1D21] text-xs font-medium border border-[#D4E815]/40">500+ Instant Matches</div>
+                  <div className="px-3 py-1 rounded-full bg-[#1A1D21]/10 text-[#1A1D21] text-xs font-medium border border-[#1A1D21]/20">Weekly Fresh Leads</div>
                 </div>
               </BentoCard>
 
               {/* Standard Cards */}
               <BentoCard 
-                title="Verified Emails"
-                description="Direct access to personal and business addresses with 98% deliverability."
+                title="Get Emails Nobody Else Can Find"
+                description="YouTube hides emails behind CAPTCHAs. Instagram makes contact impossible. We find 90%+ of contacts — including LinkedIn profiles."
                 graphic={<VerifiedEmailGraphic />}
               />
 
               <BentoCard 
-                title="Smart Pipelines"
-                description="Kanban-style tracking for your recruitment outreach."
+                title="Start Recruiting Today"
+                description="Export verified emails, use our proven templates, and start building partnerships immediately."
                 graphic={<PipelineGraphic />}
               />
            </BentoGrid>
@@ -229,7 +229,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                transition={{ duration: 0.5 }}
                className="text-3xl md:text-4xl font-bold text-[#111827] mb-4 tracking-tight"
              >
-               From search to signed in 3 steps.
+               From Zero to 500+ Affiliates in Minutes
              </motion.h2>
              <motion.p 
                initial={{ opacity: 0, y: 20 }}
@@ -238,7 +238,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                transition={{ duration: 0.5, delay: 0.1 }}
                className="text-slate-500 text-lg"
              >
-               A streamlined workflow designed for high-growth teams.
+               Watch your dashboard fill with qualified partners ready to promote your brand.
              </motion.p>
            </div>
 
@@ -246,27 +246,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
              {[
                {
                  step: "01",
-                 title: "Define your ideal partner",
-                 desc: "Input your niche, competitors, or even a moodboard. Our AI understands context, not just keywords, to find creators that align with your brand values.",
+                 title: "Find Your Competitors' Top Affiliates",
+                 desc: "Enter your competitors and we'll reverse-engineer their affiliate programs across 100+ networks to find all their top affiliates — even the hidden ones.",
                  image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2426",
-                 overlayTitle: "Niche Analysis",
-                 overlaySubtitle: "Found 1,240 matches"
+                 overlayTitle: "Competitor Analysis",
+                 overlaySubtitle: "Found 1,243 affiliates",
+                 bullets: [
+                   "Scan across YouTube, Instagram, TikTok, and blogs",
+                   "Find affiliates promoting similar products",
+                   "No more digging through Ahrefs or Semrush"
+                 ]
                },
                {
                  step: "02",
-                 title: "Review matched profiles",
-                 desc: "Get a curated list of creators with deep insights into their audience demographics, engagement quality, and past brand collaborations.",
+                 title: "Get 500-2,500 Qualified Prospects",
+                 desc: "Watch your dashboard fill with qualified affiliates. Sort by traffic volume, Google rankings, follower count, or engagement rates to find your perfect partners fast.",
                  image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2340",
-                 overlayTitle: "High Engagement",
-                 overlaySubtitle: "8.5% Avg. Engagement Rate"
+                 overlayTitle: "High-Quality Matches",
+                 overlaySubtitle: "Sorted by engagement rate",
+                 bullets: [
+                   "Filter by traffic, rankings, and engagement",
+                   "View audience demographics and location data",
+                   "Track previous brand partnerships"
+                 ]
                },
                {
                  step: "03",
-                 title: "Automated outreach",
-                 desc: "Connect your email and let our sequences handle the initial conversation. Personalized templates ensure high response rates while you sleep.",
+                 title: "Start Recruiting Immediately",
+                 desc: "Export verified emails, use our proven-to-convert templates, and start building partnerships today. Get 150+ fresh leads delivered every week.",
                  image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80&w=2664",
-                 overlayTitle: "Outreach Sent",
-                 overlaySubtitle: "Opened by creator • Just now"
+                 overlayTitle: "Outreach Ready",
+                 overlaySubtitle: "150+ new leads weekly",
+                 bullets: [
+                   "90%+ email deliverability rate",
+                   "Proven outreach templates included",
+                   "One-click CRM export"
+                 ]
                }
              ].map((item, idx) => (
                <motion.div 
@@ -289,10 +304,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                     <p className="text-lg text-slate-500 leading-relaxed">{item.desc}</p>
                     
                     <ul className="space-y-3 pt-2">
-                      {[1, 2, 3].map((_, i) => (
+                      {item.bullets.map((bullet, i) => (
                         <li key={i} className="flex items-center gap-3 text-sm text-slate-600">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#D4E815]"></div>
-                          <span>Key feature point or benefit goes here</span>
+                          <span>{bullet}</span>
                         </li>
                       ))}
                     </ul>
@@ -300,7 +315,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   
                   <div className="flex-1 w-full">
                     <div className="relative group">
-                      <div className={`absolute -inset-4 bg-gradient-to-r ${idx % 2 === 0 ? 'from-blue-100 to-violet-100' : 'from-orange-100 to-rose-100'} rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl`} />
+                      <div className={`absolute -inset-4 bg-gradient-to-r ${idx % 2 === 0 ? 'from-[#D4E815]/20 to-[#D4E815]/10' : 'from-[#D4E815]/10 to-[#D4E815]/20'} rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl`} />
                       <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200/60 aspect-[4/3] transform group-hover:scale-[1.02] transition-transform duration-500">
                         <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/0 transition-colors duration-500" />
                         <img src={item.image} alt={item.title} className="object-cover w-full h-full" />
@@ -339,13 +354,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
             >
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4E815]/20 border border-[#D4E815]/40 text-[11px] font-bold text-[#1A1D21] mb-4">
                 <Zap size={12} fill="currentColor" />
-                SIMPLE PRICING
+                SIMPLE, TRANSPARENT PRICING
               </span>
               <h2 className="text-3xl md:text-4xl font-bold text-[#111827] mb-4 tracking-tight">
-                Start free. Scale when ready.
+                Find the Perfect Plan for Your Growth
               </h2>
               <p className="text-slate-500 text-lg max-w-xl mx-auto">
-                No hidden fees. No credit card required. Cancel anytime.
+                All plans include weekly affiliate discovery to keep your pipeline full. 7-day free trial, no credit card required.
               </p>
             </motion.div>
           </div>
@@ -369,7 +384,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
                   <h3 className="text-lg font-medium text-[#111827] mb-1">Pro</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For serious affiliate program growth</p>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For growing SaaS & e-commerce brands</p>
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-3xl font-medium tracking-tight text-[#1A1D21]">$99</span>
                     <span className="text-base font-serif italic text-[#333333]">/month</span>
@@ -380,17 +395,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   onClick={onLoginClick}
                   className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md"
                 >
-                  Start 7-day free trial
+                  Start 7-Day Free Trial
                 </button>
 
                 <div className="space-y-3 flex-1">
                   {[
-                    'Unlimited Affiliate Discovery',
-                    '150 Verified Emails/month',
-                    '150 AI Outreach Emails',
-                    'Advanced Search & Filtering',
+                    'Unlimited affiliate discovery (500+ matches)',
+                    'Weekly new affiliate discoveries',
+                    '150 verified email credits/month',
+                    'Advanced search & filtering tools',
                     '2 Team Seats',
-                    'Priority Support'
+                    'One-click CRM export'
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2.5">
                       <div className="mt-0.5 w-3.5 h-3.5 rounded-full bg-[#1A1D21] text-[#D4E815] flex items-center justify-center shrink-0">
@@ -415,8 +430,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               <div className="h-[34px]" />
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-medium text-[#111827] mb-1">Business</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For teams managing multiple programs</p>
+                  <h3 className="text-lg font-medium text-[#111827] mb-1">Growth</h3>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For agencies & multi-brand companies</p>
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-3xl font-medium tracking-tight text-[#111827]">$249</span>
                     <span className="text-base font-serif italic text-[#333333]">/month</span>
@@ -427,17 +442,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   onClick={onLoginClick}
                   className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#333333] text-white hover:bg-[#444444] shadow-sm hover:shadow-md"
                 >
-                  Start 7-day free trial
+                  Start 7-Day Free Trial
                 </button>
 
                 <div className="space-y-3 flex-1">
                   {[
                     'Everything in Pro +',
-                    '500 Verified Emails/month',
-                    '5 Brands',
+                    '500 verified email credits/month',
+                    '5 brands or geographical markets',
                     '5 Team Seats',
-                    'Advanced Analytics',
-                    'Dedicated Account Manager'
+                    'Advanced analytics dashboard',
+                    'Dedicated account manager'
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2.5">
                       <div className={`mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#1A1D21] text-[#D4E815]'}`}>
@@ -463,7 +478,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
                   <h3 className="text-lg font-medium text-[#111827] mb-1">Enterprise</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For large organizations with custom requirements</p>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight">For large organizations with custom needs</p>
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-3xl font-medium tracking-tight text-[#111827]">Custom</span>
                   </div>
@@ -478,12 +493,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
 
                 <div className="space-y-3 flex-1">
                   {[
-                    'Everything in Business +',
-                    'Unlimited Verified Emails',
-                    'Unlimited Brands',
-                    'Unlimited Team Access',
-                    'Custom AI Training',
-                    'API Access & Webhooks'
+                    'Everything in Growth +',
+                    'Unlimited verified emails',
+                    'Unlimited brand portfolio',
+                    'Unlimited team access',
+                    'API access & webhooks',
+                    '24/7 priority support'
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2.5">
                       <div className={`mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#1A1D21] text-[#D4E815]'}`}>
@@ -519,23 +534,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
             
             <div className="relative z-10 space-y-6">
               <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight">
-                Ready to scale your revenue?
+                Ready to Find Your Perfect Affiliates?
               </h2>
               <p className="text-lg text-slate-300 max-w-xl mx-auto">
-                Join 2,000+ modern brands using Affiliate Finder AI to build their dream partner network.
+                Join 1,300+ brands that have found their ideal affiliate partners in minutes, not months.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                 <button 
                   onClick={onLoginClick}
                   className="px-6 py-3 bg-[#D4E815] text-[#1A1D21] text-base font-bold rounded-xl hover:bg-[#c5d913] transition-colors w-full sm:w-auto shadow-xl"
                 >
-                  Get Started for Free
+                  Start Your 7-Day Free Trial
                 </button>
                 <button className="px-6 py-3 bg-transparent border border-slate-600 text-white text-base font-bold rounded-xl hover:bg-white/10 transition-colors w-full sm:w-auto">
-                  Talk to Sales
+                  Get a Demo
                 </button>
               </div>
-              <p className="text-xs text-slate-400 pt-2">No credit card required • 14-day free trial</p>
+              <p className="text-xs text-slate-400 pt-2">No credit card required • Cancel anytime</p>
             </div>
          </div>
       </section>
