@@ -6,20 +6,30 @@ import { Check, Sparkles, Zap, Building2, Loader2, ArrowRight } from 'lucide-rea
 import { cn } from '@/lib/utils';
 
 export const PricingScreen = () => {
-  const { completeSubscription } = useAuth();
+  const { startFreeTrial } = useAuth();
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const handleSubscribe = async () => {
-    setIsLoading(true);
+  const handleStartTrial = async (planName: string) => {
+    // Enterprise plan - contact sales (no trial)
+    if (planName === 'Enterprise') {
+      // In production, this would open a contact form or redirect
+      window.open('mailto:sales@affiliatefinder.ai?subject=Enterprise%20Inquiry', '_blank');
+      return;
+    }
+    
+    setLoadingPlan(planName);
     try {
-      // Simulate Stripe/Checkout delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await completeSubscription();
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Start 7-day free trial with selected plan
+      const selectedPlan = planName.toLowerCase() as 'pro' | 'business';
+      await startFreeTrial(selectedPlan);
     } catch (error) {
-      console.error('Subscription failed', error);
+      console.error('Failed to start trial', error);
     } finally {
-      setIsLoading(false);
+      setLoadingPlan(null);
     }
   };
 
@@ -161,8 +171,8 @@ export const PricingScreen = () => {
                 </div>
 
                 <button
-                  onClick={handleSubscribe}
-                  disabled={isLoading}
+                  onClick={() => handleStartTrial(plan.name)}
+                  disabled={loadingPlan !== null}
                   className={cn(
                     "w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 shadow-sm hover:shadow-md",
                     plan.highlight 
@@ -170,7 +180,7 @@ export const PricingScreen = () => {
                       : "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50"
                   )}
                 >
-                   {isLoading && plan.highlight ? (
+                   {loadingPlan === plan.name ? (
                      <Loader2 size={18} className="animate-spin mx-auto" />
                    ) : plan.cta}
                 </button>

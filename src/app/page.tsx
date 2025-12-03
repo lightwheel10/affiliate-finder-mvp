@@ -416,7 +416,7 @@ export default function Home() {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap",
                         activeFilter === tab.id
-                          ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                          ? "bg-[#D4E815] text-[#1A1D21] border-[#D4E815] shadow-sm shadow-[#D4E815]/20"
                           : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                       )}
                     >
@@ -427,7 +427,7 @@ export default function Home() {
                       {hasSearched && tab.count > 0 && (
                         <span className={cn(
                           "ml-0.5 px-1.5 py-0.5 rounded text-[9px]",
-                          activeFilter === tab.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                          activeFilter === tab.id ? "bg-[#1A1D21]/20 text-[#1A1D21]" : "bg-slate-100 text-slate-500"
                         )}>
                           {tab.count}
                         </span>

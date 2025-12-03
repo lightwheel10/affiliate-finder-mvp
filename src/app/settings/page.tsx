@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { cn } from '@/lib/utils';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, getTrialDaysRemaining } from '../context/AuthContext';
 import { PricingModal } from '../components/PricingModal';
+import { Modal } from '../components/Modal';
 import { 
   User, 
   CreditCard, 
@@ -13,7 +14,10 @@ import {
   Mail, 
   Key,
   Check,
-  Zap
+  Zap,
+  Clock,
+  AlertTriangle,
+  Calendar
 } from 'lucide-react';
 
 type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
@@ -21,8 +25,10 @@ type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
 export default function SettingsPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, cancelTrial } = useAuth();
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const tabs = [
     { id: 'profile', label: 'My Profile', icon: <User size={16} />, description: 'Manage your personal information' },
@@ -97,7 +103,8 @@ export default function SettingsPage() {
                   {activeTab === 'plan' && (
                     <PlanSettings 
                       user={user} 
-                      onUpgrade={() => setIsPricingModalOpen(true)} 
+                      onUpgrade={() => setIsPricingModalOpen(true)}
+                      onCancelTrial={() => setIsCancelModalOpen(true)}
                     />
                   )}
                   {activeTab === 'notifications' && <NotificationSettings user={user} updateProfile={updateProfile} />}
@@ -114,6 +121,54 @@ export default function SettingsPage() {
         isOpen={isPricingModalOpen} 
         onClose={() => setIsPricingModalOpen(false)} 
       />
+
+      {/* Cancel Trial Confirmation Modal */}
+      <Modal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        title="Cancel Free Trial"
+        width="max-w-md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-900">Are you sure you want to cancel?</p>
+              <p className="text-xs text-amber-700 mt-1">
+                You'll lose access to all features immediately. Your discovered affiliates and saved data will be preserved for 30 days.
+              </p>
+            </div>
+          </div>
+          
+          <p className="text-sm text-slate-600">
+            If you're having issues, we'd love to help! Contact us at{' '}
+            <a href="mailto:support@affiliatefinder.ai" className="text-[#1A1D21] font-medium hover:underline">
+              support@affiliatefinder.ai
+            </a>
+          </p>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button 
+              onClick={() => setIsCancelModalOpen(false)}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all duration-200"
+            >
+              Keep Trial
+            </button>
+            <button 
+              onClick={async () => {
+                setIsCancelling(true);
+                await cancelTrial();
+                setIsCancelling(false);
+                setIsCancelModalOpen(false);
+              }}
+              disabled={isCancelling}
+              className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 border border-transparent rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Trial'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -191,33 +246,52 @@ function ProfileSettings({ user }: { user: any }) {
   );
 }
 
-function PlanSettings({ user, onUpgrade }: { user: any, onUpgrade: () => void }) {
-  const isFreeTrial = user?.plan === 'free_trial';
-  const planName = isFreeTrial ? 'Free Trial' : (user?.plan || 'Pro').replace('_', ' ');
+function PlanSettings({ user, onUpgrade, onCancelTrial }: { user: any, onUpgrade: () => void, onCancelTrial: () => void }) {
+  const isFreeTrial = user?.plan === 'free_trial' && user?.trialEndDate;
+  const daysRemaining = isFreeTrial ? getTrialDaysRemaining(user.trialEndDate) : 0;
+  const trialPlanName = user?.trialPlan ? user.trialPlan.charAt(0).toUpperCase() + user.trialPlan.slice(1) : 'Pro';
+  const planName = isFreeTrial ? `${trialPlanName} Trial` : (user?.plan || 'Pro').replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+  const planPrice = user?.plan === 'business' || user?.trialPlan === 'business' ? '$249' : '$99';
   
   return (
     <div className="space-y-8">
       {/* Current Plan */}
       <div className={cn(
         "p-4 rounded-xl border space-y-4 transition-all",
-        isFreeTrial ? "bg-slate-50 border-slate-200" : "bg-[#D4E815]/10 border-[#D4E815]/30"
+        isFreeTrial ? "bg-amber-50/50 border-amber-200" : "bg-[#D4E815]/10 border-[#D4E815]/30"
       )}>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className={cn("text-sm font-bold", isFreeTrial ? "text-slate-900" : "text-[#1A1D21]")}>
-                {planName} Plan
+                {planName}
               </span>
               <span className={cn(
                 "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border",
-                isFreeTrial ? "bg-slate-200 text-slate-600 border-slate-300" : "bg-[#D4E815]/20 text-[#1A1D21] border-[#D4E815]/40"
+                isFreeTrial ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-[#D4E815]/20 text-[#1A1D21] border-[#D4E815]/40"
               )}>
-                Current
+                {isFreeTrial ? 'Trial' : 'Active'}
               </span>
             </div>
-            <p className={cn("text-xs", isFreeTrial ? "text-slate-500" : "text-[#1A1D21]")}>
-              {isFreeTrial ? "Trial ends in 3 days" : "Billed monthly • Next billing date: Dec 24, 2024"}
-            </p>
+            {isFreeTrial ? (
+              <div className="flex items-center gap-1.5 text-xs text-amber-700">
+                <Clock size={12} />
+                <span>
+                  {daysRemaining === 0 
+                    ? 'Trial ends today!' 
+                    : daysRemaining === 1 
+                      ? '1 day remaining' 
+                      : `${daysRemaining} days remaining`
+                  }
+                </span>
+                <span className="text-amber-500">•</span>
+                <span>Converts to {planPrice}/mo after trial</span>
+              </div>
+            ) : (
+              <p className="text-xs text-[#1A1D21]">
+                Billed monthly • Next billing date: {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+            )}
           </div>
           {isFreeTrial ? (
             <button 
@@ -228,20 +302,63 @@ function PlanSettings({ user, onUpgrade }: { user: any, onUpgrade: () => void })
               Upgrade Now
             </button>
           ) : (
-            <span className="text-lg font-bold text-slate-900">$29<span className="text-sm font-normal text-slate-500">/mo</span></span>
+            <span className="text-lg font-bold text-slate-900">{planPrice}<span className="text-sm font-normal text-slate-500">/mo</span></span>
           )}
         </div>
         
+        {/* Trial Progress Bar */}
+        {isFreeTrial && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-slate-600">
+              <span>Trial Progress</span>
+              <span className="font-semibold">{7 - daysRemaining} of 7 days used</span>
+            </div>
+            <div className="h-2 bg-slate-200/60 rounded-full overflow-hidden">
+              <div 
+                className={cn("h-full rounded-full transition-all", daysRemaining <= 2 ? "bg-amber-500" : "bg-[#D4E815]")} 
+                style={{ width: `${((7 - daysRemaining) / 7) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Email Credits */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-slate-600">
             <span>Email Credits</span>
-            <span className="font-semibold">150 / 150 used</span>
+            <span className="font-semibold">0 / {user?.trialPlan === 'business' ? '500' : '150'} used</span>
           </div>
           <div className="h-2 bg-slate-200/60 rounded-full overflow-hidden">
-            <div className={cn("h-full w-full rounded-full", isFreeTrial ? "bg-slate-400" : "bg-[#D4E815]")} />
+            <div className={cn("h-full rounded-full", isFreeTrial ? "bg-slate-300" : "bg-[#D4E815]")} style={{ width: '0%' }} />
           </div>
         </div>
+
+        {/* Trial End Date */}
+        {isFreeTrial && user?.trialEndDate && (
+          <div className="flex items-center gap-2 pt-2 border-t border-amber-200/50 text-xs text-slate-600">
+            <Calendar size={12} className="text-slate-400" />
+            <span>Trial ends on {new Date(user.trialEndDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+          </div>
+        )}
       </div>
+
+      {/* Cancel Trial Option (only for trial users) */}
+      {isFreeTrial && (
+        <div className="p-4 border border-slate-200 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Cancel Trial</h3>
+              <p className="text-xs text-slate-500 mt-0.5">End your trial early and lose access to all features</p>
+            </div>
+            <button 
+              onClick={onCancelTrial}
+              className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-red-600 border border-slate-200 hover:border-red-200 hover:bg-red-50 rounded-lg transition-all"
+            >
+              Cancel Trial
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Payment Method */}
       <div>
@@ -401,4 +518,5 @@ function SecuritySettings() {
     </div>
   );
 }
+
 

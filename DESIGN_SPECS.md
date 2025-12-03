@@ -195,3 +195,76 @@
   - Background: Deep Slate (`#1A1D21`)
   - Checkmark: Electric Lime (`#D4E815`)
 
+## Post-Login Dashboard (Main Interface)
+
+### Layout
+- Sidebar navigation (collapsible, 240px expanded / 52px collapsed)
+- Main content area with sticky header
+- Background: Off-white (`#FDFDFD`)
+- Header: White with backdrop blur, subtle bottom border
+
+### Header Elements
+- **Page Title:** Semibold, Slate-900
+- **Stats Badges:**
+  - Search Credits: Emerald-50 background, Emerald-100 border
+  - Email Credits: Electric Lime at 10% opacity, Electric Lime at 30% border
+- **Primary CTA Button:**
+  - Background: Electric Lime (`#D4E815`)
+  - Text: Deep Slate (`#1A1D21`)
+  - Hover: Darker Electric Lime (`#c5d913`) with shadow
+
+### Filter Pills (Source Filters)
+- **Active State:**
+  - Background: Electric Lime (`#D4E815`)
+  - Text: Deep Slate (`#1A1D21`)
+  - Border: Electric Lime (`#D4E815`)
+  - Shadow: Electric Lime at 20% opacity
+  - Badge: Deep Slate at 20% opacity background, Deep Slate text
+
+- **Inactive State:**
+  - Background: White (`#FFFFFF`)
+  - Text: Slate-600
+  - Border: Slate-200
+  - Hover: Slate-50 background, Slate-300 border
+  - Badge: Slate-100 background, Slate-500 text
+
+### Search Input
+- Background: White (`#FFFFFF`)
+- Border: Slate-200 ring
+- Focus: Electric Lime at 20% opacity ring, Electric Lime shadow
+- Icon: Slate-400, transitions to Deep Slate on focus
+
+### Table/Results Area
+- **Table Header:**
+  - Background: White
+  - Text: Slate-400, uppercase, tracking-wider
+  - Border: Slate-200
+
+- **Results Container:**
+  - Background: White
+  - Border: Slate-200
+  - Border Radius: Rounded corners (top: xl, bottom: xl)
+  - Shadow: Small
+
+### Pagination
+- **Active Page:**
+  - Background: Slate-900
+  - Text: White
+- **Inactive Page:**
+  - Background: White with border
+  - Text: Slate-700
+  - Hover: Slate-50 background
+
+### Loading States
+- **Progress Indicator:**
+  - Background: Electric Lime at 10% opacity
+  - Border: Electric Lime at 30% opacity
+  - Spinner: Electric Lime border with transparent top
+- **Skeleton Rows:** Opacity 50%
+
+### Empty States
+- Icon container: Slate-50 background, Slate-100 border
+- Icon: Slate-300
+- Heading: Slate-900, bold
+- Subtext: Slate-400
+

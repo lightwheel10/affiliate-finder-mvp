@@ -14,10 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
-  Zap
+  Zap,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, getTrialDaysRemaining } from '../context/AuthContext';
 import { Modal } from './Modal';
 import { PricingModal } from './PricingModal';
 import Link from 'next/link';
@@ -149,28 +150,46 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
         <div className={cn("border-t border-slate-100 space-y-0.5 bg-white/50 transition-all duration-300", isCollapsed ? "p-1.5" : "p-3")}>
           
           {/* Upgrade Plan CTA for Free Trial Users */}
-          {(!user?.plan || user?.plan === 'free_trial') && (
+          {user?.plan === 'free_trial' && user?.trialEndDate && (
             <div className={cn("mb-3 transition-all duration-300", isCollapsed ? "hidden" : "block")}>
-              <div className="bg-[#1A1D21] rounded-xl p-3.5 text-white relative overflow-hidden group cursor-pointer shadow-lg shadow-[#1A1D21]/20" onClick={() => setIsPricingModalOpen(true)}>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <div className="p-1 bg-[#D4E815]/20 rounded-md backdrop-blur-sm">
-                      <Zap size={12} className="text-[#D4E815]" fill="currentColor" />
+              {(() => {
+                const daysRemaining = getTrialDaysRemaining(user.trialEndDate);
+                const isUrgent = daysRemaining <= 2;
+                const trialPlanName = user.trialPlan ? user.trialPlan.charAt(0).toUpperCase() + user.trialPlan.slice(1) : 'Pro';
+                
+                return (
+                  <div className="bg-[#1A1D21] rounded-xl p-3.5 text-white relative overflow-hidden group cursor-pointer shadow-lg shadow-[#1A1D21]/20" onClick={() => setIsPricingModalOpen(true)}>
+                    {/* Dot pattern background - matching landing page CTA */}
+                    <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[radial-gradient(#D4E815_1px,transparent_1px)] [background-size:12px_12px]"></div>
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <div className={cn("p-1 rounded-md backdrop-blur-sm", isUrgent ? "bg-red-500/20" : "bg-[#D4E815]/20")}>
+                          <Clock size={12} className={isUrgent ? "text-red-400" : "text-[#D4E815]"} />
+                        </div>
+                        <span className={cn("text-[10px] font-bold tracking-wide uppercase", isUrgent ? "text-red-400" : "text-white/90")}>
+                          {daysRemaining === 0 ? 'Trial Ends Today!' : daysRemaining === 1 ? '1 Day Left' : `${daysRemaining} Days Left`}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-white mb-1 leading-tight">
+                        {trialPlanName} Plan Trial
+                      </h4>
+                      <p className="text-[10px] text-slate-300 leading-relaxed mb-3 opacity-90">
+                        {isUrgent 
+                          ? "Upgrade now to keep your data and continue growing." 
+                          : "Enjoying the trial? Upgrade anytime to unlock full access."
+                        }
+                      </p>
+                      <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-2 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
+                        Upgrade Now <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                      </button>
                     </div>
-                    <span className="text-[10px] font-bold text-white/90 tracking-wide uppercase">Trial Ending Soon</span>
+                    {/* Decorative blur elements */}
+                    <div className={cn("absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full blur-2xl transition-all duration-500", isUrgent ? "bg-red-500/10 group-hover:bg-red-500/20" : "bg-[#D4E815]/20 group-hover:bg-[#D4E815]/30")} />
+                    <div className={cn("absolute bottom-0 left-0 -mb-6 -ml-6 w-20 h-20 rounded-full blur-xl", isUrgent ? "bg-red-500/10" : "bg-[#D4E815]/10")} />
                   </div>
-                  <h4 className="text-xs font-bold text-white mb-1 leading-tight">Unlock Full Access</h4>
-                  <p className="text-[10px] text-slate-300 leading-relaxed mb-3 opacity-90">
-                    Don't lose your saved affiliates. Upgrade now to keep growing.
-                  </p>
-                  <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-2 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
-                    View Plans <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                </div>
-                {/* Decorative elements */}
-                <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 bg-[#D4E815]/10 rounded-full blur-2xl group-hover:bg-[#D4E815]/20 transition-all duration-500" />
-                <div className="absolute bottom-0 left-0 -mb-6 -ml-6 w-20 h-20 bg-[#D4E815]/10 rounded-full blur-xl" />
-              </div>
+                );
+              })()}
             </div>
           )}
 
