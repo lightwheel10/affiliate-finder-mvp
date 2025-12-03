@@ -11,11 +11,10 @@ import {
   ChevronDown,
   Sparkles,
   Command,
-  ChevronLeft,
-  ChevronRight,
   MoreHorizontal,
   Zap,
-  Clock
+  Clock,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth, getTrialDaysRemaining } from '../context/AuthContext';
@@ -25,12 +24,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getSavedAffiliates, getDiscoveredAffiliates } from '../services/storage';
 
-interface SidebarProps {
-  isCollapsed: boolean;
-  toggleCollapse: () => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse }) => {
+export const Sidebar: React.FC = () => {
   const { logout, user } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -76,30 +70,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
 
   return (
     <>
-      <aside 
-        className={cn(
-          "min-h-screen bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40 transition-all duration-300 ease-in-out will-change-[width]",
-          isCollapsed ? "w-[52px]" : "w-60"
-        )}
-      >
-        {/* Collapse Toggle Button */}
-        <button 
-          onClick={toggleCollapse}
-          className={cn(
-            "absolute top-6 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 shadow-sm z-50 transition-all hover:scale-110",
-            isCollapsed ? "-right-2.5" : "-right-2.5"
-          )}
-        >
-          {isCollapsed ? <ChevronRight size={10} /> : <ChevronLeft size={10} />}
-        </button>
-
+      <aside className="min-h-screen w-60 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
         {/* Brand / Logo Area */}
-        <div className={cn("h-14 flex items-center mt-1 mb-6 transition-all duration-300", isCollapsed ? "px-0 justify-center" : "px-4")}>
+        <div className="h-14 flex items-center mt-1 mb-6 px-4">
           <div className="flex items-center gap-2 text-slate-900">
             <div className="w-7 h-7 bg-[#1A1D21] rounded-lg flex items-center justify-center shadow-md shadow-[#1A1D21]/10 shrink-0">
               <Sparkles size={14} fill="currentColor" className="text-[#D4E815] opacity-90" />
             </div>
-            <div className={cn("flex flex-col transition-all duration-300 overflow-hidden whitespace-nowrap", isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
+            <div className="flex flex-col">
               <span className="font-bold text-sm tracking-tight leading-none">Affiliate<span className="text-[#1A1D21]">Finder</span></span>
               <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">Intelligence</span>
             </div>
@@ -108,16 +86,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
 
 
         {/* Main Navigation */}
-        <nav className={cn("flex-1 space-y-6 overflow-y-auto py-1 transition-all duration-300", isCollapsed ? "px-1.5" : "px-3")}>
+        <nav className="flex-1 space-y-6 overflow-y-auto py-1 px-3">
           <div>
-            <p className={cn("text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-0.5 transition-all duration-300 whitespace-nowrap overflow-hidden", isCollapsed ? "opacity-0 h-0" : "px-2 h-auto opacity-100")}>Discovery</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-0.5 px-2">Discovery</p>
             <div className="space-y-0.5">
               <NavItem 
                 href="/" 
                 icon={<Search size={14} />} 
                 label="Find New" 
                 active={pathname === '/'} 
-                isCollapsed={isCollapsed} 
               />
               <NavItem 
                 href="/discovered"
@@ -125,13 +102,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                 label="All Discovered" 
                 badge={discoveredCount > 0 ? discoveredCount.toString() : undefined}
                 active={pathname === '/discovered'}
-                isCollapsed={isCollapsed} 
               />
             </div>
           </div>
 
           <div>
-            <p className={cn("text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-0.5 transition-all duration-300 whitespace-nowrap overflow-hidden", isCollapsed ? "opacity-0 h-0" : "px-2 h-auto opacity-100")}>Management</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-0.5 px-2">Management</p>
             <div className="space-y-0.5">
               <NavItem 
                 href="/saved"
@@ -139,19 +115,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                 label="Saved Affiliates" 
                 badge={pipelineCount > 0 ? pipelineCount.toString() : undefined}
                 active={pathname === '/saved'}
-                isCollapsed={isCollapsed} 
               />
-              <NavItem icon={<Users size={14} />} label="Outreach" isCollapsed={isCollapsed} />
+              <NavItem icon={<Users size={14} />} label="Outreach" />
             </div>
           </div>
         </nav>
 
         {/* Bottom Actions */}
-        <div className={cn("border-t border-slate-100 space-y-0.5 bg-white/50 transition-all duration-300", isCollapsed ? "p-1.5" : "p-3")}>
+        <div className="p-3 space-y-3 bg-white/50">
           
           {/* Upgrade Plan CTA for Free Trial Users */}
           {user?.plan === 'free_trial' && user?.trialEndDate && (
-            <div className={cn("mb-3 transition-all duration-300", isCollapsed ? "hidden" : "block")}>
+            <>
               {(() => {
                 const daysRemaining = getTrialDaysRemaining(user.trialEndDate);
                 const isUrgent = daysRemaining <= 2;
@@ -190,16 +165,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                   </div>
                 );
               })()}
-            </div>
+            </>
           )}
+
+          {/* Divider - now below the trial indicator */}
+          <div className="border-t border-slate-100"></div>
 
           <div className="relative">
             <button 
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className={cn(
-                "flex items-center w-full rounded-lg transition-all duration-200 hover:bg-slate-50 group", 
-                isCollapsed ? "justify-center p-1" : "p-2 gap-2.5"
-              )}
+              className="flex items-center w-full rounded-lg transition-all duration-200 hover:bg-slate-50 group p-2 gap-2.5"
             >
               <div className="relative shrink-0">
                  <img 
@@ -210,14 +185,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                 <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 border-2 border-white rounded-full"></span>
               </div>
               
-              <div className={cn("flex-1 text-left min-w-0 transition-all duration-300 overflow-hidden whitespace-nowrap", isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100")}>
+              <div className="flex-1 text-left min-w-0">
                 <p className="text-xs font-semibold text-slate-900 truncate">{user?.name || 'Jamie Founder'}</p>
                 <p className="text-[10px] text-slate-500 truncate capitalize">{user?.plan?.replace('_', ' ') || 'Free Trial'}</p>
               </div>
 
-              {!isCollapsed && (
-                <MoreHorizontal size={16} className="text-slate-400 group-hover:text-slate-600 transition-colors shrink-0 ml-1" />
-              )}
+              <MoreHorizontal size={16} className="text-slate-400 group-hover:text-slate-600 transition-colors shrink-0 ml-1" />
             </button>
 
             {/* Dropdown Menu */}
@@ -228,10 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                   className="fixed inset-0 z-40" 
                   onClick={() => setIsProfileMenuOpen(false)} 
                 />
-                <div className={cn(
-                  "absolute bottom-full mb-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2",
-                  isCollapsed ? "left-full ml-2 bottom-0 mb-0" : "left-0 w-full"
-                )}>
+                <div className="absolute bottom-full mb-2 left-0 w-full bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-2">
                   <Link 
                     href="/settings"
                     onClick={() => setIsProfileMenuOpen(false)}
@@ -301,50 +271,40 @@ interface NavItemProps {
   label: string;
   active?: boolean;
   badge?: string;
-  isCollapsed?: boolean;
   onClick?: () => void;
   href?: string;
 }
 
-const NavItem = ({ icon, label, active, badge, isCollapsed, onClick, href }: NavItemProps) => {
+const NavItem = ({ icon, label, active, badge, onClick, href }: NavItemProps) => {
   const content = (
     <>
       <span className={cn("transition-colors shrink-0", active ? "text-[#1A1D21]" : "group-hover:text-slate-700")}>
         {icon}
       </span>
-      <span 
-        className={cn(
-          "text-left transition-all duration-300 overflow-hidden whitespace-nowrap",
-          isCollapsed ? "w-0 opacity-0 duration-100" : "flex-1 w-auto opacity-100 delay-100"
-        )}
-      >
+      <span className="text-left flex-1">
         {label}
       </span>
-      {badge && !isCollapsed && (
+      {badge && (
         <span className={cn(
-          "px-1.5 py-0.5 rounded-md text-[9px] font-bold min-w-[20px] text-center transition-opacity duration-300",
+          "px-1.5 py-0.5 rounded-md text-[9px] font-bold min-w-[20px] text-center",
           active ? "bg-[#D4E815]/20 text-[#1A1D21]" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
         )}>
           {badge}
         </span>
       )}
-      {badge && isCollapsed && (
-        <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[#D4E815] rounded-full ring-1 ring-white" />
-      )}
     </>
   );
 
   const className = cn(
-    "w-full flex items-center rounded-lg text-[13px] font-medium transition-all duration-200 group relative",
+    "w-full flex items-center rounded-lg text-[13px] font-medium transition-all duration-200 group relative justify-start px-2.5 py-1.5 gap-2.5",
     active 
       ? "bg-[#D4E815]/10 text-[#1A1D21]" 
-      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
-    isCollapsed ? "justify-center px-0 py-2" : "justify-start px-2.5 py-1.5 gap-2.5"
+      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
   );
 
   if (href) {
     return (
-      <Link href={href} className={className} title={isCollapsed ? label : undefined}>
+      <Link href={href} className={className}>
         {content}
       </Link>
     );
@@ -354,7 +314,6 @@ const NavItem = ({ icon, label, active, badge, isCollapsed, onClick, href }: Nav
     <button 
       onClick={onClick}
       className={className}
-      title={isCollapsed ? label : undefined}
     >
       {content}
     </button>

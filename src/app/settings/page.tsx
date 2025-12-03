@@ -23,7 +23,6 @@ import {
 type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
 
 export default function SettingsPage() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const { user, updateProfile, cancelTrial } = useAuth();
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
@@ -39,14 +38,9 @@ export default function SettingsPage() {
 
   return (
     <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
-      <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+      <Sidebar />
       
-      <main 
-        className={cn(
-          "flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out will-change-[margin] relative",
-          isSidebarCollapsed ? "ml-[52px]" : "ml-60"
-        )}
-      >
+      <main className="flex-1 flex flex-col min-h-screen ml-60">
         {/* Header */}
         <header className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
            <div className="flex items-center gap-2">
@@ -251,7 +245,7 @@ function PlanSettings({ user, onUpgrade, onCancelTrial }: { user: any, onUpgrade
   const daysRemaining = isFreeTrial ? getTrialDaysRemaining(user.trialEndDate) : 0;
   const trialPlanName = user?.trialPlan ? user.trialPlan.charAt(0).toUpperCase() + user.trialPlan.slice(1) : 'Pro';
   const planName = isFreeTrial ? `${trialPlanName} Trial` : (user?.plan || 'Pro').replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-  const planPrice = (user?.plan === 'business' || user?.trialPlan === 'business') ? '$249' : '$99';
+  const planPrice = user?.plan === 'business' || user?.trialPlan === 'business' ? '$249' : '$99';
   
   return (
     <div className="space-y-8">
@@ -518,5 +512,3 @@ function SecuritySettings() {
     </div>
   );
 }
-
-

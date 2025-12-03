@@ -36,7 +36,6 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [savedLinks, setSavedLinks] = useState<Set<string>>(new Set());
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFindModalOpen, setIsFindModalOpen] = useState(false);
@@ -319,14 +318,9 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
-      <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+      <Sidebar />
       
-      <main 
-        className={cn(
-          "flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out will-change-[margin] relative",
-          isSidebarCollapsed ? "ml-[52px]" : "ml-60"
-        )}
-      >
+      <main className="flex-1 flex flex-col min-h-screen ml-60">
         {/* Dashboard Header */}
         <header className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
            {/* Page Title */}
