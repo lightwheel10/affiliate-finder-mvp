@@ -2,14 +2,19 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, ArrowRight, Loader2, Lock, Mail, User, CheckCircle } from 'lucide-react';
+import { Sparkles, ArrowRight, Loader2, Lock, Mail, User, CheckCircle, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type AuthView = 'signin' | 'signup' | 'forgot-password';
 
-export const LoginScreen = () => {
+interface LoginScreenProps {
+  onBackToHome?: () => void;
+  initialView?: AuthView;
+}
+
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onBackToHome, initialView = 'signin' }) => {
   const { login } = useAuth();
-  const [view, setView] = useState<AuthView>('signin');
+  const [view, setView] = useState<AuthView>(initialView);
   
   // Form States
   const [name, setName] = useState('');
@@ -81,6 +86,17 @@ export const LoginScreen = () => {
 
       <div className="w-full max-w-[400px] px-6 relative z-10">
         <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 shadow-xl rounded-2xl p-6 md:p-8">
+          {/* Back to Home Button */}
+          {onBackToHome && (
+            <button
+              onClick={onBackToHome}
+              className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-[#1A1D21] transition-colors mb-4 group"
+            >
+              <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+              Back to Home
+            </button>
+          )}
+
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <div className="w-10 h-10 bg-[#1A1D21] rounded-xl flex items-center justify-center shadow-lg shadow-[#1A1D21]/20">

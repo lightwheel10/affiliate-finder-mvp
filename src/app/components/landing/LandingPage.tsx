@@ -31,9 +31,10 @@ import { Footer } from '../Footer';
 
 interface LandingPageProps {
   onLoginClick: () => void;
+  onSignupClick: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignupClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -65,13 +66,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
 
           {/* Desktop Links */}
           <div className="hidden md:flex items-center gap-1 bg-white/50 backdrop-blur-md px-1.5 py-1 rounded-full border border-slate-200/60 shadow-sm">
-            {['Product', 'Solutions', 'Pricing', 'Company'].map((item) => (
+            {[
+              { label: 'Features', href: '#features' },
+              { label: 'How It Works', href: '#how-it-works' },
+              { label: 'Pricing', href: '#pricing' },
+            ].map((item) => (
               <a 
-                key={item} 
-                href={`#${item.toLowerCase()}`} 
+                key={item.label} 
+                href={item.href}
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.querySelector(item.href);
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
                 className="px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white hover:shadow-sm rounded-full transition-all"
               >
-                {item}
+                {item.label}
               </a>
             ))}
           </div>
@@ -84,7 +96,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               Log in
             </button>
             <button 
-              onClick={onLoginClick}
+              onClick={onSignupClick}
               className="px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-semibold rounded-lg hover:bg-[#c5d913] transition-all shadow-lg shadow-[#D4E815]/30 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:shadow-none"
             >
               Start Free Trial
@@ -96,6 +108,55 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
             {mobileMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-xl border-b border-slate-200/60 shadow-lg">
+            <div className="px-6 py-4 space-y-1">
+              {[
+                { label: 'Features', href: '#features' },
+                { label: 'How It Works', href: '#how-it-works' },
+                { label: 'Pricing', href: '#pricing' },
+              ].map((item) => (
+                <a 
+                  key={item.label} 
+                  href={item.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMobileMenuOpen(false);
+                    const element = document.querySelector(item.href);
+                    if (element) {
+                      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }}
+                  className="block px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all"
+                >
+                  {item.label}
+                </a>
+              ))}
+              <div className="pt-3 mt-3 border-t border-slate-100 space-y-2">
+                <button 
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onLoginClick();
+                  }}
+                  className="w-full px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all text-left"
+                >
+                  Log in
+                </button>
+                <button 
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onSignupClick();
+                  }}
+                  className="w-full px-4 py-2.5 bg-[#D4E815] text-[#1A1D21] text-sm font-semibold rounded-lg hover:bg-[#c5d913] transition-all text-center"
+                >
+                  Start Free Trial
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
@@ -128,7 +189,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
 
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 <button 
-                  onClick={onLoginClick}
+                  onClick={onSignupClick}
                   className="w-full sm:w-auto px-6 py-3 bg-[#D4E815] text-[#1A1D21] text-sm font-bold rounded-lg hover:bg-[#c5d913] transition-all shadow-xl shadow-[#D4E815]/30 hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
                 >
                   Try for Free
@@ -219,7 +280,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* "How it Works" Steps */}
-      <section className="py-20 border-t border-[#E5E7EB] bg-white overflow-hidden">
+      <section id="how-it-works" className="py-20 border-t border-[#E5E7EB] bg-white overflow-hidden">
         <div className="max-w-5xl mx-auto px-6">
            <div className="text-center mb-24">
              <motion.h2 
@@ -392,7 +453,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                 </div>
 
                 <button
-                  onClick={onLoginClick}
+                  onClick={onSignupClick}
                   className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md"
                 >
                   Start 7-Day Free Trial
@@ -439,7 +500,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                 </div>
 
                 <button
-                  onClick={onLoginClick}
+                  onClick={onSignupClick}
                   className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#333333] text-white hover:bg-[#444444] shadow-sm hover:shadow-md"
                 >
                   Start 7-Day Free Trial
@@ -541,7 +602,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                 <button 
-                  onClick={onLoginClick}
+                  onClick={onSignupClick}
                   className="px-6 py-3 bg-[#D4E815] text-[#1A1D21] text-base font-bold rounded-xl hover:bg-[#c5d913] transition-colors w-full sm:w-auto shadow-xl"
                 >
                   Start Your 7-Day Free Trial
