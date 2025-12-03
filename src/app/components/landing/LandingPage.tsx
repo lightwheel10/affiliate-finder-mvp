@@ -191,7 +191,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               {/* Large Main Feature */}
               <BentoCard 
                 title="Reverse-Engineer Competitor Programs"
-                description="Enter your competitors and we'll find all their top affiliates across 100+ networks — even the ones you don't know about. No more digging through Ahrefs or Semrush."
+                description="Find all their top affiliates across 100+ networks."
                 className="md:col-span-2 md:row-span-2 bg-white border-[#E5E7EB]"
                 fade="bottom"
                 graphic={<DiscoveryGraphic />}
@@ -205,13 +205,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               {/* Standard Cards */}
               <BentoCard 
                 title="Get Emails Nobody Else Can Find"
-                description="YouTube hides emails behind CAPTCHAs. Instagram makes contact impossible. We find 90%+ of contacts — including LinkedIn profiles."
+                description="90%+ contact rate including LinkedIn profiles."
                 graphic={<VerifiedEmailGraphic />}
               />
 
               <BentoCard 
                 title="Start Recruiting Today"
-                description="Export verified emails, use our proven templates, and start building partnerships immediately."
+                description="Export to CRM and start outreach immediately."
                 graphic={<PipelineGraphic />}
               />
            </BentoGrid>
