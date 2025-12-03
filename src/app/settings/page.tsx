@@ -251,7 +251,7 @@ function PlanSettings({ user, onUpgrade, onCancelTrial }: { user: any, onUpgrade
   const daysRemaining = isFreeTrial ? getTrialDaysRemaining(user.trialEndDate) : 0;
   const trialPlanName = user?.trialPlan ? user.trialPlan.charAt(0).toUpperCase() + user.trialPlan.slice(1) : 'Pro';
   const planName = isFreeTrial ? `${trialPlanName} Trial` : (user?.plan || 'Pro').replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-  const planPrice = user?.plan === 'business' || user?.trialPlan === 'business' ? '$249' : '$99';
+  const planPrice = (user?.plan === 'business' || user?.trialPlan === 'business') ? '$249' : '$99';
   
   return (
     <div className="space-y-8">
