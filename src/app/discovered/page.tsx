@@ -101,7 +101,7 @@ export default function DiscoveredPage() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       
       <main 
@@ -157,7 +157,7 @@ export default function DiscoveredPage() {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap",
                         activeFilter === tab.id
-                          ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                          ? "bg-[#1A1D21] text-white border-[#1A1D21] shadow-sm"
                           : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                       )}
                     >
@@ -202,7 +202,7 @@ export default function DiscoveredPage() {
                <div className="py-24 text-center">
                  <div className="relative w-10 h-10 mx-auto">
                     <div className="absolute inset-0 border-[3px] border-slate-100 rounded-full"></div>
-                    <div className="absolute inset-0 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 border-[3px] border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
                   </div>
                   <p className="text-slate-400 text-xs mt-4">Loading discovered affiliates...</p>
                </div>
