@@ -25,7 +25,7 @@ export const BentoCard = ({
   return (
     <motion.div
       className={cn(
-        "relative overflow-hidden rounded-3xl bg-white border border-slate-100 p-6",
+        "relative overflow-hidden rounded-3xl bg-white border border-[#E5E7EB] p-6",
         "flex flex-col justify-between h-full",
         "cursor-pointer",
         className
@@ -61,7 +61,7 @@ export const BentoCard = ({
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full pointer-events-none">
         <div className="mt-auto space-y-2">
-          <h3 className="text-lg font-bold text-slate-900 leading-tight tracking-tight">
+          <h3 className="text-lg font-bold text-[#111827] leading-tight tracking-tight">
             {title}
           </h3>
           <p className="text-sm text-slate-500 leading-relaxed line-clamp-3 font-medium">
@@ -70,7 +70,7 @@ export const BentoCard = ({
         </div>
         
         {children && (
-          <div className="mt-4 pt-4 border-t border-slate-50 pointer-events-auto">
+          <div className="mt-4 pt-4 border-t border-[#E5E7EB]/50 pointer-events-auto">
             {children}
           </div>
         )}

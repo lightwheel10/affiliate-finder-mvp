@@ -22,11 +22,11 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
   }, [isHovered]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-slate-50/30">
+    <div className="absolute inset-0 overflow-hidden bg-white">
       <div 
         className="absolute inset-0 opacity-[0.15]" 
         style={{ 
-          backgroundImage: 'radial-gradient(#6366f1 1px, transparent 1px)', 
+          backgroundImage: 'radial-gradient(#D4E815 1px, transparent 1px)', 
           backgroundSize: '16px 16px' 
         }} 
       />
@@ -56,8 +56,8 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
          </div>
 
          {/* Col 2 */}
-         <div className="flex-1 flex flex-col gap-2 pt-4 border-l border-dashed border-slate-200 pl-3">
-            <div className="h-1 w-12 bg-blue-200 rounded-full mb-1" />
+         <div className="flex-1 flex flex-col gap-2 pt-4 border-l border-dashed border-[#E5E7EB] pl-3">
+            <div className="h-1 w-12 bg-[#D4E815]/50 rounded-full mb-1" />
             <KanbanCard />
             
             <AnimatePresence>
@@ -76,8 +76,8 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
          </div>
 
          {/* Col 3 */}
-         <div className="flex-1 flex flex-col gap-2 pt-4 border-l border-dashed border-slate-200 pl-3 opacity-60">
-            <div className="h-1 w-12 bg-green-200 rounded-full mb-1" />
+         <div className="flex-1 flex flex-col gap-2 pt-4 border-l border-dashed border-[#E5E7EB] pl-3 opacity-60">
+            <div className="h-1 w-12 bg-[#D4E815] rounded-full mb-1" />
             
             <AnimatePresence>
                 {stage === 2 && (
@@ -101,14 +101,14 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
 const KanbanCard = ({ active, highlight, complete }: { active?: boolean, highlight?: boolean, complete?: boolean }) => (
   <div className={cn(
     "bg-white p-2.5 rounded-lg border shadow-sm space-y-2 w-full",
-    active ? "shadow-md" : "border-slate-100",
-    highlight ? "border-blue-200 ring-2 ring-blue-50" : "",
-    complete ? "border-green-200 bg-green-50/30" : ""
+    active ? "shadow-md" : "border-[#E5E7EB]",
+    highlight ? "border-[#D4E815]/50 ring-2 ring-[#D4E815]/20" : "",
+    complete ? "border-[#D4E815] bg-[#D4E815]/10" : ""
   )}>
     <div className="flex items-center gap-2">
         <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold", 
-            highlight ? "bg-blue-100 text-blue-600" : 
-            complete ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-500"
+            highlight ? "bg-[#D4E815]/30 text-[#1A1D21]" : 
+            complete ? "bg-[#D4E815] text-[#1A1D21]" : "bg-slate-100 text-slate-500"
         )}>
             {complete ? "✓" : "JD"}
         </div>

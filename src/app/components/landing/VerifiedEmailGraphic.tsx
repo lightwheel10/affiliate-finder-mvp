@@ -32,11 +32,11 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
   }, [isHovered]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-slate-50/30">
+    <div className="absolute inset-0 overflow-hidden bg-white">
       <div 
         className="absolute inset-0 opacity-[0.15]" 
         style={{ 
-          backgroundImage: 'radial-gradient(#a855f7 1px, transparent 1px)', 
+          backgroundImage: 'radial-gradient(#D4E815 1px, transparent 1px)', 
           backgroundSize: '16px 16px' 
         }} 
       />
@@ -44,11 +44,11 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
       {/* Main Card */}
       <div className="absolute inset-x-6 top-2 bottom-26 flex flex-col items-center justify-center">
         <motion.div
-          className="relative w-full max-w-[240px] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
-          animate={isHovered ? { y: -4, boxShadow: "0 10px 30px -10px rgba(168, 85, 247, 0.15)" } : { y: 0 }}
+          className="relative w-full max-w-[240px] bg-white rounded-xl border border-[#E5E7EB] shadow-sm overflow-hidden"
+          animate={isHovered ? { y: -4, boxShadow: "0 10px 30px -10px rgba(212, 232, 21, 0.25)" } : { y: 0 }}
         >
             <div className="flex items-center p-3 gap-3 border-b border-slate-50">
-                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[#D4E815]/20 flex items-center justify-center text-[#1A1D21] shrink-0">
                     <Mail size={14} />
                 </div>
                 <div className="flex-1 min-w-0 space-y-1.5">
@@ -77,11 +77,11 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
             
             {/* Success Banner */}
             <div className={cn(
-                "bg-green-50 p-2 flex items-center justify-center gap-1.5 transition-all duration-300",
+                "bg-[#D4E815]/20 p-2 flex items-center justify-center gap-1.5 transition-all duration-300",
                 isHovered && step >= 4 ? "opacity-100" : "opacity-0 h-0 overflow-hidden p-0"
             )}>
-                <ShieldCheck size={12} className="text-green-600" />
-                <span className="text-[10px] font-bold text-green-700">Verified Deliverable</span>
+                <ShieldCheck size={12} className="text-[#1A1D21]" />
+                <span className="text-[10px] font-bold text-[#1A1D21]">Verified Deliverable</span>
             </div>
         </motion.div>
 

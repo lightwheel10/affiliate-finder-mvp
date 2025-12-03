@@ -137,16 +137,16 @@ export const InteractiveSearchDemo = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden backdrop-blur-sm transform transition-all duration-500 hover:shadow-2xl">
+      <div className="bg-white rounded-2xl shadow-xl border border-[#E5E7EB] overflow-hidden backdrop-blur-sm transform transition-all duration-500 hover:shadow-2xl">
         {/* Browser Header */}
-        <div className="h-10 bg-slate-50/80 border-b border-slate-100 flex items-center px-4 gap-3">
+        <div className="h-10 bg-slate-50/80 border-b border-[#E5E7EB] flex items-center px-4 gap-3">
           <div className="flex gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-red-400/80"></div>
             <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80"></div>
             <div className="w-2.5 h-2.5 rounded-full bg-green-400/80"></div>
           </div>
           <div className="flex-1 flex justify-center">
-            <div className="w-3/5 h-6 bg-white rounded-md border border-slate-200/80 flex items-center px-2 gap-2 text-[10px] text-slate-400 font-medium shadow-sm">
+            <div className="w-3/5 h-6 bg-white rounded-md border border-[#E5E7EB] flex items-center px-2 gap-2 text-[10px] text-slate-400 font-medium shadow-sm">
               <Search size={10} />
               <span>affiliatefinder.ai/scout</span>
             </div>
@@ -167,7 +167,7 @@ export const InteractiveSearchDemo = () => {
                      animate={{ opacity: 1, scale: 1 }}
                      exit={{ opacity: 0, scale: 0.8 }}
                    >
-                     <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                     <Loader2 className="h-5 w-5 text-[#D4E815] animate-spin" />
                    </motion.div>
                 ) : (
                   <motion.div
@@ -184,13 +184,13 @@ export const InteractiveSearchDemo = () => {
             <input
               disabled
               value={text}
-              className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-sm shadow-sm"
+              className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border-[#E5E7EB] rounded-xl text-[#111827] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#D4E815]/30 transition-all font-medium text-sm shadow-sm"
               placeholder="Enter a niche or keyword..."
             />
             {step === 'TYPING' && (
               <motion.div 
                 layoutId="cursor"
-                className="absolute top-1/2 -translate-y-1/2 w-[2px] h-5 bg-blue-500"
+                className="absolute top-1/2 -translate-y-1/2 w-[2px] h-5 bg-[#D4E815]"
                 style={{ left: `${44 + (text.length * 8)}px` }}
                 initial={{ opacity: 1 }}
                 animate={{ opacity: [1, 0] }}
@@ -198,24 +198,24 @@ export const InteractiveSearchDemo = () => {
               />
             )}
             <div className="absolute right-2 top-1/2 -translate-y-1/2">
-               <button className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 ${text.length > 5 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-slate-200 text-slate-400'}`}>
+               <button className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 ${text.length > 5 ? 'bg-[#D4E815] text-[#1A1D21] shadow-md shadow-[#D4E815]/30' : 'bg-slate-200 text-slate-400'}`}>
                  Scout
                </button>
             </div>
           </div>
 
           {/* Status Bar / Tabs */}
-          <div className="flex items-center gap-4 mb-6 border-b border-slate-100 pb-2 overflow-hidden">
+          <div className="flex items-center gap-4 mb-6 border-b border-[#E5E7EB] pb-2 overflow-hidden">
              {(['All', 'Web', 'YouTube', 'Instagram', 'Reddit'] as Tab[]).map((tab) => (
                <div 
                  key={tab} 
-                 className={`relative text-xs font-medium pb-2 cursor-default transition-colors ${activeTab === tab ? 'text-blue-600' : 'text-slate-400'}`}
+                 className={`relative text-xs font-medium pb-2 cursor-default transition-colors ${activeTab === tab ? 'text-[#1A1D21]' : 'text-slate-400'}`}
                >
                  {tab}
                  {activeTab === tab && (
                    <motion.div 
                      layoutId="activeTab"
-                     className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"
+                     className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D4E815] rounded-full"
                    />
                  )}
                </div>
@@ -230,9 +230,9 @@ export const InteractiveSearchDemo = () => {
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="text-xs text-blue-600 font-medium flex items-center gap-1.5"
+                      className="text-xs text-[#1A1D21] font-medium flex items-center gap-1.5"
                     >
-                      <Sparkles size={12} />
+                      <Sparkles size={12} className="text-[#D4E815]" />
                       Scanning...
                     </motion.div>
                  )}
@@ -242,9 +242,9 @@ export const InteractiveSearchDemo = () => {
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="text-xs text-orange-600 font-medium flex items-center gap-1.5"
+                      className="text-xs text-[#333333] font-medium flex items-center gap-1.5"
                     >
-                      <Loader2 size={12} className="animate-spin" />
+                      <Loader2 size={12} className="animate-spin text-[#D4E815]" />
                       Analyzing...
                     </motion.div>
                  )}
@@ -279,7 +279,7 @@ export const InteractiveSearchDemo = () => {
                    className="space-y-3"
                  >
                    {[1, 2, 3].map((i) => (
-                     <div key={i} className="flex items-center gap-4 p-3 rounded-xl border border-slate-100 bg-white shadow-sm">
+                     <div key={i} className="flex items-center gap-4 p-3 rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
                        <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" />
                        <div className="flex-1 space-y-2">
                          <div className="h-4 w-1/3 bg-slate-100 rounded animate-pulse" />
@@ -299,7 +299,7 @@ export const InteractiveSearchDemo = () => {
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                     transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                    className="group relative bg-white hover:bg-slate-50/50 border border-slate-100 rounded-xl p-3 flex items-center gap-4 transition-all shadow-sm hover:shadow-md hover:border-blue-100"
+                    className="group relative bg-white hover:bg-slate-50/50 border border-[#E5E7EB] rounded-xl p-3 flex items-center gap-4 transition-all shadow-sm hover:shadow-md hover:border-[#D4E815]/50"
                   >
                     {/* Avatar */}
                     <div className="relative shrink-0">
@@ -317,9 +317,9 @@ export const InteractiveSearchDemo = () => {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="font-semibold text-slate-900 text-sm truncate">{result.title}</h4>
+                        <h4 className="font-semibold text-[#111827] text-sm truncate">{result.title}</h4>
                         {result.eng && (
-                          <span className="shrink-0 text-[10px] font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-100">
+                          <span className="shrink-0 text-[10px] font-medium text-[#1A1D21] bg-[#D4E815]/20 px-1.5 py-0.5 rounded-full border border-[#D4E815]/30">
                             {result.eng} Eng.
                           </span>
                         )}
@@ -336,19 +336,19 @@ export const InteractiveSearchDemo = () => {
                          className="overflow-hidden"
                        >
                          {result.email ? (
-                           <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-100 whitespace-nowrap">
+                           <div className="flex items-center gap-1.5 px-2 py-1 bg-[#D4E815]/20 text-[#1A1D21] rounded-md border border-[#D4E815]/30 whitespace-nowrap">
                              <Mail size={12} />
                              <span className="text-[10px] font-medium">Found</span>
                            </div>
                          ) : (
-                            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 text-slate-400 rounded-md border border-slate-100 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 text-slate-400 rounded-md border border-[#E5E7EB] whitespace-nowrap">
                               <Search size={12} />
                               <span className="text-[10px] font-medium">No Email</span>
                             </div>
                          )}
                        </motion.div>
                        
-                       <button className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                       <button className="p-2 text-slate-300 hover:text-[#1A1D21] hover:bg-[#D4E815]/20 rounded-lg transition-colors">
                          <ArrowRight size={14} />
                        </button>
                     </div>
@@ -364,16 +364,16 @@ export const InteractiveSearchDemo = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400"
+                className="mt-auto pt-3 border-t border-[#E5E7EB] flex items-center justify-between text-[10px] text-slate-400"
               >
                  <div className="flex gap-3">
                    <span>
-                     <strong className="text-slate-700">{visibleResults.length}</strong> Results Visible
+                     <strong className="text-[#111827]">{visibleResults.length}</strong> Results Visible
                    </span>
                    <span>0.8s Search Time</span>
                  </div>
-                 <div className="flex items-center gap-1 text-green-600 font-medium">
-                   <Check size={10} />
+                 <div className="flex items-center gap-1 text-[#1A1D21] font-medium">
+                   <Check size={10} className="text-[#D4E815]" />
                    Analysis Complete
                  </div>
               </motion.div>

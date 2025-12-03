@@ -17,19 +17,19 @@ const candidates = [
 
 export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) => {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-slate-50/30">
+    <div className="absolute inset-0 overflow-hidden bg-white">
       {/* Abstract Grid Background */}
       <div 
         className="absolute inset-0 opacity-[0.15]" 
         style={{ 
-          backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', 
+          backgroundImage: 'radial-gradient(#D4E815 1px, transparent 1px)', 
           backgroundSize: '16px 16px' 
         }} 
       />
 
       {/* Scanner Beam */}
       <motion.div
-        className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent z-20 blur-[1px]"
+        className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#D4E815] to-transparent z-20 blur-[1px]"
         animate={{
           top: ['15%', '75%'],
           opacity: [0, 1, 1, 0]
@@ -42,7 +42,7 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
       />
       
       {/* Search Status Indicator */}
-      <div className="absolute top-2 right-5 flex items-center gap-2 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 z-30">
+      <div className="absolute top-2 right-5 flex items-center gap-2 px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm border border-[#E5E7EB] z-30">
         {isHovered ? (
           <motion.div
             initial={{ scale: 0 }}
@@ -53,7 +53,7 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             >
-                <RotateCw size={10} className="text-blue-500" />
+                <RotateCw size={10} className="text-[#D4E815]" />
             </motion.div>
           </motion.div>
         ) : (
@@ -70,7 +70,7 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
             </motion.div>
           </motion.div>
         )}
-        <span className="text-[9px] font-semibold text-slate-600 uppercase tracking-wider">
+        <span className="text-[9px] font-semibold text-[#111827] uppercase tracking-wider">
           {isHovered ? 'Scanning...' : 'Indexing'}
         </span>
       </div>
@@ -100,13 +100,13 @@ const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered:
       transition={{ delay: index * 0.15 }}
       className={cn(
         "relative flex items-center gap-3 p-3 rounded-xl border bg-white shadow-sm transition-all duration-300",
-        isHovered ? "border-blue-200 shadow-md translate-x-1" : "border-slate-100"
+        isHovered ? "border-[#D4E815]/50 shadow-md translate-x-1" : "border-[#E5E7EB]"
       )}
     >
       {/* Avatar Placeholder */}
       <div className={cn(
         "w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 shrink-0",
-        isHovered ? "bg-blue-50 text-blue-500" : "bg-slate-50 text-slate-400"
+        isHovered ? "bg-[#D4E815]/20 text-[#1A1D21]" : "bg-slate-50 text-slate-400"
       )}>
         <User size={14} strokeWidth={2.5} />
       </div>
@@ -133,7 +133,7 @@ const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered:
             <div className={cn(
                 "px-2 py-0.5 rounded text-[10px] font-bold border transition-all duration-300",
                 isHovered 
-                    ? "bg-green-50 text-green-600 border-green-200" 
+                    ? "bg-[#D4E815]/20 text-[#1A1D21] border-[#D4E815]/40" 
                     : "bg-slate-50 text-slate-400 border-slate-100"
             )}>
                 {isHovered ? `${candidate.score}%` : '--'}
