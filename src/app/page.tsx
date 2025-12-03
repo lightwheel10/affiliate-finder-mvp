@@ -318,7 +318,7 @@ export default function Home() {
   }, [activeFilter, searchQuery]);
 
   return (
-    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       
       <main 
@@ -340,15 +340,15 @@ export default function Home() {
               <Search size={12} className="text-emerald-600" />
               <span className="font-semibold text-emerald-900">14/15 Topic Searches</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg">
-              <Mail size={12} className="text-blue-600" />
-              <span className="font-semibold text-blue-900">150/150 Email Credits</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg">
+              <Mail size={12} className="text-[#1A1D21]" />
+              <span className="font-semibold text-[#1A1D21]">150/150 Email Credits</span>
             </div>
             
             {/* Action Buttons */}
             <button 
               onClick={() => setIsFindModalOpen(true)}
-              className="bg-slate-900 text-white px-3.5 py-1.5 rounded-lg hover:bg-blue-600 hover:shadow-md hover:shadow-blue-600/20 transition-all font-semibold flex items-center gap-1.5"
+              className="bg-[#D4E815] text-[#1A1D21] px-3.5 py-1.5 rounded-lg hover:bg-[#c5d913] hover:shadow-md hover:shadow-[#D4E815]/20 transition-all font-semibold flex items-center gap-1.5"
             >
               <Plus size={14} /> Find Affiliates
             </button>
@@ -363,19 +363,19 @@ export default function Home() {
 
             {/* Previous Results Warning - Above Search Bar */}
             {showWarning && (
-              <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full shrink-0">
-                  <Search size={16} className="text-blue-600" />
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-center w-8 h-8 bg-[#D4E815]/20 rounded-full shrink-0">
+                  <Search size={16} className="text-[#1A1D21]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-blue-900">New search started</p>
-                  <p className="text-xs text-blue-700 mt-0.5">
+                  <p className="text-sm font-semibold text-[#1A1D21]">New search started</p>
+                  <p className="text-xs text-slate-600 mt-0.5">
                     Previous results have been moved to <span className="font-semibold">"All Discovered"</span> page. Showing new results below...
                   </p>
                 </div>
                 <button
                   onClick={() => setShowWarning(false)}
-                  className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                  className="text-[#1A1D21] hover:text-slate-600 transition-colors p-1"
                   aria-label="Dismiss"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -392,11 +392,11 @@ export default function Home() {
               <div className="flex items-center gap-4 flex-1">
                 <div className="w-full max-w-xs">
                    <div className="relative w-full group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
                         <Search className="h-4 w-4" />
                       </div>
                       <input
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-xl text-sm font-medium text-slate-900 shadow-[0_1px_2px_rgb(0,0,0,0.05)] transition-all duration-200 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:shadow-[0_4px_12px_rgb(37,99,235,0.05)]"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-xl text-sm font-medium text-slate-900 shadow-[0_1px_2px_rgb(0,0,0,0.05)] transition-all duration-200 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:shadow-[0_4px_12px_rgb(212,232,21,0.1)]"
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -467,24 +467,24 @@ export default function Home() {
                    // STREAMING MODE: Show results as they arrive + skeletons for pending
                    <>
                     {/* Loading progress indicator at top */}
-                    <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="flex items-center gap-3 px-4 py-3 bg-[#D4E815]/10 border-b border-[#D4E815]/30">
+                      <div className="w-5 h-5 border-2 border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-blue-900">
+                        <p className="text-sm font-semibold text-[#1A1D21]">
                           Discovering affiliates...
                         </p>
-                        <p className="text-xs text-blue-600">
+                        <p className="text-xs text-slate-600">
                           {results.length > 0 
                             ? `${groupedResults.length} unique affiliates from ${results.length} results • Analyzing more...`
                             : 'Searching across platforms...'}
                         </p>
                       </div>
-                      <div className="text-xs font-mono text-blue-500 bg-blue-100 px-2 py-1 rounded flex items-center gap-2">
+                      <div className="text-xs font-mono text-[#1A1D21] bg-[#D4E815]/20 px-2 py-1 rounded flex items-center gap-2">
                         <span>{results.length}/{expectedResultsCount} analyzed</span>
                         {groupedResults.length > 0 && (
                           <>
-                            <span className="text-blue-300">•</span>
-                            <span className="text-emerald-600 font-semibold">{groupedResults.length} affiliates</span>
+                            <span className="text-[#1A1D21]/30">•</span>
+                            <span className="text-[#1A1D21] font-semibold">{groupedResults.length} affiliates</span>
                           </>
                         )}
                       </div>
@@ -685,8 +685,8 @@ export default function Home() {
         <div className="space-y-5">
           {/* Header */}
           <div className="text-center pb-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/25">
-              <Search size={24} className="text-white" />
+            <div className="w-12 h-12 bg-[#1A1D21] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-[#1A1D21]/25">
+              <Search size={24} className="text-[#D4E815]" />
             </div>
             <h2 className="text-xl font-bold text-slate-900">Find Affiliates</h2>
             <p className="text-sm text-slate-500 mt-1">
@@ -699,7 +699,7 @@ export default function Home() {
             {/* Left Column - Keywords */}
             <div className="flex flex-col">
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7">
-                <Search size={14} className="text-blue-500" />
+                <Search size={14} className="text-[#1A1D21]" />
                 Keywords
                 <span className="ml-auto text-xs font-normal text-slate-400">
                   {keywords.length}/{MAX_KEYWORDS}
@@ -720,12 +720,12 @@ export default function Home() {
                   }}
                   placeholder="Type keyword + Enter..."
                   disabled={keywords.length >= MAX_KEYWORDS}
-                  className="w-full px-3 py-2.5 pr-16 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2.5 pr-16 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#D4E815] focus:ring-2 focus:ring-[#D4E815]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   onClick={addKeyword}
                   disabled={!keywordInput.trim() || keywords.length >= MAX_KEYWORDS}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[#D4E815] text-[#1A1D21] text-xs font-semibold rounded hover:bg-[#c5d913] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
                 >
                   Add
                 </button>
@@ -739,7 +739,7 @@ export default function Home() {
                       key={kw}
                       className="flex items-center gap-2 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-sm group hover:border-red-200 transition-all"
                     >
-                      <span className="w-4 h-4 flex items-center justify-center bg-blue-100 text-blue-600 text-[10px] font-bold rounded shrink-0">
+                      <span className="w-4 h-4 flex items-center justify-center bg-[#D4E815]/20 text-[#1A1D21] text-[10px] font-bold rounded shrink-0">
                         {idx + 1}
                       </span>
                       <span className="text-slate-700 truncate flex-1">{kw}</span>
@@ -811,11 +811,11 @@ export default function Home() {
           <button
             onClick={handleFindAffiliates}
             disabled={keywords.length === 0 || loading}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 bg-[#D4E815] text-[#1A1D21] font-semibold rounded-xl hover:bg-[#c5d913] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed shadow-lg shadow-[#D4E815]/25 hover:shadow-xl hover:shadow-[#D4E815]/30 transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 border-[#1A1D21] border-t-transparent rounded-full animate-spin"></div>
                 Searching...
               </>
             ) : (
