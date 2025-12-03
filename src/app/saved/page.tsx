@@ -87,7 +87,7 @@ export default function PipelinePage() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       
       <main 
@@ -143,7 +143,7 @@ export default function PipelinePage() {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap",
                         activeFilter === tab.id
-                          ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                          ? "bg-[#1A1D21] text-white border-[#1A1D21] shadow-sm"
                           : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                       )}
                     >
