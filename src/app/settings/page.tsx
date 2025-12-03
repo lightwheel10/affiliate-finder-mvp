@@ -136,8 +136,8 @@ export default function SettingsPage() {
           
           <p className="text-sm text-slate-600">
             If you're having issues, we'd love to help! Contact us at{' '}
-            <a href="mailto:support@affiliatefinder.ai" className="text-[#1A1D21] font-medium hover:underline">
-              support@affiliatefinder.ai
+            <a href="mailto:support@crewcast.studio" className="text-[#1A1D21] font-medium hover:underline">
+              support@crewcast.studio
             </a>
           </p>
 

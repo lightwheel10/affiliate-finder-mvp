@@ -1,7 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Check, Globe, Youtube, Instagram, ArrowRight, Sparkles, Loader2, MessageCircle } from 'lucide-react';
+import { Search, Mail, Check, Globe, Youtube, Instagram, ArrowRight, Loader2, MessageCircle } from 'lucide-react';
+
+// Selecdoo "S" Logo Icon
+const SelecdooIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    className={className}
+  >
+    <path 
+      d="M12 4C8.5 4 6 6 6 8.5C6 11 8 12.5 12 13.5C16 14.5 18 16 18 18.5C18 21 15.5 23 12 23C8.5 23 6 21 6 18.5M12 1V4M12 23V20" 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 import { motion, AnimatePresence } from 'framer-motion';
 
 type Step = 'IDLE' | 'TYPING' | 'SEARCHING' | 'ANALYZING' | 'COMPLETE';
@@ -148,7 +167,7 @@ export const InteractiveSearchDemo = () => {
           <div className="flex-1 flex justify-center">
             <div className="w-3/5 h-6 bg-white rounded-md border border-[#E5E7EB] flex items-center px-2 gap-2 text-[10px] text-slate-400 font-medium shadow-sm">
               <Search size={10} />
-              <span>affiliatefinder.ai/scout</span>
+              <span>crewcast.studio/scout</span>
             </div>
           </div>
         </div>
@@ -232,7 +251,7 @@ export const InteractiveSearchDemo = () => {
                       exit={{ opacity: 0, x: -10 }}
                       className="text-xs text-[#1A1D21] font-medium flex items-center gap-1.5"
                     >
-                      <Sparkles size={12} className="text-[#D4E815]" />
+                      <SelecdooIcon size={12} className="text-[#D4E815]" />
                       Scanning...
                     </motion.div>
                  )}

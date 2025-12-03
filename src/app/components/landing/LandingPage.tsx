@@ -16,11 +16,29 @@ import {
   X,
   ChevronRight,
   Star,
-  Sparkles,
   Play,
   Target,
   Radar
 } from 'lucide-react';
+
+// Selecdoo "S" Logo Icon
+const SelecdooIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    className={className}
+  >
+    <path 
+      d="M12 4C8.5 4 6 6 6 8.5C6 11 8 12.5 12 13.5C16 14.5 18 16 18 18.5C18 21 15.5 23 12 23C8.5 23 6 21 6 18.5M12 1V4M12 23V20" 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 import { LogoMarquee } from './LogoMarquee';
 import { InteractiveSearchDemo } from './InteractiveSearchDemo';
 import { BentoGrid, BentoCard } from './BentoGrid';
@@ -59,9 +77,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-lg tracking-tight z-50">
             <div className="w-7 h-7 bg-[#1A1D21] rounded-lg flex items-center justify-center text-white shadow-lg shadow-[#1A1D21]/20">
-              <Sparkles size={14} fill="currentColor" className="text-[#D4E815]" />
+              <SelecdooIcon size={14} className="text-[#D4E815]" />
             </div>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#111827] to-[#333333]">Affiliate Finder</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#111827] to-[#333333]">CrewCast Studio</span>
           </div>
 
           {/* Desktop Links */}
@@ -385,7 +403,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                         <div className="absolute bottom-6 left-6 right-6 p-4 bg-white/90 backdrop-blur-md rounded-xl border border-white/20 shadow-lg transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-[#D4E815]/20 flex items-center justify-center text-[#1A1D21]">
-                              <Sparkles size={14} />
+                              <SelecdooIcon size={14} className="text-[#1A1D21]" />
                             </div>
                             <div className="flex-1">
                               <div className="text-sm font-bold text-[#111827]">{item.overlayTitle}</div>

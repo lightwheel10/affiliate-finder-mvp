@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Affiliate Finder AI",
-  description: "Find the best affiliates for your campaign",
+  title: "CrewCast Studio | backed by selecdoo AI",
+  description: "Find the best affiliates for your campaign - backed by selecdoo AI",
 };
 
 export default function RootLayout({

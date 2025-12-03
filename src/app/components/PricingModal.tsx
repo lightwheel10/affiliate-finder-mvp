@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Check, Sparkles, Zap, Loader2, Star, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Check, Zap, Loader2, Star, ShieldCheck, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from './Modal';
 

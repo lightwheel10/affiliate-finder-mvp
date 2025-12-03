@@ -2,7 +2,26 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, Check, ChevronDown, Sparkles, Globe, Plus, X, Search, MessageSquare, MousePointerClick } from 'lucide-react';
+import { Loader2, Check, ChevronDown, Globe, Plus, X, Search, MessageSquare, MousePointerClick } from 'lucide-react';
+
+// Selecdoo "S" Logo Icon
+const SelecdooIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    className={className}
+  >
+    <path 
+      d="M12 4C8.5 4 6 6 6 8.5C6 11 8 12.5 12 13.5C16 14.5 18 16 18 18.5C18 21 15.5 23 12 23C8.5 23 6 21 6 18.5M12 1V4M12 23V20" 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 import { cn } from '@/lib/utils';
 
 // Mock data for suggestions
@@ -185,7 +204,7 @@ export const OnboardingScreen = () => {
       {/* Header */}
       <div className="text-center mb-4">
         <p className="text-slate-600 text-xs font-medium mb-1.5">
-          Thanks for joining AffiliateFinder.ai
+          Thanks for joining CrewCast Studio
         </p>
         <h1 className="text-xl md:text-2xl text-slate-900 font-medium tracking-tight">
           Let's <span className="text-[#1A1D21] font-serif italic">get to know</span> each other
@@ -264,9 +283,9 @@ export const OnboardingScreen = () => {
       <div className="text-center mb-4">
         <div className="flex items-center justify-center gap-1.5 mb-3">
             <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
+              <SelecdooIcon size={10} className="text-[#D4E815]" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
+            <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
         </div>
         
         <h1 className="text-lg md:text-xl text-slate-900 font-medium tracking-tight mb-1">
@@ -383,9 +402,9 @@ export const OnboardingScreen = () => {
       <div className="text-center mb-4">
         <div className="flex items-center justify-center gap-1.5 mb-3">
             <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
+              <SelecdooIcon size={10} className="text-[#D4E815]" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
+            <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
         </div>
         
         <h1 className="text-lg md:text-xl text-slate-900 font-medium tracking-tight mb-1">
@@ -418,7 +437,7 @@ export const OnboardingScreen = () => {
       <div className="space-y-4">
         <div className="flex gap-2.5 items-start">
            <div className="w-7 h-7 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
-             <Sparkles size={14} />
+             <SelecdooIcon size={14} className="text-[#1A1D21]" />
           </div>
           <div className="space-y-0.5">
             <p className="text-slate-900 font-medium text-sm leading-relaxed pt-0.5">
@@ -521,9 +540,9 @@ export const OnboardingScreen = () => {
       <div className="text-center mb-4">
         <div className="flex items-center justify-center gap-1.5 mb-3">
             <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
+              <SelecdooIcon size={10} className="text-[#D4E815]" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
+            <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
         </div>
         
         <h1 className="text-lg md:text-xl text-slate-900 font-medium tracking-tight mb-1">
@@ -638,9 +657,9 @@ export const OnboardingScreen = () => {
       <div className="text-center mb-4">
         <div className="flex items-center justify-center gap-1.5 mb-3">
             <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
+              <SelecdooIcon size={10} className="text-[#D4E815]" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Affiliate<span className="text-[#1A1D21]">Finder.ai</span></span>
+            <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
         </div>
         
         <h1 className="text-lg md:text-xl text-slate-900 font-medium tracking-tight mb-1">

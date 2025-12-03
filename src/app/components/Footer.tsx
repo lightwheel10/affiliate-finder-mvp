@@ -1,5 +1,24 @@
 import React from 'react';
-import { Sparkles, Globe, Users, Twitter, Linkedin, Github } from 'lucide-react';
+import { Globe, Users, Twitter, Linkedin, Github } from 'lucide-react';
+
+// Selecdoo "S" Logo Icon
+const SelecdooIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    className={className}
+  >
+    <path 
+      d="M12 4C8.5 4 6 6 6 8.5C6 11 8 12.5 12 13.5C16 14.5 18 16 18 18.5C18 21 15.5 23 12 23C8.5 23 6 21 6 18.5M12 1V4M12 23V20" 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 export const Footer = () => {
   return (
@@ -8,11 +27,13 @@ export const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
           <div className="col-span-2">
             <div className="flex items-center gap-2 font-bold text-lg text-[#111827] mb-4">
-              <Sparkles size={16} className="text-[#D4E815]" fill="currentColor" />
-              <span>Affiliate Finder</span>
+              <div className="w-6 h-6 bg-[#1A1D21] rounded-md flex items-center justify-center">
+                <SelecdooIcon size={14} className="text-[#D4E815]" />
+              </div>
+              <span>CrewCast Studio</span>
             </div>
             <p className="text-slate-500 text-xs leading-relaxed max-w-xs mb-6">
-              The new standard for affiliate discovery. Powered by AI, designed for humans.
+              The new standard for affiliate discovery. Backed by selecdoo AI.
               Helping brands scale their partner networks 10x faster.
             </p>
             <div className="flex gap-4">
@@ -74,9 +95,9 @@ export const Footer = () => {
         
         <div className="pt-8 border-t border-[#E5E7EB] flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex flex-col md:flex-row items-center gap-4">
-             <p className="text-[10px] text-slate-400">© 2025 Affiliate Finder AI Inc. All rights reserved.</p>
+             <p className="text-[10px] text-slate-400">© 2025 CrewCast Studio. All rights reserved.</p>
              <span className="hidden md:block text-[10px] text-slate-300">•</span>
-             <p className="text-[10px] text-slate-400">Made by Spectrum AI Labs</p>
+             <p className="text-[10px] text-slate-400">Backed by selecdoo AI</p>
           </div>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
