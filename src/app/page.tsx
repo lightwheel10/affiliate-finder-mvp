@@ -147,7 +147,7 @@ function Dashboard() {
     // Combined keyword string for storage
     const combinedKeyword = keywords.join(' | ');
     const streamedResults: ResultItem[] = [];
-    const resultsToSave: ResultItem[] = []; // Batch for Convex
+    const resultsToSave: ResultItem[] = []; // Batch for Convex (non-streaming fallback only)
 
     try {
       // Search all keywords in parallel for speed!
@@ -203,11 +203,14 @@ function Dashboard() {
                   };
 
                   streamedResults.push(enhancedResult);
-                  resultsToSave.push(enhancedResult);
                   setResults([...streamedResults]);
                   
                   // Save to Convex in real-time (one at a time during streaming)
-                  saveDiscoveredAffiliate(enhancedResult, combinedKeyword);
+                  // Note: We don't await here to avoid blocking the UI stream
+                  // The mutation will complete in the background
+                  saveDiscoveredAffiliate(enhancedResult, combinedKeyword).catch(err => {
+                    console.error('Failed to save discovered affiliate:', err);
+                  });
                   
                 } catch (parseError) {
                   console.error('Failed to parse streamed result:', parseError);
@@ -250,9 +253,14 @@ function Dashboard() {
 
       await Promise.all(searchPromises);
       
-      // Batch save final results to Convex (for non-streaming mode)
-      if (resultsToSave.length > 0 && !streamedResults.length) {
-        saveDiscoveredAffiliates(resultsToSave, combinedKeyword);
+      // Batch save results to Convex for non-streaming fallback mode only
+      // Streaming mode saves each result individually above
+      if (resultsToSave.length > 0) {
+        try {
+          await saveDiscoveredAffiliates(resultsToSave, combinedKeyword);
+        } catch (err) {
+          console.error('Failed to batch save discovered affiliates:', err);
+        }
       }
       
     } catch (e: unknown) {
