@@ -80,7 +80,7 @@ export const Footer = () => {
           <div className="flex flex-col md:flex-row items-center gap-4">
              <p className="text-[10px] text-slate-400">© 2025 CrewCast Studio. All rights reserved.</p>
              <span className="hidden md:block text-[10px] text-slate-300">•</span>
-             <p className="text-[10px] text-slate-400">Made by Spectrum AI Labs</p>
+             <a href="https://www.spectrumailabs.com" target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-[#D4E815] transition-colors">Made by Spectrum AI Labs</a>
           </div>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
