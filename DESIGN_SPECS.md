@@ -59,3 +59,33 @@
 - **Card Background:** White (`#FFFFFF`) with subtle shadow.
 - **Border:** Very subtle light gray (`#E5E7EB`) or none with shadow.
 
+## Auth Screens (Login/Signup)
+
+### Layout
+- Centered card layout with decorative background blurs
+- Card: White with backdrop blur, subtle border, rounded corners (`1rem`)
+- Max width: `400px`
+
+### Colors
+- **Background:** Off-white (`#FDFDFD`) with Electric Lime gradient blurs
+- **Logo Icon:** Deep Slate (`#1A1D21`) background with Electric Lime (`#D4E815`) icon
+- **Input Focus:** Electric Lime ring (`#D4E815`) with 10% opacity
+- **Primary Button:** Deep Slate (`#1A1D21`) background, hover to Electric Lime (`#D4E815`)
+- **Links:** Electric Lime (`#D4E815`) for interactive text links
+- **Error State:** Red (`#EF4444`) background with red border
+
+### Form Elements
+- **Input Fields:**
+  - Background: White (`#FFFFFF`)
+  - Border: Light gray (`#E5E7EB`)
+  - Focus Border: Electric Lime (`#D4E815`)
+  - Focus Ring: Electric Lime at 10% opacity
+  - Icon Color (default): Slate-400
+  - Icon Color (focus): Electric Lime (`#D4E815`)
+
+### Typography
+- **Heading:** Bold, Near Black (`#111827`)
+- **Subtext:** Slate-500
+- **Labels:** SemiBold, Slate-700
+- **Links:** SemiBold, Electric Lime (`#D4E815`)
+

@@ -75,16 +75,16 @@ export const LoginScreen = () => {
     <div className="min-h-screen w-full flex items-center justify-center bg-[#FDFDFD] relative overflow-hidden">
       {/* Decorative Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-50/50 blur-3xl" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-50/50 blur-3xl" />
+        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-[#D4E815]/10 blur-3xl" />
+        <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-[#D4E815]/5 blur-3xl" />
       </div>
 
       <div className="w-full max-w-[400px] px-6 relative z-10">
         <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 shadow-xl rounded-2xl p-6 md:p-8">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-              <Sparkles size={20} fill="currentColor" className="opacity-90" />
+            <div className="w-10 h-10 bg-[#1A1D21] rounded-xl flex items-center justify-center shadow-lg shadow-[#1A1D21]/20">
+              <Sparkles size={20} fill="currentColor" className="text-[#D4E815]" />
             </div>
           </div>
 
@@ -105,13 +105,13 @@ export const LoginScreen = () => {
           {view === 'forgot-password' && resetSent ? (
             <div className="text-center space-y-6">
               <div className="flex justify-center">
-                <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-green-500" />
+                <div className="w-16 h-16 bg-[#D4E815]/20 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-[#1A1D21]" />
                 </div>
               </div>
               <button
                 onClick={() => switchView('signin')}
-                className="text-sm text-slate-600 font-semibold hover:text-blue-600 transition-colors"
+                className="text-sm text-slate-600 font-semibold hover:text-[#D4E815] transition-colors"
               >
                 Back to Sign In
               </button>
@@ -123,12 +123,12 @@ export const LoginScreen = () => {
                 <div className="space-y-1.5 animate-in slide-in-from-left-2 duration-300">
                   <label className="text-xs font-semibold text-slate-700 ml-1">Full Name</label>
                   <div className="relative group">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={16} />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1A1D21] transition-colors" size={16} />
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                      className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#D4E815] focus:ring-2 focus:ring-[#D4E815]/20 transition-all"
                       placeholder="Jamie Founder"
                     />
                   </div>
@@ -138,12 +138,12 @@ export const LoginScreen = () => {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 ml-1">Email Address</label>
                 <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={16} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1A1D21] transition-colors" size={16} />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#D4E815] focus:ring-2 focus:ring-[#D4E815]/20 transition-all"
                     placeholder="name@company.com"
                   />
                 </div>
@@ -157,19 +157,19 @@ export const LoginScreen = () => {
                       <button 
                         type="button"
                         onClick={() => switchView('forgot-password')}
-                        className="text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                        className="text-[11px] font-medium text-[#1A1D21] hover:text-[#D4E815] transition-colors"
                       >
                         Forgot password?
                       </button>
                     )}
                   </div>
                   <div className="relative group">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={16} />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1A1D21] transition-colors" size={16} />
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                      className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#D4E815] focus:ring-2 focus:ring-[#D4E815]/20 transition-all"
                       placeholder="••••••••"
                     />
                   </div>
@@ -186,7 +186,7 @@ export const LoginScreen = () => {
                 type="submit"
                 disabled={isSubmitting}
                 className={cn(
-                  "w-full mt-6 bg-slate-900 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:shadow-blue-600/20",
+                  "w-full mt-6 bg-[#1A1D21] hover:bg-[#D4E815] text-white hover:text-[#1A1D21] font-semibold py-2.5 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:shadow-[#D4E815]/30",
                   isSubmitting && "opacity-80 cursor-not-allowed"
                 )}
               >
@@ -210,7 +210,7 @@ export const LoginScreen = () => {
                 Don't have an account?{' '}
                 <button 
                   onClick={() => switchView('signup')}
-                  className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+                  className="text-[#1A1D21] font-semibold hover:text-[#D4E815] transition-colors"
                 >
                   Sign up
                 </button>
@@ -222,7 +222,7 @@ export const LoginScreen = () => {
                 Already have an account?{' '}
                 <button 
                   onClick={() => switchView('signin')}
-                  className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+                  className="text-[#1A1D21] font-semibold hover:text-[#D4E815] transition-colors"
                 >
                   Sign in
                 </button>
