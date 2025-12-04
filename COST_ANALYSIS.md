@@ -35,14 +35,6 @@ These services are **$0/month** until you exceed their free tier limits:
 | **Convex** | Database | 1M function calls, 1GB storage, 1GB bandwidth | >1M calls OR >1GB storage |
 | **Clerk** | Authentication | 10,000 Monthly Active Users (MAUs) | >10,000 MAUs → $0.02/MAU |
 
-### Paid Plan Costs (If Exceeded)
-
-| Service | Trigger | Paid Plan Cost |
-|---------|---------|----------------|
-| Vercel Pro | Commercial use or >100GB | $20/month |
-| Convex Pro | >1M calls or >1GB storage | $25/month |
-| Clerk | >10,000 MAUs | $0.02 per additional MAU |
-
 ---
 
 ## 3. Apify Credit Breakdown
@@ -57,106 +49,37 @@ Apify Plan:              $39/month
 └── Remaining Credits:    $20 (for all scraper usage)
 ```
 
-### Scraper Costs (Per Run)
+---
 
-| Scraper | Actor ID | Rental Fee | Usage Cost | What You Get |
-|---------|----------|------------|------------|--------------|
-| **SimilarWeb** | `yOYYzj2J5K88boIVO` | $19/month (from credits) | ~$0.05/domain | Traffic, rankings, sources, keywords |
-| **Instagram Profile** | `dSCLg0C3YEZ83HzYX` | $0 | ~$0.002/profile | Followers, posts, engagement |
-| **Instagram Search** | `DrF9mzPPEuVizVF4l` | $0 | ~$0.002/search | Discovery + profile data |
-| **YouTube** | `h7sDV53CddomktSi5` | $0 | ~$0.005/video | Views, likes, subscribers, comments |
-| **TikTok** | `GdWCkxBtKWOsKjdch` | $0 | ~$0.0002/video | Followers, likes, views, engagement |
+## 4. Cost Per Search (KEY METRIC)
 
-### Monthly Credit Allocation Example
+When a user searches a keyword, ALL platforms are queried and SimilarWeb data is fetched for every web result.
 
-Starting with $39 credits, $19 goes to SimilarWeb rental = **$20 remaining**:
+### Search Cost Breakdown (with 20 web results)
 
-| Item | Cost | Running Total |
-|------|------|---------------|
-| SimilarWeb Rental | $19.00 | $19.00 |
-| SimilarWeb Usage (100 domains) | $5.00 | $24.00 |
-| Instagram Search (100 searches) | $0.20 | $24.20 |
-| Instagram Profile (500 profiles) | $1.00 | $25.20 |
-| YouTube (500 videos) | $2.50 | $27.70 |
-| TikTok (2,000 videos) | $0.40 | $28.10 |
-| **TOTAL** | **$28.10** | ✅ Within $39 |
+| Component | Service | Cost |
+|-----------|---------|------|
+| Web Discovery | Serper | $0.001 |
+| Instagram Search | Apify | ~$0.002 |
+| YouTube Search | Apify | ~$0.005 |
+| TikTok Search | Apify | ~$0.002 |
+| **SimilarWeb Traffic** | Apify (20 domains × $0.05) | **$1.00** |
+| **TOTAL PER SEARCH** | | **~$1.01** |
 
-> **Overage**: If you exceed $39 in credits, additional usage costs ~$0.30 per compute unit.
+### Cost Varies by Web Results Shown
 
-### ⚠️ Credit Budget Warning
+| Web Results | SimilarWeb Cost | Total Per Search |
+|-------------|-----------------|------------------|
+| 5 results | $0.25 | **~$0.26** |
+| 10 results | $0.50 | **~$0.51** |
+| 20 results | $1.00 | **~$1.01** |
+| 30 results | $1.50 | **~$1.51** |
 
-With SimilarWeb rental taking $19, you only have **$20/month** for actual scraping:
-
-| Usage Level | SimilarWeb Domains | Other Scrapers | Total Usage | Within Budget? |
-|-------------|-------------------|----------------|-------------|----------------|
-| Light | 50 ($2.50) | $5 | $7.50 | ✅ Yes ($20) |
-| Moderate | 150 ($7.50) | $10 | $17.50 | ✅ Yes ($20) |
-| Heavy | 300 ($15) | $15 | $30 | ❌ Over by $10 |
+> **⚠️ Important:** SimilarWeb is the biggest cost driver. Reducing web results significantly reduces cost per search.
 
 ---
 
-## 4. Serper API Usage
-
-The $50/month plan includes **50,000 searches**. One search = one API call.
-
-| Usage Level | Searches/Month | Within Limit? | Overage Cost |
-|-------------|---------------|---------------|--------------|
-| Light | 5,000 | ✅ Yes | $0 |
-| Moderate | 20,000 | ✅ Yes | $0 |
-| Heavy | 50,000 | ✅ Yes | $0 |
-| Very Heavy | 80,000 | ❌ Over by 30K | $30.00 |
-
-> **Overage**: $0.001 per search after 50,000.
-
----
-
-## 5. Per-Search Cost Breakdown
-
-### Example: User searches "AI automation tools"
-
-When a user performs a search, here's what happens and what it costs:
-
-#### Step 1: Content Discovery
-
-| Platform | Service Used | API Calls | Cost |
-|----------|-------------|-----------|------|
-| Web/Blogs | Serper | 1 search | $0.001 |
-| Instagram | Apify Instagram Search | 1 run | $0.002 |
-| YouTube | Apify YouTube Scraper | 1 run | $0.005 |
-| TikTok | Apify TikTok Scraper | 1 run | $0.0002 |
-| **Discovery Total** | | | **$0.0082** |
-
-#### Step 2: Results Found
-
-| Platform | Results Found | Per-Result Cost | Total |
-|----------|--------------|-----------------|-------|
-| Web/Blogs | 20 articles | Included in search | $0 |
-| Instagram | 10 profiles | Included in search | $0 |
-| YouTube | 10 videos | Included in search | $0 |
-| TikTok | 10 videos | Included in search | $0 |
-| **50 Total Results** | | | **$0** |
-
-#### Step 3: Website Traffic Enrichment (Optional)
-
-For each web result, user can view traffic data:
-
-| Action | Service | Cost |
-|--------|---------|------|
-| View traffic for 1 website | SimilarWeb Scraper | $0.05 |
-| View traffic for 5 websites | SimilarWeb Scraper | $0.25 |
-| View traffic for all 20 websites | SimilarWeb Scraper | $1.00 |
-
-#### Total Search Cost Summary
-
-| Scenario | Discovery | Enrichment | Total |
-|----------|-----------|------------|-------|
-| Search only (no traffic view) | $0.0082 | $0 | **$0.01** |
-| Search + 5 traffic views | $0.0082 | $0.25 | **$0.26** |
-| Search + all 20 traffic views | $0.0082 | $1.00 | **$1.01** |
-
----
-
-## 6. Per-Email Cost Breakdown
+## 5. Per-Email Cost Breakdown
 
 ### Email Discovery + Generation Flow
 
@@ -166,154 +89,108 @@ For each web result, user can view traffic data:
 | 2. Generate personalized email | OpenAI GPT-4 | $0.02 | Per email generated |
 | **Total per email** | | **$0.044** | |
 
-*Apollo only charges for successfully found emails. Within 2,500/month = $0.
-
-### Apollo Credit Math
-
-| Emails Found | Within 2,500? | Apollo Cost | OpenAI Cost | Total |
-|--------------|---------------|-------------|-------------|-------|
-| 100 | ✅ Yes | $0 | $2.00 | **$2.00** |
-| 500 | ✅ Yes | $0 | $10.00 | **$10.00** |
-| 2,500 | ✅ Yes | $0 | $50.00 | **$50.00** |
-| 3,000 | ❌ Over by 500 | $12.00 | $60.00 | **$72.00** |
+*Apollo: First 2,500 emails/month are included in the $59 plan.
 
 ### Email Cost Examples
 
-**Example 1: Find 50 emails from search results (within credits)**
+**Within Apollo's 2,500 limit:**
 ```
-Apollo: 50 emails × $0 (within 2,500 credits) = $0
-OpenAI: 50 emails × $0.02 = $1.00
-TOTAL: $1.00
-```
-
-**Example 2: Find 100 emails after credits exhausted**
-```
-Apollo: 100 emails × $0.024 = $2.40
-OpenAI: 100 emails × $0.02 = $2.00
-TOTAL: $4.40
+Apollo: $0 (included)
+OpenAI: $0.02
+TOTAL: $0.02 per email
 ```
 
----
-
-## 7. Complete Search-to-Outreach Example
-
-### Scenario: User searches "AI automation tools" and contacts 10 people
-
-| Step | Action | Cost |
-|------|--------|------|
-| 1 | Search across all platforms | $0.01 |
-| 2 | View traffic for 5 websites | $0.25 |
-| 3 | Find 10 emails (within Apollo credits) | $0.00 |
-| 4 | Generate 10 personalized emails | $0.20 |
-| **TOTAL** | | **$0.46** |
-
-### Cost Per Outreach
-
-| Metric | Value |
-|--------|-------|
-| Total cost | $0.46 |
-| Results found | 50 |
-| Emails sent | 10 |
-| **Cost per outreach** | **$0.046** |
+**After exceeding 2,500 limit:**
+```
+Apollo: $0.024
+OpenAI: $0.02
+TOTAL: $0.044 per email
+```
 
 ---
 
-## 8. Monthly Cost Projections
+## 6. Monthly Cost Projections
 
-### Light User (~50 searches/month, 25 emails)
+### Light Usage (50 searches/month, 25 emails)
 
-| Item | Cost |
-|------|------|
-| **Fixed Costs** | |
-| Apify ($39 credits) | $39.00 |
-| Serper | $50.00 |
-| Apollo | $59.00 |
-| **Fixed Total** | **$148.00** |
-| **Variable Costs** | |
-| SimilarWeb Rental (from Apify credits) | -$19.00 |
-| Remaining Apify usage | ~$5.00 |
-| Serper (within 50K) | $0 extra |
-| Apollo (within 2,500) | $0 extra |
-| OpenAI (25 emails × $0.02) | $0.50 |
-| **Apify Overage** | $0 (within $39) |
-| **MONTHLY TOTAL** | **$148.50** |
+| Item | Calculation | Cost |
+|------|-------------|------|
+| Fixed costs | | $148.00 |
+| Search costs | 50 × $1.01 | $50.50 |
+| Apify usage | ~$50.45 (over $20 budget) | +$30.45 overage |
+| Serper | Within 50K limit | $0.00 |
+| Apollo | Within 2,500 limit | $0.00 |
+| OpenAI | 25 × $0.02 | $0.50 |
+| **TOTAL** | | **~$199** |
 
 ---
 
-### Moderate User (~200 searches/month, 150 emails)
+### Moderate Usage (100 searches/month, 100 emails)
 
-| Item | Cost |
-|------|------|
-| **Fixed Total** | **$148.00** |
-| SimilarWeb Rental (from credits) | -$19.00 |
-| Remaining Apify usage | ~$15.00 |
-| **Apify Total** | $34.00 ✅ (within $39) |
-| OpenAI (150 emails × $0.02) | $3.00 |
-| **MONTHLY TOTAL** | **$151.00** |
-
----
-
-### Heavy User (~500 searches/month, 500 emails)
-
-| Item | Cost |
-|------|------|
-| **Fixed Total** | **$148.00** |
-| SimilarWeb Rental (from credits) | -$19.00 |
-| Remaining Apify usage | ~$25.00 |
-| **Apify Total** | $44.00 ❌ ($5 overage) |
-| Apify Overage | $5.00 |
-| OpenAI (500 emails × $0.02) | $10.00 |
-| **MONTHLY TOTAL** | **$163.00** |
+| Item | Calculation | Cost |
+|------|-------------|------|
+| Fixed costs | | $148.00 |
+| Search costs | 100 × $1.01 | $101.00 |
+| Apify usage | ~$100.90 (over $20 budget) | +$80.90 overage |
+| OpenAI | 100 × $0.02 | $2.00 |
+| **TOTAL** | | **~$231** |
 
 ---
 
-### Very Heavy User (~2,000 searches/month, 2,500 emails)
+### Heavy Usage (200 searches/month, 300 emails)
 
-| Item | Cost |
-|------|------|
-| **Fixed Total** | **$148.00** |
-| SimilarWeb Rental (from credits) | -$19.00 |
-| Remaining Apify usage | ~$40.00 |
-| **Apify Total** | $59.00 ❌ ($20 overage) |
-| Apify Overage | $20.00 |
-| OpenAI (2,500 emails × $0.02) | $50.00 |
-| **MONTHLY TOTAL** | **$218.00** |
+| Item | Calculation | Cost |
+|------|-------------|------|
+| Fixed costs | | $148.00 |
+| Search costs | 200 × $1.01 | $202.00 |
+| Apify usage | ~$201.80 (over $20 budget) | +$181.80 overage |
+| OpenAI | 300 × $0.02 | $6.00 |
+| **TOTAL** | | **~$336** |
 
 ---
 
-### Enterprise User (~5,000 searches/month, 4,000 emails)
+### Enterprise Usage (500 searches/month, 1,000 emails)
 
-| Item | Cost |
-|------|------|
-| **Fixed Total** | **$148.00** |
-| SimilarWeb Rental (from credits) | -$19.00 |
-| Remaining Apify usage | ~$70.00 |
-| **Apify Total** | $89.00 ❌ ($50 overage) |
-| Apify Overage | $50.00 |
-| Apollo Overage (1,500 × $0.024) | $36.00 |
-| OpenAI (4,000 emails × $0.02) | $80.00 |
-| **MONTHLY TOTAL** | **$314.00** |
+| Item | Calculation | Cost |
+|------|-------------|------|
+| Fixed costs | | $148.00 |
+| Search costs | 500 × $1.01 | $505.00 |
+| Apify usage | ~$504.50 (over $20 budget) | +$484.50 overage |
+| OpenAI | 1,000 × $0.02 | $20.00 |
+| **TOTAL** | | **~$653** |
 
 ---
 
-## 9. Quick Reference - Cost Per Action
+## 7. Cost Optimization Options
 
-| Action | Service | Cost |
-|--------|---------|------|
-| 1 web search | Serper | $0.001 |
-| 1 Instagram search | Apify | $0.002 |
-| 1 Instagram profile | Apify | $0.002 |
-| 1 YouTube search (10 videos) | Apify | $0.005 |
-| 1 TikTok search (10 videos) | Apify | $0.0002 |
-| 1 website traffic lookup | Apify SimilarWeb | $0.05 |
-| 1 email lookup (found) | Apollo | $0.024* |
-| 1 email generation | OpenAI | $0.02 |
+### Option A: Reduce Web Results
+| Web Results | Cost Per Search | 50 searches/mo | 100 searches/mo |
+|-------------|-----------------|----------------|-----------------|
+| 20 | $1.01 | ~$199 | ~$231 |
+| 10 | $0.51 | ~$174 | ~$181 |
+| 5 | $0.26 | ~$161 | ~$164 |
 
-*Within 2,500/month included credits = $0.
+### Option B: Lazy-Load SimilarWeb
+Only fetch SimilarWeb data when user clicks "View Details" instead of automatically for all results.
+
+- **Pro:** Dramatically reduces costs
+- **Con:** Slightly slower UX when viewing details
 
 ---
 
-## 10. Service Account Requirements
+## 8. Quick Reference
+
+| Action | Cost |
+|--------|------|
+| 1 search (20 web results) | ~$1.01 |
+| 1 search (10 web results) | ~$0.51 |
+| 1 search (5 web results) | ~$0.26 |
+| 1 email (within 2,500 limit) | $0.02 |
+| 1 email (over limit) | $0.044 |
+
+---
+
+## 9. Service Account Requirements
 
 ### Required Accounts
 
@@ -338,27 +215,17 @@ OPENAI_API_KEY=sk-xxx
 
 ---
 
-## 11. Summary
+## 10. Summary
 
 | Metric | Value |
 |--------|-------|
-| **Base Monthly Cost** | $148 (Apify $39 + Serper $50 + Apollo $59) |
-| **Typical Monthly Cost** | $150-165 (light to moderate use) |
-| **Heavy Usage Cost** | $220-320 (high volume) |
-| **Cost per search** | ~$0.01 |
-| **Cost per outreach** | ~$0.05 |
-
-### Apify Credit Reality Check
-
-```
-Apify Plan:              $39/month = $39 credits
-├── SimilarWeb Rental:   $19 (from credits)
-└── Available for Usage: $20 (for all scraper runs)
-
-⚠️  Heavy SimilarWeb usage will push you into overage quickly!
-```
-
----
+| **Fixed Monthly Cost** | $148 |
+| **Cost per search (20 web results)** | ~$1.01 |
+| **Cost per search (10 web results)** | ~$0.51 |
+| **Cost per email** | $0.02 - $0.044 |
+| **Light usage (50 searches)** | ~$199/month |
+| **Moderate usage (100 searches)** | ~$231/month |
+| **Heavy usage (200 searches)** | ~$336/month |
 
 ---
 

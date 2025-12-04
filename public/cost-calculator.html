@@ -27,6 +27,7 @@
             --signal-green: #22c55e;
             --signal-orange: #f59e0b;
             --signal-red: #ef4444;
+            --signal-blue: #3b82f6;
             
             --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.1);
             --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
@@ -47,7 +48,6 @@
             font-size: 14px;
         }
 
-        /* Grain Overlay */
         .noise {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -60,19 +60,17 @@
         .mono { font-family: 'JetBrains Mono', monospace; letter-spacing: -0.02em; }
         .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); }
 
-        /* Layout */
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 3rem 2rem;
         }
 
-        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 4rem;
+            margin-bottom: 3rem;
             padding-bottom: 2rem;
             border-bottom: 1px solid var(--border-subtle);
         }
@@ -98,10 +96,105 @@
             margin-top: 0.25rem;
         }
 
+        /* Flow Diagram */
+        .flow-section {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .flow-title {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .flow-steps {
+            display: flex;
+            gap: 1rem;
+            align-items: stretch;
+        }
+
+        @media (max-width: 900px) {
+            .flow-steps { flex-direction: column; }
+        }
+
+        .flow-step {
+            flex: 1;
+            background: var(--bg-surface-highlight);
+            border: 1px solid var(--border-subtle);
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .flow-step::after {
+            content: '→';
+            position: absolute;
+            right: -1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            font-size: 1.5rem;
+        }
+
+        .flow-step:last-child::after {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .flow-step::after {
+                content: '↓';
+                right: 50%;
+                top: auto;
+                bottom: -1.5rem;
+                transform: translateX(50%);
+            }
+        }
+
+        .step-number {
+            width: 24px;
+            height: 24px;
+            background: var(--text-primary);
+            color: var(--bg-void);
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .step-cost {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-subtle);
+            font-size: 0.85rem;
+        }
+
+        .step-cost .amount {
+            font-weight: 600;
+            color: var(--signal-green);
+        }
+
         /* Main Grid */
         .main-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 400px;
             gap: 3rem;
         }
 
@@ -109,9 +202,8 @@
             .main-grid { grid-template-columns: 1fr; }
         }
 
-        /* Section */
         .section {
-            margin-bottom: 3rem;
+            margin-bottom: 2.5rem;
         }
 
         .section-title {
@@ -132,94 +224,123 @@
             background: var(--border-subtle);
         }
 
-        /* Fixed Costs Card */
-        .fixed-costs {
+        /* Cards */
+        .card {
             background: var(--bg-surface);
             border: 1px solid var(--border-subtle);
             padding: 1.5rem;
-            margin-bottom: 2rem;
         }
 
-        .fixed-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .fixed-row:last-child {
-            border-bottom: none;
-        }
-
-        .fixed-row.total {
-            margin-top: 0.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border-active);
-            border-bottom: none;
-        }
-
-        .service-info {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .service-name {
-            font-weight: 500;
-        }
-
-        .service-detail {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-        }
-
-        .service-cost {
-            font-weight: 500;
-        }
-
-        /* Usage Calculator */
-        .calc-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            padding: 2rem;
-        }
-
-        .input-section {
-            margin-bottom: 2rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .input-section:last-of-type {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-
-        .input-header {
+        .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
         }
 
-        .input-title {
+        .card-title {
             font-weight: 500;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .input-value {
-            font-size: 1.5rem;
+        .card-value {
+            font-size: 1.75rem;
             font-weight: 500;
         }
 
+        /* Per Keyword Breakdown */
+        .keyword-cost-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--bg-surface) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .cost-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .cost-row:last-child {
+            border-bottom: none;
+        }
+
+        .cost-row.total {
+            font-weight: 600;
+            padding-top: 1rem;
+            margin-top: 0.5rem;
+            border-top: 1px solid var(--border-active);
+            border-bottom: none;
+        }
+
+        .cost-row .service {
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cost-row .amount {
+            font-weight: 500;
+        }
+
+        .cost-row.total .amount {
+            color: var(--signal-blue);
+            font-size: 1.1rem;
+        }
+
+        /* Config */
+        .config-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .config-row:last-child {
+            border-bottom: none;
+        }
+
+        .config-label {
+            font-size: 0.85rem;
+        }
+
+        .config-input {
+            width: 70px;
+            padding: 0.5rem;
+            background: var(--bg-surface-highlight);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .config-input:focus {
+            outline: none;
+            border-color: var(--border-active);
+        }
+
         /* Slider */
-        .slider-container {
-            position: relative;
+        .slider-group {
             margin: 1.5rem 0;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .slider-value {
+            font-size: 1.25rem;
+            font-weight: 500;
         }
 
         input[type=range] {
@@ -239,16 +360,6 @@
             background: #fff;
             cursor: grab;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            transition: transform 0.15s ease;
-        }
-
-        input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.1);
-        }
-
-        input[type=range]:active::-webkit-slider-thumb {
-            cursor: grabbing;
-            transform: scale(0.95);
         }
 
         .slider-labels {
@@ -259,88 +370,11 @@
             color: var(--text-tertiary);
         }
 
-        /* Cost Breakdown */
-        .breakdown {
-            background: var(--bg-surface-highlight);
-            padding: 1rem;
-            margin-top: 1rem;
-            font-size: 0.8rem;
-        }
-
-        .breakdown-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.5rem 0;
-            color: var(--text-secondary);
-        }
-
-        .breakdown-row.highlight {
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .breakdown-row .cost {
-            color: var(--text-primary);
-        }
-
-        .breakdown-row .cost.free {
-            color: var(--signal-green);
-        }
-
-        .breakdown-row .cost.overage {
-            color: var(--signal-orange);
-        }
-
-        /* Per Search Breakdown */
-        .per-search-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            padding: 2rem;
-            margin-top: 2rem;
-        }
-
-        .api-call-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .api-call-row:last-child {
-            border-bottom: none;
-        }
-
-        .api-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .api-icon {
-            width: 28px;
-            height: 28px;
-            display: grid;
-            place-items: center;
-            background: var(--bg-surface-highlight);
-            border-radius: 4px;
-            font-size: 0.9rem;
-        }
-
-        .api-name {
-            font-size: 0.85rem;
-        }
-
-        .api-cost {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
         /* Summary Panel */
         .summary-panel {
             background: linear-gradient(135deg, var(--bg-surface-highlight) 0%, var(--bg-surface) 100%);
             border: 1px solid var(--border-active);
-            padding: 2rem;
+            padding: 1.5rem;
             position: sticky;
             top: 2rem;
         }
@@ -348,7 +382,8 @@
         .summary-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.75rem 0;
+            padding: 0.6rem 0;
+            font-size: 0.85rem;
             border-bottom: 1px solid var(--border-subtle);
         }
 
@@ -357,11 +392,11 @@
         }
 
         .summary-row.total {
-            margin-top: 1rem;
-            padding-top: 1.5rem;
+            margin-top: 0.5rem;
+            padding-top: 1rem;
             border-top: 1px solid var(--border-active);
             border-bottom: none;
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
 
         .summary-row .value {
@@ -370,30 +405,98 @@
 
         .summary-row.total .value {
             font-size: 1.5rem;
-        }
-
-        /* Status Indicator */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            margin-top: 1.5rem;
-        }
-
-        .status-badge.within {
-            background: rgba(34, 197, 94, 0.1);
             color: var(--signal-green);
-            border: 1px solid rgba(34, 197, 94, 0.2);
         }
 
-        .status-badge.overage {
-            background: rgba(245, 158, 11, 0.1);
+        .summary-row .value.overage {
             color: var(--signal-orange);
-            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        /* Meters */
+        .meter-group {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .meter {
+            margin-bottom: 1rem;
+        }
+
+        .meter:last-child {
+            margin-bottom: 0;
+        }
+
+        .meter-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .meter-bar {
+            height: 4px;
+            background: var(--border-subtle);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .meter-fill {
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        /* Fixed Costs */
+        .fixed-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .fixed-row:last-child {
+            border-bottom: none;
+        }
+
+        .fixed-row.total {
+            font-weight: 600;
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-active);
+        }
+
+        .fixed-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .fixed-detail {
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+        }
+
+        /* Note Box */
+        .note-box {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .note-box.warning {
+            background: rgba(245, 158, 11, 0.05);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .note-box strong {
+            color: var(--signal-blue);
+        }
+
+        .note-box.warning strong {
+            color: var(--signal-orange);
         }
 
         /* Footer */
@@ -407,46 +510,38 @@
             font-size: 0.75rem;
         }
 
-        /* Presets */
-        .presets {
+        /* Highlight Box */
+        .highlight-row {
             display: flex;
-            gap: 0.5rem;
+            gap: 1rem;
             margin-bottom: 2rem;
         }
 
-        .preset-btn {
-            padding: 0.5rem 1rem;
+        @media (max-width: 768px) {
+            .highlight-row { flex-direction: column; }
+        }
+
+        .highlight-box {
+            flex: 1;
             background: var(--bg-surface);
             border: 1px solid var(--border-subtle);
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            padding: 1.5rem;
+            text-align: center;
         }
 
-        .preset-btn:hover {
-            border-color: var(--border-active);
-            color: var(--text-primary);
+        .highlight-box.primary {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, var(--bg-surface) 100%);
+            border-color: rgba(34, 197, 94, 0.3);
         }
 
-        .preset-btn.active {
-            background: var(--text-primary);
-            color: var(--bg-void);
-            border-color: var(--text-primary);
+        .highlight-box .big-number {
+            font-size: 2rem;
+            font-weight: 300;
+            margin: 0.5rem 0;
         }
 
-        /* Note Box */
-        .note-box {
-            background: rgba(245, 158, 11, 0.05);
-            border: 1px dashed rgba(245, 158, 11, 0.3);
-            padding: 1rem;
-            margin-top: 1rem;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .note-box strong {
-            color: var(--signal-orange);
+        .highlight-box.primary .big-number {
+            color: var(--signal-green);
         }
     </style>
 </head>
@@ -461,196 +556,233 @@
                 <p class="label mono">CREW CAST STUDIO // DEC 2025</p>
             </div>
             <div class="header-right">
-                <div class="total-display mono" id="grand-total">$150.00</div>
+                <div class="total-display mono" id="grand-total">$153.05</div>
                 <p class="label total-label">ESTIMATED MONTHLY</p>
             </div>
         </header>
 
-        <!-- Presets -->
-        <div class="presets">
-            <button class="preset-btn active" onclick="setPreset('light')">Light User</button>
-            <button class="preset-btn" onclick="setPreset('moderate')">Moderate</button>
-            <button class="preset-btn" onclick="setPreset('heavy')">Heavy</button>
-            <button class="preset-btn" onclick="setPreset('enterprise')">Enterprise</button>
+        <!-- User Flow -->
+        <div class="flow-section">
+            <div class="flow-title">
+                <span>📋</span>
+                <span>User Journey & Cost Flow</span>
+            </div>
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Search Keywords</div>
+                    <div class="step-desc">
+                        User enters 1-5 keywords. Each keyword queries all platforms simultaneously.
+                    </div>
+                    <div class="step-cost">
+                        Cost: <span class="amount" id="flow-search-cost">~$1.01</span> per keyword
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Browse & Save</div>
+                    <div class="step-desc">
+                        User reviews results from all platforms, saves the ones they like.
+                    </div>
+                    <div class="step-cost">
+                        Cost: <span class="amount">$0.00</span> (no API calls)
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Find Emails & Outreach</div>
+                    <div class="step-desc">
+                        User finds emails for saved contacts, generates personalized messages.
+                    </div>
+                    <div class="step-cost">
+                        Cost: <span class="amount">$0.02-0.044</span> per email
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="highlight-row">
+            <div class="highlight-box primary">
+                <p class="label">Cost Per Keyword Search</p>
+                <div class="big-number mono" id="cost-per-keyword">$1.01</div>
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">
+                    <span id="total-results-display">50</span> results (<span id="web-count-display">20</span> web + <span id="social-count-display">30</span> social)
+                </p>
+            </div>
+            <div class="highlight-box">
+                <p class="label">Max Session Cost (5 keywords)</p>
+                <div class="big-number mono" id="cost-per-session">$5.05</div>
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">
+                    Per user search session
+                </p>
+            </div>
+            <div class="highlight-box">
+                <p class="label">Cost Per Email</p>
+                <div class="big-number mono">$0.02</div>
+                <p style="font-size: 0.75rem; color: var(--text-secondary);">
+                    Within 2,500/mo limit
+                </p>
+            </div>
         </div>
 
         <div class="main-grid">
-            <!-- Left Column: Inputs -->
+            <!-- Left Column -->
             <div class="left-col">
                 
-                <!-- Fixed Costs -->
+                <!-- Per Keyword Cost Breakdown -->
                 <div class="section">
-                    <div class="section-title">Fixed Monthly Costs</div>
-                    <div class="fixed-costs">
-                        <div class="fixed-row">
-                            <div class="service-info">
-                                <span class="service-name">Apify Platform</span>
-                                <span class="service-detail">$39 credits (−$19 SimilarWeb rental = $20 usage)</span>
-                            </div>
-                            <span class="service-cost mono">$39.00</span>
+                    <div class="section-title">Cost Per Keyword Search</div>
+                    
+                    <div class="card keyword-cost-card">
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                            When user searches 1 keyword, these API calls are made:
+                        </p>
+                        
+                        <div class="cost-row">
+                            <span class="service">🌐 Serper (Web Discovery)</span>
+                            <span class="amount mono">$0.001</span>
                         </div>
-                        <div class="fixed-row">
-                            <div class="service-info">
-                                <span class="service-name">Serper API</span>
-                                <span class="service-detail">50,000 web searches included</span>
-                            </div>
-                            <span class="service-cost mono">$50.00</span>
+                        <div class="cost-row">
+                            <span class="service">📊 SimilarWeb × <span id="sw-count">20</span> domains</span>
+                            <span class="amount mono" id="sw-cost">$1.00</span>
                         </div>
-                        <div class="fixed-row">
-                            <div class="service-info">
-                                <span class="service-name">Apollo.io</span>
-                                <span class="service-detail">2,500 email lookups included</span>
-                            </div>
-                            <span class="service-cost mono">$59.00</span>
+                        <div class="cost-row">
+                            <span class="service">📸 Apify Instagram (<span id="insta-count">10</span> results)</span>
+                            <span class="amount mono" id="insta-cost">~$0.002</span>
                         </div>
-                        <div class="fixed-row total">
-                            <span class="service-name">Total Fixed</span>
-                            <span class="service-cost mono" style="font-size: 1.2rem;">$148.00</span>
+                        <div class="cost-row">
+                            <span class="service">▶️ Apify YouTube (<span id="youtube-count">10</span> results)</span>
+                            <span class="amount mono" id="youtube-cost">~$0.005</span>
+                        </div>
+                        <div class="cost-row">
+                            <span class="service">🎵 Apify TikTok (<span id="tiktok-count">10</span> results)</span>
+                            <span class="amount mono" id="tiktok-cost">~$0.002</span>
+                        </div>
+                        <div class="cost-row total">
+                            <span class="service">Total Per Keyword</span>
+                            <span class="amount mono" id="keyword-total">$1.01</span>
+                        </div>
+                    </div>
+
+                    <div class="note-box">
+                        <strong>ℹ️ Note:</strong> Apify scrapers return full profile/channel stats. No additional calls needed for Instagram, YouTube, or TikTok data.
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="section">
+                    <div class="section-title">Results Per Keyword (Configure)</div>
+                    
+                    <div class="card">
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                            Configure how many results to show per platform for each keyword search:
+                        </p>
+                        
+                        <div class="config-row">
+                            <span class="config-label">🌐 Web Results (SimilarWeb @ $0.05 each)</span>
+                            <input type="number" class="config-input" id="cfg-web" value="20" min="0" max="50" onchange="update()">
+                        </div>
+                        <div class="config-row">
+                            <span class="config-label">📸 Instagram Results</span>
+                            <input type="number" class="config-input" id="cfg-insta" value="10" min="0" max="50" onchange="update()">
+                        </div>
+                        <div class="config-row">
+                            <span class="config-label">▶️ YouTube Results</span>
+                            <input type="number" class="config-input" id="cfg-youtube" value="10" min="0" max="50" onchange="update()">
+                        </div>
+                        <div class="config-row">
+                            <span class="config-label">🎵 TikTok Results</span>
+                            <input type="number" class="config-input" id="cfg-tiktok" value="10" min="0" max="50" onchange="update()">
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-surface-highlight); border: 1px solid var(--border-subtle);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.9rem;">Total Results Per Keyword</span>
+                                <span class="mono" style="font-size: 1.5rem; font-weight: 500;" id="total-results">50</span>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-tertiary);">
+                                <span>🌐 <span id="sum-web">20</span></span>
+                                <span>📸 <span id="sum-insta">10</span></span>
+                                <span>▶️ <span id="sum-youtube">10</span></span>
+                                <span>🎵 <span id="sum-tiktok">10</span></span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Variable Usage -->
+                <!-- Monthly Usage -->
                 <div class="section">
-                    <div class="section-title">Monthly Usage (Variable)</div>
+                    <div class="section-title">Monthly Usage Estimate</div>
                     
-                    <div class="calc-card">
-                        <!-- Searches -->
-                        <div class="input-section">
-                            <div class="input-header">
-                                <span class="input-title">🔍 Keyword Searches</span>
-                                <span class="input-value mono" id="disp-searches">50</span>
+                    <div class="card">
+                        <!-- Keyword Searches -->
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span class="label">Keyword Searches / Month</span>
+                                <span class="slider-value mono" id="disp-keywords">5</span>
                             </div>
-                            <p style="font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 1rem;">
-                                Each search queries: Web (Serper) + Instagram + YouTube + TikTok (Apify)
-                            </p>
-                            <div class="slider-container">
-                                <input type="range" id="in-searches" min="0" max="2000" step="10" value="50" oninput="update()">
-                                <div class="slider-labels">
-                                    <span>0</span>
-                                    <span>500</span>
-                                    <span>1,000</span>
-                                    <span>2,000</span>
-                                </div>
-                            </div>
-                            <div class="breakdown">
-                                <div class="breakdown-row">
-                                    <span>Serper (Web) — <span id="serper-calls">50</span> calls</span>
-                                    <span class="cost" id="cost-serper">INCLUDED</span>
-                                </div>
-                                <div class="breakdown-row">
-                                    <span>Apify (Social) — <span id="apify-search-calls">150</span> calls</span>
-                                    <span class="cost" id="cost-apify-search">~$0.45</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Traffic Lookups -->
-                        <div class="input-section">
-                            <div class="input-header">
-                                <span class="input-title">📊 Website Traffic Lookups</span>
-                                <span class="input-value mono" id="disp-traffic">20</span>
-                            </div>
-                            <p style="font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 1rem;">
-                                SimilarWeb data when viewing web result details ($0.05 each)
-                            </p>
-                            <div class="slider-container">
-                                <input type="range" id="in-traffic" min="0" max="500" step="5" value="20" oninput="update()">
-                                <div class="slider-labels">
-                                    <span>0</span>
-                                    <span>100</span>
-                                    <span>250</span>
-                                    <span>500</span>
-                                </div>
-                            </div>
-                            <div class="breakdown">
-                                <div class="breakdown-row">
-                                    <span>SimilarWeb Scraper — <span id="traffic-calls">20</span> domains</span>
-                                    <span class="cost" id="cost-traffic">$1.00</span>
-                                </div>
+                            <input type="range" id="in-keywords" min="1" max="500" value="5" oninput="update()">
+                            <div class="slider-labels">
+                                <span>1</span>
+                                <span>100</span>
+                                <span>250</span>
+                                <span>500</span>
                             </div>
                         </div>
 
                         <!-- Emails -->
-                        <div class="input-section">
-                            <div class="input-header">
-                                <span class="input-title">📧 Emails Found & Generated</span>
-                                <span class="input-value mono" id="disp-emails">25</span>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span class="label">Emails Found & Sent / Month</span>
+                                <span class="slider-value mono" id="disp-emails">50</span>
                             </div>
-                            <p style="font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 1rem;">
-                                Apollo lookup (within 2,500) + OpenAI generation ($0.02 each)
-                            </p>
-                            <div class="slider-container">
-                                <input type="range" id="in-emails" min="0" max="5000" step="25" value="25" oninput="update()">
-                                <div class="slider-labels">
-                                    <span>0</span>
-                                    <span>1,000</span>
-                                    <span>2,500</span>
-                                    <span>5,000</span>
-                                </div>
-                            </div>
-                            <div class="breakdown">
-                                <div class="breakdown-row">
-                                    <span>Apollo — <span id="apollo-calls">25</span> emails</span>
-                                    <span class="cost" id="cost-apollo">INCLUDED</span>
-                                </div>
-                                <div class="breakdown-row">
-                                    <span>OpenAI — <span id="openai-calls">25</span> generations</span>
-                                    <span class="cost" id="cost-openai">$0.50</span>
-                                </div>
+                            <input type="range" id="in-emails" min="0" max="5000" step="10" value="50" oninput="update()">
+                            <div class="slider-labels">
+                                <span>0</span>
+                                <span>1,000</span>
+                                <span>2,500</span>
+                                <span>5,000</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Apify Budget Note -->
-                    <div class="note-box">
-                        <strong>⚠️ Apify Budget:</strong> You have $20/month for usage after SimilarWeb rental.
-                        <br>Current Apify usage: <span class="mono" id="apify-usage-total">$1.45</span>
-                        <span id="apify-status"></span>
+                    <div class="note-box warning">
+                        <strong>⚠️ Apify Budget:</strong> $20/month for usage (after $19 SimilarWeb rental).
+                        <br>Current usage: <span class="mono" id="apify-usage">$5.05</span>
+                        <span id="apify-status"> — <span style="color: var(--signal-green);">✓ Within budget</span></span>
                     </div>
                 </div>
 
-                <!-- Per Search Breakdown -->
+                <!-- Fixed Costs -->
                 <div class="section">
-                    <div class="section-title">Cost Per Single Search</div>
-                    <div class="per-search-card">
-                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
-                            When a user searches a keyword, these API calls are made:
-                        </p>
-                        <div class="api-call-row">
-                            <div class="api-info">
-                                <div class="api-icon">🌐</div>
-                                <span class="api-name">Serper (Web/Blogs)</span>
+                    <div class="section-title">Fixed Monthly Costs</div>
+                    
+                    <div class="card">
+                        <div class="fixed-row">
+                            <div class="fixed-info">
+                                <span>Apify Platform</span>
+                                <span class="fixed-detail">$39 credits (−$19 SimilarWeb = $20 usage)</span>
                             </div>
-                            <span class="api-cost mono">$0.001</span>
+                            <span class="mono">$39.00</span>
                         </div>
-                        <div class="api-call-row">
-                            <div class="api-info">
-                                <div class="api-icon">📸</div>
-                                <span class="api-name">Apify Instagram Search</span>
+                        <div class="fixed-row">
+                            <div class="fixed-info">
+                                <span>Serper API</span>
+                                <span class="fixed-detail">50,000 searches included</span>
                             </div>
-                            <span class="api-cost mono">~$0.002</span>
+                            <span class="mono">$50.00</span>
                         </div>
-                        <div class="api-call-row">
-                            <div class="api-info">
-                                <div class="api-icon">▶️</div>
-                                <span class="api-name">Apify YouTube Scraper</span>
+                        <div class="fixed-row">
+                            <div class="fixed-info">
+                                <span>Apollo.io</span>
+                                <span class="fixed-detail">2,500 email lookups included</span>
                             </div>
-                            <span class="api-cost mono">~$0.005</span>
+                            <span class="mono">$59.00</span>
                         </div>
-                        <div class="api-call-row">
-                            <div class="api-info">
-                                <div class="api-icon">🎵</div>
-                                <span class="api-name">Apify TikTok Scraper</span>
-                            </div>
-                            <span class="api-cost mono">~$0.002</span>
-                        </div>
-                        <div class="api-call-row" style="background: var(--bg-surface-highlight); margin: 0 -2rem; padding: 1rem 2rem; border-bottom: none;">
-                            <div class="api-info">
-                                <div class="api-icon" style="background: var(--text-primary); color: var(--bg-void);">Σ</div>
-                                <span class="api-name" style="font-weight: 600;">Total per search</span>
-                            </div>
-                            <span class="api-cost mono" style="color: var(--text-primary); font-weight: 600;">~$0.01</span>
+                        <div class="fixed-row total">
+                            <span>Total Fixed</span>
+                            <span class="mono">$148.00</span>
                         </div>
                     </div>
                 </div>
@@ -662,71 +794,89 @@
                     <h3 style="font-size: 1rem; margin-bottom: 1.5rem; font-weight: 500;">Monthly Cost Summary</h3>
                     
                     <div class="summary-row">
-                        <span class="label">Fixed Costs</span>
+                        <span>Fixed Costs</span>
                         <span class="value mono">$148.00</span>
                     </div>
                     
                     <div class="summary-row">
-                        <span class="label">Serper Overage</span>
-                        <span class="value mono" id="sum-serper">$0.00</span>
+                        <span>Search Costs (<span id="sum-keywords">5</span> keywords)</span>
+                        <span class="value mono" id="sum-search">$5.05</span>
                     </div>
                     
                     <div class="summary-row">
-                        <span class="label">Apify Overage</span>
+                        <span>Apify Overage</span>
                         <span class="value mono" id="sum-apify">$0.00</span>
                     </div>
                     
                     <div class="summary-row">
-                        <span class="label">Apollo Overage</span>
+                        <span>Apollo Overage</span>
                         <span class="value mono" id="sum-apollo">$0.00</span>
                     </div>
                     
                     <div class="summary-row">
-                        <span class="label">OpenAI Usage</span>
-                        <span class="value mono" id="sum-openai">$0.50</span>
+                        <span>OpenAI (<span id="sum-email-count">50</span> emails)</span>
+                        <span class="value mono" id="sum-openai">$1.00</span>
                     </div>
                     
                     <div class="summary-row total">
-                        <span>Total</span>
-                        <span class="value mono" id="sum-total">$148.50</span>
+                        <span>Monthly Total</span>
+                        <span class="value mono" id="sum-total">$154.05</span>
                     </div>
 
-                    <div class="status-badge within" id="status-badge">
-                        <span>✓</span>
-                        <span id="status-text">Within all included limits</span>
-                    </div>
-
-                    <!-- Usage Meters -->
-                    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);">
+                    <!-- Meters -->
+                    <div class="meter-group">
                         <p class="label" style="margin-bottom: 1rem;">Credit Usage</p>
                         
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                        <div class="meter">
+                            <div class="meter-header">
                                 <span>Apify ($20 budget)</span>
-                                <span class="mono" id="meter-apify-text">$1.45 / $20</span>
+                                <span class="mono" id="meter-apify-text">$5.05 / $20</span>
                             </div>
-                            <div style="height: 4px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
-                                <div id="meter-apify" style="height: 100%; width: 7%; background: var(--signal-green); transition: all 0.3s ease;"></div>
+                            <div class="meter-bar">
+                                <div class="meter-fill" id="meter-apify" style="width: 25%; background: var(--signal-green);"></div>
                             </div>
                         </div>
                         
-                        <div style="margin-bottom: 1rem;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                        <div class="meter">
+                            <div class="meter-header">
                                 <span>Serper (50K searches)</span>
-                                <span class="mono" id="meter-serper-text">50 / 50,000</span>
+                                <span class="mono" id="meter-serper-text">5 / 50,000</span>
                             </div>
-                            <div style="height: 4px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
-                                <div id="meter-serper" style="height: 100%; width: 0.1%; background: var(--signal-green); transition: all 0.3s ease;"></div>
+                            <div class="meter-bar">
+                                <div class="meter-fill" id="meter-serper" style="width: 0.5%; background: var(--signal-green);"></div>
                             </div>
                         </div>
                         
-                        <div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                        <div class="meter">
+                            <div class="meter-header">
                                 <span>Apollo (2,500 emails)</span>
-                                <span class="mono" id="meter-apollo-text">25 / 2,500</span>
+                                <span class="mono" id="meter-apollo-text">50 / 2,500</span>
                             </div>
-                            <div style="height: 4px; background: var(--border-subtle); border-radius: 2px; overflow: hidden;">
-                                <div id="meter-apollo" style="height: 100%; width: 1%; background: var(--signal-green); transition: all 0.3s ease;"></div>
+                            <div class="meter-bar">
+                                <div class="meter-fill" id="meter-apollo" style="width: 2%; background: var(--signal-green);"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Ref -->
+                    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);">
+                        <p class="label" style="margin-bottom: 0.75rem;">Quick Reference</p>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+                                <span>Per keyword (current config)</span>
+                                <span class="mono" id="ref-keyword">$1.01</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+                                <span>Max session (5 keywords)</span>
+                                <span class="mono" id="ref-session">$5.05</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+                                <span>Per email (within limit)</span>
+                                <span class="mono">$0.02</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+                                <span>Per email (over 2,500)</span>
+                                <span class="mono">$0.044</span>
                             </div>
                         </div>
                     </div>
@@ -742,197 +892,138 @@
     </div>
 
     <script>
-        // Pricing Constants
+        // Pricing
         const PRICING = {
             fixed: 148,
-            
-            // Apify: $39 credits, $19 goes to SimilarWeb rental, $20 for usage
             apify: {
-                totalCredits: 39,
-                similarWebRental: 19,
-                get usageBudget() { return this.totalCredits - this.similarWebRental }, // $20
-                
-                // Per-call costs (approximate)
-                instagramSearch: 0.002,
-                youtubeSearch: 0.005,
-                tiktokSearch: 0.002,
-                similarWebLookup: 0.05
+                budget: 20, // $39 - $19 SimilarWeb rental
+                similarWeb: 0.05,
+                instagram: 0.002,
+                youtube: 0.005,
+                tiktok: 0.002
             },
-            
-            // Serper: 50K searches included
             serper: {
                 included: 50000,
-                perSearch: 0.001,
-                overageRate: 0.001
+                perCall: 0.001
             },
-            
-            // Apollo: 2,500 emails included
             apollo: {
                 included: 2500,
-                overageRate: 0.024
+                overage: 0.024
             },
-            
-            // OpenAI: Pay per email
             openai: {
                 perEmail: 0.02
             }
         };
 
-        // Presets
-        const PRESETS = {
-            light: { searches: 50, traffic: 20, emails: 25 },
-            moderate: { searches: 200, traffic: 100, emails: 150 },
-            heavy: { searches: 500, traffic: 250, emails: 500 },
-            enterprise: { searches: 1500, traffic: 400, emails: 3000 }
-        };
-
         // State
-        let state = { ...PRESETS.light };
-
-        // DOM refs
-        const els = {
-            searches: document.getElementById('in-searches'),
-            traffic: document.getElementById('in-traffic'),
-            emails: document.getElementById('in-emails')
-        };
-
-        function setPreset(name) {
-            state = { ...PRESETS[name] };
-            els.searches.value = state.searches;
-            els.traffic.value = state.traffic;
-            els.emails.value = state.emails;
-            
-            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            update();
-        }
+        let config = { web: 20, insta: 10, youtube: 10, tiktok: 10 };
+        let usage = { keywords: 5, emails: 50 };
 
         function update() {
-            // Read values
-            state.searches = parseInt(els.searches.value);
-            state.traffic = parseInt(els.traffic.value);
-            state.emails = parseInt(els.emails.value);
+            // Read inputs
+            config.web = parseInt(document.getElementById('cfg-web').value) || 0;
+            config.insta = parseInt(document.getElementById('cfg-insta').value) || 0;
+            config.youtube = parseInt(document.getElementById('cfg-youtube').value) || 0;
+            config.tiktok = parseInt(document.getElementById('cfg-tiktok').value) || 0;
+            usage.keywords = parseInt(document.getElementById('in-keywords').value) || 0;
+            usage.emails = parseInt(document.getElementById('in-emails').value) || 0;
 
-            // === CALCULATIONS ===
+            // Total results per keyword
+            const totalResults = config.web + config.insta + config.youtube + config.tiktok;
+            const socialResults = config.insta + config.youtube + config.tiktok;
 
-            // 1. Per search: 1 Serper + 3 Apify (Insta, YT, TikTok)
-            const serperCalls = state.searches;
-            const apifySearchCalls = state.searches * 3; // 1 each for Insta, YT, TikTok
-            const apifySearchCost = state.searches * (PRICING.apify.instagramSearch + PRICING.apify.youtubeSearch + PRICING.apify.tiktokSearch);
+            // === COST PER KEYWORD ===
+            const serperCost = config.web > 0 ? PRICING.serper.perCall : 0;
+            const similarWebCost = config.web * PRICING.apify.similarWeb;
+            const instaCost = config.insta > 0 ? PRICING.apify.instagram : 0;
+            const youtubeCost = config.youtube > 0 ? PRICING.apify.youtube : 0;
+            const tiktokCost = config.tiktok > 0 ? PRICING.apify.tiktok : 0;
+            const socialCost = instaCost + youtubeCost + tiktokCost;
+            const costPerKeyword = serperCost + similarWebCost + socialCost;
+            const costPerSession = costPerKeyword * 5;
 
-            // 2. Traffic lookups (SimilarWeb via Apify)
-            const trafficCost = state.traffic * PRICING.apify.similarWebLookup;
+            // === MONTHLY COSTS ===
+            const totalSearchCost = usage.keywords * costPerKeyword;
+            const apifyUsage = usage.keywords * (similarWebCost + socialCost);
+            const apifyOverage = Math.max(0, apifyUsage - PRICING.apify.budget);
+            const serperOverage = Math.max(0, usage.keywords - PRICING.serper.included) * PRICING.serper.perCall;
+            const apolloOverage = Math.max(0, usage.emails - PRICING.apollo.included) * PRICING.apollo.overage;
+            const openaiCost = usage.emails * PRICING.openai.perEmail;
 
-            // 3. Total Apify usage
-            const totalApifyUsage = apifySearchCost + trafficCost;
-            const apifyOverage = Math.max(0, totalApifyUsage - PRICING.apify.usageBudget);
-
-            // 4. Serper overage
-            const serperOverage = Math.max(0, serperCalls - PRICING.serper.included) * PRICING.serper.overageRate;
-
-            // 5. Apollo
-            const apolloOverage = Math.max(0, state.emails - PRICING.apollo.included) * PRICING.apollo.overageRate;
-
-            // 6. OpenAI (always pay)
-            const openaiCost = state.emails * PRICING.openai.perEmail;
-
-            // 7. Grand total
-            const variableTotal = serperOverage + apifyOverage + apolloOverage + openaiCost;
-            const grandTotal = PRICING.fixed + variableTotal;
+            const grandTotal = PRICING.fixed + apifyOverage + serperOverage + apolloOverage + openaiCost;
 
             // === UPDATE UI ===
 
-            // Display values
-            document.getElementById('disp-searches').textContent = state.searches.toLocaleString();
-            document.getElementById('disp-traffic').textContent = state.traffic.toLocaleString();
-            document.getElementById('disp-emails').textContent = state.emails.toLocaleString();
+            // Results summary
+            document.getElementById('total-results').textContent = totalResults;
+            document.getElementById('total-results-display').textContent = totalResults;
+            document.getElementById('sum-web').textContent = config.web;
+            document.getElementById('sum-insta').textContent = config.insta;
+            document.getElementById('sum-youtube').textContent = config.youtube;
+            document.getElementById('sum-tiktok').textContent = config.tiktok;
+            document.getElementById('web-count-display').textContent = config.web;
+            document.getElementById('social-count-display').textContent = socialResults;
 
-            // Breakdown: Searches
-            document.getElementById('serper-calls').textContent = serperCalls.toLocaleString();
-            document.getElementById('apify-search-calls').textContent = apifySearchCalls.toLocaleString();
-            
-            const serperEl = document.getElementById('cost-serper');
-            if (serperCalls <= PRICING.serper.included) {
-                serperEl.textContent = 'INCLUDED';
-                serperEl.className = 'cost free';
-            } else {
-                serperEl.textContent = '+$' + serperOverage.toFixed(2);
-                serperEl.className = 'cost overage';
-            }
-            
-            document.getElementById('cost-apify-search').textContent = '~$' + apifySearchCost.toFixed(2);
+            // Per keyword breakdown
+            document.getElementById('sw-count').textContent = config.web;
+            document.getElementById('sw-cost').textContent = '$' + similarWebCost.toFixed(2);
+            document.getElementById('insta-count').textContent = config.insta;
+            document.getElementById('insta-cost').textContent = config.insta > 0 ? '~$0.002' : '$0.00';
+            document.getElementById('youtube-count').textContent = config.youtube;
+            document.getElementById('youtube-cost').textContent = config.youtube > 0 ? '~$0.005' : '$0.00';
+            document.getElementById('tiktok-count').textContent = config.tiktok;
+            document.getElementById('tiktok-cost').textContent = config.tiktok > 0 ? '~$0.002' : '$0.00';
+            document.getElementById('keyword-total').textContent = '$' + costPerKeyword.toFixed(2);
+            document.getElementById('cost-per-keyword').textContent = '$' + costPerKeyword.toFixed(2);
+            document.getElementById('cost-per-session').textContent = '$' + costPerSession.toFixed(2);
+            document.getElementById('flow-search-cost').textContent = '~$' + costPerKeyword.toFixed(2);
 
-            // Breakdown: Traffic
-            document.getElementById('traffic-calls').textContent = state.traffic.toLocaleString();
-            document.getElementById('cost-traffic').textContent = '$' + trafficCost.toFixed(2);
+            // Usage displays
+            document.getElementById('disp-keywords').textContent = usage.keywords;
+            document.getElementById('disp-emails').textContent = usage.emails.toLocaleString();
 
-            // Breakdown: Emails
-            document.getElementById('apollo-calls').textContent = state.emails.toLocaleString();
-            document.getElementById('openai-calls').textContent = state.emails.toLocaleString();
-            
-            const apolloEl = document.getElementById('cost-apollo');
-            if (state.emails <= PRICING.apollo.included) {
-                apolloEl.textContent = 'INCLUDED';
-                apolloEl.className = 'cost free';
-            } else {
-                apolloEl.textContent = '+$' + apolloOverage.toFixed(2);
-                apolloEl.className = 'cost overage';
-            }
-            
-            document.getElementById('cost-openai').textContent = '$' + openaiCost.toFixed(2);
-
-            // Apify budget note
-            document.getElementById('apify-usage-total').textContent = '$' + totalApifyUsage.toFixed(2);
+            // Apify budget
+            document.getElementById('apify-usage').textContent = '$' + apifyUsage.toFixed(2);
             const apifyStatusEl = document.getElementById('apify-status');
-            if (totalApifyUsage <= PRICING.apify.usageBudget) {
+            if (apifyUsage <= PRICING.apify.budget) {
                 apifyStatusEl.innerHTML = ' — <span style="color: var(--signal-green);">✓ Within budget</span>';
             } else {
                 apifyStatusEl.innerHTML = ' — <span style="color: var(--signal-orange);">⚠️ +$' + apifyOverage.toFixed(2) + ' overage</span>';
             }
 
-            // Summary panel
-            document.getElementById('sum-serper').textContent = serperOverage > 0 ? '+$' + serperOverage.toFixed(2) : '$0.00';
+            // Summary
+            document.getElementById('sum-keywords').textContent = usage.keywords;
+            document.getElementById('sum-search').textContent = '$' + totalSearchCost.toFixed(2);
             document.getElementById('sum-apify').textContent = apifyOverage > 0 ? '+$' + apifyOverage.toFixed(2) : '$0.00';
+            document.getElementById('sum-apify').className = apifyOverage > 0 ? 'value mono overage' : 'value mono';
             document.getElementById('sum-apollo').textContent = apolloOverage > 0 ? '+$' + apolloOverage.toFixed(2) : '$0.00';
+            document.getElementById('sum-apollo').className = apolloOverage > 0 ? 'value mono overage' : 'value mono';
+            document.getElementById('sum-email-count').textContent = usage.emails;
             document.getElementById('sum-openai').textContent = '$' + openaiCost.toFixed(2);
             document.getElementById('sum-total').textContent = '$' + grandTotal.toFixed(2);
-
-            // Grand total in header
             document.getElementById('grand-total').textContent = '$' + grandTotal.toFixed(2);
 
-            // Status badge
-            const statusBadge = document.getElementById('status-badge');
-            const statusText = document.getElementById('status-text');
-            const hasOverage = serperOverage > 0 || apifyOverage > 0 || apolloOverage > 0;
-            
-            if (hasOverage) {
-                statusBadge.className = 'status-badge overage';
-                statusText.textContent = 'Overage charges apply';
-            } else {
-                statusBadge.className = 'status-badge within';
-                statusText.textContent = 'Within all included limits';
-            }
-
             // Meters
-            const apifyPct = Math.min(100, (totalApifyUsage / PRICING.apify.usageBudget) * 100);
-            const serperPct = Math.min(100, (serperCalls / PRICING.serper.included) * 100);
-            const apolloPct = Math.min(100, (state.emails / PRICING.apollo.included) * 100);
-
-            document.getElementById('meter-apify').style.width = apifyPct + '%';
+            const apifyPct = (apifyUsage / PRICING.apify.budget) * 100;
+            document.getElementById('meter-apify').style.width = Math.min(100, apifyPct) + '%';
             document.getElementById('meter-apify').style.background = apifyPct > 100 ? 'var(--signal-orange)' : apifyPct > 70 ? 'var(--signal-orange)' : 'var(--signal-green)';
-            document.getElementById('meter-apify-text').textContent = '$' + totalApifyUsage.toFixed(2) + ' / $20';
+            document.getElementById('meter-apify-text').textContent = '$' + apifyUsage.toFixed(2) + ' / $20';
 
+            const serperPct = (usage.keywords / PRICING.serper.included) * 100;
             document.getElementById('meter-serper').style.width = Math.max(0.5, serperPct) + '%';
-            document.getElementById('meter-serper').style.background = serperPct > 100 ? 'var(--signal-orange)' : serperPct > 70 ? 'var(--signal-orange)' : 'var(--signal-green)';
-            document.getElementById('meter-serper-text').textContent = serperCalls.toLocaleString() + ' / 50,000';
+            document.getElementById('meter-serper-text').textContent = usage.keywords.toLocaleString() + ' / 50,000';
 
-            document.getElementById('meter-apollo').style.width = Math.max(0.5, apolloPct) + '%';
-            document.getElementById('meter-apollo').style.background = apolloPct > 100 ? 'var(--signal-orange)' : apolloPct > 70 ? 'var(--signal-orange)' : 'var(--signal-green)';
-            document.getElementById('meter-apollo-text').textContent = state.emails.toLocaleString() + ' / 2,500';
+            const apolloPct = (usage.emails / PRICING.apollo.included) * 100;
+            document.getElementById('meter-apollo').style.width = Math.max(0.5, Math.min(100, apolloPct)) + '%';
+            document.getElementById('meter-apollo').style.background = apolloPct > 100 ? 'var(--signal-orange)' : 'var(--signal-green)';
+            document.getElementById('meter-apollo-text').textContent = usage.emails.toLocaleString() + ' / 2,500';
+
+            // Quick ref
+            document.getElementById('ref-keyword').textContent = '$' + costPerKeyword.toFixed(2);
+            document.getElementById('ref-session').textContent = '$' + costPerSession.toFixed(2);
         }
 
-        // Initialize
+        // Init
         update();
     </script>
 </body>
