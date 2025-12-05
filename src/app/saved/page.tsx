@@ -8,12 +8,11 @@ import { AuthGuard } from '../components/AuthGuard';
 import { useSavedAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { 
-  Search, 
   Globe, 
   Youtube, 
   Instagram,
   ArrowUpDown,
-  MessageCircle,
+  Music,
   Download,
   Users,
 } from 'lucide-react';
@@ -68,7 +67,7 @@ function SavedContent() {
       Web: savedAffiliates.filter(r => r.source === 'Web').length,
       YouTube: savedAffiliates.filter(r => r.source === 'YouTube').length,
       Instagram: savedAffiliates.filter(r => r.source === 'Instagram').length,
-      Reddit: savedAffiliates.filter(r => r.source === 'Reddit').length,
+      TikTok: savedAffiliates.filter(r => r.source === 'TikTok').length,
     };
   }, [savedAffiliates]);
 
@@ -77,7 +76,7 @@ function SavedContent() {
     { id: 'Web', icon: <Globe size={14} />, count: counts.Web },
     { id: 'YouTube', icon: <Youtube size={14} />, count: counts.YouTube },
     { id: 'Instagram', icon: <Instagram size={14} />, count: counts.Instagram },
-    { id: 'Reddit', icon: <MessageCircle size={14} />, count: counts.Reddit },
+    { id: 'TikTok', icon: <Music size={14} />, count: counts.TikTok },
   ];
 
   return (
@@ -162,12 +161,12 @@ function SavedContent() {
           </div>
 
           {/* Table Header */}
-          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[48px_280px_1fr_160px_120px_100px_160px_100px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
+          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_220px_1fr_140px_100px_90px_130px_100px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
             <div className="pl-1"></div>
             <div>Affiliate</div>
             <div>Relevant Content</div>
             <div>Discovery Method</div>
-            <div>Discovery Date</div>
+            <div>Date</div>
             <div>Status</div>
             <div>Emails</div>
             <div className="text-right pr-2">Action</div>
@@ -176,7 +175,7 @@ function SavedContent() {
           {/* Results Area */}
           <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm min-h-[400px]">
              {!loading && filteredResults.length > 0 ? (
-               filteredResults.map((item, idx) => (
+               filteredResults.map((item) => (
                   <AffiliateRow 
                     key={item.link}
                     title={item.title}
@@ -195,6 +194,9 @@ function SavedContent() {
                     discoveryMethod={item.discoveryMethod}
                     email={item.email}
                     isPipelineView={true}
+                    channel={item.channel}
+                    duration={item.duration}
+                    personName={item.personName}
                   />
                ))
              ) : (

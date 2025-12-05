@@ -1,19 +1,33 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 // Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
+const publicRoutes = [
   "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/webhook(.*)",
-]);
+  "/sign-in",
+  "/sign-up",
+  "/handler", // Stack Auth handler routes
+  "/api/webhook",
+];
 
-export default clerkMiddleware(async (auth, request) => {
-  // Protect all routes except public ones
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Check if the route is public
+  const isPublicRoute = publicRoutes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  // Allow public routes and static files
+  if (isPublicRoute) {
+    return NextResponse.next();
   }
-});
+
+  // For protected routes, Stack Auth handles auth via the StackProvider
+  // The actual auth check happens client-side with useUser({ or: "redirect" })
+  // This middleware just ensures the request passes through
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
@@ -23,4 +37,3 @@ export const config = {
     "/(api|trpc)(.*)",
   ],
 };
-

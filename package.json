@@ -9,9 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.35.6",
     "@google/generative-ai": "^0.24.1",
-    "convex": "^1.30.0",
+    "@neondatabase/serverless": "^1.0.2",
+    "@stackframe/stack": "^2.8.54",
+    "apify-client": "^2.20.0",
     "framer-motion": "^12.23.24",
     "next": "16.0.7",
     "react": "19.2.0",

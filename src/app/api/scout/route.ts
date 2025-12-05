@@ -1,15 +1,20 @@
-import { searchMultiPlatform, Platform, SearchResult } from '../../services/search';
+import { searchMultiPlatform, Platform } from '../../services/search';
 import { analyzeContent } from '../../services/analysis';
+import { trackSearch, completeSearch, API_COSTS } from '../../services/tracking';
 
 /**
  * Scout API - Searches for affiliates across multiple platforms
+ * 
+ * Platforms:
+ * - Web: Uses Serper.dev (Google search)
+ * - YouTube/Instagram/TikTok: Uses Apify scrapers for rich data
  * 
  * Mode 1 (default): Fast mode - returns raw search results immediately
  * Mode 2 (analyze=true): Slow mode - includes AI analysis (takes longer)
  */
 export async function POST(req: Request) {
   try {
-    const { keyword, sources, analyze = false } = await req.json();
+    const { keyword, sources, analyze = false, userId } = await req.json();
 
     if (!keyword) {
       return new Response(JSON.stringify({ error: 'Keyword is required' }), { 
@@ -18,8 +23,10 @@ export async function POST(req: Request) {
       });
     }
 
+    // Filter out unsupported platforms (Reddit was removed)
+    const supportedPlatforms: Platform[] = ['Web', 'YouTube', 'Instagram', 'TikTok'];
     const activeSources: Platform[] = sources && sources.length > 0 
-      ? sources 
+      ? sources.filter((s: string) => supportedPlatforms.includes(s as Platform))
       : ['Web'];
 
     // Create a TransformStream for streaming results
@@ -30,13 +37,31 @@ export async function POST(req: Request) {
     // Process search and stream results
     (async () => {
       let isStreamClosed = false;
+      let searchId: number | null = null;
+      let totalCost = 0;
       
       try {
         console.log(`🔍 Starting search for "${keyword}" on: ${activeSources.join(', ')}`);
         
-        // 1. Search Step - get all results first
-        const searchResults = await searchMultiPlatform(keyword, activeSources);
+        // Track the search in the database
+        if (userId) {
+          searchId = await trackSearch({
+            userId,
+            keyword,
+            sources: activeSources,
+          });
+          console.log(`📝 Search tracked with ID: ${searchId}`);
+        }
+        
+        // 1. Search Step - get all results first (pass userId for API tracking)
+        const searchResults = await searchMultiPlatform(keyword, activeSources, userId);
         console.log(`📊 Found ${searchResults.length} total results`);
+        
+        // Estimate total cost based on platforms used
+        if (activeSources.includes('Web')) totalCost += API_COSTS.serper;
+        if (activeSources.includes('YouTube')) totalCost += API_COSTS.apify_youtube * Math.min(searchResults.filter(r => r.source === 'YouTube').length, 15);
+        if (activeSources.includes('Instagram')) totalCost += API_COSTS.apify_instagram * Math.min(searchResults.filter(r => r.source === 'Instagram').length, 15);
+        if (activeSources.includes('TikTok')) totalCost += API_COSTS.apify_tiktok * Math.min(searchResults.filter(r => r.source === 'TikTok').length, 15);
         
         if (searchResults.length === 0) {
           // No results found - close stream gracefully
@@ -112,6 +137,12 @@ export async function POST(req: Request) {
             await writer.write(encoder.encode('data: [DONE]\n\n'));
             await writer.close();
             console.log(`✅ Streamed ${resultsToProcess.length} results`);
+            
+            // Mark search as complete
+            if (searchId) {
+              await completeSearch(searchId, resultsToProcess.length, totalCost);
+              console.log(`📝 Search ${searchId} completed: ${resultsToProcess.length} results, $${totalCost.toFixed(4)} cost`);
+            }
           } catch (closeError) {
             // Ignore close errors
           }
@@ -119,6 +150,10 @@ export async function POST(req: Request) {
         
       } catch (error: any) {
         console.error("Stream Error:", error);
+        // Still mark search as complete even on error
+        if (searchId) {
+          await completeSearch(searchId, 0, totalCost);
+        }
         try {
           if (!isStreamClosed) {
             await writer.close();

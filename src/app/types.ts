@@ -1,12 +1,40 @@
 /**
- * YouTube Channel Info for rich display
+ * YouTube/TikTok Channel/Creator Info for rich display
  */
 export interface YouTubeChannelInfo {
   name: string;
   link: string;
   thumbnail?: string;
   verified?: boolean;
-  subscribers?: string;  // e.g., "1.9K subscribers"
+  subscribers?: string;  // e.g., "1.9K subscribers" or "1.9K followers" for TikTok
+}
+
+/**
+ * SimilarWeb traffic data for web domains
+ */
+export interface SimilarWebData {
+  domain: string;
+  monthlyVisits: number;
+  monthlyVisitsFormatted: string;  // e.g., "359.8K"
+  globalRank: number | null;
+  countryRank: number | null;
+  countryCode: string | null;
+  bounceRate: number;              // 0-1 (e.g., 0.5 = 50%)
+  pagesPerVisit: number;
+  timeOnSite: number;              // seconds
+  trafficSources: {
+    direct: number;
+    search: number;
+    social: number;
+    referrals: number;
+    mail: number;
+    paid: number;
+  };
+  topCountries: Array<{
+    countryCode: string;
+    share: number;
+  }>;
+  category: string | null;
 }
 
 export interface ResultItem {
@@ -32,15 +60,17 @@ export interface ResultItem {
   isAlreadyAffiliate?: boolean;
   isNew?: boolean;
   
-  // YouTube-specific fields
+  // YouTube/TikTok-specific fields (channel = creator for TikTok)
   channel?: YouTubeChannelInfo;
   duration?: string;     // Video length e.g., "12:34"
   
-  /**
-   * TODO: Future enhancements for YouTube analytics:
-   * - engagementRate?: number;    // (likes + comments) / views * 100 - needs YouTube Data API
-   * - uploadFrequency?: string;   // e.g., "4/m uploads" - needs channel video analysis
-   * - viewToSubRatio?: number;    // avgViews / subscribers * 100 - can calculate client-side
-   */
+  // SimilarWeb data (for Web results)
+  similarWeb?: SimilarWebData;
+  isEnriching?: boolean;           // True while SimilarWeb is loading
+  enrichmentError?: string;        // Error message if enrichment failed
+  
+  // Database fields
+  savedAt?: string;
+  discoveredAt?: string;
+  searchKeyword?: string;
 }
-

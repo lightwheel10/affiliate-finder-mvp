@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, MessageCircle, MoreHorizontal, Mail, ChevronDown, CheckCircle2, Users, Play } from 'lucide-react';
+import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play } from 'lucide-react';
 import { Modal } from './Modal';
 import { ResultItem, YouTubeChannelInfo } from '../types';
+
+// TikTok icon component
+const TikTokIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+  </svg>
+);
 
 interface AffiliateRowProps {
   title: string;
@@ -26,16 +33,10 @@ interface AffiliateRowProps {
   isAlreadyAffiliate?: boolean;
   isNew?: boolean;
   subItems?: ResultItem[];
-  // YouTube-specific props
+  // YouTube/TikTok/Instagram-specific props
   channel?: YouTubeChannelInfo;
   duration?: string;
-  
-  /**
-   * TODO: Future YouTube analytics enhancements:
-   * - engagementRate?: number;    // Display as "5.51% engagement"
-   * - uploadFrequency?: string;   // Display as "4/m uploads"
-   * - viewToSubRatio?: number;    // Display as "51.64% view/subs"
-   */
+  personName?: string;
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
@@ -59,17 +60,42 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   isNew = true,
   subItems = [],
   channel,
-  duration
+  duration,
+  personName
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Check if this is a social media source
+  const isSocialMedia = ['youtube', 'instagram', 'tiktok'].includes(source.toLowerCase());
+
   // Determine icon based on source
-  const getSourceIcon = () => {
+  const getSourceIcon = (size: number = 14) => {
     switch(source.toLowerCase()) {
-      case 'youtube': return <Youtube size={14} className="text-red-600" />;
-      case 'instagram': return <Instagram size={14} className="text-pink-600" />;
-      case 'reddit': return <MessageCircle size={14} className="text-orange-600" />;
-      default: return <Globe size={14} className="text-[#1A1D21]" />;
+      case 'youtube': return <Youtube size={size} className="text-red-600" />;
+      case 'instagram': return <Instagram size={size} className="text-pink-600" />;
+      case 'tiktok': return <TikTokIcon size={size} className="text-slate-900" />;
+      default: return <Globe size={size} className="text-[#1A1D21]" />;
+    }
+  };
+
+  // Get platform-specific colors
+  const getPlatformColors = () => {
+    switch(source.toLowerCase()) {
+      case 'youtube': return { bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-600' };
+      case 'instagram': return { bg: 'bg-gradient-to-r from-purple-50 to-pink-50', border: 'border-pink-100', text: 'text-pink-600' };
+      case 'tiktok': return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-900' };
+      default: return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700' };
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return new Date().toLocaleDateString();
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+    } catch {
+      return dateStr;
     }
   };
 
@@ -174,8 +200,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   };
 
   const gridClass = isPipelineView 
-    ? "grid grid-cols-[48px_280px_1fr_160px_120px_100px_160px_100px] gap-0"
-    : "grid grid-cols-[48px_280px_1fr_160px_128px_144px] gap-0";
+    ? "grid grid-cols-[40px_220px_1fr_140px_100px_90px_130px_100px] gap-0"
+    : "grid grid-cols-[40px_220px_1fr_140px_100px_120px] gap-0";
+
+  const platformColors = getPlatformColors();
 
   return (
     <div className={`group ${gridClass} items-center p-4 bg-white border-b border-slate-50 hover:bg-slate-50/80 transition-all duration-200`}>
@@ -184,93 +212,144 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" />
       </div>
 
-      {/* Affiliate Info */}
+      {/* Affiliate Info - Enhanced for Social Media */}
       <div className="pr-6">
         <div className="flex items-center gap-3">
-           {/* Thumbnail - use channel thumbnail for YouTube if available */}
-           <div className={`${thumbnail || channel?.thumbnail ? 'w-8 h-8 rounded-md' : 'w-8 h-8 rounded-full'} bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden`}>
-            <img 
-              src={channel?.thumbnail || thumbnail || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
-              alt="" 
-              className={`${thumbnail || channel?.thumbnail ? 'w-full h-full object-cover' : 'w-4 h-4 opacity-90'}`}
-              onError={(e) => (e.currentTarget.style.display = 'none')}
-            />
-          </div>
-          <div className="min-w-0">
-            {/* Row 1: Name + badges */}
-            <div className="flex items-center gap-2">
-               <h4 className="font-bold text-sm text-slate-900 truncate">
-                 {channel?.name || domain}
-               </h4>
-               {channel?.verified && (
-                 <CheckCircle2 size={12} className="text-[#D4E815] shrink-0" />
-               )}
-               <a href={channel?.link || `https://${domain}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-[#1A1D21] transition-colors shrink-0">
-                 <ExternalLink size={12} />
-               </a>
-               {isNew && !isAlreadyAffiliate && (
-                 <span className="px-1.5 py-[1px] bg-[#FF4500] text-white text-[9px] font-bold rounded-[3px] shadow-sm shrink-0">NEW</span>
-               )}
-               {isAlreadyAffiliate && (
-                 <span className="px-1.5 py-[1px] bg-slate-200 text-slate-600 text-[9px] font-bold rounded-[3px] shadow-sm shrink-0">ALREADY</span>
-               )}
+          {/* Platform Icon + Avatar */}
+          <div className="relative shrink-0">
+            {/* Avatar/Thumbnail */}
+            <div className={`w-10 h-10 rounded-lg bg-slate-50 border ${platformColors.border} flex items-center justify-center overflow-hidden`}>
+              <img 
+                src={channel?.thumbnail || thumbnail || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
+                alt="" 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             </div>
-            {/* Row 2: Stats (subs, views) - only for YouTube */}
-            {source.toLowerCase() === 'youtube' && (channel?.subscribers || views) && (
-              <div className="flex items-center gap-3 mt-1">
+            {/* Platform badge */}
+            {isSocialMedia && (
+              <div className={`absolute -bottom-1 -left-1 w-5 h-5 rounded-full ${platformColors.bg} border ${platformColors.border} flex items-center justify-center shadow-sm`}>
+                {getSourceIcon(10)}
+              </div>
+            )}
+          </div>
+          
+          <div className="min-w-0 flex-1">
+            {/* Row 1: Creator/Channel Name + badges */}
+            <div className="flex items-center gap-2">
+              {getSourceIcon(14)}
+              <h4 className="font-bold text-sm text-slate-900 truncate">
+                {channel?.name || personName || domain}
+              </h4>
+              {channel?.verified && (
+                <CheckCircle2 size={12} className="text-blue-500 fill-blue-500 shrink-0" />
+              )}
+              {isNew && !isAlreadyAffiliate && (
+                <span className="px-1.5 py-[1px] bg-emerald-500 text-white text-[9px] font-bold rounded-[3px] shadow-sm shrink-0">NEW</span>
+              )}
+              {isAlreadyAffiliate && (
+                <span className="px-1.5 py-[1px] bg-slate-200 text-slate-600 text-[9px] font-bold rounded-[3px] shadow-sm shrink-0">ALREADY</span>
+              )}
+            </div>
+            
+            {/* Row 2: Stats - Enhanced for all social platforms */}
+            {isSocialMedia && (
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {/* Followers/Subscribers */}
                 {channel?.subscribers && (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-600">
-                    <Users size={11} className="text-slate-400" />
-                    <span className="font-medium">{channel.subscribers}</span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${platformColors.bg} ${platformColors.text} border ${platformColors.border}`}>
+                    <Users size={10} />
+                    {channel.subscribers} followers
                   </span>
                 )}
-                {views && (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-600">
-                    <Eye size={11} className="text-slate-400" />
-                    <span className="font-medium">{views}</span>
-                  </span>
-                )}
-                {/* 
-                  TODO: Future YouTube analytics to display here:
-                  - engagementRate: <span>📈 5.51% engagement</span>
-                  - uploadFrequency: <span>📅 4/m uploads</span>
-                  - viewToSubRatio: <span>📊 51.64% view/subs</span>
-                */}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Relevant Content */}
-      <div className="pr-8 min-w-0">
-        <div className="space-y-1">
-          <a 
-            href={link}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm font-semibold text-[#1A1D21] hover:underline decoration-[#D4E815] underline-offset-2 cursor-pointer truncate block"
-          >
-            {title}
-          </a>
-          
-          <div className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
-            <span className="font-medium text-slate-700">rank {rank}</span>
-            <span>for keyword</span>
-            <span className="font-medium text-slate-900">{keyword}</span>
-          </div>
-
-          {subItems && subItems.length > 0 && (
-             <p 
-               onClick={() => setIsModalOpen(true)}
-               className="text-[10px] text-emerald-600 font-bold cursor-pointer hover:underline mt-1.5 inline-block select-none"
-             >
-               +{subItems.length} more pages
-             </p>
+      {/* Relevant Content - Enhanced with thumbnail for social media */}
+      <div className="pr-4 min-w-0 overflow-hidden">
+        <div className="flex items-start gap-2">
+          {/* Video/Post Thumbnail for social media */}
+          {isSocialMedia && thumbnail && (
+            <a 
+              href={link} 
+              target="_blank" 
+              rel="noreferrer"
+              className="shrink-0 relative group/thumb"
+            >
+              <div className="w-14 h-10 rounded-md overflow-hidden bg-slate-100 border border-slate-200">
+                <img 
+                  src={thumbnail} 
+                  alt="" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => (e.currentTarget.style.display = 'none')}
+                />
+              </div>
+              {/* Duration badge */}
+              {duration && (
+                <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-black/80 text-white text-[8px] font-medium rounded">
+                  {duration}
+                </span>
+              )}
+              {/* Play icon overlay */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
+                  <Play size={10} className="text-slate-900 ml-0.5" fill="currentColor" />
+                </div>
+              </div>
+            </a>
           )}
+          
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <a 
+              href={link}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold text-[#1A1D21] hover:underline decoration-[#D4E815] underline-offset-2 cursor-pointer line-clamp-2 block leading-tight"
+            >
+              {title}
+            </a>
+            
+            {/* Stats row for social media */}
+            {isSocialMedia && (views || date) && (
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+                {views && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <Eye size={10} className="text-slate-400" />
+                    {views} views
+                  </span>
+                )}
+                {date && (
+                  <span className="inline-flex items-center gap-0.5">
+                    <span className="text-slate-300">•</span>
+                    {formatDate(date)}
+                  </span>
+                )}
+              </div>
+            )}
+            
+            {/* Keyword info for web results */}
+            {!isSocialMedia && (
+              <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                <span className="font-medium text-slate-700">rank {rank}</span>
+                <span>for</span>
+                <span className="font-medium text-slate-900 truncate max-w-[100px]">{keyword}</span>
+              </div>
+            )}
 
-          {/* Only show snippet in pipeline view or if explicitly needed, to match competitor clean look in discovery */}
-          {isPipelineView && snippet && renderHighlightedSnippet()}
+            {subItems && subItems.length > 0 && (
+               <p 
+                 onClick={() => setIsModalOpen(true)}
+                 className="text-[9px] text-emerald-600 font-bold cursor-pointer hover:underline inline-block select-none"
+               >
+                 +{subItems.length} more
+               </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -281,7 +360,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
       {/* Discovery Date */}
       <div className="text-xs font-medium text-slate-500">
-        {date || new Date().toLocaleDateString()}
+        {formatDate(date)}
       </div>
 
       {/* Status (Pipeline Only) */}

@@ -1,8 +1,32 @@
-import { SignUp } from "@clerk/nextjs";
+'use client';
+
+import { SignUp, useUser } from "@stackframe/stack";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function SignUpPage() {
+  const user = useUser();
+  const router = useRouter();
+
+  // Auto-redirect to home if already signed in
+  useEffect(() => {
+    if (user) {
+      router.replace('/');
+    }
+  }, [user, router]);
+
+  // Show loading while checking auth or redirecting
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD]">
+        <div className="w-8 h-8 border-2 border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // Show sign-up form for unauthenticated users
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFDFD]">
       <div className="w-full max-w-md px-4">
@@ -14,24 +38,7 @@ export default function SignUpPage() {
           Back to Home
         </Link>
       </div>
-      <SignUp 
-        appearance={{
-          elements: {
-            rootBox: "mx-auto",
-            card: "shadow-xl border border-slate-200",
-            headerTitle: "text-slate-900",
-            headerSubtitle: "text-slate-500",
-            socialButtonsBlockButton: "border-slate-200 hover:bg-slate-50",
-            formButtonPrimary: "bg-[#D4E815] hover:bg-[#c5d913] text-[#1A1D21]",
-            footerActionLink: "text-[#1A1D21] hover:text-[#D4E815]",
-          },
-        }}
-        routing="path"
-        path="/sign-up"
-        signInUrl="/sign-in"
-        forceRedirectUrl="/discovered"
-      />
+      <SignUp automaticRedirect={true} />
     </div>
   );
 }
-

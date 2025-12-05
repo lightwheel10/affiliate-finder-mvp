@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# documentation (except README)
+*.md
+!README.md
+
+# scripts folder (test files and results)
+/scripts/
+
+# IDE and editor folders
+.cursor/
+.vscode/
+
+# MCP config
+mcp.json

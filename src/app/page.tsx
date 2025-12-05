@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@stackframe/stack';
 import { useRouter } from 'next/navigation';
 import { AffiliateRow } from './components/AffiliateRow';
 import { AffiliateRowSkeleton } from './components/AffiliateRowSkeleton';
@@ -10,7 +10,7 @@ import { Modal } from './components/Modal';
 import { LandingPage } from './components/landing/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { LoadingOnboardingScreen } from './components/LoadingOnboardingScreen';
-import { useConvexUser } from './hooks/useConvexUser';
+import { useNeonUser } from './hooks/useNeonUser';
 import { 
   Plus, 
   Search, 
@@ -19,7 +19,7 @@ import {
   Instagram,
   ArrowUpDown,
   List,
-  MessageCircle,
+  Music,
   Mail,
   ChevronLeft,
   ChevronRight
@@ -30,34 +30,175 @@ import { useSavedAffiliates, useDiscoveredAffiliates } from './hooks/useAffiliat
 
 const MAX_KEYWORDS = 5;
 
+// Full page skeleton that matches the dashboard layout
+const DashboardSkeleton = () => (
+  <div className="flex min-h-screen bg-[#FDFDFD] font-sans">
+    {/* Sidebar Skeleton */}
+    <aside className="min-h-screen w-60 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
+      {/* Brand / Logo Area - Always visible */}
+      <div className="h-14 flex items-center mt-1 mb-6 px-4">
+        <div className="flex items-center gap-2.5 text-slate-900">
+          <img 
+            src="/logo.jpg" 
+            alt="CrewCast Studio" 
+            className="w-7 h-7 rounded-lg shadow-md shadow-[#1A1D21]/10 shrink-0 object-cover"
+          />
+          <div className="flex flex-col">
+            <span className="font-bold text-sm tracking-tight leading-none">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
+            <span className="text-[9px] font-medium text-slate-400 tracking-wide mt-0.5">backed by selecdoo AI</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Skeleton */}
+      <nav className="flex-1 space-y-6 overflow-y-auto py-1 px-3 animate-pulse">
+        <div>
+          <div className="h-2.5 w-16 bg-slate-200 rounded mb-3 ml-2"></div>
+          <div className="space-y-1">
+            <div className="h-9 bg-slate-100 rounded-lg"></div>
+            <div className="h-9 bg-slate-100 rounded-lg"></div>
+          </div>
+        </div>
+        <div>
+          <div className="h-2.5 w-20 bg-slate-200 rounded mb-3 ml-2"></div>
+          <div className="space-y-1">
+            <div className="h-9 bg-slate-100 rounded-lg"></div>
+            <div className="h-9 bg-slate-100 rounded-lg"></div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Bottom Section Skeleton */}
+      <div className="p-3 space-y-3 bg-white/50 animate-pulse">
+        <div className="bg-slate-100 rounded-xl p-3.5">
+          <div className="space-y-2">
+            <div className="h-3 w-20 bg-slate-200 rounded"></div>
+            <div className="h-4 w-32 bg-slate-200 rounded"></div>
+            <div className="h-3 w-full bg-slate-200 rounded"></div>
+            <div className="h-8 w-full bg-slate-200 rounded-lg mt-2"></div>
+          </div>
+        </div>
+        <div className="border-t border-slate-100"></div>
+        <div className="flex items-center gap-2.5 p-2">
+          <div className="w-7 h-7 bg-slate-200 rounded-full"></div>
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-20 bg-slate-200 rounded"></div>
+            <div className="h-2.5 w-32 bg-slate-200 rounded"></div>
+          </div>
+          <div className="w-4 h-4 bg-slate-200 rounded"></div>
+        </div>
+      </div>
+    </aside>
+
+    {/* Main Content Skeleton */}
+    <main className="flex-1 flex flex-col min-h-screen ml-60">
+      {/* Header Skeleton */}
+      <header className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+        <div className="animate-pulse">
+          <div className="h-5 w-40 bg-slate-200 rounded"></div>
+        </div>
+        <div className="flex items-center gap-3 animate-pulse">
+          <div className="h-8 w-36 bg-slate-100 rounded-lg"></div>
+          <div className="h-8 w-36 bg-slate-100 rounded-lg"></div>
+          <div className="h-8 w-32 bg-slate-200 rounded-lg"></div>
+        </div>
+      </header>
+
+      {/* Content Skeleton */}
+      <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full animate-pulse">
+        {/* Controls Bar Skeleton */}
+        <div className="mb-6 space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1">
+              {/* Search Input Skeleton */}
+              <div className="w-full max-w-xs h-10 bg-slate-100 rounded-xl"></div>
+              <div className="h-8 w-px bg-slate-200 mx-1 hidden lg:block"></div>
+              {/* Filter Pills Skeleton */}
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-16 bg-slate-200 rounded-lg"></div>
+                <div className="h-8 w-20 bg-slate-100 rounded-lg"></div>
+                <div className="h-8 w-24 bg-slate-100 rounded-lg"></div>
+                <div className="h-8 w-24 bg-slate-100 rounded-lg"></div>
+                <div className="h-8 w-20 bg-slate-100 rounded-lg"></div>
+              </div>
+            </div>
+            {/* View Actions Skeleton */}
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-28 bg-slate-100 rounded-lg"></div>
+              <div className="h-9 w-40 bg-slate-100 rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Table Header Skeleton */}
+        <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 h-10"></div>
+
+        {/* Table Content Skeleton */}
+        <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm min-h-[400px] p-4 space-y-3">
+          {/* Row Skeletons */}
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center gap-4 p-3 border border-slate-100 rounded-lg">
+              <div className="w-10 h-10 bg-slate-100 rounded-lg shrink-0"></div>
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-48 bg-slate-200 rounded"></div>
+                <div className="h-3 w-32 bg-slate-100 rounded"></div>
+              </div>
+              <div className="h-3 w-64 bg-slate-100 rounded hidden lg:block"></div>
+              <div className="h-3 w-24 bg-slate-100 rounded hidden lg:block"></div>
+              <div className="h-3 w-20 bg-slate-100 rounded hidden lg:block"></div>
+              <div className="h-8 w-20 bg-slate-100 rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  </div>
+);
+
+/**
+ * BULLETPROOF AUTH FLOW:
+ * 
+ * 1. stackUser === undefined → Loading (Stack Auth checking session)
+ * 2. stackUser === null → Not authenticated → Show Landing Page
+ * 3. stackUser exists + neonLoading → Loading (fetching/creating Neon user)
+ * 4. stackUser exists + neonUser exists + !isOnboarded → Show Onboarding (resume from saved step)
+ * 5. stackUser exists + neonUser exists + isOnboarded → Show Dashboard
+ */
 export default function Home() {
-  const { isSignedIn, isLoaded } = useUser();
-  const { userId, isOnboarded, isLoading: convexLoading, userName, user } = useConvexUser();
+  const stackUser = useUser();
+  const { 
+    userId, 
+    isOnboarded, 
+    onboardingStep,
+    isLoading: neonLoading, 
+    userName, 
+    user,
+    refetch 
+  } = useNeonUser();
   const router = useRouter();
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
-  // Debug logging - remove after testing
-  console.log('Auth State:', { 
-    isSignedIn, 
-    isLoaded, 
-    convexLoading, 
-    userId: userId?.toString(), 
+  // Debug logging
+  console.log('🔐 Auth State:', { 
+    stackUserStatus: stackUser === undefined ? 'loading' : stackUser ? 'authenticated' : 'not authenticated',
+    neonLoading, 
+    userId, 
     isOnboarded,
+    onboardingStep,
     userName,
-    userFromConvex: user 
   });
 
-  // Show loading state while Clerk or Convex is loading
-  if (!isLoaded || (isSignedIn && convexLoading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="w-8 h-8 border-2 border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  // ============================================
+  // CASE 1: Stack Auth is still loading
+  // ============================================
+  if (stackUser === undefined) {
+    return <DashboardSkeleton />;
   }
 
-  // Show landing page for unauthenticated users
-  if (!isSignedIn) {
+  // ============================================
+  // CASE 2: Not authenticated → Landing Page
+  // ============================================
+  if (!stackUser) {
     return (
       <LandingPage 
         onLoginClick={() => router.push('/sign-in')}
@@ -66,21 +207,45 @@ export default function Home() {
     );
   }
 
-  // Show loading screen after onboarding completion
+  // ============================================
+  // CASE 3: Authenticated but Neon user loading
+  // ============================================
+  if (neonLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  // ============================================
+  // CASE 4: Show loading screen after onboarding
+  // ============================================
   if (showLoadingScreen) {
     return <LoadingOnboardingScreen />;
   }
 
-  // Show onboarding for users who haven't completed it
+  // ============================================
+  // CASE 5: Not onboarded → Show Onboarding
+  // Resume from saved step with pre-filled data
+  // ============================================
   if (!isOnboarded && userId) {
     return (
       <OnboardingScreen 
         userId={userId}
         userName={userName}
+        initialStep={onboardingStep || 1}
+        userData={user ? {
+          name: user.name,
+          role: user.role || undefined,
+          brand: user.brand || undefined,
+          targetCountry: user.target_country || undefined,
+          targetLanguage: user.target_language || undefined,
+          competitors: user.competitors || undefined,
+          topics: user.topics || undefined,
+          affiliateTypes: user.affiliate_types || undefined,
+        } : undefined}
         onComplete={() => {
           setShowLoadingScreen(true);
-          // Show loading screen for 2 seconds, then redirect to dashboard
-          setTimeout(() => {
+          // Show loading screen for 2 seconds, then refetch user and show dashboard
+          setTimeout(async () => {
+            await refetch();
             setShowLoadingScreen(false);
           }, 2000);
         }}
@@ -88,12 +253,17 @@ export default function Home() {
     );
   }
 
-  // Authenticated and onboarded users see the dashboard
+  // ============================================
+  // CASE 6: Authenticated + Onboarded → Dashboard
+  // ============================================
   return <Dashboard />
 }
 
 function Dashboard() {
-  // Convex hooks for data management
+  // Get user ID for API tracking
+  const { userId } = useNeonUser();
+  
+  // Hooks for data management
   const { 
     savedAffiliates, 
     saveAffiliate, 
@@ -147,9 +317,9 @@ function Dashboard() {
       const lastKeyword = discoveredAffiliates[0]?.searchKeyword;
       if (lastKeyword) {
         const lastSearchResults = discoveredAffiliates.filter(
-          (d: { searchKeyword: string }) => d.searchKeyword === lastKeyword
+          (d) => d.searchKeyword === lastKeyword
         );
-        setResults(lastSearchResults as ResultItem[]);
+        setResults(lastSearchResults);
         // Restore keywords (could be comma-separated for multi-keyword searches)
         const restoredKeywords = lastKeyword.split(' | ').filter(Boolean);
         setKeywords(restoredKeywords);
@@ -191,7 +361,7 @@ function Dashboard() {
         const res = await fetch('/api/scout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keyword: kw, sources: ['Web', 'YouTube', 'Reddit', 'Instagram'] }),
+          body: JSON.stringify({ keyword: kw, sources: ['Web', 'YouTube', 'Instagram', 'TikTok'], userId }),
         });
 
         const contentType = res.headers.get('content-type');
@@ -336,7 +506,7 @@ function Dashboard() {
 
   // Calculate real counts from results
   const counts = useMemo(() => {
-    if (!hasSearched) return { All: 0, Web: 0, YouTube: 0, Instagram: 0, Reddit: 0 };
+    if (!hasSearched) return { All: 0, Web: 0, YouTube: 0, Instagram: 0, TikTok: 0 };
     
     // Count all results per source (no grouping - show actual counts)
     return {
@@ -344,7 +514,7 @@ function Dashboard() {
       Web: results.filter(r => r.source === 'Web').length,
       YouTube: results.filter(r => r.source === 'YouTube').length,
       Instagram: results.filter(r => r.source === 'Instagram').length,
-      Reddit: results.filter(r => r.source === 'Reddit').length,
+      TikTok: results.filter(r => r.source === 'TikTok').length,
     };
   }, [results, hasSearched]);
 
@@ -354,7 +524,7 @@ function Dashboard() {
     { id: 'Web', icon: <Globe size={14} />, count: counts.Web },
     { id: 'YouTube', icon: <Youtube size={14} />, count: counts.YouTube },
     { id: 'Instagram', icon: <Instagram size={14} />, count: counts.Instagram },
-    { id: 'Reddit', icon: <MessageCircle size={14} />, count: counts.Reddit },
+    { id: 'TikTok', icon: <Music size={14} />, count: counts.TikTok },
   ];
 
   // Filter results based on active filter AND search query
@@ -539,12 +709,12 @@ function Dashboard() {
           </div>
 
           {/* Table Header */}
-          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[48px_280px_1fr_160px_128px_144px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
+          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_220px_1fr_140px_100px_120px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
             <div className="pl-1"></div>
             <div>Affiliate</div>
             <div>Relevant Content</div>
             <div>Discovery Method</div>
-            <div>Discovery Date</div>
+            <div>Date</div>
             <div className="text-right pr-2">Action</div>
           </div>
 
@@ -608,6 +778,7 @@ function Dashboard() {
                           subItems={group.subItems}
                           channel={group.main.channel}
                           duration={group.main.duration}
+                          personName={group.main.personName}
                         />
                       </div>
                     ))}
@@ -651,6 +822,7 @@ function Dashboard() {
                         subItems={group.subItems}
                         channel={group.main.channel}
                         duration={group.main.duration}
+                        personName={group.main.personName}
                       />
                     </div>
                   ))

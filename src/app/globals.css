@@ -203,6 +203,15 @@
     scrollbar-width: none;
   }
 
+  /* Hide scrollbar but keep scrolling functionality */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   /* Touch manipulation for better mobile performance */
   .touch-manipulation {
     touch-action: manipulation;

@@ -13,7 +13,7 @@ import {
   Youtube, 
   Instagram,
   ArrowUpDown,
-  MessageCircle,
+  Music,
   Download,
 } from 'lucide-react';
 import { ResultItem } from '../types';
@@ -78,7 +78,7 @@ function DiscoveredContent() {
       Web: discoveredAffiliates.filter(r => r.source === 'Web').length,
       YouTube: discoveredAffiliates.filter(r => r.source === 'YouTube').length,
       Instagram: discoveredAffiliates.filter(r => r.source === 'Instagram').length,
-      Reddit: discoveredAffiliates.filter(r => r.source === 'Reddit').length,
+      TikTok: discoveredAffiliates.filter(r => r.source === 'TikTok').length,
     };
   }, [discoveredAffiliates]);
 
@@ -87,7 +87,7 @@ function DiscoveredContent() {
     { id: 'Web', icon: <Globe size={14} />, count: counts.Web },
     { id: 'YouTube', icon: <Youtube size={14} />, count: counts.YouTube },
     { id: 'Instagram', icon: <Instagram size={14} />, count: counts.Instagram },
-    { id: 'Reddit', icon: <MessageCircle size={14} />, count: counts.Reddit },
+    { id: 'TikTok', icon: <Music size={14} />, count: counts.TikTok },
   ];
 
   return (
@@ -172,12 +172,12 @@ function DiscoveredContent() {
           </div>
 
           {/* Table Header */}
-          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[48px_280px_1fr_160px_128px_144px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
+          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_220px_1fr_140px_100px_120px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
             <div className="pl-1"></div>
             <div>Affiliate</div>
             <div>Relevant Content</div>
             <div>Discovery Method</div>
-            <div>Discovery Date</div>
+            <div>Date</div>
             <div className="text-right pr-2">Action</div>
           </div>
 
@@ -210,6 +210,9 @@ function DiscoveredContent() {
                     highlightedWords={item.highlightedWords}
                     discoveryMethod={item.discoveryMethod}
                     email={item.email}
+                    channel={item.channel}
+                    duration={item.duration}
+                    personName={item.personName}
                   />
                ))
              ) : (

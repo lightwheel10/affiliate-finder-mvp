@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Check, Globe, Youtube, Instagram, ArrowRight, Loader2, MessageCircle } from 'lucide-react';
+import { Search, Mail, Check, Globe, Youtube, Instagram, ArrowRight, Loader2, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type Step = 'IDLE' | 'TYPING' | 'SEARCHING' | 'ANALYZING' | 'COMPLETE';
-type Tab = 'All' | 'Web' | 'YouTube' | 'Instagram' | 'Reddit';
+type Tab = 'All' | 'Web' | 'YouTube' | 'Instagram' | 'TikTok';
 
 const DEMO_RESULTS = [
   {
@@ -40,13 +40,13 @@ const DEMO_RESULTS = [
   },
   {
     id: 4,
-    platform: 'Reddit',
-    title: 'r/SkincareAddicts',
-    subtitle: 'Community • 2.1M Members',
-    eng: 'High',
-    email: null,
-    avatarGradient: 'from-orange-500 to-red-500',
-    initials: 'SA'
+    platform: 'TikTok',
+    title: '@skincare_queen',
+    subtitle: 'Beauty • 1.2M Followers',
+    eng: '12.5%',
+    email: 'skincare@creators.co',
+    avatarGradient: 'from-pink-500 to-cyan-400',
+    initials: 'SQ'
   },
   {
     id: 5,
@@ -206,7 +206,7 @@ export const InteractiveSearchDemo = () => {
 
           {/* Status Bar / Tabs */}
           <div className="flex items-center gap-4 mb-6 border-b border-[#E5E7EB] pb-2 overflow-hidden">
-             {(['All', 'Web', 'YouTube', 'Instagram', 'Reddit'] as Tab[]).map((tab) => (
+             {(['All', 'Web', 'YouTube', 'Instagram', 'TikTok'] as Tab[]).map((tab) => (
                <div 
                  key={tab} 
                  className={`relative text-xs font-medium pb-2 cursor-default transition-colors ${activeTab === tab ? 'text-[#1A1D21]' : 'text-slate-400'}`}
@@ -310,7 +310,7 @@ export const InteractiveSearchDemo = () => {
                         {result.platform === 'Instagram' && <Instagram size={10} className="text-pink-600" />}
                         {result.platform === 'YouTube' && <Youtube size={10} className="text-red-600" />}
                         {result.platform === 'Web' && <Globe size={10} className="text-blue-600" />}
-                        {result.platform === 'Reddit' && <MessageCircle size={10} className="text-orange-600" />}
+                        {result.platform === 'TikTok' && <Music size={10} className="text-pink-500" />}
                       </div>
                     </div>
 
