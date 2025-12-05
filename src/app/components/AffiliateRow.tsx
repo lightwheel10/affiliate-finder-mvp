@@ -68,6 +68,21 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   // Check if this is a social media source
   const isSocialMedia = ['youtube', 'instagram', 'tiktok'].includes(source.toLowerCase());
 
+  // Helper to proxy images from Instagram/TikTok to avoid CORS issues
+  const getProxiedImageUrl = (url?: string) => {
+    if (!url) return undefined;
+    // Check if image needs proxying (Instagram or TikTok CDN)
+    const needsProxy = url.includes('cdninstagram.com') || 
+                       url.includes('instagram.com') || 
+                       url.includes('fbcdn.net') ||
+                       url.includes('tiktokcdn.com') ||
+                       url.includes('tiktok.com');
+    if (needsProxy) {
+      return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
   // Determine icon based on source
   const getSourceIcon = (size: number = 14) => {
     switch(source.toLowerCase()) {
@@ -220,7 +235,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {/* Avatar/Thumbnail */}
             <div className={`w-10 h-10 rounded-lg bg-slate-50 border ${platformColors.border} flex items-center justify-center overflow-hidden`}>
               <img 
-                src={channel?.thumbnail || thumbnail || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
+                src={getProxiedImageUrl(channel?.thumbnail || thumbnail) || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
                 alt="" 
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -283,7 +298,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             >
               <div className="w-14 h-10 rounded-md overflow-hidden bg-slate-100 border border-slate-200">
                 <img 
-                  src={thumbnail} 
+                  src={getProxiedImageUrl(thumbnail)} 
                   alt="" 
                   className="w-full h-full object-cover"
                   onError={(e) => (e.currentTarget.style.display = 'none')}
