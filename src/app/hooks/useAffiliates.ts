@@ -40,6 +40,7 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
   } : undefined);
 
   return {
+    id: dbAffiliate.id,
     title: dbAffiliate.title,
     link: dbAffiliate.link,
     domain: dbAffiliate.domain,
@@ -67,6 +68,10 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     channel,
     duration: dbAffiliate.duration,
     similarWeb,
+    // Email discovery fields
+    emailStatus: dbAffiliate.email_status || 'not_searched',
+    emailSearchedAt: dbAffiliate.email_searched_at,
+    emailProvider: dbAffiliate.email_provider,
   };
 }
 
@@ -216,11 +221,61 @@ export function useSavedAffiliates() {
     return savedAffiliates.some(a => a.link === link);
   }, [savedAffiliates]);
 
+  // Find email for an affiliate using Apollo
+  const findEmail = useCallback(async (affiliateId: number, domain: string, personName?: string) => {
+    if (!userId || !affiliateId) return null;
+
+    // Optimistic update - set status to searching
+    setSavedAffiliates(prev => prev.map(a => 
+      a.id === affiliateId ? { ...a, emailStatus: 'searching' as const } : a
+    ));
+
+    try {
+      const res = await fetch('/api/enrich/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          affiliateId,
+          userId,
+          domain,
+          personName,
+        }),
+      });
+
+      const data = await res.json();
+
+      // Update local state with result
+      setSavedAffiliates(prev => prev.map(a => 
+        a.id === affiliateId 
+          ? { 
+              ...a, 
+              email: data.email || a.email,
+              emailStatus: data.status as 'found' | 'not_found' | 'error',
+              emailSearchedAt: new Date().toISOString(),
+              emailProvider: 'apollo',
+            } 
+          : a
+      ));
+
+      return data;
+    } catch (err) {
+      console.error('Error finding email:', err);
+      
+      // Update status to error
+      setSavedAffiliates(prev => prev.map(a => 
+        a.id === affiliateId ? { ...a, emailStatus: 'error' as const } : a
+      ));
+      
+      return null;
+    }
+  }, [userId]);
+
   return {
     savedAffiliates,
     saveAffiliate,
     removeAffiliate,
     isAffiliateSaved,
+    findEmail,
     isLoading: userLoading || isLoading,
     count: savedAffiliates.length,
     refetch: fetchSavedAffiliates,

@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AffiliateRow } from '../components/AffiliateRow';
 import { SearchInput } from '../components/Input';
+import { ScanCountdown } from '../components/ScanCountdown';
 import { AuthGuard } from '../components/AuthGuard';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,9 @@ import {
   ArrowUpDown,
   Music,
   Download,
+  Mail,
+  Plus,
+  Sparkles,
 } from 'lucide-react';
 import { ResultItem } from '../types';
 
@@ -84,28 +88,46 @@ function DiscoveredContent() {
 
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
-    { id: 'Web', icon: <Globe size={14} />, count: counts.Web },
-    { id: 'YouTube', icon: <Youtube size={14} />, count: counts.YouTube },
-    { id: 'Instagram', icon: <Instagram size={14} />, count: counts.Instagram },
-    { id: 'TikTok', icon: <Music size={14} />, count: counts.TikTok },
+    { id: 'Web', icon: <Globe size={14} className="text-blue-500" />, count: counts.Web },
+    { id: 'YouTube', icon: <Youtube size={14} className="text-red-600" />, count: counts.YouTube },
+    { id: 'Instagram', icon: <Instagram size={14} className="text-pink-600" />, count: counts.Instagram },
+    { id: 'TikTok', icon: <Music size={14} className="text-cyan-500" />, count: counts.TikTok },
   ];
 
   return (
     <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
       <Sidebar />
       
-      <main className="flex-1 flex flex-col min-h-screen ml-60">
+      <main className="flex-1 flex flex-col min-h-screen ml-52">
         {/* Header */}
-        <header className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+        <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
            <div className="flex items-center gap-2">
               <h1 className="text-lg font-semibold text-slate-900">All Discovered Affiliates</h1>
             </div>
+
+          {/* Countdown Timer */}
+          <ScanCountdown />
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 text-xs">
+            {/* Stats Display */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-lg">
+              <Search size={12} className="text-emerald-600" />
+              <span className="font-semibold text-emerald-900">14/15 Topic Searches</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg">
+              <Mail size={12} className="text-[#1A1D21]" />
+              <span className="font-semibold text-[#1A1D21]">150/150 Email Credits</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg">
+              <Sparkles size={12} className="text-purple-600" />
+              <span className="font-semibold text-purple-900">100 AI Credits</span>
+            </div>
+            
+            {/* Action Buttons */}
             <button 
-              className="bg-white text-slate-700 border border-slate-200 px-3.5 py-1.5 rounded-lg hover:bg-slate-50 transition-all text-xs font-bold flex items-center gap-1.5 shadow-sm"
+              className="bg-[#D4E815] text-[#1A1D21] px-3.5 py-1.5 rounded-lg hover:bg-[#c5d913] hover:shadow-md hover:shadow-[#D4E815]/20 transition-all font-semibold flex items-center gap-1.5"
             >
-              <Download size={14} /> Export CSV
+              <Plus size={14} /> Find Affiliates
             </button>
           </div>
         </header>
@@ -119,16 +141,19 @@ function DiscoveredContent() {
               
               {/* Left: Search & Filters */}
               <div className="flex items-center gap-4 flex-1">
-                <div className="w-full max-w-xs">
-                   <SearchInput 
-                      value={searchQuery}
-                      onChange={setSearchQuery}
-                      onSearch={() => {}} // Instant search
-                      isLoading={false}
-                      placeholder="Search discovered affiliates..."
-                      className="text-sm h-10 shadow-sm"
-                      buttonLabel="Search"
-                    />
+                <div className="w-full max-w-[160px]">
+                   <div className="relative w-full group">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
+                        <Search size={14} />
+                      </div>
+                      <input
+                        className="w-full pl-9 pr-3 py-1.5 bg-white border ring-1 ring-slate-200 rounded-lg text-xs font-semibold text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815]"
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search..."
+                      />
+                    </div>
                 </div>
 
                 <div className="h-8 w-px bg-slate-200 mx-1 hidden lg:block"></div>
@@ -147,7 +172,7 @@ function DiscoveredContent() {
                       )}
                     >
                       {tab.icon}
-                      {tab.id !== 'All' && <span>{tab.id}</span>}
+                      {/* Only show text for "All" filter */}
                       {tab.id === 'All' && <span>All</span>}
                       {tab.count > 0 && (
                         <span className={cn(
@@ -160,13 +185,6 @@ function DiscoveredContent() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Right: View Actions */}
-              <div className="flex items-center gap-2">
-                 <button className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-sm flex items-center gap-1.5 transition-all">
-                    <ArrowUpDown size={12} /> Sort by: Discovery Date
-                  </button>
               </div>
             </div>
           </div>

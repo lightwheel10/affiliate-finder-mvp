@@ -97,6 +97,10 @@ export interface DbSavedAffiliate {
   similarweb_category: string | null;
   similarweb_traffic_sources: Record<string, number> | null;
   similarweb_top_countries: Array<{ countryCode: string; share: number }> | null;
+  // Email discovery fields
+  email_status: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
+  email_searched_at: string | null;
+  email_provider: string | null;
 }
 
 export interface DbDiscoveredAffiliate {
@@ -162,6 +166,10 @@ export interface DbDiscoveredAffiliate {
   similarweb_category: string | null;
   similarweb_traffic_sources: Record<string, number> | null;
   similarweb_top_countries: Array<{ countryCode: string; share: number }> | null;
+  // Email discovery fields
+  email_status: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
+  email_searched_at: string | null;
+  email_provider: string | null;
 }
 
 export interface DbSearch {
@@ -178,7 +186,7 @@ export interface DbSearch {
 export interface DbApiCall {
   id: number;
   user_id: number;
-  service: 'serper' | 'apify_youtube' | 'apify_instagram' | 'apify_tiktok' | 'apify_similarweb';
+  service: 'serper' | 'apify_youtube' | 'apify_instagram' | 'apify_tiktok' | 'apify_similarweb' | 'apollo_email';
   endpoint: string | null;
   keyword: string | null;
   domain: string | null;

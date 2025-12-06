@@ -72,7 +72,7 @@ const PageSkeleton = () => (
     </aside>
 
     {/* Main Content Skeleton */}
-    <main className="flex-1 flex flex-col min-h-screen ml-60">
+    <main className="flex-1 flex flex-col min-h-screen ml-52">
       {/* Header Skeleton */}
       <header className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
         <div className="animate-pulse">

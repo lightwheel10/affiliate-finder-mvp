@@ -38,6 +38,7 @@ export interface SimilarWebData {
 }
 
 export interface ResultItem {
+  id?: number;  // Database ID (for saved/discovered affiliates)
   title: string;
   link: string;
   domain: string;
@@ -73,4 +74,9 @@ export interface ResultItem {
   savedAt?: string;
   discoveredAt?: string;
   searchKeyword?: string;
+  
+  // Email discovery fields
+  emailStatus?: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
+  emailSearchedAt?: string;
+  emailProvider?: string;
 }

@@ -25,7 +25,7 @@ import { useSubscription } from '../hooks/useSubscription';
 
 // Skeleton component for loading state
 const SidebarSkeleton: React.FC = () => (
-  <aside className="min-h-screen w-60 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
+  <aside className="min-h-screen w-52 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
     {/* Brand / Logo Area - Always visible */}
     <div className="h-14 flex items-center mt-1 mb-6 px-4">
       <div className="flex items-center gap-2.5 text-slate-900">
@@ -118,9 +118,9 @@ export const Sidebar: React.FC = () => {
 
   return (
     <>
-      <aside className="min-h-screen w-60 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
+      <aside className="min-h-screen w-52 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
         {/* Brand / Logo Area */}
-        <div className="h-14 flex items-center mt-1 mb-6 px-4">
+        <div className="h-14 flex items-center mt-1 mb-6 px-3">
           <div className="flex items-center gap-2.5 text-slate-900">
             <img 
               src="/logo.jpg" 
@@ -166,7 +166,12 @@ export const Sidebar: React.FC = () => {
                 badge={pipelineCount > 0 ? pipelineCount.toString() : undefined}
                 active={pathname === '/saved'}
               />
-              <NavItem icon={<Users size={14} />} label="Outreach" />
+              <NavItem 
+                href="/outreach"
+                icon={<Users size={14} />} 
+                label="Outreach"
+                active={pathname === '/outreach'}
+              />
             </div>
           </div>
         </nav>
@@ -177,19 +182,26 @@ export const Sidebar: React.FC = () => {
           {/* Dynamic Plan Banner - Changes based on trial/subscription status */}
           {isTrialing ? (
             // Trial with card (card is always on file now since it's required at signup)
-            <div className="bg-[#1A1D21] rounded-xl p-3.5 text-white relative overflow-hidden group cursor-pointer shadow-lg shadow-[#1A1D21]/20" onClick={() => setIsPricingModalOpen(true)}>
+            <div className="bg-[#1A1D21] rounded-xl p-3 text-white relative overflow-hidden group cursor-pointer" onClick={() => setIsPricingModalOpen(true)}>
               <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[radial-gradient(#D4E815_1px,transparent_1px)] [background-size:12px_12px]"></div>
               
               <div className="relative z-10">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <div className="p-1 rounded-md backdrop-blur-sm bg-[#D4E815]/20">
-                    <Clock size={12} className="text-[#D4E815]" />
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="p-1 rounded-md backdrop-blur-sm bg-[#D4E815]/20">
+                      <Clock size={11} className="text-[#D4E815]" />
+                    </div>
+                    <span className="text-[10px] font-bold tracking-wide uppercase text-white/90">
+                      {subscription?.plan ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1) : 'Trial'} Plan
+                    </span>
                   </div>
-                  <span className="text-[10px] font-bold tracking-wide uppercase text-white/90">
-                    {subscription?.plan ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1) : 'Trial'} Plan
-                  </span>
+                  {/* Blinking dot */}
+                  <div className="relative">
+                    <span className="absolute inset-0 w-2 h-2 rounded-full bg-[#D4E815] animate-ping opacity-75"></span>
+                    <span className="relative block w-2 h-2 rounded-full bg-[#D4E815]"></span>
+                  </div>
                 </div>
-                <h4 className="text-xs font-bold text-white mb-1 leading-tight">
+                <h4 className="text-xs font-bold text-white mb-2 leading-tight">
                   {daysLeftInTrial === 0 
                     ? 'Trial ends today' 
                     : daysLeftInTrial === 1 
@@ -197,10 +209,7 @@ export const Sidebar: React.FC = () => {
                       : `${daysLeftInTrial} days left in trial`
                   }
                 </h4>
-                <p className="text-[10px] text-slate-300 leading-relaxed mb-3 opacity-90">
-                  Upgrade or change your plan anytime.
-                </p>
-                <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-2 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
+                <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-1.5 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
                   Change Plan <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </div>

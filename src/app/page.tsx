@@ -7,6 +7,7 @@ import { AffiliateRow } from './components/AffiliateRow';
 import { AffiliateRowSkeleton } from './components/AffiliateRowSkeleton';
 import { Sidebar } from './components/Sidebar';
 import { Modal } from './components/Modal';
+import { ScanCountdown } from './components/ScanCountdown';
 import { LandingPage } from './components/landing/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { LoadingOnboardingScreen } from './components/LoadingOnboardingScreen';
@@ -22,7 +23,8 @@ import {
   Music,
   Mail,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ResultItem } from './types';
@@ -34,7 +36,7 @@ const MAX_KEYWORDS = 5;
 const DashboardSkeleton = () => (
   <div className="flex min-h-screen bg-[#FDFDFD] font-sans">
     {/* Sidebar Skeleton */}
-    <aside className="min-h-screen w-60 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
+    <aside className="min-h-screen w-52 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
       {/* Brand / Logo Area - Always visible */}
       <div className="h-14 flex items-center mt-1 mb-6 px-4">
         <div className="flex items-center gap-2.5 text-slate-900">
@@ -91,7 +93,7 @@ const DashboardSkeleton = () => (
     </aside>
 
     {/* Main Content Skeleton */}
-    <main className="flex-1 flex flex-col min-h-screen ml-60">
+    <main className="flex-1 flex flex-col min-h-screen ml-52">
       {/* Header Skeleton */}
       <header className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
         <div className="animate-pulse">
@@ -111,7 +113,7 @@ const DashboardSkeleton = () => (
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-4 flex-1">
               {/* Search Input Skeleton */}
-              <div className="w-full max-w-xs h-10 bg-slate-100 rounded-xl"></div>
+              <div className="w-full max-w-[160px] h-10 bg-slate-100 rounded-xl"></div>
               <div className="h-8 w-px bg-slate-200 mx-1 hidden lg:block"></div>
               {/* Filter Pills Skeleton */}
               <div className="flex items-center gap-2">
@@ -521,10 +523,10 @@ function Dashboard() {
   // Filter tabs data with real counts
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
-    { id: 'Web', icon: <Globe size={14} />, count: counts.Web },
-    { id: 'YouTube', icon: <Youtube size={14} />, count: counts.YouTube },
-    { id: 'Instagram', icon: <Instagram size={14} />, count: counts.Instagram },
-    { id: 'TikTok', icon: <Music size={14} />, count: counts.TikTok },
+    { id: 'Web', icon: <Globe size={14} className="text-blue-500" />, count: counts.Web },
+    { id: 'YouTube', icon: <Youtube size={14} className="text-red-600" />, count: counts.YouTube },
+    { id: 'Instagram', icon: <Instagram size={14} className="text-pink-600" />, count: counts.Instagram },
+    { id: 'TikTok', icon: <Music size={14} className="text-cyan-500" />, count: counts.TikTok },
   ];
 
   // Filter results based on active filter AND search query
@@ -577,13 +579,16 @@ function Dashboard() {
     <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
       <Sidebar />
       
-      <main className="flex-1 flex flex-col min-h-screen ml-60">
+      <main className="flex-1 flex flex-col min-h-screen ml-52">
         {/* Dashboard Header */}
-        <header className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+        <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
            {/* Page Title */}
            <div className="flex items-center gap-2">
               <h1 className="text-lg font-semibold text-slate-900">Find New Affiliates</h1>
             </div>
+
+          {/* Countdown Timer */}
+          <ScanCountdown />
           
           <div className="flex items-center gap-3 text-xs">
             {/* Stats Display */}
@@ -594,6 +599,10 @@ function Dashboard() {
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg">
               <Mail size={12} className="text-[#1A1D21]" />
               <span className="font-semibold text-[#1A1D21]">150/150 Email Credits</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg">
+              <Sparkles size={12} className="text-purple-600" />
+              <span className="font-semibold text-purple-900">100 AI Credits</span>
             </div>
             
             {/* Action Buttons */}
@@ -641,17 +650,17 @@ function Dashboard() {
               
               {/* Left: Search & Filters */}
               <div className="flex items-center gap-4 flex-1">
-                <div className="w-full max-w-xs">
+                <div className="w-full max-w-[160px]">
                    <div className="relative w-full group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
-                        <Search className="h-4 w-4" />
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
+                        <Search className="h-3.5 w-3.5" />
                       </div>
                       <input
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-xl text-sm font-medium text-slate-900 shadow-[0_1px_2px_rgb(0,0,0,0.05)] transition-all duration-200 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:shadow-[0_4px_12px_rgb(212,232,21,0.1)]"
+                        className="w-full pl-9 pr-3 py-1.5 bg-white border ring-1 ring-slate-200 rounded-lg text-xs font-semibold text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815]"
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search results by name, domain, or keyword..."
+                        placeholder="Search..."
                       />
                     </div>
                 </div>
@@ -672,9 +681,9 @@ function Dashboard() {
                       )}
                     >
                       {tab.icon}
-                      {tab.id !== 'All' && <span>{tab.id}</span>}
+                      {/* Only show text for "All" filter */}
                       {tab.id === 'All' && <span>All</span>}
-                      {/* Only show badge if there is data */}
+                      {/* Show badge if there is data */}
                       {hasSearched && tab.count > 0 && (
                         <span className={cn(
                           "ml-0.5 px-1.5 py-0.5 rounded text-[9px]",
@@ -686,24 +695,6 @@ function Dashboard() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Right: View Actions */}
-              <div className="flex items-center gap-2">
-                 <button 
-                   onClick={() => setGroupByDomain(!groupByDomain)}
-                   className={cn(
-                     "px-3 py-2 border rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all",
-                     groupByDomain 
-                       ? "bg-[#D4E815] border-[#D4E815] text-[#1A1D21]"
-                       : "bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300"
-                   )}
-                 >
-                    <List size={12} /> {groupByDomain ? 'Grouped' : 'All Results'}
-                  </button>
-                  <button className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-sm flex items-center gap-1.5 transition-all">
-                    <ArrowUpDown size={12} /> Sort by: Most Content
-                  </button>
               </div>
             </div>
           </div>

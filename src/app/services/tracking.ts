@@ -13,6 +13,7 @@ export const API_COSTS = {
   apify_instagram: 0.0016, // $0.0016 per profile (~$1.60/1000)
   apify_tiktok: 0.0002,    // $0.0002 per video
   apify_similarweb: 0.05,  // $0.05 per domain
+  apollo_email: 0.03,      // $0.03 per email lookup
 } as const;
 
 // ============================================================================

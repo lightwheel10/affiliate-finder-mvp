@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play } from 'lucide-react';
+import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle } from 'lucide-react';
 import { Modal } from './Modal';
 import { ResultItem, YouTubeChannelInfo } from '../types';
 
@@ -11,6 +11,7 @@ const TikTokIcon = ({ size = 14, className = "" }: { size?: number; className?: 
 );
 
 interface AffiliateRowProps {
+  id?: number;  // Database ID for email lookup
   title: string;
   domain: string;
   link: string;
@@ -25,6 +26,8 @@ interface AffiliateRowProps {
   snippet?: string;
   highlightedWords?: string[];
   email?: string;
+  emailStatus?: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
+  onFindEmail?: () => void;  // Callback to trigger email search
   isPipelineView?: boolean;
   discoveryMethod?: {
     type: 'competitor' | 'keyword' | 'topic' | 'tagged';
@@ -40,6 +43,7 @@ interface AffiliateRowProps {
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
+  id,
   title, 
   domain, 
   link,
@@ -54,6 +58,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   snippet,
   highlightedWords,
   email,
+  emailStatus = 'not_searched',
+  onFindEmail,
   isPipelineView = false,
   discoveryMethod = { type: 'keyword', value: keyword || 'Keyword' },
   isAlreadyAffiliate = false,
@@ -390,20 +396,66 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       {/* Emails (Pipeline Only) */}
       {isPipelineView && (
          <div className="shrink-0">
-            {email ? (
-               <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-100 text-emerald-600 hover:bg-emerald-100 transition-colors text-[10px] font-bold">
-                 <div className="w-3.5 h-3.5 rounded-full border border-emerald-200 flex items-center justify-center bg-white shrink-0">
-                    <Mail size={8} className="text-emerald-600" />
-                 </div>
-                 Access Email
+            {/* Email Found - Show email with copy */}
+            {(emailStatus === 'found' || email) && email ? (
+               <button 
+                 onClick={() => navigator.clipboard.writeText(email)}
+                 className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-100 text-emerald-600 hover:bg-emerald-100 transition-colors text-[10px] font-bold group"
+                 title={`Click to copy: ${email}`}
+               >
+                 <Check size={12} className="text-emerald-500" />
+                 <span className="max-w-[80px] truncate">{email}</span>
+                 <Copy size={10} className="text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                </button>
-            ) : (
-               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-400 text-[10px] font-medium">
-                 <div className="w-3.5 h-3.5 rounded-full border border-slate-200 flex items-center justify-center bg-white shrink-0">
-                    <Mail size={8} className="text-slate-300" />
-                 </div>
-                 No emails found
+            ) : emailStatus === 'searching' ? (
+               /* Searching State - Animated spinner */
+               <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                 <Loader2 size={14} className="text-blue-500 animate-spin" />
                </div>
+            ) : emailStatus === 'not_found' ? (
+               /* Not Found State - X icon + retry */
+               <div className="flex items-center gap-1">
+                 <div 
+                   className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center"
+                   title="Email not found"
+                 >
+                   <X size={12} className="text-slate-400" />
+                 </div>
+                 <button 
+                   onClick={onFindEmail}
+                   className="w-7 h-7 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center hover:bg-slate-200 transition-colors group"
+                   title="Retry search"
+                 >
+                   <RotateCw size={12} className="text-slate-500 group-hover:rotate-180 transition-transform duration-300" />
+                 </button>
+               </div>
+            ) : emailStatus === 'error' ? (
+               /* Error State - Warning icon + retry */
+               <div className="flex items-center gap-1">
+                 <div 
+                   className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center"
+                   title="Error occurred"
+                 >
+                   <AlertCircle size={12} className="text-amber-500" />
+                 </div>
+                 <button 
+                   onClick={onFindEmail}
+                   className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center hover:bg-amber-200 transition-colors group"
+                   title="Retry search"
+                 >
+                   <RotateCw size={12} className="text-amber-600 group-hover:rotate-180 transition-transform duration-300" />
+                 </button>
+               </div>
+            ) : (
+               /* Default: Find Email Button */
+               <button 
+                 onClick={onFindEmail}
+                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#D4E815]/20 border border-[#D4E815]/40 hover:bg-[#D4E815]/40 transition-colors text-[10px] font-bold text-[#1A1D21]"
+                 title="Find email"
+               >
+                 <Search size={12} />
+                 Find Email
+               </button>
             )}
          </div>
       )}
