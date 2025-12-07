@@ -264,8 +264,8 @@ function OutreachContent() {
               <div className="flex items-center gap-3">
                 {selectedAffiliates.size > 0 && (
                   <>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-xs font-semibold text-blue-900">
-                      <Check size={12} className="text-blue-600" />
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-xs font-semibold text-emerald-900">
+                      <Check size={12} className="text-emerald-600" />
                       {selectedAffiliates.size} selected
                     </div>
                     <button
@@ -290,7 +290,7 @@ function OutreachContent() {
                   className={cn(
                     "flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold text-xs transition-all",
                     selectedAffiliates.size > 0 && generatingIds.size === 0
-                      ? "bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-700 hover:to-purple-600 shadow-sm hover:shadow-md"
+                      ? "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
                       : "bg-slate-100 text-slate-400 cursor-not-allowed"
                   )}
                 >
@@ -317,7 +317,7 @@ function OutreachContent() {
                 type="checkbox"
                 checked={selectedAffiliates.size === filteredResults.length && filteredResults.length > 0}
                 onChange={handleSelectAll}
-                className="w-3.5 h-3.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+                className="w-3.5 h-3.5 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 focus:ring-offset-0 cursor-pointer"
               />
             </div>
             <div>Affiliate</div>
@@ -333,12 +333,12 @@ function OutreachContent() {
             {/* Empty State */}
             {!loading && savedAffiliates.length === 0 && (
               <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare size={28} className="text-purple-600" />
+                <div className="w-16 h-16 rounded-full bg-[#D4E815]/10 flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare size={28} className="text-[#1A1D21]" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">No saved affiliates yet</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Start Building Connections</h3>
                 <p className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
-                  Save some affiliates first, then come back here to generate personalized outreach messages.
+                  Save affiliates to generate AI-powered outreach messages.
                 </p>
               </div>
             )}
@@ -355,7 +355,7 @@ function OutreachContent() {
                   key={item.id}
                   className={cn(
                     "grid grid-cols-[40px_220px_1fr_140px_100px_100px_130px] items-start gap-4 px-4 py-4 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors",
-                    isSelected && "bg-purple-50/30 hover:bg-purple-50/40"
+                    isSelected && "bg-[#D4E815]/10 hover:bg-[#D4E815]/20"
                   )}
                 >
                   {/* Checkbox */}
@@ -364,7 +364,7 @@ function OutreachContent() {
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleSelectAffiliate(item.id!)}
-                      className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 focus:ring-offset-0 cursor-pointer"
                     />
                   </div>
 
@@ -431,7 +431,7 @@ function OutreachContent() {
                     {hasMessage ? (
                       <button
                         onClick={() => setViewingMessageId(item.id!)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40 hover:bg-[#D4E815]/30"
                       >
                         <MessageSquare size={12} />
                         View Message
@@ -444,7 +444,7 @@ function OutreachContent() {
                           "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
                           isGenerating
                             ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                            : "bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-700 hover:to-purple-600 shadow-sm"
+                            : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
                         )}
                       >
                         {isGenerating ? (

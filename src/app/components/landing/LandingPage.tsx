@@ -180,12 +180,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               </div>
               
               <h1 className="text-5xl md:text-6xl font-bold text-[#111827] tracking-tight mb-6 leading-[1]">
-                Find Affiliates Already <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4E815] to-[#a8bc10]">Promoting Your Competitors</span>
+                Discover Affiliates <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4E815] to-[#a8bc10]">Promoting Competitors</span>
               </h1>
 
               <p className="text-lg text-slate-500 mb-8 leading-relaxed max-w-md">
-                Get 500+ active affiliates with verified contacts in minutes. Stop wasting 20 hours a week on manual research. Land your first new partner in 7 days.
+                Find 500+ active affiliates with verified contacts instantly. Skip weeks of manual research.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -310,7 +310,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                  step: "01",
                  title: "Find Your Competitors' Top Affiliates",
                  desc: "Enter your competitors and we'll reverse-engineer their affiliate programs across 100+ networks to find all their top affiliates — even the hidden ones.",
-                 image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2426",
+                 image: "/Find Your Competitors' Top Affiliates.jpeg",
                  overlayTitle: "Competitor Analysis",
                  overlaySubtitle: "Found 1,243 affiliates",
                  bullets: [
@@ -323,7 +323,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                  step: "02",
                  title: "Get 500-2,500 Qualified Prospects",
                  desc: "Watch your dashboard fill with qualified affiliates. Sort by traffic volume, Google rankings, follower count, or engagement rates to find your perfect partners fast.",
-                 image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2340",
+                 image: "/Get 500-2,500 Qualified Prospects.jpeg",
                  overlayTitle: "High-Quality Matches",
                  overlaySubtitle: "Sorted by engagement rate",
                  bullets: [
@@ -336,7 +336,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                  step: "03",
                  title: "Start Recruiting Immediately",
                  desc: "Export verified emails, use our proven-to-convert templates, and start building partnerships today. Get 150+ fresh leads delivered every week.",
-                 image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80&w=2664",
+                 image: "/Start Recruiting Immediately.jpeg",
                  overlayTitle: "Outreach Ready",
                  overlaySubtitle: "150+ new leads weekly",
                  bullets: [
@@ -378,7 +378,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   <div className="flex-1 w-full">
                     <div className="relative group">
                       <div className={`absolute -inset-4 bg-gradient-to-r ${idx % 2 === 0 ? 'from-[#D4E815]/20 to-[#D4E815]/10' : 'from-[#D4E815]/10 to-[#D4E815]/20'} rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl`} />
-                      <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200/60 aspect-[4/3] transform group-hover:scale-[1.02] transition-transform duration-500">
+                      <div className="relative rounded-2xl overflow-hidden border border-slate-200/60 aspect-[4/3] transform group-hover:scale-[1.02] transition-transform duration-500">
                         <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/0 transition-colors duration-500" />
                         <img src={item.image} alt={item.title} className="object-cover w-full h-full" />
                         
