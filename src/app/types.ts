@@ -79,4 +79,57 @@ export interface ResultItem {
   emailStatus?: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
   emailSearchedAt?: string;
   emailProvider?: string;
+  
+  // Full email results (for modal display)
+  emailResults?: {
+    emails: string[];
+    contacts?: Array<{
+      firstName?: string;
+      lastName?: string;
+      fullName?: string;
+      title?: string;
+      linkedinUrl?: string;
+      emails: string[];
+      phoneNumbers?: string[];
+    }>;
+    // Primary contact info (first contact)
+    firstName?: string;
+    lastName?: string;
+    title?: string;  // Job title
+    linkedinUrl?: string;
+    phoneNumbers?: string[];
+    provider?: string;
+  };
+  
+  // ==========================================================================
+  // Instagram-specific fields (added to fix data pipeline)
+  // These fields come from searchInstagramApify() in apify.ts via SearchResult
+  // and are saved to database columns: instagram_username, instagram_followers, etc.
+  // ==========================================================================
+  instagramUsername?: string;
+  instagramFullName?: string;
+  instagramBio?: string;
+  instagramFollowers?: number;
+  instagramFollowing?: number;
+  instagramPostsCount?: number;
+  instagramIsBusiness?: boolean;
+  instagramIsVerified?: boolean;
+  
+  // ==========================================================================
+  // TikTok-specific fields (added to fix data pipeline)
+  // These fields come from searchTikTokApify() in apify.ts via SearchResult
+  // and are saved to database columns: tiktok_username, tiktok_followers, etc.
+  // ==========================================================================
+  tiktokUsername?: string;
+  tiktokDisplayName?: string;
+  tiktokBio?: string;
+  tiktokFollowers?: number;
+  tiktokFollowing?: number;
+  tiktokLikes?: number;
+  tiktokVideosCount?: number;
+  tiktokIsVerified?: boolean;
+  tiktokVideoPlays?: number;
+  tiktokVideoLikes?: number;
+  tiktokVideoComments?: number;
+  tiktokVideoShares?: number;
 }

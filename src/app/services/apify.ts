@@ -226,6 +226,11 @@ export async function searchInstagramApify(
       });
     }
 
+    // ==========================================================================
+    // FIX: Now returning all Instagram-specific fields from Apify response
+    // Previously, this data was lost because SearchResult didn't have these fields
+    // The data now flows: Apify → SearchResult → ResultItem → Database
+    // ==========================================================================
     return results.map((item, index): SearchResult => {
       // Build snippet from bio and stats
       const stats = [];
@@ -246,8 +251,18 @@ export async function searchInstagramApify(
         views: item.followersCount ? formatNumber(item.followersCount) : undefined,
         position: index + 1,
         searchQuery: keyword,
-        // Extended Instagram data stored in personName for now (will be properly typed later)
         personName: item.fullName || item.username,
+        
+        // Instagram-specific fields - these are now properly passed through the pipeline
+        // and will be saved to the database columns: instagram_username, instagram_followers, etc.
+        instagramUsername: item.username,
+        instagramFullName: item.fullName,
+        instagramBio: item.biography,
+        instagramFollowers: item.followersCount,
+        instagramFollowing: item.followsCount,
+        instagramPostsCount: item.postsCount,
+        instagramIsBusiness: item.isBusinessAccount,
+        instagramIsVerified: item.verified ?? item.isVerified,
       };
     });
 
@@ -345,6 +360,11 @@ export async function searchTikTokApify(
       });
     }
 
+    // ==========================================================================
+    // FIX: Now returning all TikTok-specific fields from Apify response
+    // Previously, this data was lost because SearchResult didn't have these fields
+    // The data now flows: Apify → SearchResult → ResultItem → Database
+    // ==========================================================================
     return results.map((item, index): SearchResult => {
       const author = item.authorMeta;
       
@@ -359,7 +379,7 @@ export async function searchTikTokApify(
         stats.length > 0 ? `📊 ${stats.join(' • ')}` : null,
       ].filter(Boolean).join('\n');
 
-      // Create a channel-like object for TikTok creator
+      // Create a channel-like object for TikTok creator (kept for backward compatibility)
       const channel: YouTubeChannelInfo | undefined = author ? {
         name: author.nickName || author.name || '',
         link: author.profileUrl || `https://www.tiktok.com/@${author.name}`,
@@ -382,6 +402,21 @@ export async function searchTikTokApify(
         position: index + 1,
         searchQuery: keyword,
         personName: author?.nickName || author?.name,
+        
+        // TikTok-specific fields - these are now properly passed through the pipeline
+        // and will be saved to the database columns: tiktok_username, tiktok_followers, etc.
+        tiktokUsername: author?.name,
+        tiktokDisplayName: author?.nickName,
+        tiktokBio: author?.signature,
+        tiktokFollowers: author?.fans,
+        tiktokLikes: author?.heart,
+        tiktokVideosCount: author?.video,
+        tiktokIsVerified: author?.verified,
+        // Video-specific metrics for the discovered video
+        tiktokVideoPlays: item.playCount,
+        tiktokVideoLikes: item.diggCount,
+        tiktokVideoComments: item.commentCount,
+        tiktokVideoShares: item.shareCount,
       };
     });
 

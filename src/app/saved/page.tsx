@@ -215,7 +215,8 @@ function SavedContent() {
                     discoveryMethod={item.discoveryMethod}
                     email={item.email}
                     emailStatus={item.emailStatus}
-                    onFindEmail={() => item.id && findEmail(item.id, item.domain, item.personName || item.channel?.name)}
+                    emailResults={item.emailResults}
+                    onFindEmail={() => item.id && findEmail(item)}
                     isPipelineView={true}
                     channel={item.channel}
                     duration={item.duration}

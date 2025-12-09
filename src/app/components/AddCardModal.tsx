@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CreditCard, Lock, Loader2, Check, AlertCircle } from 'lucide-react';
+import { CreditCard, Lock, Loader2, Check, AlertCircle, X, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from './Modal';
 
@@ -54,6 +54,13 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({ isOpen, onClose, onS
   const [cardholderName, setCardholderName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Discount Code
+  const [discountCode, setDiscountCode] = useState('');
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [discountError, setDiscountError] = useState('');
+  const [discountAmount, setDiscountAmount] = useState(0);
 
   const cardBrand = detectCardBrand(cardNumber);
   const cleanedNumber = cardNumber.replace(/\s/g, '');
@@ -81,6 +88,9 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({ isOpen, onClose, onS
       const fullYear = 2000 + parseInt(expYear);
 
       // Save card details to database
+      // TODO: Include discount code when updating payment method
+      // - If user is adding a card and has a discount code, apply it to their subscription
+      // - Backend should validate and store the discount code association
       const res = await fetch('/api/subscriptions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -90,6 +100,8 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({ isOpen, onClose, onS
           cardBrand,
           cardExpMonth: parseInt(expMonth),
           cardExpYear: fullYear,
+          discountCode: discountApplied ? discountCode : null, // TODO: Send to backend
+          discountAmount: discountApplied ? discountAmount : 0, // TODO: Send to backend
         }),
       });
 
@@ -205,6 +217,109 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({ isOpen, onClose, onS
               maxLength={4}
               className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all placeholder:text-slate-400 font-mono"
             />
+          </div>
+
+          {/* Discount Code Section */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700">Discount Code (Optional)</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={discountCode}
+                  onChange={(e) => {
+                    setDiscountCode(e.target.value.toUpperCase());
+                    setDiscountError('');
+                    setDiscountApplied(false);
+                  }}
+                  placeholder="SAVE20"
+                  disabled={discountApplied}
+                  className={cn(
+                    "w-full px-3 py-2.5 bg-white border rounded-lg text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400 uppercase font-mono",
+                    discountApplied 
+                      ? "border-green-300 bg-green-50 text-green-700"
+                      : discountError
+                      ? "border-red-300 focus:border-red-400 focus:ring-1 focus:ring-red-200"
+                      : "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                  )}
+                />
+                {discountApplied && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Check size={16} className="text-green-600" />
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!discountCode.trim()) return;
+                  
+                  setIsApplyingDiscount(true);
+                  setDiscountError('');
+                  
+                  // TODO: Implement discount code validation
+                  // 1. Call API endpoint: POST /api/validate-discount
+                  // 2. Send: { code: discountCode, userId }
+                  // 3. Response should include: { valid: boolean, discountAmount: number, discountType: 'percentage' | 'fixed' }
+                  // 4. If valid, the discount will be applied when card is saved
+                  // 5. Database schema needed:
+                  //    - discount_codes table: id, code, discount_type, discount_value, valid_until, max_uses, current_uses
+                  //    - subscriptions table: add discount_code_id, discount_applied columns
+                  
+                  try {
+                    // Simulated API call - replace with actual implementation
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Mock validation - REMOVE THIS and implement real API call
+                    const mockValidCodes = ['SAVE20', 'WELCOME10', 'PROMO50'];
+                    if (mockValidCodes.includes(discountCode)) {
+                      setDiscountApplied(true);
+                      setDiscountAmount(20); // Mock 20% discount
+                      setDiscountError('');
+                    } else {
+                      setDiscountError('Invalid discount code');
+                      setDiscountApplied(false);
+                      setDiscountAmount(0);
+                    }
+                  } catch (error) {
+                    setDiscountError('Failed to validate code');
+                  } finally {
+                    setIsApplyingDiscount(false);
+                  }
+                }}
+                disabled={!discountCode.trim() || discountApplied || isApplyingDiscount}
+                className={cn(
+                  "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap",
+                  discountApplied
+                    ? "bg-green-100 text-green-700 border border-green-300 cursor-default"
+                    : !discountCode.trim() || isApplyingDiscount
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow"
+                )}
+              >
+                {isApplyingDiscount ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : discountApplied ? (
+                  'Applied'
+                ) : (
+                  'Apply'
+                )}
+              </button>
+            </div>
+            {discountError && (
+              <p className="text-[10px] text-red-500 flex items-center gap-1">
+                <X size={10} />
+                {discountError}
+              </p>
+            )}
+            {discountApplied && discountAmount > 0 && (
+              <div className="flex items-center gap-1.5 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <Sparkles size={12} className="text-green-600" />
+                <p className="text-[10px] text-green-700 font-semibold">
+                  {discountAmount}% discount will be applied to your next billing cycle
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

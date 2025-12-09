@@ -186,7 +186,7 @@ export interface DbSearch {
 export interface DbApiCall {
   id: number;
   user_id: number;
-  service: 'serper' | 'apify_youtube' | 'apify_instagram' | 'apify_tiktok' | 'apify_similarweb' | 'apollo_email';
+  service: 'serper' | 'apify_youtube' | 'apify_instagram' | 'apify_tiktok' | 'apify_similarweb' | 'apollo_email' | 'lusha_email';
   endpoint: string | null;
   keyword: string | null;
   domain: string | null;

@@ -5,6 +5,7 @@ import { useNeonUser } from './useNeonUser';
 import { ResultItem } from '../types';
 
 // Transform database affiliate to ResultItem format
+// This function maps database columns (snake_case) to ResultItem fields (camelCase)
 function transformAffiliate(dbAffiliate: any): ResultItem {
   // Build SimilarWeb data if available
   const similarWeb = dbAffiliate.similarweb_monthly_visits ? {
@@ -25,6 +26,7 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
   } : undefined;
 
   // Build channel info (for YouTube/TikTok)
+  // Priority: channel_name (YouTube) > tiktok_username (TikTok fallback)
   const channel = dbAffiliate.channel_name ? {
     name: dbAffiliate.channel_name,
     link: dbAffiliate.channel_link || '',
@@ -32,7 +34,7 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     verified: dbAffiliate.channel_verified,
     subscribers: dbAffiliate.channel_subscribers,
   } : (dbAffiliate.tiktok_username ? {
-    // Fallback to TikTok data for channel display
+    // Fallback to TikTok data for channel display (backward compatibility)
     name: dbAffiliate.tiktok_display_name || dbAffiliate.tiktok_username,
     link: `https://www.tiktok.com/@${dbAffiliate.tiktok_username}`,
     verified: dbAffiliate.tiktok_is_verified,
@@ -72,6 +74,36 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     emailStatus: dbAffiliate.email_status || 'not_searched',
     emailSearchedAt: dbAffiliate.email_searched_at,
     emailProvider: dbAffiliate.email_provider,
+    
+    // ==========================================================================
+    // Instagram fields (FIX: now properly reading from database)
+    // Maps DB columns instagram_x → ResultItem.instagramX
+    // ==========================================================================
+    instagramUsername: dbAffiliate.instagram_username,
+    instagramFullName: dbAffiliate.instagram_full_name,
+    instagramBio: dbAffiliate.instagram_bio,
+    instagramFollowers: dbAffiliate.instagram_followers,
+    instagramFollowing: dbAffiliate.instagram_following,
+    instagramPostsCount: dbAffiliate.instagram_posts_count,
+    instagramIsBusiness: dbAffiliate.instagram_is_business,
+    instagramIsVerified: dbAffiliate.instagram_is_verified,
+    
+    // ==========================================================================
+    // TikTok fields (FIX: now properly reading from database)
+    // Maps DB columns tiktok_x → ResultItem.tiktokX
+    // ==========================================================================
+    tiktokUsername: dbAffiliate.tiktok_username,
+    tiktokDisplayName: dbAffiliate.tiktok_display_name,
+    tiktokBio: dbAffiliate.tiktok_bio,
+    tiktokFollowers: dbAffiliate.tiktok_followers,
+    tiktokFollowing: dbAffiliate.tiktok_following,
+    tiktokLikes: dbAffiliate.tiktok_likes,
+    tiktokVideosCount: dbAffiliate.tiktok_videos_count,
+    tiktokIsVerified: dbAffiliate.tiktok_is_verified,
+    tiktokVideoPlays: dbAffiliate.tiktok_video_plays,
+    tiktokVideoLikes: dbAffiliate.tiktok_video_likes,
+    tiktokVideoComments: dbAffiliate.tiktok_video_comments,
+    tiktokVideoShares: dbAffiliate.tiktok_video_shares,
   };
 }
 
@@ -98,6 +130,7 @@ function parseJsonField(value: any): any {
 }
 
 // Build affiliate payload for API calls (without userId for batch)
+// This function maps ResultItem fields to the API payload format expected by the backend
 function buildAffiliatePayloadWithoutUserId(a: ResultItem) {
   return {
     title: a.title,
@@ -125,6 +158,37 @@ function buildAffiliatePayloadWithoutUserId(a: ResultItem) {
     channelVerified: a.channel?.verified,
     channelSubscribers: a.channel?.subscribers,
     duration: a.duration,
+    
+    // ==========================================================================
+    // Instagram fields (FIX: these were missing, causing NULL values in database)
+    // Maps ResultItem.instagramX → API payload instagramX → DB column instagram_x
+    // ==========================================================================
+    instagramUsername: a.instagramUsername,
+    instagramFullName: a.instagramFullName,
+    instagramBio: a.instagramBio,
+    instagramFollowers: a.instagramFollowers,
+    instagramFollowing: a.instagramFollowing,
+    instagramPostsCount: a.instagramPostsCount,
+    instagramIsBusiness: a.instagramIsBusiness,
+    instagramIsVerified: a.instagramIsVerified,
+    
+    // ==========================================================================
+    // TikTok fields (FIX: these were missing, causing NULL values in database)
+    // Maps ResultItem.tiktokX → API payload tiktokX → DB column tiktok_x
+    // ==========================================================================
+    tiktokUsername: a.tiktokUsername,
+    tiktokDisplayName: a.tiktokDisplayName,
+    tiktokBio: a.tiktokBio,
+    tiktokFollowers: a.tiktokFollowers,
+    tiktokFollowing: a.tiktokFollowing,
+    tiktokLikes: a.tiktokLikes,
+    tiktokVideosCount: a.tiktokVideosCount,
+    tiktokIsVerified: a.tiktokIsVerified,
+    tiktokVideoPlays: a.tiktokVideoPlays,
+    tiktokVideoLikes: a.tiktokVideoLikes,
+    tiktokVideoComments: a.tiktokVideoComments,
+    tiktokVideoShares: a.tiktokVideoShares,
+    
     // SimilarWeb fields
     similarwebMonthlyVisits: a.similarWeb?.monthlyVisits,
     similarwebGlobalRank: a.similarWeb?.globalRank,
@@ -221,9 +285,32 @@ export function useSavedAffiliates() {
     return savedAffiliates.some(a => a.link === link);
   }, [savedAffiliates]);
 
-  // Find email for an affiliate using Apollo
-  const findEmail = useCallback(async (affiliateId: number, domain: string, personName?: string) => {
-    if (!userId || !affiliateId) return null;
+  /**
+   * Find email for an affiliate using the enrichment service
+   * 
+   * Uses the multi-provider enrichment service (Apollo/Lusha) with
+   * configurable fallback strategy.
+   * 
+   * This function extracts ALL available data from the affiliate item
+   * to maximize the chances of finding an email:
+   * - Web: domain, personName
+   * - YouTube: channel name, channel link
+   * - Instagram: username, full name, bio (may contain email/links)
+   * - TikTok: username, display name, bio
+   * 
+   * @param affiliate - The full ResultItem with all available data
+   * @param options - Additional options (provider override)
+   * @returns Enrichment result or null on error
+   */
+  const findEmail = useCallback(async (
+    affiliate: ResultItem,
+    options?: {
+      provider?: 'apollo' | 'lusha';
+    }
+  ) => {
+    if (!userId || !affiliate.id) return null;
+
+    const affiliateId = affiliate.id;
 
     // Optimistic update - set status to searching
     setSavedAffiliates(prev => prev.map(a => 
@@ -231,28 +318,130 @@ export function useSavedAffiliates() {
     ));
 
     try {
+      // ==========================================================================
+      // EXTRACT ALL AVAILABLE DATA FROM DIFFERENT SOURCES
+      // ==========================================================================
+      
+      // Determine the best domain to search
+      // For social media, we need to find the creator's actual website/company
+      let searchDomain = affiliate.domain;
+      
+      // For YouTube/TikTok/Instagram, the domain might be youtube.com, tiktok.com, etc.
+      // We should try to find a better domain from their bio or links
+      const isSocialPlatform = ['youtube.com', 'tiktok.com', 'instagram.com', 'www.youtube.com', 'www.tiktok.com', 'www.instagram.com']
+        .some(platform => affiliate.domain.toLowerCase().includes(platform));
+      
+      // If it's a social platform, try to extract a business domain from bio or use channel link
+      if (isSocialPlatform) {
+        // Try to extract domain from Instagram bio
+        if (affiliate.instagramBio) {
+          const domainMatch = affiliate.instagramBio.match(/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/);
+          if (domainMatch) {
+            searchDomain = domainMatch[1];
+          }
+        }
+        // Try to extract from TikTok bio
+        if (affiliate.tiktokBio && searchDomain === affiliate.domain) {
+          const domainMatch = affiliate.tiktokBio.match(/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/);
+          if (domainMatch) {
+            searchDomain = domainMatch[1];
+          }
+        }
+      }
+
+      // ==========================================================================
+      // EXTRACT PERSON NAME FROM ALL AVAILABLE SOURCES
+      // Priority: personName > instagramFullName > tiktokDisplayName > channel.name
+      // ==========================================================================
+      const personName = affiliate.personName 
+        || affiliate.instagramFullName 
+        || affiliate.tiktokDisplayName 
+        || affiliate.channel?.name
+        || undefined;
+
+      // ==========================================================================
+      // EXTRACT LINKEDIN URL IF AVAILABLE
+      // Could be in bio or snippet for some affiliates
+      // ==========================================================================
+      let linkedinUrl: string | undefined;
+      
+      // Check Instagram bio for LinkedIn
+      if (affiliate.instagramBio) {
+        const linkedinMatch = affiliate.instagramBio.match(/linkedin\.com\/in\/([a-zA-Z0-9-]+)/i);
+        if (linkedinMatch) {
+          linkedinUrl = `https://www.linkedin.com/in/${linkedinMatch[1]}`;
+        }
+      }
+      
+      // Check TikTok bio for LinkedIn
+      if (!linkedinUrl && affiliate.tiktokBio) {
+        const linkedinMatch = affiliate.tiktokBio.match(/linkedin\.com\/in\/([a-zA-Z0-9-]+)/i);
+        if (linkedinMatch) {
+          linkedinUrl = `https://www.linkedin.com/in/${linkedinMatch[1]}`;
+        }
+      }
+      
+      // Check snippet for LinkedIn
+      if (!linkedinUrl && affiliate.snippet) {
+        const linkedinMatch = affiliate.snippet.match(/linkedin\.com\/in\/([a-zA-Z0-9-]+)/i);
+        if (linkedinMatch) {
+          linkedinUrl = `https://www.linkedin.com/in/${linkedinMatch[1]}`;
+        }
+      }
+
+      // ==========================================================================
+      // BUILD REQUEST PAYLOAD WITH ALL AVAILABLE DATA
+      // ==========================================================================
+      const payload = {
+        affiliateId,
+        userId,
+        // Domain info
+        domain: searchDomain,
+        originalDomain: affiliate.domain, // Keep original for reference
+        // Person identification
+        personName,
+        // Social media usernames (useful for finding business emails)
+        instagramUsername: affiliate.instagramUsername,
+        tiktokUsername: affiliate.tiktokUsername,
+        // Channel info
+        channelName: affiliate.channel?.name,
+        channelLink: affiliate.channel?.link,
+        // LinkedIn if found
+        linkedinUrl,
+        // Source type (helps API choose best strategy)
+        source: affiliate.source,
+        // Provider override
+        provider: options?.provider,
+      };
+
       const res = await fetch('/api/enrich/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          affiliateId,
-          userId,
-          domain,
-          personName,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
-      // Update local state with result
+      // Update local state with result (including all contacts for modal display)
       setSavedAffiliates(prev => prev.map(a => 
         a.id === affiliateId 
           ? { 
               ...a, 
               email: data.email || a.email,
+              // Store all email results for display
+              emailResults: {
+                emails: data.emails || (data.email ? [data.email] : []),
+                contacts: data.contacts,  // All contacts with full details
+                firstName: data.firstName,
+                lastName: data.lastName,
+                title: data.title,
+                linkedinUrl: data.linkedinUrl,
+                phoneNumbers: data.phoneNumbers,
+                provider: data.provider,
+              },
               emailStatus: data.status as 'found' | 'not_found' | 'error',
               emailSearchedAt: new Date().toISOString(),
-              emailProvider: 'apollo',
+              emailProvider: data.provider || 'apollo',
             } 
           : a
       ));

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle } from 'lucide-react';
+import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User } from 'lucide-react';
 import { Modal } from './Modal';
 import { ResultItem, YouTubeChannelInfo } from '../types';
 
@@ -40,6 +40,25 @@ interface AffiliateRowProps {
   channel?: YouTubeChannelInfo;
   duration?: string;
   personName?: string;
+  // Email results for modal display
+  emailResults?: {
+    emails: string[];
+    contacts?: Array<{
+      firstName?: string;
+      lastName?: string;
+      fullName?: string;
+      title?: string;
+      linkedinUrl?: string;
+      emails: string[];
+      phoneNumbers?: string[];
+    }>;
+    firstName?: string;
+    lastName?: string;
+    title?: string;
+    linkedinUrl?: string;
+    phoneNumbers?: string[];
+    provider?: string;
+  };
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
@@ -67,9 +86,19 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   subItems = [],
   channel,
   duration,
-  personName
+  personName,
+  emailResults
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  
+  // Copy email to clipboard with feedback
+  const copyEmail = (emailToCopy: string) => {
+    navigator.clipboard.writeText(emailToCopy);
+    setCopiedEmail(emailToCopy);
+    setTimeout(() => setCopiedEmail(null), 2000);
+  };
 
   // Check if this is a social media source
   const isSocialMedia = ['youtube', 'instagram', 'tiktok'].includes(source.toLowerCase());
@@ -396,16 +425,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       {/* Emails (Pipeline Only) */}
       {isPipelineView && (
          <div className="shrink-0">
-            {/* Email Found - Show email with copy */}
+            {/* Email Found - Show email count badge that opens modal */}
             {(emailStatus === 'found' || email) && email ? (
                <button 
-                 onClick={() => navigator.clipboard.writeText(email)}
-                 className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 border border-emerald-100 text-emerald-600 hover:bg-emerald-100 transition-colors text-[10px] font-bold group"
-                 title={`Click to copy: ${email}`}
+                 onClick={() => setIsEmailModalOpen(true)}
+                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors text-[10px] font-bold group"
+                 title="View email results"
                >
-                 <Check size={12} className="text-emerald-500" />
-                 <span className="max-w-[80px] truncate">{email}</span>
-                 <Copy size={10} className="text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                 <Mail size={12} className="text-emerald-500" />
+                 <span>{emailResults?.emails?.length || 1} Found</span>
+                 <Eye size={10} className="text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                </button>
             ) : emailStatus === 'searching' ? (
                /* Searching State - Animated spinner */
@@ -413,14 +442,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                  <Loader2 size={14} className="text-blue-500 animate-spin" />
                </div>
             ) : emailStatus === 'not_found' ? (
-               /* Not Found State - X icon + retry */
+               /* Not Found State - Show 0 found + retry */
                <div className="flex items-center gap-1">
-                 <div 
-                   className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center"
-                   title="Email not found"
+                 <button 
+                   onClick={() => setIsEmailModalOpen(true)}
+                   className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors text-[10px] font-medium"
+                   title="View search results"
                  >
-                   <X size={12} className="text-slate-400" />
-                 </div>
+                   <X size={10} className="text-slate-400" />
+                   0 Found
+                 </button>
                  <button 
                    onClick={onFindEmail}
                    className="w-7 h-7 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center hover:bg-slate-200 transition-colors group"
@@ -554,6 +585,198 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
            <button className="px-4 py-2 bg-red-400 text-white border border-red-500 rounded-lg text-sm font-bold hover:bg-red-500 transition-all flex items-center gap-2 shadow-sm">
               <Trash2 size={16} /> Delete
            </button>
+        </div>
+      </Modal>
+
+      {/* Email Results Modal */}
+      <Modal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)}
+        title=""
+        width="max-w-2xl"
+      >
+        <div className="space-y-5">
+          {/* Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-bold text-slate-900">
+                Email <span className="italic text-[#1A9A6D]">Results</span> for {personName || channel?.name || domain.split('.')[0]}
+              </h3>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                (emailResults?.emails?.length || (email ? 1 : 0)) > 0 
+                  ? 'bg-[#1A9A6D]/10 text-[#1A9A6D] border border-[#1A9A6D]/20' 
+                  : 'bg-slate-100 text-slate-500 border border-slate-200'
+              }`}>
+                <Mail size={12} />
+                {emailResults?.emails?.length || (email ? 1 : 0)} Email{(emailResults?.emails?.length || 0) !== 1 ? 's' : ''} • {emailResults?.contacts?.length || (emailResults?.firstName ? 1 : 0)} Contact{(emailResults?.contacts?.length || 0) !== 1 ? 's' : ''}
+              </span>
+            </div>
+            {emailResults?.provider && (
+              <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                via {emailResults.provider}
+              </span>
+            )}
+          </div>
+
+          {/* Show all contacts if available, otherwise show simple email list */}
+          {emailResults?.contacts && emailResults.contacts.length > 0 ? (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              {emailResults.contacts.map((contact, contactIdx) => {
+                const contactName = contact.firstName && contact.lastName 
+                  ? `${contact.firstName} ${contact.lastName}`
+                  : contact.fullName || `Contact ${contactIdx + 1}`;
+                
+                return (
+                  <div key={contactIdx} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                    {/* Contact Header */}
+                    <div className="p-4 bg-white border-b border-slate-100">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1A9A6D]/20 to-[#1A9A6D]/5 border border-[#1A9A6D]/20 flex items-center justify-center flex-shrink-0">
+                          <User size={18} className="text-[#1A9A6D]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-slate-900 truncate">{contactName}</h4>
+                          {contact.title && (
+                            <p className="text-sm text-slate-600 flex items-center gap-1.5 mt-0.5 truncate">
+                              <Briefcase size={12} className="text-slate-400 flex-shrink-0" />
+                              {contact.title}
+                            </p>
+                          )}
+                          {contact.linkedinUrl && (
+                            <a 
+                              href={contact.linkedinUrl} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mt-1 hover:underline"
+                            >
+                              <Linkedin size={10} />
+                              LinkedIn
+                              <ExternalLink size={8} />
+                            </a>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-bold text-[#1A9A6D] bg-[#1A9A6D]/10 px-2 py-0.5 rounded-full border border-[#1A9A6D]/20">
+                          {contact.emails.length} email{contact.emails.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Contact Emails */}
+                    <div className="p-3 space-y-2">
+                      {contact.emails.map((emailAddr, emailIdx) => (
+                        <div 
+                          key={emailIdx}
+                          className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:border-[#1A9A6D]/30 hover:bg-[#1A9A6D]/5 transition-all"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-md bg-[#1A9A6D]/10 flex items-center justify-center flex-shrink-0">
+                              <Mail size={12} className="text-[#1A9A6D]" />
+                            </div>
+                            <span className="font-medium text-slate-900 text-sm truncate">{emailAddr}</span>
+                          </div>
+                          <button
+                            onClick={() => copyEmail(emailAddr)}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all flex-shrink-0 ${
+                              copiedEmail === emailAddr
+                                ? 'bg-[#1A9A6D] text-white'
+                                : 'bg-[#1A9A6D]/10 text-[#1A9A6D] hover:bg-[#1A9A6D]/20 border border-[#1A9A6D]/20'
+                            }`}
+                          >
+                            {copiedEmail === emailAddr ? <Check size={10} /> : <Copy size={10} />}
+                            {copiedEmail === emailAddr ? 'Copied!' : 'Copy'}
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {/* Phone Numbers for this contact */}
+                      {contact.phoneNumbers && contact.phoneNumbers.length > 0 && (
+                        <div className="pt-2 mt-2 border-t border-slate-100">
+                          {contact.phoneNumbers.map((phone, phoneIdx) => (
+                            <div 
+                              key={phoneIdx}
+                              className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center">
+                                  <Phone size={12} className="text-blue-600" />
+                                </div>
+                                <span className="font-medium text-slate-900 text-sm">{phone}</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(phone);
+                                  setCopiedEmail(phone);
+                                  setTimeout(() => setCopiedEmail(null), 2000);
+                                }}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                                  copiedEmail === phone
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                                }`}
+                              >
+                                {copiedEmail === phone ? <Check size={10} /> : <Copy size={10} />}
+                                {copiedEmail === phone ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (emailResults?.emails?.length || (email ? 1 : 0)) > 0 ? (
+            /* Fallback: Simple email list (no contact details) */
+            <div>
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Email Addresses</h4>
+              <div className="space-y-2">
+                {(emailResults?.emails || (email ? [email] : [])).map((emailAddr, idx) => (
+                  <div 
+                    key={idx}
+                    className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:border-[#1A9A6D]/30 hover:bg-[#1A9A6D]/5 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#1A9A6D]/10 flex items-center justify-center">
+                        <Mail size={14} className="text-[#1A9A6D]" />
+                      </div>
+                      <span className="font-medium text-slate-900">{emailAddr}</span>
+                    </div>
+                    <button
+                      onClick={() => copyEmail(emailAddr)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        copiedEmail === emailAddr
+                          ? 'bg-[#1A9A6D] text-white'
+                          : 'bg-[#1A9A6D]/10 text-[#1A9A6D] hover:bg-[#1A9A6D]/20 border border-[#1A9A6D]/20'
+                      }`}
+                    >
+                      {copiedEmail === emailAddr ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedEmail === emailAddr ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* No emails found */
+            <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                <X size={20} className="text-slate-400" />
+              </div>
+              <p className="text-sm font-medium text-slate-600">No emails found</p>
+              <p className="text-xs text-slate-400 mt-1">Try searching again or use a different provider</p>
+              <button
+                onClick={() => {
+                  setIsEmailModalOpen(false);
+                  onFindEmail?.();
+                }}
+                className="mt-4 px-4 py-2 bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40 rounded-lg text-xs font-bold hover:bg-[#D4E815]/40 transition-all inline-flex items-center gap-2"
+              >
+                <RotateCw size={12} />
+                Search Again
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

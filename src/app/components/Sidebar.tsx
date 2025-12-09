@@ -11,7 +11,8 @@ import {
   MoreHorizontal,
   Zap,
   Clock,
-  ChevronRight
+  ChevronRight,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@stackframe/stack';
@@ -140,6 +141,12 @@ export const Sidebar: React.FC = () => {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-0.5 px-2">Discovery</p>
             <div className="space-y-0.5">
+              <NavItem 
+                href="/dashboard" 
+                icon={<BarChart3 size={14} />} 
+                label="Dashboard" 
+                active={pathname === '/dashboard'} 
+              />
               <NavItem 
                 href="/" 
                 icon={<Search size={14} />} 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Check, ChevronDown, Sparkles, Globe, Plus, X, MessageSquare, MousePointerClick, CreditCard, Zap, Star, ShieldCheck, TrendingUp, Lock } from 'lucide-react';
+import { Loader2, Check, ChevronDown, Sparkles, Globe, Plus, X, MessageSquare, MousePointerClick, CreditCard, Zap, Star, ShieldCheck, TrendingUp, Lock, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Pricing plans data - matching PricingModal exactly
@@ -153,16 +153,33 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvc, setCardCvc] = useState('');
   const [cardholderName, setCardholderName] = useState('');
+  
+  // Discount Code
+  const [discountCode, setDiscountCode] = useState('');
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [discountError, setDiscountError] = useState('');
+  const [discountAmount, setDiscountAmount] = useState(0); // Percentage or fixed amount
 
   // UI States
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+  
+  // Search states for dropdowns
+  const [roleSearch, setRoleSearch] = useState('');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [langSearch, setLangSearch] = useState('');
 
   // Refs for click-outside detection
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const countryDropdownRef = useRef<HTMLDivElement>(null);
   const langDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Refs for search inputs
+  const roleSearchRef = useRef<HTMLInputElement>(null);
+  const countrySearchRef = useRef<HTMLInputElement>(null);
+  const langSearchRef = useRef<HTMLInputElement>(null);
 
   // Click outside to close dropdowns
   useEffect(() => {
@@ -300,6 +317,11 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
         }
 
         // 2. Create subscription with selected plan + card details (3-day trial starts NOW)
+        // TODO: Include discount code in subscription creation
+        // - Add discountCode and discountAmount to the request body
+        // - Backend should validate the discount code again before applying
+        // - Store discount_code_id in subscriptions table
+        // - Calculate discounted price and store original_price vs discounted_price
         const subscriptionRes = await fetch('/api/subscriptions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -310,6 +332,8 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
             cardLast4: cleanedCardNumber.slice(-4),
             cardBrand,
             cardExpMonth: parseInt(expMonth || '0'),
+            discountCode: discountApplied ? discountCode : null, // TODO: Send to backend
+            discountAmount: discountApplied ? discountAmount : 0, // TODO: Send to backend
             cardExpYear: fullYear,
           }),
         });
@@ -403,12 +427,16 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
           />
         </div>
 
-        {/* Role Dropdown */}
+        {/* Role Dropdown - Searchable */}
         <div className="space-y-1 relative" ref={roleDropdownRef}>
           <label className="text-slate-900 font-medium ml-1 text-sm">What&apos;s your role</label>
           <button
             type="button"
-            onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+            onClick={() => {
+              setIsRoleDropdownOpen(!isRoleDropdownOpen);
+              setRoleSearch('');
+              setTimeout(() => roleSearchRef.current?.focus(), 100);
+            }}
             className={cn(
               "w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
               !role ? "text-slate-400" : "text-slate-800"
@@ -419,21 +447,42 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
           </button>
 
           {isRoleDropdownOpen && (
-            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-1.5 max-h-52 overflow-y-auto scrollbar-hide">
-              {roles.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => {
-                    setRole(r);
-                    setIsRoleDropdownOpen(false);
-                  }}
-                  className="w-full text-left px-3.5 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
-                >
-                  {r}
-                  {role === r && <Check size={14} className="text-[#D4E815]" />}
-                </button>
-              ))}
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
+              {/* Search Input */}
+              <div className="p-2 border-b border-slate-100">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    ref={roleSearchRef}
+                    type="text"
+                    value={roleSearch}
+                    onChange={(e) => setRoleSearch(e.target.value)}
+                    placeholder="Search roles..."
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                  />
+                </div>
+              </div>
+              {/* Options */}
+              <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
+                {roles.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase())).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => {
+                      setRole(r);
+                      setIsRoleDropdownOpen(false);
+                      setRoleSearch('');
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
+                  >
+                    {r}
+                    {role === r && <Check size={14} className="text-[#D4E815]" />}
+                  </button>
+                ))}
+                {roles.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase())).length === 0 && (
+                  <p className="px-3.5 py-2 text-sm text-slate-400">No results found</p>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -493,46 +542,75 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
           </p>
         </div>
 
-        {/* Country Dropdown */}
+        {/* Country Dropdown - Searchable */}
         <div className="space-y-1 relative" ref={countryDropdownRef}>
           <label className="text-slate-700 text-xs font-medium ml-1">Country</label>
           <button
             type="button"
-            onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+            onClick={() => {
+              setIsCountryDropdownOpen(!isCountryDropdownOpen);
+              setCountrySearch('');
+              setTimeout(() => countrySearchRef.current?.focus(), 100);
+            }}
             className={cn(
               "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
-              !targetCountry ? "text-slate-900" : "text-slate-900"
+              !targetCountry ? "text-slate-400" : "text-slate-900"
             )}
           >
             {targetCountry || "Select your target country..."}
             <ChevronDown className={cn("text-slate-400 transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
           </button>
-           {isCountryDropdownOpen && (
-            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-1.5 max-h-52 overflow-y-auto scrollbar-hide">
-              {countries.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    setTargetCountry(c);
-                    setIsCountryDropdownOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
-                >
-                  {c}
-                  {targetCountry === c && <Check size={14} className="text-[#D4E815]" />}
-                </button>
-              ))}
+          {isCountryDropdownOpen && (
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
+              {/* Search Input */}
+              <div className="p-2 border-b border-slate-100">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    ref={countrySearchRef}
+                    type="text"
+                    value={countrySearch}
+                    onChange={(e) => setCountrySearch(e.target.value)}
+                    placeholder="Search countries..."
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                  />
+                </div>
+              </div>
+              {/* Options */}
+              <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
+                {countries.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => {
+                      setTargetCountry(c);
+                      setIsCountryDropdownOpen(false);
+                      setCountrySearch('');
+                    }}
+                    className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
+                  >
+                    {c}
+                    {targetCountry === c && <Check size={14} className="text-[#D4E815]" />}
+                  </button>
+                ))}
+                {countries.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
+                  <p className="px-4 py-2 text-sm text-slate-400">No results found</p>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Language Dropdown */}
+        {/* Language Dropdown - Searchable */}
         <div className="space-y-1 relative" ref={langDropdownRef}>
           <label className="text-slate-700 text-xs font-semibold ml-1">Target Language</label>
           <button
             type="button"
-            onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+            onClick={() => {
+              setIsLangDropdownOpen(!isLangDropdownOpen);
+              setLangSearch('');
+              setTimeout(() => langSearchRef.current?.focus(), 100);
+            }}
             className={cn(
               "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
               !targetLanguage ? "text-slate-400" : "text-slate-900"
@@ -541,22 +619,43 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
             {targetLanguage || "Select your target language..."}
             <ChevronDown className={cn("text-slate-400 transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
           </button>
-           {isLangDropdownOpen && (
-            <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-1.5 max-h-52 overflow-y-auto scrollbar-hide">
-              {languages.map((l) => (
-                <button
-                  key={l}
-                  type="button"
-                  onClick={() => {
-                    setTargetLanguage(l);
-                    setIsLangDropdownOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
-                >
-                  {l}
-                  {targetLanguage === l && <Check size={14} className="text-[#D4E815]" />}
-                </button>
-              ))}
+          {isLangDropdownOpen && (
+            <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
+              {/* Options first (since dropdown opens upward) */}
+              <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
+                {languages.filter(l => l.toLowerCase().includes(langSearch.toLowerCase())).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => {
+                      setTargetLanguage(l);
+                      setIsLangDropdownOpen(false);
+                      setLangSearch('');
+                    }}
+                    className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
+                  >
+                    {l}
+                    {targetLanguage === l && <Check size={14} className="text-[#D4E815]" />}
+                  </button>
+                ))}
+                {languages.filter(l => l.toLowerCase().includes(langSearch.toLowerCase())).length === 0 && (
+                  <p className="px-4 py-2 text-sm text-slate-400">No results found</p>
+                )}
+              </div>
+              {/* Search Input at bottom (since dropdown opens upward) */}
+              <div className="p-2 border-t border-slate-100">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    ref={langSearchRef}
+                    type="text"
+                    value={langSearch}
+                    onChange={(e) => setLangSearch(e.target.value)}
+                    placeholder="Search languages..."
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -994,20 +1093,6 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
           );
         })}
       </div>
-
-      {/* Guarantee Footer */}
-      <div className="mt-4 text-center pt-3 border-t border-slate-100">
-        <div className="flex items-center justify-center gap-3 text-[10px] text-slate-500">
-          <div className="flex items-center gap-1">
-            <ShieldCheck size={12} className="text-[#D4E815]" />
-            <span>Secure Payment</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp size={12} className="text-[#1A1D21]" />
-            <span>Cancel Anytime</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 
@@ -1194,40 +1279,111 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
               />
             </div>
           </div>
+
+          {/* Discount Code Section */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700">Discount Code (Optional)</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={discountCode}
+                  onChange={(e) => {
+                    setDiscountCode(e.target.value.toUpperCase());
+                    setDiscountError('');
+                    setDiscountApplied(false);
+                  }}
+                  placeholder="SAVE20"
+                  disabled={discountApplied}
+                  className={cn(
+                    "w-full px-3 py-2.5 bg-white border rounded-lg text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400 uppercase font-mono",
+                    discountApplied 
+                      ? "border-green-300 bg-green-50 text-green-700"
+                      : discountError
+                      ? "border-red-300 focus:border-red-400 focus:ring-1 focus:ring-red-200"
+                      : "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                  )}
+                />
+                {discountApplied && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Check size={16} className="text-green-600" />
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!discountCode.trim()) return;
+                  
+                  setIsApplyingDiscount(true);
+                  setDiscountError('');
+                  
+                  // TODO: Implement discount code validation
+                  // 1. Call API endpoint: POST /api/validate-discount
+                  // 2. Send: { code: discountCode, plan: selectedPlan, billingInterval }
+                  // 3. Response should include: { valid: boolean, discountAmount: number, discountType: 'percentage' | 'fixed' }
+                  // 4. If valid, store discount info in Neon DB when creating subscription
+                  // 5. Database schema needed:
+                  //    - discount_codes table: id, code, discount_type, discount_value, valid_until, max_uses, current_uses
+                  //    - subscriptions table: add discount_code_id, discount_applied columns
+                  
+                  try {
+                    // Simulated API call - replace with actual implementation
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Mock validation - REMOVE THIS and implement real API call
+                    const mockValidCodes = ['SAVE20', 'WELCOME10', 'PROMO50'];
+                    if (mockValidCodes.includes(discountCode)) {
+                      setDiscountApplied(true);
+                      setDiscountAmount(20); // Mock 20% discount
+                      setDiscountError('');
+                    } else {
+                      setDiscountError('Invalid discount code');
+                      setDiscountApplied(false);
+                      setDiscountAmount(0);
+                    }
+                  } catch (error) {
+                    setDiscountError('Failed to validate code');
+                  } finally {
+                    setIsApplyingDiscount(false);
+                  }
+                }}
+                disabled={!discountCode.trim() || discountApplied || isApplyingDiscount}
+                className={cn(
+                  "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap",
+                  discountApplied
+                    ? "bg-green-100 text-green-700 border border-green-300 cursor-default"
+                    : !discountCode.trim() || isApplyingDiscount
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow"
+                )}
+              >
+                {isApplyingDiscount ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : discountApplied ? (
+                  'Applied'
+                ) : (
+                  'Apply'
+                )}
+              </button>
+            </div>
+            {discountError && (
+              <p className="text-[10px] text-red-500 flex items-center gap-1">
+                <X size={10} />
+                {discountError}
+              </p>
+            )}
+            {discountApplied && discountAmount > 0 && (
+              <div className="flex items-center gap-1.5 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <Sparkles size={12} className="text-green-600" />
+                <p className="text-[10px] text-green-700 font-semibold">
+                  {discountAmount}% discount applied! You'll save ${((price || 0) * discountAmount / 100).toFixed(2)}/mo
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Submit Button for Step 7 */}
-        <button
-          type="submit"
-          disabled={!isCardNumberValid || !isExpiryValid || !isCvcValid || !isNameValid || isLoading}
-          className={cn(
-            "w-full mt-5 py-3 rounded-full font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2",
-            (!isCardNumberValid || !isExpiryValid || !isCvcValid || !isNameValid || isLoading)
-              ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-              : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]"
-          )}
-        >
-          {isLoading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <>
-              <Lock size={14} />
-              Start 3-Day Free Trial
-            </>
-          )}
-        </button>
-
-        {/* Security Note */}
-        <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-1.5">
-            <Lock size={12} className="text-[#D4E815]" />
-            <span>256-bit SSL encryption</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={12} className="text-[#1A1D21]" />
-            <span>Cancel anytime</span>
-          </div>
-        </div>
       </div>
     );
   };
@@ -1256,15 +1412,17 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#F0F2F5] font-sans py-4 px-4">
       <div className={cn(
-        "bg-white rounded-2xl shadow-sm p-5 relative flex flex-col",
-        step === 6 ? "w-full max-w-3xl" : "w-full max-w-[420px] max-h-[90vh]"
+        "bg-white rounded-2xl shadow-sm relative flex flex-col",
+        "p-5",
+        step === 6 ? "w-full max-w-3xl" : "w-full max-w-[420px]",
+        step === 7 ? "origin-center scale-[0.9]" : "max-h-[90vh]"
       )}>
         
         <form onSubmit={(e) => { e.preventDefault(); handleContinue(); }} className="flex-1 flex flex-col">
            {/* Content area - only scroll on steps that need it (3, 4, 5 have lots of content, 6 needs full width) */}
            <div className={cn(
              "flex-1 pr-1",
-             step >= 3 && step <= 5 ? "overflow-y-auto scrollbar-hide" : "overflow-visible"
+             (step >= 3 && step <= 5) ? "overflow-y-auto scrollbar-hide" : "overflow-visible"
            )}>
              {step === 1 && renderStep1()}
              {step === 2 && renderStep2()}
@@ -1275,14 +1433,15 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
              {step === 7 && renderStep7()}
            </div>
 
-           {/* Submit Button - Hide for step 7 since it has its own button */}
-          {step !== 7 && (
+           {/* Submit Button */}
           <div className="pt-5 mt-auto shrink-0">
               {(() => {
+                const isStep7Valid = step === 7 && getStep7Validation();
                 const isDisabled = 
                 (step === 1 && (!name || !role || !brand)) ||
                 (step === 2 && (!targetCountry || !targetLanguage)) || 
                   (step === 6 && !selectedPlan) ||
+                  (step === 7 && !isStep7Valid) ||
                   isLoading;
 
                 return (
@@ -1298,6 +1457,11 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
             >
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin" />
+                    ) : step === 7 ? (
+                      <>
+                        <Lock size={14} />
+                        Start 3-Day Free Trial
+                      </>
                     ) : step === 6 ? (
                       selectedPlan === 'enterprise' ? (
                         "Contact Sales"
@@ -1315,7 +1479,6 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
                 );
               })()}
           </div>
-          )}
         </form>
 
       </div>

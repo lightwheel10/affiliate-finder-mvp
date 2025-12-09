@@ -49,6 +49,38 @@ export interface SearchResult {
   channel?: YouTubeChannelInfo;
   duration?: string;
   personName?: string;
+  
+  // ==========================================================================
+  // Instagram-specific fields (added to fix data pipeline)
+  // These fields are populated by searchInstagramApify() in apify.ts
+  // and flow through to the database via useAffiliates.ts
+  // ==========================================================================
+  instagramUsername?: string;
+  instagramFullName?: string;
+  instagramBio?: string;
+  instagramFollowers?: number;
+  instagramFollowing?: number;
+  instagramPostsCount?: number;
+  instagramIsBusiness?: boolean;
+  instagramIsVerified?: boolean;
+  
+  // ==========================================================================
+  // TikTok-specific fields (added to fix data pipeline)
+  // These fields are populated by searchTikTokApify() in apify.ts
+  // and flow through to the database via useAffiliates.ts
+  // ==========================================================================
+  tiktokUsername?: string;
+  tiktokDisplayName?: string;
+  tiktokBio?: string;
+  tiktokFollowers?: number;
+  tiktokFollowing?: number;
+  tiktokLikes?: number;
+  tiktokVideosCount?: number;
+  tiktokIsVerified?: boolean;
+  tiktokVideoPlays?: number;
+  tiktokVideoLikes?: number;
+  tiktokVideoComments?: number;
+  tiktokVideoShares?: number;
 }
 
 /**
