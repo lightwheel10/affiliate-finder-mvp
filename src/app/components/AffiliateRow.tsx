@@ -10,6 +10,19 @@ const TikTokIcon = ({ size = 14, className = "" }: { size?: number; className?: 
   </svg>
 );
 
+/**
+ * AffiliateRowProps Interface
+ * 
+ * Props for the AffiliateRow component which displays a single affiliate result
+ * in a table row format with actions like save, delete, view, and select.
+ * 
+ * BULK SELECTION SUPPORT (Added Dec 2025 ):
+ * - isSelected: Whether this row's checkbox is checked
+ * - onSelect: Callback when checkbox is toggled, receives the affiliate's link as identifier
+ * 
+ * These props enable bulk operations (save multiple to pipeline, delete multiple)
+ * from parent pages like Find New, Discovered, and Saved.
+ */
 interface AffiliateRowProps {
   id?: number;  // Database ID for email lookup
   title: string;
@@ -59,6 +72,17 @@ interface AffiliateRowProps {
     phoneNumbers?: string[];
     provider?: string;
   };
+  // ============================================================================
+  // BULK SELECTION PROPS (Added Dec 2025)
+  // Used by parent pages to enable multi-select for bulk save/delete operations
+  // ============================================================================
+  isSelected?: boolean;           // Whether this row is selected (checkbox checked)
+  onSelect?: (link: string) => void;  // Callback when selection changes, uses link as unique ID
+  // ============================================================================
+  // BULK SAVE VISUAL FEEDBACK (Added Dec 2025)
+  // Shows saving state during bulk operations
+  // ============================================================================
+  isSaving?: boolean;             // Whether this item is currently being saved (shows spinner)
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
@@ -87,7 +111,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   channel,
   duration,
   personName,
-  emailResults
+  emailResults,
+  // Bulk selection props with defaults for backward compatibility
+  isSelected = false,
+  onSelect,
+  isSaving = false,  // Added Dec 2025: Shows loading state during bulk save
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -257,9 +285,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
   return (
     <div className={`group ${gridClass} items-center p-4 bg-white border-b border-slate-50 hover:bg-slate-50/80 transition-all duration-200`}>
-      {/* Checkbox */}
+      {/* Checkbox - Connected to bulk selection system (Dec 2025)
+          When onSelect is provided, clicking toggles selection state in parent component.
+          Parent manages selectedLinks Set and passes isSelected based on whether link is in Set. */}
       <div className="flex justify-center">
-        <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" />
+        <input 
+          type="checkbox" 
+          checked={isSelected}
+          onChange={() => onSelect?.(link)}
+          className="w-4 h-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" 
+        />
       </div>
 
       {/* Affiliate Info - Enhanced for Social Media */}
@@ -499,16 +534,24 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         <button className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors shadow-sm" title="View">
           <Eye size={14} />
         </button>
+        {/* Save Button - Updated Dec 2025 to show saving state during bulk operations */}
         <button 
           onClick={onSave}
+          disabled={isSaving}
           className={`w-7 h-7 flex items-center justify-center rounded transition-all shadow-sm ${
-            isSaved 
-              ? 'bg-emerald-500 text-white border border-emerald-600' 
-              : 'bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100'
+            isSaving
+              ? 'bg-[#D4E815] border border-[#c5d913] cursor-wait'
+              : isSaved 
+                ? 'bg-emerald-500 text-white border border-emerald-600' 
+                : 'bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100'
           }`}
-          title={isSaved ? "Saved" : "Save to Pipeline"}
+          title={isSaving ? "Saving..." : isSaved ? "Saved" : "Save to Pipeline"}
         >
-          <Save size={14} />
+          {isSaving ? (
+            <Loader2 size={14} className="animate-spin text-[#1A1D21]" />
+          ) : (
+            <Save size={14} />
+          )}
         </button>
       </div>
 

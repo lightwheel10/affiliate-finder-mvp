@@ -459,12 +459,303 @@ export function useSavedAffiliates() {
     }
   }, [userId]);
 
+  // ============================================================================
+  // BULK SAVE AFFILIATES (Added Dec 2025)
+  // Saves multiple affiliates to the pipeline in a single API call.
+  // Used by Find New and Discovered pages for "Save Selected" bulk action.
+  // 
+  // Returns:
+  // - savedCount: Number of affiliates successfully saved
+  // - duplicateCount: Number of affiliates that were already in pipeline (skipped)
+  // - error: Error object if request failed
+  // 
+  // The API checks for duplicates and only saves new affiliates.
+  // ============================================================================
+  const saveAffiliatesBulk = useCallback(async (affiliates: ResultItem[]): Promise<{
+    savedCount: number;
+    duplicateCount: number;
+    error?: unknown;
+  }> => {
+    if (!userId || affiliates.length === 0) return { savedCount: 0, duplicateCount: 0 };
+
+    try {
+      const res = await fetch('/api/affiliates/saved/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          affiliates: affiliates.map(a => buildAffiliatePayloadWithoutUserId(a)),
+        }),
+      });
+
+      const data = await res.json();
+      const savedCount = data.count || 0;
+      const duplicateCount = data.duplicateCount || 0;
+
+      // Only add actually saved affiliates to local state (not duplicates)
+      // Filter out affiliates that were already saved (duplicates)
+      if (savedCount > 0) {
+        const now = new Date().toISOString();
+        // Get the links that were actually saved (not duplicates)
+        const existingLinks = new Set(savedAffiliates.map(a => a.link));
+        const newAffiliates = affiliates.filter(a => !existingLinks.has(a.link));
+        
+        setSavedAffiliates(prev => [
+          ...newAffiliates.map(a => ({ ...a, savedAt: now })),
+          ...prev
+        ]);
+      }
+
+      return { savedCount, duplicateCount };
+    } catch (err) {
+      console.error('Error bulk saving affiliates:', err);
+      return { savedCount: 0, duplicateCount: 0, error: err };
+    }
+  }, [userId, savedAffiliates]);
+
+  // ============================================================================
+  // BULK FIND EMAILS (Added Dec 2025)
+  // Finds emails for multiple affiliates sequentially to respect rate limits.
+  // Used by Saved page for "Find Emails" bulk action.
+  // 
+  // Returns:
+  // - foundCount: Number of affiliates where email was found
+  // - notFoundCount: Number of affiliates where no email was found
+  // - errorCount: Number of affiliates that had errors
+  // - skippedCount: Number of affiliates skipped (already had email/searching)
+  // 
+  // Progress callback allows UI to show real-time progress.
+  // ============================================================================
+  const findEmailsBulk = useCallback(async (
+    affiliates: ResultItem[],
+    onProgress?: (progress: {
+      current: number;
+      total: number;
+      currentAffiliate: ResultItem;
+      status: 'searching' | 'found' | 'not_found' | 'error';
+    }) => void
+  ): Promise<{
+    foundCount: number;
+    notFoundCount: number;
+    errorCount: number;
+    skippedCount: number;
+  }> => {
+    if (!userId || affiliates.length === 0) {
+      return { foundCount: 0, notFoundCount: 0, errorCount: 0, skippedCount: 0 };
+    }
+
+    // Filter out affiliates that already have emails or are currently searching
+    const affiliatesToSearch = affiliates.filter(a => 
+      a.id && 
+      a.emailStatus !== 'found' && 
+      a.emailStatus !== 'searching' &&
+      !a.email
+    );
+
+    const skippedCount = affiliates.length - affiliatesToSearch.length;
+    let foundCount = 0;
+    let notFoundCount = 0;
+    let errorCount = 0;
+
+    // Set all to searching status optimistically
+    setSavedAffiliates(prev => prev.map(a => {
+      const shouldSearch = affiliatesToSearch.some(toSearch => toSearch.id === a.id);
+      if (shouldSearch) {
+        return { ...a, emailStatus: 'searching' as const };
+      }
+      return a;
+    }));
+
+    // Process affiliates sequentially to respect rate limits
+    for (let i = 0; i < affiliatesToSearch.length; i++) {
+      const affiliate = affiliatesToSearch[i];
+      
+      // Report progress (searching)
+      onProgress?.({
+        current: i + 1,
+        total: affiliatesToSearch.length,
+        currentAffiliate: affiliate,
+        status: 'searching',
+      });
+
+      try {
+        // Use the existing findEmail function logic but inline it here
+        // to avoid recursive hook calls and allow better progress tracking
+        const searchDomain = extractSearchDomain(affiliate);
+        const personName = affiliate.personName 
+          || affiliate.instagramFullName 
+          || affiliate.tiktokDisplayName 
+          || affiliate.channel?.name
+          || undefined;
+
+        // Extract LinkedIn URL if available
+        let linkedinUrl: string | undefined;
+        const bioSources = [affiliate.instagramBio, affiliate.tiktokBio, affiliate.snippet].filter(Boolean);
+        for (const bio of bioSources) {
+          if (bio) {
+            const linkedinMatch = bio.match(/linkedin\.com\/in\/([a-zA-Z0-9-]+)/i);
+            if (linkedinMatch) {
+              linkedinUrl = `https://www.linkedin.com/in/${linkedinMatch[1]}`;
+              break;
+            }
+          }
+        }
+
+        const payload = {
+          affiliateId: affiliate.id,
+          userId,
+          domain: searchDomain,
+          originalDomain: affiliate.domain,
+          personName,
+          instagramUsername: affiliate.instagramUsername,
+          tiktokUsername: affiliate.tiktokUsername,
+          channelName: affiliate.channel?.name,
+          channelLink: affiliate.channel?.link,
+          linkedinUrl,
+          source: affiliate.source,
+        };
+
+        const res = await fetch('/api/enrich/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        
+        // Determine result status
+        const resultStatus = data.status as 'found' | 'not_found' | 'error';
+        
+        if (resultStatus === 'found') {
+          foundCount++;
+        } else if (resultStatus === 'error') {
+          errorCount++;
+        } else {
+          notFoundCount++;
+        }
+
+        // Update local state with result
+        setSavedAffiliates(prev => prev.map(a => 
+          a.id === affiliate.id 
+            ? { 
+                ...a, 
+                email: data.email || a.email,
+                emailResults: {
+                  emails: data.emails || (data.email ? [data.email] : []),
+                  contacts: data.contacts,
+                  firstName: data.firstName,
+                  lastName: data.lastName,
+                  title: data.title,
+                  linkedinUrl: data.linkedinUrl,
+                  phoneNumbers: data.phoneNumbers,
+                  provider: data.provider,
+                },
+                emailStatus: resultStatus,
+                emailSearchedAt: new Date().toISOString(),
+                emailProvider: data.provider || 'apollo',
+              } 
+            : a
+        ));
+
+        // Report progress (with result)
+        onProgress?.({
+          current: i + 1,
+          total: affiliatesToSearch.length,
+          currentAffiliate: affiliate,
+          status: resultStatus,
+        });
+
+        // Small delay between requests to be respectful to rate limits
+        if (i < affiliatesToSearch.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+      } catch (err) {
+        console.error(`Error finding email for affiliate ${affiliate.id}:`, err);
+        errorCount++;
+        
+        // Update status to error
+        setSavedAffiliates(prev => prev.map(a => 
+          a.id === affiliate.id ? { ...a, emailStatus: 'error' as const } : a
+        ));
+
+        // Report progress (error)
+        onProgress?.({
+          current: i + 1,
+          total: affiliatesToSearch.length,
+          currentAffiliate: affiliate,
+          status: 'error',
+        });
+      }
+    }
+
+    return { foundCount, notFoundCount, errorCount, skippedCount };
+  }, [userId]);
+
+  // Helper function to extract the best search domain from an affiliate
+  function extractSearchDomain(affiliate: ResultItem): string {
+    let searchDomain = affiliate.domain;
+    
+    const isSocialPlatform = ['youtube.com', 'tiktok.com', 'instagram.com', 'www.youtube.com', 'www.tiktok.com', 'www.instagram.com']
+      .some(platform => affiliate.domain.toLowerCase().includes(platform));
+    
+    if (isSocialPlatform) {
+      // Try to extract domain from Instagram bio
+      if (affiliate.instagramBio) {
+        const domainMatch = affiliate.instagramBio.match(/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/);
+        if (domainMatch) {
+          searchDomain = domainMatch[1];
+        }
+      }
+      // Try to extract from TikTok bio
+      if (affiliate.tiktokBio && searchDomain === affiliate.domain) {
+        const domainMatch = affiliate.tiktokBio.match(/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/);
+        if (domainMatch) {
+          searchDomain = domainMatch[1];
+        }
+      }
+    }
+    
+    return searchDomain;
+  }
+
+  // ============================================================================
+  // BULK REMOVE AFFILIATES (Added Dec 2025)
+  // Removes multiple saved affiliates in a single API call.
+  // Used by Saved page for "Delete Selected" bulk action.
+  // ============================================================================
+  const removeAffiliatesBulk = useCallback(async (links: string[]) => {
+    if (!userId || links.length === 0) return { removedCount: 0 };
+
+    try {
+      const res = await fetch('/api/affiliates/saved/batch', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, links }),
+      });
+
+      const data = await res.json();
+
+      // Optimistic update - remove from local state
+      setSavedAffiliates(prev => prev.filter(a => !links.includes(a.link)));
+
+      return { removedCount: data.count || links.length };
+    } catch (err) {
+      console.error('Error bulk removing affiliates:', err);
+      return { removedCount: 0, error: err };
+    }
+  }, [userId]);
+
   return {
     savedAffiliates,
     saveAffiliate,
     removeAffiliate,
     isAffiliateSaved,
     findEmail,
+    // Bulk operations (Added Dec 2025)
+    saveAffiliatesBulk,
+    removeAffiliatesBulk,
+    findEmailsBulk,  // Added Dec 2025: Bulk email finding
     isLoading: userLoading || isLoading,
     count: savedAffiliates.length,
     refetch: fetchSavedAffiliates,
@@ -584,12 +875,41 @@ export function useDiscoveredAffiliates() {
     }
   }, [userId]);
 
+  // ============================================================================
+  // BULK REMOVE DISCOVERED AFFILIATES (Added Dec 2025)
+  // Removes multiple discovered affiliates in a single API call.
+  // Used by Discovered and Find New pages for "Delete Selected" bulk action.
+  // ============================================================================
+  const removeDiscoveredAffiliatesBulk = useCallback(async (links: string[]) => {
+    if (!userId || links.length === 0) return { removedCount: 0 };
+
+    try {
+      const res = await fetch('/api/affiliates/discovered/batch', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, links }),
+      });
+
+      const data = await res.json();
+
+      // Optimistic update - remove from local state
+      setDiscoveredAffiliates(prev => prev.filter(a => !links.includes(a.link)));
+
+      return { removedCount: data.count || links.length };
+    } catch (err) {
+      console.error('Error bulk removing discovered affiliates:', err);
+      return { removedCount: 0, error: err };
+    }
+  }, [userId]);
+
   return {
     discoveredAffiliates,
     saveDiscoveredAffiliate,
     saveDiscoveredAffiliates,
     removeDiscoveredAffiliate,
     clearAllDiscovered,
+    // Bulk operations (Added Dec 2025)
+    removeDiscoveredAffiliatesBulk,
     isLoading: userLoading || isLoading,
     count: discoveredAffiliates.length,
     refetch: fetchDiscoveredAffiliates,

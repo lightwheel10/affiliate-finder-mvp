@@ -1,11 +1,23 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+/**
+ * Discovered Affiliates Page
+ * Updated: December 2025
+ * 
+ * Shows ALL discovered affiliates from all searches.
+ * 
+ * BULK SELECTION FEATURE (Added Dec 2025):
+ * - Users can select multiple affiliates using checkboxes
+ * - Bulk save selected to pipeline
+ * - Bulk delete selected from discovered list
+ */
+
+import { useState, useMemo, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AffiliateRow } from '../components/AffiliateRow';
-import { SearchInput } from '../components/Input';
 import { ScanCountdown } from '../components/ScanCountdown';
 import { AuthGuard } from '../components/AuthGuard';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { 
@@ -13,12 +25,16 @@ import {
   Globe, 
   Youtube, 
   Instagram,
-  ArrowUpDown,
   Music,
-  Download,
   Mail,
   Plus,
   Sparkles,
+  // Added Dec 2025 for bulk actions UI
+  Check,
+  Trash2,
+  Save,
+  Loader2,
+  X
 } from 'lucide-react';
 import { ResultItem } from '../types';
 
@@ -35,23 +51,151 @@ function DiscoveredContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 
-  // Convex hooks
+  // Data hooks
   const { 
     discoveredAffiliates, 
+    removeDiscoveredAffiliatesBulk,  // Added Dec 2025 for bulk delete
     isLoading: loading 
   } = useDiscoveredAffiliates();
   
   const { 
     saveAffiliate, 
     removeAffiliate, 
-    isAffiliateSaved 
+    isAffiliateSaved,
+    saveAffiliatesBulk  // Added Dec 2025 for bulk save
   } = useSavedAffiliates();
+
+  // ============================================================================
+  // BULK SELECTION STATE (Added Dec 2025)
+  // Tracks which affiliates are selected for bulk operations (save/delete)
+  // ============================================================================
+  const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  
+  // ============================================================================
+  // BULK OPERATION VISUAL FEEDBACK STATE (Added Dec 2025)
+  // ============================================================================
+  const [savingLinks, setSavingLinks] = useState<Set<string>>(new Set());
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [bulkSaveResult, setBulkSaveResult] = useState<{
+    savedCount: number;
+    duplicateCount: number;
+    show: boolean;
+  } | null>(null);
 
   const toggleSave = (item: ResultItem) => {
     if (isAffiliateSaved(item.link)) {
       removeAffiliate(item.link);
     } else {
       saveAffiliate(item);
+    }
+  };
+
+  // ============================================================================
+  // BULK SELECTION HANDLERS (Added Dec 2025)
+  // ============================================================================
+  const toggleSelectItem = (link: string) => {
+    setSelectedLinks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(link)) {
+        newSet.delete(link);
+      } else {
+        newSet.add(link);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllVisible = () => {
+    // Add all visible items to selection (preserves existing selections from other filters)
+    setSelectedLinks(prev => {
+      const newSet = new Set(prev);
+      filteredResults.forEach(r => newSet.add(r.link));
+      return newSet;
+    });
+  };
+  
+  const deselectAllVisible = () => {
+    // Remove only visible items from selection (preserves selections from other filters)
+    setSelectedLinks(prev => {
+      const newSet = new Set(prev);
+      filteredResults.forEach(r => newSet.delete(r.link));
+      return newSet;
+    });
+  };
+
+  const deselectAll = () => {
+    setSelectedLinks(new Set());
+  };
+
+  /**
+   * Bulk save selected affiliates to pipeline (Updated Dec 2025)
+   * - Only saves items visible in current filter
+   * - Shows loading spinner on each item being saved
+   * - Displays feedback toast with saved/duplicate counts
+   */
+  const handleBulkSave = async () => {
+    if (visibleSelectedLinks.size === 0) return;
+    setIsBulkSaving(true);
+    setSavingLinks(new Set(visibleSelectedLinks));
+    
+    try {
+      const affiliatesToSave = discoveredAffiliates.filter(r => visibleSelectedLinks.has(r.link));
+      const result = await saveAffiliatesBulk(affiliatesToSave);
+      
+      // Show feedback toast
+      setBulkSaveResult({
+        savedCount: result.savedCount,
+        duplicateCount: result.duplicateCount,
+        show: true
+      });
+      setTimeout(() => {
+        setBulkSaveResult(prev => prev ? { ...prev, show: false } : null);
+      }, 4000);
+      
+      // Remove saved items from selection
+      setSelectedLinks(prev => {
+        const newSet = new Set(prev);
+        visibleSelectedLinks.forEach(link => newSet.delete(link));
+        return newSet;
+      });
+    } catch (err) {
+      console.error('Bulk save failed:', err);
+    } finally {
+      setIsBulkSaving(false);
+      setSavingLinks(new Set());
+    }
+  };
+
+  /**
+   * Open delete confirmation modal (Added Dec 2025)
+   */
+  const handleBulkDelete = () => {
+    if (visibleSelectedLinks.size === 0) return;
+    setIsDeleteModalOpen(true);
+  };
+
+  /**
+   * Confirm and execute bulk delete (Added Dec 2025)
+   * Only deletes items visible in current filter
+   */
+  const confirmBulkDelete = async () => {
+    if (visibleSelectedLinks.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      await removeDiscoveredAffiliatesBulk(Array.from(visibleSelectedLinks));
+      // Remove deleted items from selection
+      setSelectedLinks(prev => {
+        const newSet = new Set(prev);
+        visibleSelectedLinks.forEach(link => newSet.delete(link));
+        return newSet;
+      });
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      console.error('Bulk delete failed:', err);
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -74,6 +218,30 @@ function DiscoveredContent() {
       return true;
     });
   }, [discoveredAffiliates, activeFilter, searchQuery]);
+
+  // ============================================================================
+  // VISIBLE SELECTION - Computed from selectedLinks and filteredResults
+  // 
+  // FIX (Dec 2025): Instead of modifying selectedLinks when filter changes,
+  // we keep ALL selected links in state and compute which ones are currently
+  // visible. This prevents the cascading selection loss bug where:
+  // - Select all on "All" filter
+  // - Switch to "Web" → effect removed non-Web items
+  // - Switch to "YouTube" → selection was already empty/Web-only, so nothing left
+  // 
+  // Now selectedLinks contains ALL selected items across all filters.
+  // visibleSelectedLinks is what we show in the UI for the current filter.
+  // ============================================================================
+  const visibleSelectedLinks = useMemo(() => {
+    const visibleLinks = new Set(filteredResults.map(r => r.link));
+    const visible = new Set<string>();
+    selectedLinks.forEach(link => {
+      if (visibleLinks.has(link)) {
+        visible.add(link);
+      }
+    });
+    return visible;
+  }, [selectedLinks, filteredResults]);
 
   // Calculate counts
   const counts = useMemo(() => {
@@ -189,9 +357,84 @@ function DiscoveredContent() {
             </div>
           </div>
 
+          {/* ============================================================================
+              BULK ACTIONS BAR (Added Dec 2025)
+              Shows already-saved count and dynamic save button text
+              Uses light background to match page aesthetic
+              
+              FIX (Dec 2025): Use visibleSelectedLinks for UI display/counts
+              This shows only items selected in the CURRENT filter view
+              ============================================================================ */}
+          {visibleSelectedLinks.size > 0 && (() => {
+            const alreadySavedCount = Array.from(visibleSelectedLinks).filter(link => isAffiliateSaved(link)).length;
+            const newToSaveCount = visibleSelectedLinks.size - alreadySavedCount;
+            const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
+            
+            return (
+            <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-[#D4E815] flex items-center justify-center">
+                    <Check size={14} className="text-[#1A1D21]" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900">
+                    {visibleSelectedLinks.size} affiliate{visibleSelectedLinks.size !== 1 ? 's' : ''} selected
+                  </span>
+                  {alreadySavedCount > 0 && (
+                    <span className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                      {alreadySavedCount} already in pipeline
+                    </span>
+                  )}
+                </div>
+                <div className="h-4 w-px bg-slate-200"></div>
+                <button
+                  onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  {allVisibleSelected ? 'Deselect All' : 'Select All Visible'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={deselectAllVisible}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                >
+                  <X size={14} />
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500 hover:bg-red-600 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  Delete Selected
+                </button>
+                <button
+                  onClick={handleBulkSave}
+                  disabled={isBulkSaving || newToSaveCount === 0}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold bg-[#D4E815] hover:bg-[#c5d913] text-[#1A1D21] transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={newToSaveCount === 0 ? 'All selected affiliates are already in pipeline' : `Save ${newToSaveCount} new affiliate${newToSaveCount !== 1 ? 's' : ''} to pipeline`}
+                >
+                  {isBulkSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {newToSaveCount === 0 ? 'All Already Saved' : `Save ${newToSaveCount} to Pipeline`}
+                </button>
+              </div>
+            </div>
+            );
+          })()}
+
           {/* Table Header */}
           <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_220px_1fr_140px_100px_120px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
-            <div className="pl-1"></div>
+            <div className="pl-1 flex items-center">
+              <input
+                type="checkbox"
+                checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
+                onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
+                className="w-3.5 h-3.5 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer"
+                title={visibleSelectedLinks.size === filteredResults.length ? 'Deselect all' : 'Select all'}
+              />
+            </div>
             <div>Affiliate</div>
             <div>Relevant Content</div>
             <div>Discovery Method</div>
@@ -231,6 +474,11 @@ function DiscoveredContent() {
                     channel={item.channel}
                     duration={item.duration}
                     personName={item.personName}
+                    // Bulk selection props (Added Dec 2025)
+                    isSelected={selectedLinks.has(item.link)}
+                    onSelect={toggleSelectItem}
+                    // Bulk save visual feedback (Added Dec 2025)
+                    isSaving={savingLinks.has(item.link)}
                   />
                ))
              ) : (
@@ -246,6 +494,55 @@ function DiscoveredContent() {
 
         </div>
       </main>
+
+      {/* ============================================================================
+          DELETE CONFIRMATION MODAL (Added Dec 2025)
+          ============================================================================ */}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmBulkDelete}
+        itemCount={visibleSelectedLinks.size}
+        isDeleting={isBulkDeleting}
+        itemType="affiliate"
+      />
+
+      {/* ============================================================================
+          BULK SAVE FEEDBACK TOAST (Added Dec 2025)
+          ============================================================================ */}
+      {bulkSaveResult?.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-w-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                <Check size={20} className="text-emerald-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-slate-900">
+                  {bulkSaveResult.savedCount > 0 
+                    ? `${bulkSaveResult.savedCount} affiliate${bulkSaveResult.savedCount !== 1 ? 's' : ''} saved!`
+                    : 'No new affiliates saved'
+                  }
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {bulkSaveResult.savedCount > 0 && 'Successfully added to your pipeline.'}
+                  {bulkSaveResult.duplicateCount > 0 && (
+                    <span className="block text-amber-600 mt-1">
+                      {bulkSaveResult.duplicateCount} already in pipeline (skipped)
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => setBulkSaveResult(prev => prev ? { ...prev, show: false } : null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

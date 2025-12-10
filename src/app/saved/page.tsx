@@ -1,25 +1,42 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+/**
+ * Saved Affiliates Page (Pipeline)
+ * Updated: December 2025
+ * 
+ * Shows all affiliates saved to the user's pipeline.
+ * 
+ * BULK SELECTION FEATURE (Added Dec 2025):
+ * - Users can select multiple affiliates using checkboxes
+ * - Bulk delete selected from pipeline
+ */
+
+import { useState, useMemo, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AffiliateRow } from '../components/AffiliateRow';
-import { SearchInput } from '../components/Input';
 import { ScanCountdown } from '../components/ScanCountdown';
 import { AuthGuard } from '../components/AuthGuard';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { useSavedAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { 
   Globe, 
   Youtube, 
   Instagram,
-  ArrowUpDown,
   Music,
-  Download,
   Users,
   Search,
   Mail,
   Plus,
   Sparkles,
+  // Added Dec 2025 for bulk actions UI
+  Check,
+  Trash2,
+  Loader2,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  XCircle
 } from 'lucide-react';
 
 export default function SavedPage() {
@@ -37,13 +54,177 @@ function SavedContent() {
   // Hook for saved affiliates
   const { 
     savedAffiliates, 
-    removeAffiliate, 
+    removeAffiliate,
+    removeAffiliatesBulk,  // Added Dec 2025 for bulk delete
     findEmail,
+    findEmailsBulk,        // Added Dec 2025 for bulk email finding
     isLoading: loading 
   } = useSavedAffiliates();
 
+  // ============================================================================
+  // BULK SELECTION STATE (Added Dec 2025)  
+  // ============================================================================
+  const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  
+  // ============================================================================
+  // BULK EMAIL FINDING STATE (Added Dec 2025)
+  // ============================================================================
+  const [isBulkFindingEmails, setIsBulkFindingEmails] = useState(false);
+  const [bulkEmailProgress, setBulkEmailProgress] = useState<{
+    current: number;
+    total: number;
+    status: 'idle' | 'searching' | 'complete';
+    results?: {
+      foundCount: number;
+      notFoundCount: number;
+      errorCount: number;
+      skippedCount: number;
+    };
+  }>({ current: 0, total: 0, status: 'idle' });
+
   const handleRemove = (link: string) => {
     removeAffiliate(link);
+  };
+
+  // ============================================================================
+  // BULK SELECTION HANDLERS (Added Dec 2025)
+  // ============================================================================
+  const toggleSelectItem = (link: string) => {
+    setSelectedLinks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(link)) {
+        newSet.delete(link);
+      } else {
+        newSet.add(link);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllVisible = () => {
+    // Add all visible items to selection (preserves existing selections from other filters)
+    setSelectedLinks(prev => {
+      const newSet = new Set(prev);
+      filteredResults.forEach(r => newSet.add(r.link));
+      return newSet;
+    });
+  };
+
+  const deselectAll = () => {
+    setSelectedLinks(new Set());
+  };
+  
+  const deselectAllVisible = () => {
+    // Remove only visible items from selection (preserves selections from other filters)
+    setSelectedLinks(prev => {
+      const newSet = new Set(prev);
+      filteredResults.forEach(r => newSet.delete(r.link));
+      return newSet;
+    });
+  };
+
+  /**
+   * Open delete confirmation modal (Added Dec 2025)
+   */
+  const handleBulkDelete = () => {
+    if (visibleSelectedLinks.size === 0) return;
+    setIsDeleteModalOpen(true);
+  };
+
+  /**
+   * Confirm and execute bulk delete (Added Dec 2025)
+   * Only deletes items visible in current filter
+   */
+  const confirmBulkDelete = async () => {
+    if (visibleSelectedLinks.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      await removeAffiliatesBulk(Array.from(visibleSelectedLinks));
+      // Remove deleted items from selection
+      setSelectedLinks(prev => {
+        const newSet = new Set(prev);
+        visibleSelectedLinks.forEach(link => newSet.delete(link));
+        return newSet;
+      });
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      console.error('Bulk delete failed:', err);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  /**
+   * Handle bulk email finding (Added Dec 2025)
+   * Finds emails for all selected affiliates that don't already have emails
+   */
+  const handleBulkFindEmails = async () => {
+    if (visibleSelectedLinks.size === 0) return;
+    
+    // Get the selected affiliates that are visible
+    const selectedAffiliates = savedAffiliates.filter(a => visibleSelectedLinks.has(a.link));
+    
+    // Count how many actually need email lookup
+    const needsLookup = selectedAffiliates.filter(a => 
+      a.emailStatus !== 'found' && 
+      a.emailStatus !== 'searching' &&
+      !a.email
+    );
+    
+    if (needsLookup.length === 0) {
+      // All selected already have emails or are searching
+      setBulkEmailProgress({
+        current: 0,
+        total: 0,
+        status: 'complete',
+        results: {
+          foundCount: 0,
+          notFoundCount: 0,
+          errorCount: 0,
+          skippedCount: selectedAffiliates.length,
+        },
+      });
+      // Auto-clear after 3 seconds
+      setTimeout(() => setBulkEmailProgress({ current: 0, total: 0, status: 'idle' }), 3000);
+      return;
+    }
+    
+    setIsBulkFindingEmails(true);
+    setBulkEmailProgress({
+      current: 0,
+      total: needsLookup.length,
+      status: 'searching',
+    });
+    
+    try {
+      const results = await findEmailsBulk(selectedAffiliates, (progress) => {
+        setBulkEmailProgress({
+          current: progress.current,
+          total: progress.total,
+          status: 'searching',
+        });
+      });
+      
+      // Show results
+      setBulkEmailProgress({
+        current: needsLookup.length,
+        total: needsLookup.length,
+        status: 'complete',
+        results,
+      });
+      
+      // Auto-clear results after 5 seconds
+      setTimeout(() => {
+        setBulkEmailProgress({ current: 0, total: 0, status: 'idle' });
+      }, 5000);
+      
+    } catch (err) {
+      console.error('Bulk email finding failed:', err);
+    } finally {
+      setIsBulkFindingEmails(false);
+    }
   };
 
   // Filter and Search Logic
@@ -65,6 +246,40 @@ function SavedContent() {
       return true;
     });
   }, [savedAffiliates, activeFilter, searchQuery]);
+
+  // ============================================================================
+  // VISIBLE SELECTION - Computed from selectedLinks and filteredResults
+  // 
+  // FIX (Dec 2025): Instead of modifying selectedLinks when filter changes,
+  // we keep ALL selected links in state and compute which ones are currently
+  // visible. This prevents the cascading selection loss bug where:
+  // - Select all on "All" filter
+  // - Switch to "Web" → effect removed non-Web items
+  // - Switch to "YouTube" → selection was already empty/Web-only, so nothing left
+  // 
+  // Now selectedLinks contains ALL selected items across all filters.
+  // visibleSelectedLinks is what we show in the UI for the current filter.
+  // ============================================================================
+  const visibleSelectedLinks = useMemo(() => {
+    const visibleLinks = new Set(filteredResults.map(r => r.link));
+    const visible = new Set<string>();
+    selectedLinks.forEach(link => {
+      if (visibleLinks.has(link)) {
+        visible.add(link);
+      }
+    });
+    return visible;
+  }, [selectedLinks, filteredResults]);
+
+  // Calculate how many selected affiliates need email lookup (Added Dec 2025)
+  const selectedNeedingEmailLookup = useMemo(() => {
+    return savedAffiliates.filter(a => 
+      visibleSelectedLinks.has(a.link) &&
+      a.emailStatus !== 'found' && 
+      a.emailStatus !== 'searching' &&
+      !a.email
+    ).length;
+  }, [savedAffiliates, visibleSelectedLinks]);
 
   // Calculate counts
   const counts = useMemo(() => {
@@ -180,9 +395,133 @@ function SavedContent() {
             </div>
           </div>
 
+          {/* ============================================================================
+              BULK ACTIONS BAR (Added Dec 2025)
+              Uses light background to match page aesthetic
+              
+              FIX (Dec 2025): Use visibleSelectedLinks for UI display/counts
+              This shows only items selected in the CURRENT filter view
+              
+              ADDED (Dec 2025): Find Emails button for bulk email discovery
+              ============================================================================ */}
+          {visibleSelectedLinks.size > 0 && (() => {
+            const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
+            
+            return (
+            <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-[#D4E815] flex items-center justify-center">
+                    <Check size={14} className="text-[#1A1D21]" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900">
+                    {visibleSelectedLinks.size} affiliate{visibleSelectedLinks.size !== 1 ? 's' : ''} selected
+                  </span>
+                </div>
+                <div className="h-4 w-px bg-slate-200"></div>
+                <button
+                  onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  {allVisibleSelected ? 'Deselect All' : 'Select All Visible'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* 1. Cancel button - first position */}
+                <button
+                  onClick={deselectAllVisible}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+                
+                {/* 2. Find Emails Button & Progress - second position
+                    Shows different states: idle, searching, complete with results
+                    Uses brand colors: bg-[#D4E815] text-[#1A1D21] to match design system */}
+                {bulkEmailProgress.status === 'complete' && bulkEmailProgress.results ? (
+                  /* Results Summary - Shows after bulk operation completes */
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+                    {bulkEmailProgress.results.foundCount > 0 && (
+                      <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                        <CheckCircle2 size={12} />
+                        {bulkEmailProgress.results.foundCount} found
+                      </span>
+                    )}
+                    {bulkEmailProgress.results.notFoundCount > 0 && (
+                      <span className="flex items-center gap-1 text-slate-500 font-medium">
+                        <XCircle size={12} />
+                        {bulkEmailProgress.results.notFoundCount} not found
+                      </span>
+                    )}
+                    {bulkEmailProgress.results.errorCount > 0 && (
+                      <span className="flex items-center gap-1 text-amber-600 font-medium">
+                        <AlertCircle size={12} />
+                        {bulkEmailProgress.results.errorCount} errors
+                      </span>
+                    )}
+                    {bulkEmailProgress.results.skippedCount > 0 && (
+                      <span className="flex items-center gap-1 text-slate-400 font-medium">
+                        ({bulkEmailProgress.results.skippedCount} skipped)
+                      </span>
+                    )}
+                  </div>
+                ) : bulkEmailProgress.status === 'searching' ? (
+                  /* Progress Indicator - Shows during bulk operation */
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#D4E815]/20 border border-[#D4E815]/40 text-xs font-semibold text-[#1A1D21]">
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Finding emails... {bulkEmailProgress.current}/{bulkEmailProgress.total}</span>
+                  </div>
+                ) : (
+                  /* Find Emails Button - Uses brand colors to match design system */
+                  <button
+                    onClick={handleBulkFindEmails}
+                    disabled={isBulkFindingEmails || selectedNeedingEmailLookup === 0}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                      selectedNeedingEmailLookup === 0
+                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] hover:shadow-md hover:shadow-[#D4E815]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                    title={selectedNeedingEmailLookup === 0 
+                      ? "All selected affiliates already have emails" 
+                      : `Find emails for ${selectedNeedingEmailLookup} affiliate${selectedNeedingEmailLookup !== 1 ? 's' : ''}`
+                    }
+                  >
+                    <Mail size={14} />
+                    Find Emails
+                    {selectedNeedingEmailLookup > 0 && (
+                      <span className="ml-0.5 px-1.5 py-0.5 rounded bg-[#1A1D21]/20 text-[10px]">
+                        {selectedNeedingEmailLookup}
+                      </span>
+                    )}
+                  </button>
+                )}
+                
+                {/* 3. Delete button - last position (destructive action) */}
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500 hover:bg-red-600 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  Delete Selected
+                </button>
+              </div>
+            </div>
+            );
+          })()}
+
           {/* Table Header */}
           <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_220px_1fr_140px_100px_90px_130px_100px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
-            <div className="pl-1"></div>
+            <div className="pl-1 flex items-center">
+              <input
+                type="checkbox"
+                checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
+                onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
+                className="w-3.5 h-3.5 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer"
+                title={visibleSelectedLinks.size === filteredResults.length ? 'Deselect all' : 'Select all'}
+              />
+            </div>
             <div>Affiliate</div>
             <div>Relevant Content</div>
             <div>Discovery Method</div>
@@ -221,6 +560,9 @@ function SavedContent() {
                     channel={item.channel}
                     duration={item.duration}
                     personName={item.personName}
+                    // Bulk selection props (Added Dec 2025)
+                    isSelected={selectedLinks.has(item.link)}
+                    onSelect={toggleSelectItem}
                   />
                ))
              ) : (
@@ -236,6 +578,18 @@ function SavedContent() {
 
         </div>
       </main>
+
+      {/* ============================================================================
+          DELETE CONFIRMATION MODAL (Added Dec 2025)
+          ============================================================================ */}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmBulkDelete}
+        itemCount={visibleSelectedLinks.size}
+        isDeleting={isBulkDeleting}
+        itemType="affiliate"
+      />
     </div>
   );
 }

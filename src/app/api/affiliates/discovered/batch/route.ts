@@ -1,3 +1,17 @@
+/**
+ * Bulk Operations API for Discovered Affiliates
+ * Updated: December 2025
+ * 
+ * This endpoint handles bulk operations for discovered affiliates:
+ * - POST: Batch save multiple discovered affiliates (existing functionality)
+ * - DELETE: Bulk remove multiple discovered affiliates (added Dec 2025)
+ * 
+ * Used by:
+ * - Find New page: Auto-saves search results in batch
+ * - Find New page: "Delete Selected" button (Dec 2025)
+ * - Discovered page: "Delete Selected" button (Dec 2025)
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 
@@ -134,6 +148,48 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error batch saving discovered affiliates:', error);
     return NextResponse.json({ error: 'Failed to batch save affiliates' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/affiliates/discovered/batch
+ * Bulk remove multiple discovered affiliates
+ * Added: December 2025
+ * 
+ * Request body:
+ * {
+ *   userId: number,
+ *   links: string[]  // Array of affiliate links to delete
+ * }
+ * 
+ * Response:
+ * {
+ *   success: true,
+ *   count: number  // Number of deleted records
+ * }
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { userId, links } = body;
+
+    if (!userId || !links || !Array.isArray(links) || links.length === 0) {
+      return NextResponse.json({ error: 'Missing required fields: userId and links array' }, { status: 400 });
+    }
+
+    // Delete all matching affiliates in one query using ANY
+    await sql`
+      DELETE FROM discovered_affiliates 
+      WHERE user_id = ${userId} AND link = ANY(${links})
+    `;
+
+    return NextResponse.json({ 
+      success: true, 
+      count: links.length 
+    });
+  } catch (error) {
+    console.error('Error batch removing discovered affiliates:', error);
+    return NextResponse.json({ error: 'Failed to batch remove affiliates' }, { status: 500 });
   }
 }
 
