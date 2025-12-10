@@ -1,28 +1,36 @@
-# Affiliate Finder
+# CrewCast Studio
 
 **Discover high-converting affiliate partners for your brand — in minutes, not months.**
 
-## 🎯 What is Affiliate Finder?
+*Powered by Selecdoo AI*
 
-Affiliate Finder is an AI-powered platform that helps SaaS companies and e-commerce brands discover, qualify, and connect with affiliate marketers who are already active in their niche.
+## 🎯 What is CrewCast Studio?
 
-Instead of spending hours manually searching for potential partners, our intelligent discovery engine surfaces relevant affiliates across the web — complete with verified contact information and performance insights.
+CrewCast Studio is an AI-powered affiliate discovery platform that helps brands find, qualify, and connect with content creators and affiliate marketers who are already active in their niche.
+
+Stop spending 20+ hours a week manually searching for affiliates. Our intelligent discovery engine surfaces relevant partners across multiple platforms — complete with verified contact information and performance insights.
 
 ## ✨ Key Features
 
-- **🔍 Smart Discovery** — Find affiliates actively promoting products in your industry
-- **📊 Performance Insights** — See traffic estimates, engagement metrics, and content quality
-- **📧 Verified Contacts** — Get accurate email addresses for direct outreach
-- **🔄 Continuous Monitoring** — Fresh affiliate prospects delivered regularly
-- **🎯 Multi-Platform Search** — Discover partners across websites, YouTube, Instagram, and more
+- **🔍 Reverse-Engineer Competitor Programs** — Find all their top affiliates across 100+ networks
+- **📊 Multi-Platform Discovery** — Search across Google, YouTube, Instagram, TikTok, and more
+- **📧 Verified Email Enrichment** — Get accurate contact information with 90%+ success rate
+- **💾 Save & Organize** — Build your affiliate pipeline with saved prospects
+- **📈 Performance Insights** — View traffic estimates, engagement metrics, and content quality
+- **🎯 Smart Filtering** — Filter by platform, engagement, and relevance
+- **⚡ Bulk Actions** — Save or delete multiple affiliates at once
+- **🔄 Real-time Updates** — Fresh affiliate prospects delivered regularly
 
 ## 🛠️ Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
-- **Backend**: [Convex](https://convex.dev) — Real-time database & serverless functions
-- **Authentication**: [Clerk](https://clerk.com) — User authentication & session management
+- **Framework**: Next.js 16 (App Router with Turbopack)
+- **Database**: Neon (Serverless PostgreSQL)
+- **Authentication**: Stack Auth
 - **Styling**: Tailwind CSS 4
 - **Animation**: Framer Motion
+- **AI**: Google Generative AI
+- **Data Enrichment**: Apollo, Lusha
+- **Web Scraping**: Apify
 - **Language**: TypeScript
 - **Deployment**: Vercel
 
@@ -30,10 +38,10 @@ Instead of spending hours manually searching for potential partners, our intelli
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
-- Convex account (for backend)
-- Clerk account (for authentication)
+- Neon database account
+- Stack Auth account
 
 ### Installation
 
@@ -42,39 +50,40 @@ Instead of spending hours manually searching for potential partners, our intelli
 git clone https://github.com/lightwheel10/affiliate-finder-mvp.git
 
 # Navigate to project directory
-cd affiliate-finder-mvp
+cd affiliate-finder
 
 # Install dependencies
 npm install
 
-# Set up environment variables (see .env.example)
-cp .env.example .env.local
+# Set up environment variables
+cp .env.example .env
 
-# Start Convex development server (in a separate terminal)
-npx convex dev
-
-# Start Next.js development server
+# Start development server
 npm run dev
 ```
 
 ### Environment Variables
 
-Create a `.env.local` file with the following:
+Create a `.env` file with the following required variables:
 
 ```env
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+# Database
+DATABASE_URL=postgresql://...
 
-# Convex Backend
-NEXT_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
+# Authentication
+NEXT_PUBLIC_STACK_PROJECT_ID=your_project_id
+NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=your_publishable_key
+STACK_SECRET_SERVER_KEY=your_secret_key
 
-# Serper.dev - Search API (https://serper.dev)
-SERPER_API_KEY=your_serper_api_key
+# Search & Discovery APIs
+SERPER_API_KEY=your_serper_key
+APIFY_API_TOKEN=your_apify_token
 
-# Google AI - Content Analysis
+# Email Enrichment (Optional)
+LUSHA_API_KEY=your_lusha_key
+APOLLO_API_KEY=your_apollo_key
+
+# AI (Optional)
 GOOGLE_API_KEY=your_google_ai_key
 ```
 
@@ -92,16 +101,26 @@ npm start
 ```
 src/
 ├── app/
-│   ├── api/           # API routes (serverless functions)
-│   ├── components/    # Reusable UI components
-│   ├── context/       # React context providers
-│   ├── services/      # Business logic & external integrations
-│   ├── discovered/    # Discovered affiliates page
-│   ├── pipeline/      # Affiliate pipeline page
-│   ├── saved/         # Saved affiliates page
-│   └── settings/      # User settings page
-├── lib/               # Utility functions
-└── types/             # TypeScript type definitions
+│   ├── api/              # API routes & serverless functions
+│   │   ├── affiliates/   # Affiliate CRUD operations
+│   │   ├── scout/        # Discovery & search endpoints
+│   │   ├── enrich/       # Email enrichment endpoints
+│   │   └── subscriptions/# Subscription management
+│   ├── components/       # Reusable UI components
+│   │   └── landing/      # Landing page components
+│   ├── hooks/            # Custom React hooks
+│   ├── services/         # Business logic & external integrations
+│   │   ├── apify.ts      # Web scraping service
+│   │   ├── search.ts     # Search aggregation
+│   │   ├── analysis.ts   # AI content analysis
+│   │   └── enrichment/   # Email enrichment providers
+│   ├── discovered/       # Discovered affiliates page
+│   ├── saved/            # Saved affiliates page
+│   ├── dashboard/        # Analytics dashboard
+│   ├── outreach/         # Outreach management
+│   └── settings/         # User settings
+├── lib/                  # Utility functions & database client
+└── types/                # TypeScript type definitions
 ```
 
 ## 🌐 Deployment
@@ -110,7 +129,29 @@ This app is optimized for deployment on [Vercel](https://vercel.com):
 
 1. Push your code to GitHub
 2. Import the repository in Vercel
-3. Deploy with one click
+3. Add environment variables in Vercel dashboard
+4. Deploy with one click
+
+**Important:** Make sure to set all required environment variables in your Vercel project settings before deploying.
+
+## 🔧 Development
+
+### Running Tests
+
+```bash
+# Test individual scrapers
+npm run test:youtube
+npm run test:instagram
+npm run test:tiktok
+```
+
+### Project Documentation
+
+- `DESIGN_SPECS.md` — UI/UX design specifications and color palette
+- `PRODUCTION_ARCHITECTURE.md` — Production architecture overview
+- `MIGRATION_PLAN.md` — Database migration strategies
+- `APIFY_INTEGRATION_PLAN.md` — Apify scraper integration details
+- `COST_ANALYSIS.md` — Cost analysis and optimization strategies
 
 ## 📄 License
 
@@ -118,4 +159,4 @@ Private - All rights reserved.
 
 ---
 
-Built with ❤️ for affiliate marketers who value their time.
+**Built with ❤️ by Selecdoo AI**
