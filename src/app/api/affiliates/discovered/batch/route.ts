@@ -178,14 +178,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete all matching affiliates in one query using ANY
-    await sql`
+    // RETURNING * gives us the actual deleted rows so we can count them accurately
+    const deletedRows = await sql`
       DELETE FROM discovered_affiliates 
       WHERE user_id = ${userId} AND link = ANY(${links})
+      RETURNING id
     `;
 
     return NextResponse.json({ 
       success: true, 
-      count: links.length 
+      count: deletedRows.length  // Actual count of deleted rows
     });
   } catch (error) {
     console.error('Error batch removing discovered affiliates:', error);

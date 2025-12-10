@@ -736,10 +736,16 @@ export function useSavedAffiliates() {
 
       const data = await res.json();
 
-      // Optimistic update - remove from local state
+      // Check if API returned an error
+      if (!res.ok || data.error) {
+        console.error('API error during bulk remove:', data.error);
+        return { removedCount: 0, error: data.error };
+      }
+
+      // Only update local state after confirmed server success
       setSavedAffiliates(prev => prev.filter(a => !links.includes(a.link)));
 
-      return { removedCount: data.count || links.length };
+      return { removedCount: data.count || 0 };
     } catch (err) {
       console.error('Error bulk removing affiliates:', err);
       return { removedCount: 0, error: err };
@@ -892,10 +898,16 @@ export function useDiscoveredAffiliates() {
 
       const data = await res.json();
 
-      // Optimistic update - remove from local state
+      // Check if API returned an error
+      if (!res.ok || data.error) {
+        console.error('API error during bulk remove:', data.error);
+        return { removedCount: 0, error: data.error };
+      }
+
+      // Only update local state after confirmed server success
       setDiscoveredAffiliates(prev => prev.filter(a => !links.includes(a.link)));
 
-      return { removedCount: data.count || links.length };
+      return { removedCount: data.count || 0 };
     } catch (err) {
       console.error('Error bulk removing discovered affiliates:', err);
       return { removedCount: 0, error: err };
