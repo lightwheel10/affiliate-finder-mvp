@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User } from 'lucide-react';
+import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User, BarChart2, TrendingUp, MapPin, Clock, MousePointer, FileText, ArrowUpRight } from 'lucide-react';
 import { Modal } from './Modal';
 import { ResultItem, YouTubeChannelInfo } from '../types';
 
@@ -756,6 +756,359 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     );
   };
 
+  // Web View Modal Content - Shows SimilarWeb traffic data (Dec 2025)
+  // Design inspired by SimilarWeb's official data display
+  const renderWebViewContent = () => {
+    const swData = affiliateData?.similarWeb;
+    
+    // Helper to format time from seconds to readable format
+    const formatTime = (seconds: number) => {
+      if (!seconds || seconds === 0) return 'N/A';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.round(seconds % 60);
+      if (mins === 0) return `${secs}s`;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Helper to format large numbers
+    const formatTrafficNumber = (num: number) => {
+      if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+      if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+      return num.toString();
+    };
+
+    // Helper to format month from date string
+    const formatMonth = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short' });
+    };
+
+    // Country code to name mapping (common ones)
+    const countryNames: Record<string, string> = {
+      'US': 'United States', 'GB': 'United Kingdom', 'IN': 'India', 'CA': 'Canada',
+      'AU': 'Australia', 'DE': 'Germany', 'FR': 'France', 'BR': 'Brazil',
+      'JP': 'Japan', 'MX': 'Mexico', 'ES': 'Spain', 'IT': 'Italy',
+      'NL': 'Netherlands', 'PL': 'Poland', 'RU': 'Russia', 'KR': 'South Korea',
+      'ID': 'Indonesia', 'TR': 'Turkey', 'PH': 'Philippines', 'VN': 'Vietnam',
+      'TH': 'Thailand', 'MY': 'Malaysia', 'SG': 'Singapore', 'PK': 'Pakistan',
+      'NG': 'Nigeria', 'ZA': 'South Africa', 'EG': 'Egypt', 'AR': 'Argentina',
+      'CL': 'Chile', 'CO': 'Colombia', 'PE': 'Peru', 'UA': 'Ukraine',
+      'SE': 'Sweden', 'NO': 'Norway', 'DK': 'Denmark', 'FI': 'Finland',
+      'BE': 'Belgium', 'AT': 'Austria', 'CH': 'Switzerland', 'NZ': 'New Zealand',
+      'IE': 'Ireland', 'PT': 'Portugal', 'CZ': 'Czech Republic', 'RO': 'Romania',
+      'HU': 'Hungary', 'GR': 'Greece', 'IL': 'Israel', 'AE': 'UAE', 'SA': 'Saudi Arabia',
+      'BD': 'Bangladesh', 'HK': 'Hong Kong', 'TW': 'Taiwan', 'CN': 'China',
+    };
+
+    // Process monthly visits history for bar chart
+    const getMonthlyVisitsData = () => {
+      if (!swData?.monthlyVisitsHistory) return null;
+      const entries = Object.entries(swData.monthlyVisitsHistory)
+        .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+        .slice(-3); // Last 3 months
+      if (entries.length === 0) return null;
+      const maxValue = Math.max(...entries.map(([_, v]) => v));
+      return { entries, maxValue };
+    };
+
+    const monthlyData = swData ? getMonthlyVisitsData() : null;
+    
+    return (
+      <div className="space-y-5">
+        {/* Header - Domain with traffic badge and screenshot */}
+        <div className="flex items-start justify-between pb-4 border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            {/* Screenshot or Globe icon */}
+            {swData?.screenshot ? (
+              <img 
+                src={swData.screenshot} 
+                alt={domain}
+                className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
+                <Globe size={24} className="text-slate-500" />
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900">{domain}</h3>
+                <a 
+                  href={`https://${domain}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-slate-400 hover:text-[#1A1D21] transition-colors"
+                >
+                  <ExternalLink size={14} />
+                </a>
+              </div>
+              {swData && (
+                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#D4E815]/20 border border-[#D4E815]/40 text-[#1A1D21] text-xs font-semibold rounded-full">
+                  <ArrowUpRight size={12} />
+                  {swData.monthlyVisitsFormatted} traffic/mo
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* About this website (if available) */}
+        {swData?.siteDescription && (
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+            <h5 className="text-xs font-bold text-slate-500 mb-2">About this website</h5>
+            <p className="text-sm text-slate-700 leading-relaxed">{swData.siteDescription}</p>
+          </div>
+        )}
+
+        {/* Traffic Overview */}
+        {swData ? (
+          <>
+            {/* Section Title */}
+            <h4 className="text-sm font-bold text-slate-800">Traffic & Engagement Metrics</h4>
+
+            {/* Two-column layout for Ranking and Engagement */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Ranking Card */}
+              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <h5 className="text-xs font-bold text-slate-600 mb-3">Ranking</h5>
+                <div className="space-y-3">
+                  {/* Global Rank */}
+                  <div className="flex items-center gap-2">
+                    <Globe size={14} className="text-slate-400 flex-shrink-0" />
+                    <span className="text-xs text-slate-500">Global</span>
+                  </div>
+                  <p className="text-lg font-bold text-[#1A1D21] -mt-1 ml-6">
+                    {swData.globalRank ? `#${Number(swData.globalRank).toLocaleString()}` : 'N/A'}
+                  </p>
+                  
+                  {/* Country Rank */}
+                  {swData.countryCode && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-700 uppercase">{swData.countryCode}</span>
+                        <span className="text-xs text-slate-500 truncate">{countryNames[swData.countryCode] || swData.countryCode}</span>
+                      </div>
+                      <p className="text-lg font-bold text-[#1A1D21] -mt-1 ml-6">
+                        {swData.countryRank ? `#${Number(swData.countryRank).toLocaleString()}` : 'N/A'}
+                      </p>
+                    </>
+                  )}
+                  
+                  {/* Category with Category Rank */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <FileText size={14} className="text-slate-400 flex-shrink-0" />
+                    <span className="text-xs text-slate-500">Category</span>
+                  </div>
+                  <div className="-mt-1 ml-6 overflow-hidden">
+                    <p className="text-xs font-semibold text-slate-700 break-words leading-relaxed">
+                      {swData.category?.replace(/_/g, ' ') || 'N/A'}
+                    </p>
+                    {swData.categoryRank && (
+                      <p className="text-xs text-[#1A1D21] font-medium mt-0.5">
+                        #{swData.categoryRank} in category
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* User Engagement Metrics Card */}
+              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <h5 className="text-xs font-bold text-slate-600 mb-3">User Engagement Metrics</h5>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Pages/Visit */}
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <FileText size={16} className="mx-auto text-slate-400 mb-1" />
+                    <p className="text-base font-bold text-slate-900">
+                      {Number(swData.pagesPerVisit).toFixed(1)}
+                    </p>
+                    <p className="text-[9px] text-slate-500 leading-tight">Pages/Visit</p>
+                  </div>
+                  
+                  {/* Time on Site */}
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <Clock size={16} className="mx-auto text-slate-400 mb-1" />
+                    <p className="text-base font-bold text-slate-900">
+                      {formatTime(Number(swData.timeOnSite))}
+                    </p>
+                    <p className="text-[9px] text-slate-500 leading-tight">Time on Site</p>
+                  </div>
+                  
+                  {/* Bounce Rate */}
+                  <div className="text-center p-2 bg-slate-50 rounded-lg">
+                    <MousePointer size={16} className="mx-auto text-slate-400 mb-1" />
+                    <p className="text-base font-bold text-slate-900">
+                      {(Number(swData.bounceRate) * 100).toFixed(1)}%
+                    </p>
+                    <p className="text-[9px] text-slate-500 leading-tight">Bounce Rate</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly Visitors Bar Chart (if history available) */}
+            {monthlyData && (
+              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <h5 className="text-xs font-bold text-slate-600 mb-4">Monthly Visitors</h5>
+                <div className="flex items-end justify-around gap-4 h-32">
+                  {monthlyData.entries.map(([date, visits]) => {
+                    const heightPercent = (visits / monthlyData.maxValue) * 100;
+                    return (
+                      <div key={date} className="flex flex-col items-center flex-1">
+                        <div className="w-full flex flex-col items-center">
+                          <span className="text-xs font-bold text-slate-700 mb-1">
+                            {formatTrafficNumber(visits)}
+                          </span>
+                          <div 
+                            className="w-full max-w-[60px] bg-[#D4E815] rounded-t-md transition-all"
+                            style={{ height: `${Math.max(heightPercent, 10)}px` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-500 mt-2 font-medium">
+                          {formatMonth(date)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Traffic Sources Section */}
+            {swData.trafficSources && (
+              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <h5 className="text-xs font-bold text-slate-600 mb-4">Traffic Sources</h5>
+                
+                {/* Traffic Sources with color dots and percentages */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                  {[
+                    { label: 'Search', value: Number(swData.trafficSources.search) || 0, color: 'bg-[#D4E815]' },
+                    { label: 'Direct', value: Number(swData.trafficSources.direct) || 0, color: 'bg-[#1A1D21]' },
+                    { label: 'Referrals', value: Number(swData.trafficSources.referrals) || 0, color: 'bg-slate-400' },
+                    { label: 'Social', value: Number(swData.trafficSources.social) || 0, color: 'bg-slate-600' },
+                    { label: 'Mail', value: Number(swData.trafficSources.mail) || 0, color: 'bg-slate-300' },
+                    { label: 'Paid', value: Number(swData.trafficSources.paid) || 0, color: 'bg-slate-500' },
+                  ].sort((a, b) => b.value - a.value).map(source => (
+                    <div key={source.label} className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${source.color}`}></span>
+                        <span className="text-xs text-slate-600">{source.label}</span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-800">
+                        {(source.value * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Visual bar representation */}
+                <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-slate-100">
+                  {[
+                    { value: Number(swData.trafficSources.search) || 0, color: 'bg-[#D4E815]' },
+                    { value: Number(swData.trafficSources.direct) || 0, color: 'bg-[#1A1D21]' },
+                    { value: Number(swData.trafficSources.referrals) || 0, color: 'bg-slate-400' },
+                    { value: Number(swData.trafficSources.social) || 0, color: 'bg-slate-600' },
+                    { value: Number(swData.trafficSources.mail) || 0, color: 'bg-slate-300' },
+                    { value: Number(swData.trafficSources.paid) || 0, color: 'bg-slate-500' },
+                  ].filter(s => s.value > 0).map((source, idx) => (
+                    <div 
+                      key={idx}
+                      className={`h-full ${source.color}`}
+                      style={{ width: `${source.value * 100}%` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Geographic Traffic Section */}
+            {swData.topCountries && swData.topCountries.length > 0 && (
+              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <h5 className="text-xs font-bold text-slate-600 mb-3">Geographic Traffic</h5>
+                <p className="text-[10px] text-slate-400 mb-3">Top {swData.topCountries.length} countries:</p>
+                
+                <div className="space-y-2">
+                  {swData.topCountries.slice(0, 5).map((country, idx) => {
+                    const sharePercent = Number(country.share) * 100;
+                    return (
+                      <div key={country.countryCode || idx} className="flex items-center gap-3">
+                        <span className="w-5 h-5 rounded-full bg-[#D4E815]/20 text-[#1A1D21] text-[10px] font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-600 w-6">{country.countryCode}</span>
+                        <span className="text-xs text-slate-500 flex-1">{countryNames[country.countryCode] || country.countryCode}</span>
+                        <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-[#D4E815] rounded-full"
+                            style={{ width: `${Math.min(sharePercent, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-slate-700 w-12 text-right">
+                          {sharePercent.toFixed(1)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Top Keywords Section */}
+            {swData.topKeywords && swData.topKeywords.length > 0 && (
+              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <h5 className="text-xs font-bold text-slate-600 mb-3">Top Keywords by Traffic</h5>
+                <div className="space-y-2">
+                  {swData.topKeywords.slice(0, 5).map((keyword, idx) => (
+                    <div key={keyword.name} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-400 w-4">{idx + 1}.</span>
+                        <span className="text-xs text-slate-700">{keyword.name}</span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-800">
+                        {formatTrafficNumber(keyword.estimatedValue)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* No SimilarWeb data available */
+          <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
+            <BarChart2 size={32} className="mx-auto mb-3 text-slate-300" />
+            <p className="text-sm font-medium text-slate-500">No traffic data available</p>
+            <p className="text-xs mt-1 text-slate-400">Traffic data will be fetched during search</p>
+          </div>
+        )}
+
+        {/* Relevant Content Section (our discovered article) */}
+        {(snippet || title) && (
+          <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+            <h5 className="text-xs font-bold text-slate-600 mb-3">Relevant Content</h5>
+            <a 
+              href={link} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-[#D4E815]/50 hover:bg-[#D4E815]/5 transition-all group"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-semibold text-[#1A1D21] group-hover:text-[#1A1D21] line-clamp-2">{title}</p>
+                <ExternalLink size={12} className="text-slate-400 group-hover:text-[#1A1D21] flex-shrink-0 mt-0.5" />
+              </div>
+              {snippet && (
+                <p className="text-[10px] text-slate-500 mt-2 line-clamp-3">{snippet}</p>
+              )}
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Main View Modal Content - Dispatches to source-specific renderer
   const renderViewModalContent = () => {
     const sourceLower = source.toLowerCase();
@@ -768,13 +1121,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       case 'tiktok':
         return renderTikTokViewContent();
       default:
-        // Web source - will be implemented later
-        return (
-          <div className="text-center py-6 text-slate-500">
-            <Globe size={32} className="mx-auto mb-3 text-slate-300" />
-            <p className="text-xs">Web source view coming soon</p>
-          </div>
-        );
+        // Web source - shows SimilarWeb traffic data
+        return renderWebViewContent();
     }
   };
 
@@ -848,6 +1196,24 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${platformColors.bg} ${platformColors.text} border ${platformColors.border}`}>
                     <Users size={10} />
                     {channel.subscribers} followers
+                  </span>
+                )}
+              </div>
+            )}
+            
+            {/* Row 2: SimilarWeb Stats for Web sources (Dec 2025) */}
+            {!isSocialMedia && affiliateData?.similarWeb && (
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {/* Monthly Traffic */}
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                  <BarChart2 size={10} />
+                  {affiliateData.similarWeb.monthlyVisitsFormatted} visits/mo
+                </span>
+                {/* Global Rank */}
+                {affiliateData.similarWeb.globalRank && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-50 text-slate-600 border border-slate-200">
+                    <TrendingUp size={10} />
+                    #{affiliateData.similarWeb.globalRank.toLocaleString()}
                   </span>
                 )}
               </div>
@@ -1351,11 +1717,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           - Instagram: Profile info, followers, bio, relevant posts
           - TikTok: Profile with avatar, followers, bio, relevant posts
           ============================================================================ */}
-      <Modal 
-        isOpen={isViewModalOpen} 
+      <Modal
+        isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         title=""
-        width="max-w-lg"
+        width="max-w-2xl"
       >
         {/* Modal Content - Source-specific */}
         {renderViewModalContent()}
@@ -1367,7 +1733,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             href={getVisitButtonConfig().link}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1D21] hover:bg-[#2a2f35] text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
           >
             {getVisitButtonConfig().icon}
             {getVisitButtonConfig().text}
@@ -1383,7 +1749,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-sm ${
                 isSaved
                   ? 'bg-emerald-500 text-white border border-emerald-600'
-                  : 'bg-white text-teal-600 border border-teal-200 hover:bg-teal-50'
+                  : 'bg-[#D4E815] text-[#1A1D21] border border-[#D4E815] hover:bg-[#c5d913]'
               }`}
             >
               <Save size={12} />

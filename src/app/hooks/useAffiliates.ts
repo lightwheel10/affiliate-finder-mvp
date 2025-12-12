@@ -23,6 +23,14 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     },
     topCountries: parseJsonField(dbAffiliate.similarweb_top_countries) || [],
     category: dbAffiliate.similarweb_category,
+    // NEW FIELDS (Dec 2025)
+    siteTitle: dbAffiliate.similarweb_site_title || null,
+    siteDescription: dbAffiliate.similarweb_site_description || null,
+    screenshot: dbAffiliate.similarweb_screenshot || null,
+    categoryRank: dbAffiliate.similarweb_category_rank || null,
+    monthlyVisitsHistory: parseJsonField(dbAffiliate.similarweb_monthly_visits_history) || null,
+    topKeywords: parseJsonField(dbAffiliate.similarweb_top_keywords) || null,
+    snapshotDate: dbAffiliate.similarweb_snapshot_date || null,
   } : undefined;
 
   // Build channel info (for YouTube/TikTok)
@@ -219,6 +227,14 @@ function buildAffiliatePayloadWithoutUserId(a: ResultItem) {
     similarwebCategory: a.similarWeb?.category,
     similarwebTrafficSources: a.similarWeb?.trafficSources,
     similarwebTopCountries: a.similarWeb?.topCountries,
+    // NEW SimilarWeb fields (Dec 2025)
+    similarwebSiteTitle: a.similarWeb?.siteTitle,
+    similarwebSiteDescription: a.similarWeb?.siteDescription,
+    similarwebScreenshot: a.similarWeb?.screenshot,
+    similarwebCategoryRank: a.similarWeb?.categoryRank,
+    similarwebMonthlyVisitsHistory: a.similarWeb?.monthlyVisitsHistory,
+    similarwebTopKeywords: a.similarWeb?.topKeywords,
+    similarwebSnapshotDate: a.similarWeb?.snapshotDate,
   };
 }
 

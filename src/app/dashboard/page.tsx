@@ -311,17 +311,17 @@ function DashboardContent() {
           
           <div className="flex items-center gap-2 text-[10px]">
             {/* Stats Display - Shows real counts */}
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 border border-emerald-100 rounded-md">
-              <Users size={10} className="text-emerald-600" />
-              <span className="font-semibold text-emerald-900">{discoveredAffiliates.length} Discovered</span>
-            </div>
             <div className="flex items-center gap-1.5 px-2 py-1 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-md">
-              <Mail size={10} className="text-[#1A1D21]" />
-              <span className="font-semibold text-[#1A1D21]">150/150 Email Credits</span>
+              <Users size={10} className="text-[#1A1D21]" />
+              <span className="font-semibold text-[#1A1D21]">{discoveredAffiliates.length} Discovered</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 border border-purple-100 rounded-md">
-              <Sparkles size={10} className="text-purple-600" />
-              <span className="font-semibold text-purple-900">100 AI Credits</span>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md">
+              <Mail size={10} className="text-slate-600" />
+              <span className="font-semibold text-slate-800">150/150 Email Credits</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md">
+              <Sparkles size={10} className="text-slate-600" />
+              <span className="font-semibold text-slate-800">100 AI Credits</span>
             </div>
             
             {/* Action Button */}

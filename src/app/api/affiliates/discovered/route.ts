@@ -95,6 +95,14 @@ export async function POST(request: NextRequest) {
       similarwebCategory,
       similarwebTrafficSources,
       similarwebTopCountries,
+      // NEW SimilarWeb fields (Dec 2025)
+      similarwebSiteTitle,
+      similarwebSiteDescription,
+      similarwebScreenshot,
+      similarwebCategoryRank,
+      similarwebMonthlyVisitsHistory,
+      similarwebTopKeywords,
+      similarwebSnapshotDate,
     } = body;
 
     if (!userId || !searchKeyword || !title || !link || !domain || !snippet || !source) {
@@ -130,7 +138,9 @@ export async function POST(request: NextRequest) {
         tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares,
         similarweb_monthly_visits, similarweb_global_rank, similarweb_country_rank,
         similarweb_country_code, similarweb_bounce_rate, similarweb_pages_per_visit,
-        similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries
+        similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries,
+        similarweb_site_title, similarweb_site_description, similarweb_screenshot,
+        similarweb_category_rank, similarweb_monthly_visits_history, similarweb_top_keywords, similarweb_snapshot_date
       )
       VALUES (
         ${userId}, ${searchKeyword}, ${title}, ${link}, ${domain}, ${snippet}, ${source},
@@ -155,7 +165,12 @@ export async function POST(request: NextRequest) {
         ${similarwebCountryCode ?? null}, ${similarwebBounceRate ?? null}, ${similarwebPagesPerVisit ?? null},
         ${similarwebTimeOnSite ?? null}, ${similarwebCategory ?? null}, 
         ${similarwebTrafficSources ? JSON.stringify(similarwebTrafficSources) : null}, 
-        ${similarwebTopCountries ? JSON.stringify(similarwebTopCountries) : null}
+        ${similarwebTopCountries ? JSON.stringify(similarwebTopCountries) : null},
+        ${similarwebSiteTitle ?? null}, ${similarwebSiteDescription ?? null}, ${similarwebScreenshot ?? null},
+        ${similarwebCategoryRank ?? null}, 
+        ${similarwebMonthlyVisitsHistory ? JSON.stringify(similarwebMonthlyVisitsHistory) : null},
+        ${similarwebTopKeywords ? JSON.stringify(similarwebTopKeywords) : null},
+        ${similarwebSnapshotDate ?? null}
       )
       RETURNING id
     `;

@@ -97,6 +97,14 @@ export interface DbSavedAffiliate {
   similarweb_category: string | null;
   similarweb_traffic_sources: Record<string, number> | null;
   similarweb_top_countries: Array<{ countryCode: string; share: number }> | null;
+  // NEW SimilarWeb fields (Dec 2025)
+  similarweb_site_title: string | null;
+  similarweb_site_description: string | null;
+  similarweb_screenshot: string | null;
+  similarweb_category_rank: number | null;
+  similarweb_monthly_visits_history: Record<string, number> | null;
+  similarweb_top_keywords: Array<{ name: string; estimatedValue: number; cpc: number | null }> | null;
+  similarweb_snapshot_date: string | null;
   // Email discovery fields
   email_status: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
   email_searched_at: string | null;
@@ -166,6 +174,14 @@ export interface DbDiscoveredAffiliate {
   similarweb_category: string | null;
   similarweb_traffic_sources: Record<string, number> | null;
   similarweb_top_countries: Array<{ countryCode: string; share: number }> | null;
+  // NEW SimilarWeb fields (Dec 2025)
+  similarweb_site_title: string | null;
+  similarweb_site_description: string | null;
+  similarweb_screenshot: string | null;
+  similarweb_category_rank: number | null;
+  similarweb_monthly_visits_history: Record<string, number> | null;
+  similarweb_top_keywords: Array<{ name: string; estimatedValue: number; cpc: number | null }> | null;
+  similarweb_snapshot_date: string | null;
   // Email discovery fields
   email_status: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
   email_searched_at: string | null;

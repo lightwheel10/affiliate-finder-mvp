@@ -476,6 +476,18 @@ export interface SimilarWebData {
     share: number;
   }>;
   category: string | null;
+  // NEW FIELDS - Dec 2025
+  siteTitle: string | null;
+  siteDescription: string | null;
+  screenshot: string | null;
+  categoryRank: number | null;
+  monthlyVisitsHistory: { [date: string]: number } | null;
+  topKeywords: Array<{
+    name: string;
+    estimatedValue: number;
+    cpc: number | null;
+  }> | null;
+  snapshotDate: string | null;
 }
 
 interface ApifySimilarWebResult {
@@ -504,6 +516,17 @@ interface ApifySimilarWebResult {
   }>;
   category?: string;
   estimatedMonthlyVisits?: Record<string, number>;
+  // NEW FIELDS from API
+  title?: string;
+  description?: string;
+  screenshot?: string;
+  categoryRank?: string;
+  snapshotDate?: string;
+  topKeywords?: Array<{
+    name: string;
+    esitmatedValue: number;  // Note: typo in API response
+    cpc: number | null;
+  }>;
 }
 
 /**
@@ -553,6 +576,15 @@ export async function enrichDomainWithSimilarWeb(
 
     const monthlyVisits = parseInt(item.visits || '0', 10);
 
+    // Process top keywords (note: API has typo "esitmatedValue" instead of "estimatedValue")
+    const topKeywords = item.topKeywords && item.topKeywords.length > 0
+      ? item.topKeywords.slice(0, 10).map(kw => ({
+          name: kw.name,
+          estimatedValue: kw.esitmatedValue || 0,
+          cpc: kw.cpc,
+        }))
+      : null;
+
     return {
       domain: item.domain,
       monthlyVisits,
@@ -562,7 +594,7 @@ export async function enrichDomainWithSimilarWeb(
       countryCode: item.countryRank?.CountryCode || null,
       bounceRate: parseFloat(item.bounceRate || '0'),
       pagesPerVisit: parseFloat(item.pagesPerVisit || '0'),
-      timeOnSite: parseFloat(item.timeOnSite || '0'),
+      timeOnSite: Math.round(parseFloat(item.timeOnSite || '0')),  // Round to integer for DB compatibility
       trafficSources: {
         direct: item.trafficSources?.Direct || 0,
         search: item.trafficSources?.Search || 0,
@@ -576,6 +608,14 @@ export async function enrichDomainWithSimilarWeb(
         share: c.Value,
       })),
       category: item.category || null,
+      // NEW FIELDS - Dec 2025
+      siteTitle: item.title || null,
+      siteDescription: item.description || null,
+      screenshot: item.screenshot || null,
+      categoryRank: item.categoryRank ? parseInt(item.categoryRank, 10) : null,
+      monthlyVisitsHistory: item.estimatedMonthlyVisits || null,
+      topKeywords,
+      snapshotDate: item.snapshotDate || null,
     };
 
   } catch (error: any) {

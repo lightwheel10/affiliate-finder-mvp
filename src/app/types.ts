@@ -11,6 +11,7 @@ export interface YouTubeChannelInfo {
 
 /**
  * SimilarWeb traffic data for web domains
+ * Updated Dec 2025 to include all available API fields
  */
 export interface SimilarWebData {
   domain: string;
@@ -35,6 +36,20 @@ export interface SimilarWebData {
     share: number;
   }>;
   category: string | null;
+  // NEW FIELDS - Dec 2025
+  siteTitle: string | null;           // Website title
+  siteDescription: string | null;     // Website description ("About this website")
+  screenshot: string | null;          // Screenshot URL from SimilarWeb
+  categoryRank: number | null;        // Rank within category (e.g., #10)
+  monthlyVisitsHistory: {             // 3-month history for bar chart
+    [date: string]: number;           // e.g., "2025-08-01": 278138
+  } | null;
+  topKeywords: Array<{                // Top keywords by traffic
+    name: string;
+    estimatedValue: number;
+    cpc: number | null;
+  }> | null;
+  snapshotDate: string | null;        // When data was collected
 }
 
 export interface ResultItem {

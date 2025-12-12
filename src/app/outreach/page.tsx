@@ -183,17 +183,17 @@ function OutreachContent() {
           
           <div className="flex items-center gap-3 text-xs">
             {/* Stats Display */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-lg">
-              <Search size={12} className="text-emerald-600" />
-              <span className="font-semibold text-emerald-900">14/15 Topic Searches</span>
-            </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg">
-              <Mail size={12} className="text-[#1A1D21]" />
-              <span className="font-semibold text-[#1A1D21]">150/150 Email Credits</span>
+              <Search size={12} className="text-[#1A1D21]" />
+              <span className="font-semibold text-[#1A1D21]">14/15 Topic Searches</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg">
-              <Sparkles size={12} className="text-purple-600" />
-              <span className="font-semibold text-purple-900">100 AI Credits</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+              <Mail size={12} className="text-slate-600" />
+              <span className="font-semibold text-slate-800">150/150 Email Credits</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+              <Sparkles size={12} className="text-slate-600" />
+              <span className="font-semibold text-slate-800">100 AI Credits</span>
             </div>
             
             {/* Action Button */}

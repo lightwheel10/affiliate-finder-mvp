@@ -1,6 +1,7 @@
-import { searchMultiPlatform, Platform } from '../../services/search';
+import { searchMultiPlatform, Platform, SearchResult } from '../../services/search';
 import { analyzeContent } from '../../services/analysis';
 import { trackSearch, completeSearch, API_COSTS } from '../../services/tracking';
+import { enrichDomainsWithSimilarWeb, SimilarWebData } from '../../services/apify';
 
 /**
  * Scout API - Searches for affiliates across multiple platforms
@@ -63,6 +64,34 @@ export async function POST(req: Request) {
         if (activeSources.includes('Instagram')) totalCost += API_COSTS.apify_instagram * Math.min(searchResults.filter(r => r.source === 'Instagram').length, 15);
         if (activeSources.includes('TikTok')) totalCost += API_COSTS.apify_tiktok * Math.min(searchResults.filter(r => r.source === 'TikTok').length, 15);
         
+        // ========================================================================
+        // 2. SimilarWeb Enrichment Step (Dec 2025)
+        // Auto-enrich Web results with traffic data from SimilarWeb
+        // This adds ~$0.05 per unique domain to the search cost
+        // ========================================================================
+        let similarWebDataMap: Map<string, SimilarWebData> = new Map();
+        
+        if (activeSources.includes('Web')) {
+          const webResults = searchResults.filter(r => r.source === 'Web');
+          const uniqueDomains = [...new Set(webResults.map(r => r.domain))];
+          
+          if (uniqueDomains.length > 0) {
+            console.log(`📊 Enriching ${uniqueDomains.length} unique Web domains with SimilarWeb...`);
+            
+            try {
+              similarWebDataMap = await enrichDomainsWithSimilarWeb(uniqueDomains, userId);
+              
+              // Add SimilarWeb cost to total
+              totalCost += uniqueDomains.length * API_COSTS.apify_similarweb;
+              
+              console.log(`✅ SimilarWeb enrichment complete: ${similarWebDataMap.size}/${uniqueDomains.length} domains enriched`);
+            } catch (enrichError: any) {
+              console.error('⚠️ SimilarWeb enrichment failed (continuing without):', enrichError.message);
+              // Continue without enrichment - don't fail the entire search
+            }
+          }
+        }
+        
         if (searchResults.length === 0) {
           // No results found - close stream gracefully
           await writer.write(encoder.encode('data: [DONE]\n\n'));
@@ -86,10 +115,30 @@ export async function POST(req: Request) {
             const batchPromises = batch.map(async (item) => {
               try {
                 const analysis = await analyzeContent(item, keyword);
-                return { ...item, ...analysis, isAffiliate: analysis.isAffiliate ?? true };
+                let result: any = { ...item, ...analysis, isAffiliate: analysis.isAffiliate ?? true };
+                
+                // Merge SimilarWeb data for Web results (Dec 2025)
+                if (item.source === 'Web' && similarWebDataMap.has(item.domain)) {
+                  result = {
+                    ...result,
+                    similarWeb: similarWebDataMap.get(item.domain),
+                  };
+                }
+                
+                return result;
               } catch (error) {
                 // On analysis error, return item without analysis
-                return { ...item, isAffiliate: true, summary: 'Analysis pending' };
+                let result: any = { ...item, isAffiliate: true, summary: 'Analysis pending' };
+                
+                // Still add SimilarWeb data if available
+                if (item.source === 'Web' && similarWebDataMap.has(item.domain)) {
+                  result = {
+                    ...result,
+                    similarWeb: similarWebDataMap.get(item.domain),
+                  };
+                }
+                
+                return result;
               }
             });
             
@@ -114,11 +163,23 @@ export async function POST(req: Request) {
             if (isStreamClosed) break;
             
             // Add default affiliate flag (assume all results are potential affiliates)
-            const result = {
+            let result: any = {
               ...item,
               isAffiliate: true,
               summary: `Found via ${item.source} search`
             };
+            
+            // ====================================================================
+            // Merge SimilarWeb data for Web results (Dec 2025)
+            // Uses nested similarWeb object to match ResultItem/SimilarWebData type
+            // ====================================================================
+            if (item.source === 'Web' && similarWebDataMap.has(item.domain)) {
+              const swData = similarWebDataMap.get(item.domain)!;
+              result = {
+                ...result,
+                similarWeb: swData,  // Pass the full SimilarWebData object
+              };
+            }
             
             try {
               await writer.write(encoder.encode(`data: ${JSON.stringify(result)}\n\n`));
