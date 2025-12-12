@@ -146,10 +146,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // Show onboarding for users who haven't completed it
   if (!isOnboarded && userId) {
+    // Get user email from Stack Auth for Stripe integration
+    const userEmail = stackUser?.primaryEmail || '';
+    
     return (
       <OnboardingScreen 
         userId={userId}
         userName={userName}
+        userEmail={userEmail}
         onComplete={() => {
           setShowLoadingScreen(true);
           // Show loading screen for 2 seconds, then show dashboard

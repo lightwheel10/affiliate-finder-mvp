@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AuthGuard } from '../components/AuthGuard';
 import { cn } from '@/lib/utils';
@@ -23,7 +23,10 @@ import {
   Check,
   Loader2,
   Plus,
-  XCircle
+  XCircle,
+  FileText,
+  ExternalLink,
+  Download
 } from 'lucide-react';
 
 type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
@@ -120,6 +123,7 @@ function SettingsContent() {
                       onUpgrade={() => setIsPricingModalOpen(true)}
                       onAddCard={() => setIsAddCardModalOpen(true)}
                       onCancelPlan={() => setIsCancelModalOpen(true)}
+                      userId={userId}
                     />
                   )}
                   {activeTab === 'notifications' && <NotificationSettings />}
@@ -132,16 +136,27 @@ function SettingsContent() {
         </div>
       </main>
       
-      <PricingModal 
-        isOpen={isPricingModalOpen} 
-        onClose={() => setIsPricingModalOpen(false)} 
+      {/* Pricing Modal - Pass subscription context for plan changes */}
+      {/* Updated December 2025 to support in-app plan upgrades/downgrades */}
+      <PricingModal
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+        userId={userId}
+        currentPlan={subscription?.plan || null}
+        currentBillingInterval={subscription?.billing_interval || null}
+        isTrialing={isTrialing}
+        onSuccess={() => {
+          // Refetch subscription data after successful plan change
+          refetchSubscription();
+        }}
       />
 
-      {userId && (
+      {userId && user?.primaryEmail && (
         <AddCardModal
           isOpen={isAddCardModalOpen}
           onClose={() => setIsAddCardModalOpen(false)}
           userId={userId}
+          userEmail={user.primaryEmail}
           onSuccess={() => {
             refetchSubscription();
             setIsAddCardModalOpen(false);
@@ -305,9 +320,97 @@ interface PlanSettingsProps {
   onUpgrade: () => void;
   onAddCard: () => void;
   onCancelPlan: () => void;
+  userId: number | null; // Added December 2025 for invoice fetching
 }
 
-function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, onUpgrade, onAddCard, onCancelPlan }: PlanSettingsProps) {
+// =============================================================================
+// INVOICE TYPES
+// Added December 2025 to display invoice history from Stripe
+// =============================================================================
+interface Invoice {
+  id: string;
+  number: string | null;
+  amount_due: number;
+  amount_paid: number;
+  currency: string;
+  status: string | null;
+  created: number;
+  hosted_invoice_url: string | null;
+  invoice_pdf: string | null;
+  description: string | null;
+}
+
+function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, onUpgrade, onAddCard, onCancelPlan, userId }: PlanSettingsProps) {
+  // =========================================================================
+  // INVOICE STATE & FETCHING
+  // Added December 2025 to display invoice history from Stripe
+  // =========================================================================
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoicesError, setInvoicesError] = useState<string | null>(null);
+
+  const fetchInvoices = useCallback(async () => {
+    if (!userId) return;
+    
+    setInvoicesLoading(true);
+    setInvoicesError(null);
+    
+    try {
+      const response = await fetch(`/api/stripe/invoices?userId=${userId}`);
+      const data = await response.json();
+      
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to fetch invoices');
+      }
+      
+      setInvoices(data.invoices || []);
+    } catch (err) {
+      console.error('[PlanSettings] Error fetching invoices:', err);
+      setInvoicesError(err instanceof Error ? err.message : 'Failed to load invoices');
+    } finally {
+      setInvoicesLoading(false);
+    }
+  }, [userId]);
+
+  // Fetch invoices when component mounts or userId changes
+  useEffect(() => {
+    fetchInvoices();
+  }, [fetchInvoices]);
+
+  // Format currency amount (cents to display)
+  const formatAmount = (amountCents: number, currency: string) => {
+    const amount = amountCents / 100;
+    const currencySymbol = currency === 'eur' ? '€' : currency === 'usd' ? '$' : currency.toUpperCase() + ' ';
+    return `${currencySymbol}${amount.toFixed(2)}`;
+  };
+
+  // Format date from Unix timestamp
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  // Get status badge styling for invoices
+  const getInvoiceStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'paid':
+        return { label: 'Paid', bg: 'bg-green-100', text: 'text-green-700' };
+      case 'open':
+        return { label: 'Open', bg: 'bg-blue-100', text: 'text-blue-700' };
+      case 'draft':
+        return { label: 'Draft', bg: 'bg-slate-100', text: 'text-slate-600' };
+      case 'void':
+        return { label: 'Void', bg: 'bg-red-100', text: 'text-red-700' };
+      case 'uncollectible':
+        return { label: 'Uncollectible', bg: 'bg-orange-100', text: 'text-orange-700' };
+      default:
+        return { label: status || 'Unknown', bg: 'bg-slate-100', text: 'text-slate-600' };
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -396,14 +499,20 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
             )}
           </div>
           
-          {/* Upgrade button - only show if not on enterprise */}
+          {/* Upgrade/Manage button - only show if not on enterprise */}
+          {/* Updated December 2025 - contextual button text */}
           {(!subscription || subscription.plan !== 'enterprise') && (
             <button 
               onClick={onUpgrade}
               className="px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-bold rounded-lg hover:shadow-lg hover:shadow-[#D4E815]/20 transition-all flex items-center gap-1.5"
             >
               <Zap size={14} />
-              {subscription ? 'Change Plan' : 'Choose Plan'}
+              {!subscription 
+                ? 'Choose Plan' 
+                : isTrialing 
+                  ? 'Upgrade Plan' 
+                  : 'Manage Plan'
+              }
             </button>
           )}
         </div>
@@ -470,12 +579,131 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
         )}
       </div>
 
-      {/* Invoices */}
+      {/* Invoices - Updated December 2025 to fetch from Stripe */}
       <div>
         <h3 className="text-sm font-bold text-slate-900 mb-4">Invoice History</h3>
-        <div className="p-8 border border-dashed border-slate-200 rounded-lg text-center">
-          <p className="text-sm text-slate-500">No invoices yet</p>
-        </div>
+        
+        {/* Loading State */}
+        {invoicesLoading && (
+          <div className="p-8 border border-slate-200 rounded-lg flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            <span className="ml-2 text-sm text-slate-500">Loading invoices...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {!invoicesLoading && invoicesError && (
+          <div className="p-4 border border-red-200 bg-red-50 rounded-lg flex items-center gap-3">
+            <XCircle size={16} className="text-red-500 shrink-0" />
+            <p className="text-sm text-red-700">{invoicesError}</p>
+            <button 
+              onClick={fetchInvoices}
+              className="ml-auto text-xs font-semibold text-red-600 hover:text-red-800"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!invoicesLoading && !invoicesError && invoices.length === 0 && (
+          <div className="p-8 border border-dashed border-slate-200 rounded-lg text-center">
+            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <FileText size={20} className="text-slate-400" />
+            </div>
+            <p className="text-sm text-slate-500">No invoices yet</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Invoices will appear here after your first billing cycle
+            </p>
+          </div>
+        )}
+
+        {/* Invoice List */}
+        {!invoicesLoading && !invoicesError && invoices.length > 0 && (
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            {/* Table Header */}
+            <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <div className="col-span-3">Invoice</div>
+              <div className="col-span-3">Date</div>
+              <div className="col-span-2">Amount</div>
+              <div className="col-span-2">Status</div>
+              <div className="col-span-2 text-right">Actions</div>
+            </div>
+            
+            {/* Invoice Rows */}
+            {invoices.map((invoice) => {
+              const statusBadge = getInvoiceStatusBadge(invoice.status);
+              return (
+                <div 
+                  key={invoice.id}
+                  className="px-4 py-3 border-b border-slate-100 last:border-b-0 grid grid-cols-12 gap-4 items-center hover:bg-slate-50/50 transition-colors"
+                >
+                  {/* Invoice Number & Description */}
+                  <div className="col-span-3">
+                    <p className="text-sm font-medium text-slate-900">
+                      {invoice.number || 'Draft'}
+                    </p>
+                    {invoice.description && (
+                      <p className="text-xs text-slate-500 truncate" title={invoice.description}>
+                        {invoice.description}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Date */}
+                  <div className="col-span-3">
+                    <p className="text-sm text-slate-600">
+                      {formatDate(invoice.created)}
+                    </p>
+                  </div>
+                  
+                  {/* Amount */}
+                  <div className="col-span-2">
+                    <p className="text-sm font-medium text-slate-900">
+                      {formatAmount(invoice.amount_due, invoice.currency)}
+                    </p>
+                  </div>
+                  
+                  {/* Status */}
+                  <div className="col-span-2">
+                    <span className={cn(
+                      "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide",
+                      statusBadge.bg, statusBadge.text
+                    )}>
+                      {statusBadge.label}
+                    </span>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="col-span-2 flex items-center justify-end gap-2">
+                    {invoice.hosted_invoice_url && (
+                      <a
+                        href={invoice.hosted_invoice_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                        title="View invoice"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    )}
+                    {invoice.invoice_pdf && (
+                      <a
+                        href={invoice.invoice_pdf}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                        title="Download PDF"
+                      >
+                        <Download size={14} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Cancel Plan Section - only show if user has an active subscription */}

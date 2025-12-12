@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Check, ChevronDown, Sparkles, Globe, Plus, X, MessageSquare, MousePointerClick, CreditCard, Zap, Star, ShieldCheck, TrendingUp, Lock, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Loader2, Check, ChevronDown, Sparkles, Globe, Plus, X, MessageSquare, MousePointerClick, Star, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StripeProvider } from './StripeProvider';
+import { Step7CardForm } from './Step7CardForm';
+import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
 
 // Pricing plans data - matching PricingModal exactly
 const PRICING_PLANS = [
@@ -106,6 +109,7 @@ const AFFILIATE_TYPES = [
 interface OnboardingScreenProps {
   userId: number;
   userName: string;
+  userEmail: string; // Required for Stripe customer creation
   initialStep?: number; // Resume from this step
   userData?: {
     name?: string;
@@ -120,7 +124,7 @@ interface OnboardingScreenProps {
   onComplete: () => void;
 }
 
-export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, onComplete }: OnboardingScreenProps) => {
+export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1, userData, onComplete }: OnboardingScreenProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(initialStep);
   
@@ -148,11 +152,10 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
   const [selectedPlan, setSelectedPlan] = useState<string>('business'); // Default to business (most popular)
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('annual');
 
-  // Step 7 Data - Card Details
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
+  // Step 7 Data - Stripe Card (PCI Compliant - no raw card data)
   const [cardholderName, setCardholderName] = useState('');
+  const [isCardReady, setIsCardReady] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
   
   // Discount Code
   const [discountCode, setDiscountCode] = useState('');
@@ -279,27 +282,85 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
       }
       await saveProgress(7, { plan: selectedPlan });
       setStep(7);
-    } else {
-      // Final Submission - Step 7: Card entered, create subscription + complete onboarding
-      setIsLoading(true);
-      try {
-        // Parse card details
-        const cleanedCardNumber = cardNumber.replace(/\s/g, '');
-        const [expMonth, expYear] = cardExpiry.split('/');
-        const fullYear = 2000 + parseInt(expYear || '0');
-        
-        // Detect card brand
-        let cardBrand = 'Card';
-        if (/^4/.test(cleanedCardNumber)) cardBrand = 'Visa';
-        else if (/^5[1-5]/.test(cleanedCardNumber)) cardBrand = 'Mastercard';
-        else if (/^3[47]/.test(cleanedCardNumber)) cardBrand = 'Amex';
-        else if (/^6(?:011|5)/.test(cleanedCardNumber)) cardBrand = 'Discover';
+    }
+    // Note: Step 7 (card submission) is handled by handleStripeSubmit below
+  };
 
-        // 1. Complete onboarding data
-        const onboardingRes = await fetch('/api/users/onboarding', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+  // ==========================================================================
+  // STRIPE PAYMENT FLOW (Step 7)
+  // 
+  // This is called when user submits the card form. The flow is:
+  // 1. Create SetupIntent on our server (gets clientSecret)
+  // 2. Confirm card with Stripe (handles 3D Secure automatically)
+  // 3. Create subscription with the PaymentMethod
+  // 4. Complete onboarding
+  //
+  // SECURITY: Card data NEVER touches our server - handled entirely by Stripe
+  // ==========================================================================
+  const handleStripeSubmit = async (confirmSetup: (clientSecret: string, name: string) => Promise<{ success: boolean; paymentMethodId?: string; error?: string }>) => {
+    if (!isCardReady || !cardholderName.trim()) {
+      setStripeError('Please complete all card details');
+      return;
+    }
+
+    setIsLoading(true);
+    setStripeError(null);
+
+    try {
+      // Step 1: Create SetupIntent to securely collect card
+      console.log('[Stripe] Creating SetupIntent...');
+      const setupRes = await fetch('/api/stripe/create-setup-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          email: userEmail,
+        }),
+      });
+
+      if (!setupRes.ok) {
+        const errorData = await setupRes.json();
+        throw new Error(errorData.error || 'Failed to initialize payment');
+      }
+
+      const { clientSecret, customerId } = await setupRes.json();
+      console.log('[Stripe] SetupIntent created, confirming card...');
+
+      // Step 2: Confirm card setup with Stripe (handles 3D Secure)
+      const setupResult = await confirmSetup(clientSecret, cardholderName);
+
+      if (!setupResult.success || !setupResult.paymentMethodId) {
+        throw new Error(setupResult.error || 'Card verification failed');
+      }
+
+      console.log('[Stripe] Card verified, creating subscription...');
+
+      // Step 3: Create subscription with the verified PaymentMethod
+      const subscriptionRes = await fetch('/api/stripe/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          plan: selectedPlan,
+          billingInterval,
+          paymentMethodId: setupResult.paymentMethodId,
+          customerId,
+        }),
+      });
+
+      if (!subscriptionRes.ok) {
+        const errorData = await subscriptionRes.json();
+        throw new Error(errorData.error || 'Failed to create subscription');
+      }
+
+      const subscriptionData = await subscriptionRes.json();
+      console.log('[Stripe] Subscription created:', subscriptionData.subscription?.id);
+
+      // Step 4: Complete onboarding data
+      const onboardingRes = await fetch('/api/users/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: userId,
           name,
           role,
@@ -309,45 +370,23 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
           competitors,
           topics,
           affiliateTypes,
-          }),
-        });
-        
-        if (!onboardingRes.ok) {
-          throw new Error('Onboarding failed');
-        }
+        }),
+      });
 
-        // 2. Create subscription with selected plan + card details (3-day trial starts NOW)
-        // TODO: Include discount code in subscription creation
-        // - Add discountCode and discountAmount to the request body
-        // - Backend should validate the discount code again before applying
-        // - Store discount_code_id in subscriptions table
-        // - Calculate discounted price and store original_price vs discounted_price
-        const subscriptionRes = await fetch('/api/subscriptions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            plan: selectedPlan,
-            billingInterval,
-            cardLast4: cleanedCardNumber.slice(-4),
-            cardBrand,
-            cardExpMonth: parseInt(expMonth || '0'),
-            discountCode: discountApplied ? discountCode : null, // TODO: Send to backend
-            discountAmount: discountApplied ? discountAmount : 0, // TODO: Send to backend
-            cardExpYear: fullYear,
-          }),
-        });
-
-        if (!subscriptionRes.ok) {
-          throw new Error('Subscription creation failed');
-        }
-        
-        onComplete();
-      } catch (error) {
-        console.error('Onboarding failed', error);
-      } finally {
-        setIsLoading(false);
+      if (!onboardingRes.ok) {
+        // Subscription was created but onboarding failed - log but don't block
+        console.error('[Stripe] Onboarding data save failed, but subscription is active');
       }
+
+      // Success!
+      onComplete();
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Payment failed. Please try again.';
+      console.error('[Stripe] Payment flow error:', error);
+      setStripeError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1041,13 +1080,13 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
                       <span className="text-xl font-bold text-slate-900">{plan.priceLabel}</span>
                     ) : (
                       <>
-                        <span className="text-xl font-bold text-slate-900">${price}</span>
+                        <span className="text-xl font-bold text-slate-900">{CURRENCY_SYMBOL}{price}</span>
                         <span className="text-slate-400 text-xs font-medium">/mo</span>
                       </>
                     )}
                   </div>
                   {!plan.priceLabel && billingInterval === 'annual' && (
-                    <p className="text-[9px] text-[#1A1D21] font-medium">Billed ${price! * 12}/yr</p>
+                    <p className="text-[9px] text-[#1A1D21] font-medium">Billed {CURRENCY_SYMBOL}{price! * 12}/yr</p>
                   )}
                 </div>
 
@@ -1096,318 +1135,80 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
     </div>
   );
 
-  // Helper functions for card formatting
-  const formatCardNumber = (value: string): string => {
-    const cleaned = value.replace(/\D/g, '');
-    const groups = cleaned.match(/.{1,4}/g);
-    return groups ? groups.join(' ').slice(0, 19) : cleaned;
-  };
+  // ==========================================================================
+  // STEP 7: STRIPE CARD INPUT (PCI Compliant)
+  //
+  // This uses Stripe Elements - card data NEVER touches our servers.
+  // Step7CardForm is extracted as a separate component to prevent re-mounting
+  // on every parent render (which would cause input focus issues).
+  // ==========================================================================
 
-  const formatExpiry = (value: string): string => {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length >= 1) {
-      let month = cleaned.slice(0, 2);
-      // Auto-correct invalid months
-      if (cleaned.length === 1 && parseInt(cleaned) > 1) {
-        month = '0' + cleaned;
+  // Get selected plan info for Step 7
+  const selectedPlanInfo = PRICING_PLANS.find(p => p.id === selectedPlan);
+  const selectedPlanPrice = billingInterval === 'monthly' 
+    ? selectedPlanInfo?.monthlyPrice || 0 
+    : selectedPlanInfo?.annualPrice || 0;
+
+  // Memoized callbacks to prevent unnecessary re-renders
+  const handleApplyDiscount = useCallback(async () => {
+    if (!discountCode.trim()) return;
+    
+    setIsApplyingDiscount(true);
+    setDiscountError('');
+    
+    try {
+      // Simulated API call - replace with actual implementation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock validation - REMOVE THIS and implement real API call
+      const mockValidCodes = ['SAVE20', 'WELCOME10', 'PROMO50'];
+      if (mockValidCodes.includes(discountCode)) {
+        setDiscountApplied(true);
+        setDiscountAmount(20); // Mock 20% discount
+        setDiscountError('');
+      } else {
+        setDiscountError('Invalid discount code');
+        setDiscountApplied(false);
+        setDiscountAmount(0);
       }
-      if (cleaned.length >= 2) {
-        const monthNum = parseInt(month);
-        if (monthNum > 12) month = '12';
-        if (monthNum === 0) month = '01';
-      }
-      return month + (cleaned.length > 2 ? '/' + cleaned.slice(2, 4) : '');
+    } catch {
+      setDiscountError('Failed to validate code');
+    } finally {
+      setIsApplyingDiscount(false);
     }
-    return cleaned;
-  };
+  }, [discountCode]);
 
-  const detectCardBrand = (number: string): string => {
-    const cleaned = number.replace(/\s/g, '');
-    if (/^4/.test(cleaned)) return 'Visa';
-    if (/^5[1-5]/.test(cleaned)) return 'Mastercard';
-    if (/^3[47]/.test(cleaned)) return 'Amex';
-    if (/^6(?:011|5)/.test(cleaned)) return 'Discover';
-    return 'Card';
-  };
+  const handleResetDiscount = useCallback(() => {
+    setDiscountError('');
+    setDiscountApplied(false);
+  }, []);
 
-  const renderStep7 = () => {
-    const cardBrand = detectCardBrand(cardNumber);
-    const cleanedNumber = cardNumber.replace(/\s/g, '');
-    const isCardNumberValid = cleanedNumber.length >= 15 && cleanedNumber.length <= 16;
-    
-    // Validate expiry: must be MM/YY format with valid month (01-12) and future date
-    const expiryMatch = cardExpiry.match(/^(\d{2})\/(\d{2})$/);
-    const isExpiryValid = (() => {
-      if (!expiryMatch) return false;
-      const month = parseInt(expiryMatch[1]);
-      const year = parseInt('20' + expiryMatch[2]);
-      if (month < 1 || month > 12) return false;
-      const now = new Date();
-      const expDate = new Date(year, month - 1);
-      return expDate >= new Date(now.getFullYear(), now.getMonth());
-    })();
-    
-    // CVC: 3 digits for most cards, 4 for Amex
-    const expectedCvcLength = cardBrand === 'Amex' ? 4 : 3;
-    const isCvcValid = cardCvc.length === expectedCvcLength;
-    const isNameValid = cardholderName.trim().length > 0;
-
-    // Get selected plan info
-    const selectedPlanInfo = PRICING_PLANS.find(p => p.id === selectedPlan);
-    const price = billingInterval === 'monthly' ? selectedPlanInfo?.monthlyPrice : selectedPlanInfo?.annualPrice;
-
-    return (
-      <div className="animate-in slide-in-from-right-8 duration-500">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center gap-1.5 mb-3">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
-              <Lock size={10} />
-            </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">Secure Checkout</span>
-          </div>
-          
-          <h1 className="text-lg md:text-xl text-slate-900 font-bold tracking-tight mb-1">
-            Start your 3-day free trial
-          </h1>
-          <p className="text-slate-500 text-sm">
-            Enter your card details • You won't be charged today
-          </p>
-        </div>
-
-        {/* Selected Plan Summary */}
-        <div className="mb-6 p-4 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Selected Plan</p>
-              <p className="text-base font-bold text-[#1A1D21]">{selectedPlanInfo?.name}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-[#1A1D21]">${price}<span className="text-sm font-normal text-slate-500">/mo</span></p>
-              {billingInterval === 'annual' && (
-                <p className="text-[10px] text-slate-500">Billed annually</p>
-              )}
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-[#D4E815]/30 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span className="text-xs text-slate-600">First charge: <span className="font-semibold">3 days from now</span></span>
-          </div>
-        </div>
-
-        {/* Card Form */}
-        <div className="space-y-4">
-          {/* Cardholder Name */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Cardholder Name</label>
-            <input
-              type="text"
-              value={cardholderName}
-              onChange={(e) => setCardholderName(e.target.value)}
-              placeholder="John Doe"
-              className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all placeholder:text-slate-400"
-            />
-          </div>
-
-          {/* Card Number */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Card Number</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                placeholder="1234 5678 9012 3456"
-                maxLength={19}
-                className="w-full px-3 py-2.5 pr-12 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all placeholder:text-slate-400 font-mono"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {cardBrand === 'Visa' && (
-                  <div className="w-8 h-5 bg-blue-600 rounded text-white text-[8px] font-bold flex items-center justify-center">VISA</div>
-                )}
-                {cardBrand === 'Mastercard' && (
-                  <div className="w-8 h-5 bg-gradient-to-r from-red-500 to-yellow-500 rounded text-white text-[6px] font-bold flex items-center justify-center">MC</div>
-                )}
-                {cardBrand === 'Amex' && (
-                  <div className="w-8 h-5 bg-blue-800 rounded text-white text-[6px] font-bold flex items-center justify-center">AMEX</div>
-                )}
-                {cardBrand === 'Discover' && (
-                  <div className="w-8 h-5 bg-orange-500 rounded text-white text-[6px] font-bold flex items-center justify-center">DISC</div>
-                )}
-                {cardBrand === 'Card' && (
-                  <CreditCard size={18} className="text-slate-300" />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Expiry & CVC */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Expiry Date</label>
-              <input
-                type="text"
-                value={cardExpiry}
-                onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                placeholder="MM/YY"
-                maxLength={5}
-                className={cn(
-                  "w-full px-3 py-2.5 bg-white border rounded-lg text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400 font-mono",
-                  cardExpiry.length === 5 && !isExpiryValid
-                    ? "border-red-300 focus:border-red-400 focus:ring-1 focus:ring-red-200"
-                    : "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
-                )}
-              />
-              {cardExpiry.length === 5 && !isExpiryValid && (
-                <p className="text-[10px] text-red-500">Invalid or expired date</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">CVC</label>
-              <input
-                type="text"
-                value={cardCvc}
-                onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, cardBrand === 'Amex' ? 4 : 3))}
-                placeholder={cardBrand === 'Amex' ? '1234' : '123'}
-                maxLength={cardBrand === 'Amex' ? 4 : 3}
-                className={cn(
-                  "w-full px-3 py-2.5 bg-white border rounded-lg text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400 font-mono",
-                  cardCvc.length > 0 && !isCvcValid
-                    ? "border-red-300 focus:border-red-400 focus:ring-1 focus:ring-red-200"
-                    : "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Discount Code Section */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Discount Code (Optional)</label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={discountCode}
-                  onChange={(e) => {
-                    setDiscountCode(e.target.value.toUpperCase());
-                    setDiscountError('');
-                    setDiscountApplied(false);
-                  }}
-                  placeholder="SAVE20"
-                  disabled={discountApplied}
-                  className={cn(
-                    "w-full px-3 py-2.5 bg-white border rounded-lg text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400 uppercase font-mono",
-                    discountApplied 
-                      ? "border-green-300 bg-green-50 text-green-700"
-                      : discountError
-                      ? "border-red-300 focus:border-red-400 focus:ring-1 focus:ring-red-200"
-                      : "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
-                  )}
-                />
-                {discountApplied && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Check size={16} className="text-green-600" />
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!discountCode.trim()) return;
-                  
-                  setIsApplyingDiscount(true);
-                  setDiscountError('');
-                  
-                  // TODO: Implement discount code validation
-                  // 1. Call API endpoint: POST /api/validate-discount
-                  // 2. Send: { code: discountCode, plan: selectedPlan, billingInterval }
-                  // 3. Response should include: { valid: boolean, discountAmount: number, discountType: 'percentage' | 'fixed' }
-                  // 4. If valid, store discount info in Neon DB when creating subscription
-                  // 5. Database schema needed:
-                  //    - discount_codes table: id, code, discount_type, discount_value, valid_until, max_uses, current_uses
-                  //    - subscriptions table: add discount_code_id, discount_applied columns
-                  
-                  try {
-                    // Simulated API call - replace with actual implementation
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    // Mock validation - REMOVE THIS and implement real API call
-                    const mockValidCodes = ['SAVE20', 'WELCOME10', 'PROMO50'];
-                    if (mockValidCodes.includes(discountCode)) {
-                      setDiscountApplied(true);
-                      setDiscountAmount(20); // Mock 20% discount
-                      setDiscountError('');
-                    } else {
-                      setDiscountError('Invalid discount code');
-                      setDiscountApplied(false);
-                      setDiscountAmount(0);
-                    }
-                  } catch (error) {
-                    setDiscountError('Failed to validate code');
-                  } finally {
-                    setIsApplyingDiscount(false);
-                  }
-                }}
-                disabled={!discountCode.trim() || discountApplied || isApplyingDiscount}
-                className={cn(
-                  "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap",
-                  discountApplied
-                    ? "bg-green-100 text-green-700 border border-green-300 cursor-default"
-                    : !discountCode.trim() || isApplyingDiscount
-                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                    : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow"
-                )}
-              >
-                {isApplyingDiscount ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : discountApplied ? (
-                  'Applied'
-                ) : (
-                  'Apply'
-                )}
-              </button>
-            </div>
-            {discountError && (
-              <p className="text-[10px] text-red-500 flex items-center gap-1">
-                <X size={10} />
-                {discountError}
-              </p>
-            )}
-            {discountApplied && discountAmount > 0 && (
-              <div className="flex items-center gap-1.5 p-2 bg-green-50 border border-green-200 rounded-lg">
-                <Sparkles size={12} className="text-green-600" />
-                <p className="text-[10px] text-green-700 font-semibold">
-                  {discountAmount}% discount applied! You'll save ${((price || 0) * discountAmount / 100).toFixed(2)}/mo
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-      </div>
-    );
-  };
-
-  // Card validation helper for step 7 button
-  const getStep7Validation = () => {
-    const cardBrand = detectCardBrand(cardNumber);
-    const cleanedNumber = cardNumber.replace(/\s/g, '');
-    const isCardNumberValid = cleanedNumber.length >= 15 && cleanedNumber.length <= 16;
-    const expiryMatch = cardExpiry.match(/^(\d{2})\/(\d{2})$/);
-    const isExpiryValid = (() => {
-      if (!expiryMatch) return false;
-      const month = parseInt(expiryMatch[1]);
-      const year = parseInt('20' + expiryMatch[2]);
-      if (month < 1 || month > 12) return false;
-      const now = new Date();
-      const expDate = new Date(year, month - 1);
-      return expDate >= new Date(now.getFullYear(), now.getMonth());
-    })();
-    const expectedCvcLength = cardBrand === 'Amex' ? 4 : 3;
-    const isCvcValid = cardCvc.length === expectedCvcLength;
-    const isNameValid = cardholderName.trim().length > 0;
-    return isCardNumberValid && isExpiryValid && isCvcValid && isNameValid;
-  };
+  // Render Step 7 wrapped in StripeProvider
+  const renderStep7 = () => (
+    <StripeProvider>
+      <Step7CardForm
+        selectedPlanName={selectedPlanInfo?.name || ''}
+        selectedPlanPrice={selectedPlanPrice}
+        billingInterval={billingInterval}
+        cardholderName={cardholderName}
+        onCardholderNameChange={setCardholderName}
+        isCardReady={isCardReady}
+        onCardReadyChange={setIsCardReady}
+        stripeError={stripeError}
+        onStripeErrorChange={setStripeError}
+        discountCode={discountCode}
+        onDiscountCodeChange={setDiscountCode}
+        isApplyingDiscount={isApplyingDiscount}
+        discountApplied={discountApplied}
+        discountError={discountError}
+        discountAmount={discountAmount}
+        onApplyDiscount={handleApplyDiscount}
+        onResetDiscount={handleResetDiscount}
+        onSubmit={handleStripeSubmit}
+        isLoading={isLoading}
+      />
+    </StripeProvider>
+  );
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#F0F2F5] font-sans py-4 px-4">
@@ -1433,35 +1234,29 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
              {step === 7 && renderStep7()}
            </div>
 
-           {/* Submit Button */}
-          <div className="pt-5 mt-auto shrink-0">
+           {/* Submit Button - Hidden on Step 7 (Stripe handles its own button) */}
+          {step !== 7 && (
+            <div className="pt-5 mt-auto shrink-0">
               {(() => {
-                const isStep7Valid = step === 7 && getStep7Validation();
                 const isDisabled = 
-                (step === 1 && (!name || !role || !brand)) ||
-                (step === 2 && (!targetCountry || !targetLanguage)) || 
+                  (step === 1 && (!name || !role || !brand)) ||
+                  (step === 2 && (!targetCountry || !targetLanguage)) || 
                   (step === 6 && !selectedPlan) ||
-                  (step === 7 && !isStep7Valid) ||
                   isLoading;
 
                 return (
                   <button
                     type="submit"
                     disabled={isDisabled}
-              className={cn(
+                    className={cn(
                       "w-full py-3 rounded-full font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2",
                       isDisabled
                         ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                         : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]"
-              )}
-            >
-              {isLoading ? (
-                <Loader2 size={16} className="animate-spin" />
-                    ) : step === 7 ? (
-                      <>
-                        <Lock size={14} />
-                        Start 3-Day Free Trial
-                      </>
+                    )}
+                  >
+                    {isLoading ? (
+                      <Loader2 size={16} className="animate-spin" />
                     ) : step === 6 ? (
                       selectedPlan === 'enterprise' ? (
                         "Contact Sales"
@@ -1474,11 +1269,12 @@ export const OnboardingScreen = ({ userId, userName, initialStep = 1, userData, 
                       "Continue"
                     ) : (
                       "Next"
-              )}
-            </button>
+                    )}
+                  </button>
                 );
               })()}
-          </div>
+            </div>
+          )}
         </form>
 
       </div>

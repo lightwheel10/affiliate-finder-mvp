@@ -8,6 +8,7 @@ const publicRoutes = [
   "/sign-up",
   "/handler", // Stack Auth handler routes
   "/api/webhook",
+  "/api/stripe/webhook", // Stripe webhook - secured by signature verification
 ];
 
 export function middleware(request: NextRequest) {

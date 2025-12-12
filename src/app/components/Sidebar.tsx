@@ -216,8 +216,9 @@ export const Sidebar: React.FC = () => {
                       : `${daysLeftInTrial} days left in trial`
                   }
                 </h4>
+                {/* Updated December 2025 - "Upgrade Plan" for trial users */}
                 <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-1.5 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
-                  Change Plan <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                  Upgrade Plan <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </div>
               <div className="absolute top-0 right-0 -mt-6 -mr-6 w-24 h-24 rounded-full blur-2xl transition-all duration-500 bg-[#D4E815]/20 group-hover:bg-[#D4E815]/30" />
@@ -236,13 +237,10 @@ export const Sidebar: React.FC = () => {
                     {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} Plan
                   </span>
                 </div>
-                <h4 className="text-xs font-bold text-white mb-1 leading-tight flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-white mb-3 leading-tight flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
                   Active Subscription
                 </h4>
-                <p className="text-[10px] text-slate-300 leading-relaxed mb-3 opacity-90">
-                  Manage your plan or update billing
-                </p>
                 <button className="w-full bg-[#D4E815] text-[#1A1D21] text-[10px] font-bold py-2 rounded-lg shadow-sm hover:bg-[#c5d913] transition-all flex items-center justify-center gap-1.5 group-hover:shadow-md">
                   Manage Plan <ChevronRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
                 </button>
@@ -338,10 +336,19 @@ export const Sidebar: React.FC = () => {
         </div>
       </aside>
 
-      {/* Pricing Modal */}
+      {/* Pricing Modal - Pass subscription context for plan changes */}
+      {/* Updated December 2025 to support in-app plan upgrades/downgrades */}
       <PricingModal 
         isOpen={isPricingModalOpen} 
-        onClose={() => setIsPricingModalOpen(false)} 
+        onClose={() => setIsPricingModalOpen(false)}
+        userId={userId}
+        currentPlan={subscription?.plan || null}
+        currentBillingInterval={subscription?.billing_interval || null}
+        isTrialing={isTrialing}
+        onSuccess={() => {
+          // Refetch subscription data after successful plan change
+          refetchSubscription();
+        }}
       />
 
       {/* Logout Confirmation Modal */}

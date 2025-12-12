@@ -3,6 +3,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { DbSubscription } from '@/lib/db';
 
+// =============================================================================
+// useSubscription Hook
+//
+// Manages subscription data fetching and actions (cancel/resume).
+// All subscription modifications go through Stripe API routes to ensure
+// Stripe remains the source of truth.
+//
+// IMPORTANT: Cancel/Resume use Stripe API routes, NOT the legacy DB route.
+// =============================================================================
+
 // Subscription data with computed fields
 export interface SubscriptionData extends DbSubscription {
   // Computed fields for UI
@@ -115,48 +125,56 @@ export function useSubscription(userId: number | null) {
     fetchSubscription();
   }, [fetchSubscription]);
 
-  // Update subscription (e.g., cancel, change plan)
-  const updateSubscription = useCallback(async (updates: Partial<DbSubscription>) => {
-    if (!userId) return null;
+  // ==========================================================================
+  // LISTEN FOR SUBSCRIPTION UPDATES FROM OTHER COMPONENTS
+  // 
+  // When any component updates the subscription (e.g., PricingModal),
+  // it dispatches a custom 'subscription-updated' event.
+  // All useSubscription instances listen for this event and refetch.
+  // This ensures the Sidebar and Settings page stay in sync.
+  // Added December 2025.
+  // ==========================================================================
+  useEffect(() => {
+    const handleSubscriptionUpdate = () => {
+      console.log('[useSubscription] Received subscription-updated event, refetching...');
+      fetchSubscription();
+    };
 
-    try {
-      const res = await fetch('/api/subscriptions', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, ...updates }),
-      });
+    window.addEventListener('subscription-updated', handleSubscriptionUpdate);
+    
+    return () => {
+      window.removeEventListener('subscription-updated', handleSubscriptionUpdate);
+    };
+  }, [fetchSubscription]);
 
-      const data = await res.json();
-      
-      if (data.error) {
-        setError(data.error);
-        return null;
-      }
-
-      // Refetch to get updated computed fields
-      await fetchSubscription();
-      return data.subscription;
-    } catch (err) {
-      console.error('Error updating subscription:', err);
-      setError('Failed to update subscription');
-      return null;
-    }
-  }, [userId, fetchSubscription]);
-
-  // Cancel subscription (at period end)
+  // ==========================================================================
+  // CANCEL SUBSCRIPTION (via Stripe API)
+  // 
+  // Calls the Stripe API to cancel at period end.
+  // This ensures Stripe is the source of truth.
+  // ==========================================================================
   const cancelSubscription = useCallback(async () => {
     if (!userId) return null;
+    
+    setError(null);
+    
     try {
-      const res = await fetch('/api/subscriptions', {
-        method: 'PATCH',
+      const res = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, cancelAtPeriodEnd: true }),
+        body: JSON.stringify({ userId }),
       });
+      
       const data = await res.json();
-      if (data.error) {
-        setError(data.error);
+      
+      if (!res.ok || data.error) {
+        const errorMsg = data.error || 'Failed to cancel subscription';
+        setError(errorMsg);
+        console.error('Error canceling subscription:', errorMsg);
         return null;
       }
+      
+      // Refetch to get updated data
       await fetchSubscription();
       return data.subscription;
     } catch (err) {
@@ -166,20 +184,34 @@ export function useSubscription(userId: number | null) {
     }
   }, [userId, fetchSubscription]);
 
-  // Resume canceled subscription
+  // ==========================================================================
+  // RESUME SUBSCRIPTION (via Stripe API)
+  // 
+  // Calls the Stripe API to remove cancellation.
+  // This ensures Stripe is the source of truth.
+  // ==========================================================================
   const resumeSubscription = useCallback(async () => {
     if (!userId) return null;
+    
+    setError(null);
+    
     try {
-      const res = await fetch('/api/subscriptions', {
-        method: 'PATCH',
+      const res = await fetch('/api/stripe/resume-subscription', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, cancelAtPeriodEnd: false }),
+        body: JSON.stringify({ userId }),
       });
+      
       const data = await res.json();
-      if (data.error) {
-        setError(data.error);
+      
+      if (!res.ok || data.error) {
+        const errorMsg = data.error || 'Failed to resume subscription';
+        setError(errorMsg);
+        console.error('Error resuming subscription:', errorMsg);
         return null;
       }
+      
+      // Refetch to get updated data
       await fetchSubscription();
       return data.subscription;
     } catch (err) {
@@ -198,11 +230,9 @@ export function useSubscription(userId: number | null) {
     error,
     // Refetch subscription data
     refetch: fetchSubscription,
-    // Update subscription
-    updateSubscription,
-    // Cancel subscription at period end
+    // Cancel subscription at period end (via Stripe API)
     cancelSubscription,
-    // Resume a canceled subscription
+    // Resume a canceled subscription (via Stripe API)
     resumeSubscription,
     // Quick access to common states
     isTrialing: subscription?.isTrialing ?? false,

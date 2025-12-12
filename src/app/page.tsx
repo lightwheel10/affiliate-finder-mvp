@@ -235,10 +235,14 @@ export default function Home() {
   // Resume from saved step with pre-filled data
   // ============================================
   if (!isOnboarded && userId) {
+    // Get user email from Stack Auth for Stripe integration
+    const userEmail = stackUser?.primaryEmail || '';
+    
     return (
       <OnboardingScreen 
         userId={userId}
         userName={userName}
+        userEmail={userEmail}
         initialStep={onboardingStep || 1}
         userData={user ? {
           name: user.name,
