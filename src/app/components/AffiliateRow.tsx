@@ -83,6 +83,17 @@ interface AffiliateRowProps {
   // Shows saving state during bulk operations
   // ============================================================================
   isSaving?: boolean;             // Whether this item is currently being saved (shows spinner)
+  // ============================================================================
+  // SINGLE ITEM DELETE (Added Dec 2025)
+  // Callback for deleting this individual affiliate
+  // ============================================================================
+  onDelete?: () => void;          // Callback when delete is confirmed
+  // ============================================================================
+  // VIEW MODAL DATA (Added Dec 2025)
+  // Full affiliate data for the View modal - contains all source-specific fields
+  // (Instagram, TikTok, YouTube, SimilarWeb data)
+  // ============================================================================
+  affiliateData?: ResultItem;     // Full ResultItem for View modal display
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
@@ -116,10 +127,48 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   isSelected = false,
   onSelect,
   isSaving = false,  // Added Dec 2025: Shows loading state during bulk save
+  onDelete,          // Added Dec 2025: Single item delete callback
+  affiliateData,     // Added Dec 2025: Full data for View modal
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);  // Added Dec 2025: View modal state
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  
+  // ============================================================================
+  // SINGLE ITEM DELETE CONFIRMATION STATE (Added Dec 2025)
+  // Uses inline confirmation pattern: click once to show "Confirm?", click again to delete
+  // ============================================================================
+  const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
+  const deleteConfirmTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  // Handle delete button click with inline confirmation
+  const handleDeleteClick = () => {
+    if (isDeleteConfirming) {
+      // Second click - execute delete
+      if (deleteConfirmTimeoutRef.current) {
+        clearTimeout(deleteConfirmTimeoutRef.current);
+      }
+      setIsDeleteConfirming(false);
+      onDelete?.();
+    } else {
+      // First click - show confirmation
+      setIsDeleteConfirming(true);
+      // Auto-reset after 3 seconds if user doesn't confirm
+      deleteConfirmTimeoutRef.current = setTimeout(() => {
+        setIsDeleteConfirming(false);
+      }, 3000);
+    }
+  };
+  
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (deleteConfirmTimeoutRef.current) {
+        clearTimeout(deleteConfirmTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Copy email to clipboard with feedback
   const copyEmail = (emailToCopy: string) => {
@@ -275,6 +324,458 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </span>
       </div>
     );
+  };
+
+  // ============================================================================
+  // VIEW MODAL HELPER FUNCTIONS (Added Dec 2025)
+  // ============================================================================
+  
+  // Format large numbers for display (e.g., 1500 -> "1.5K", 1500000 -> "1.5M")
+  const formatNumber = (num?: number): string => {
+    if (!num) return '0';
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    }
+    return num.toString();
+  };
+
+  // Calculate engagement rate for videos
+  const calculateEngagement = (plays?: number, likes?: number): string => {
+    if (!plays || !likes || plays === 0) return '0%';
+    return ((likes / plays) * 100).toFixed(2) + '%';
+  };
+
+  // Get visit button text and link based on source
+  const getVisitButtonConfig = () => {
+    const sourceLower = source.toLowerCase();
+    switch (sourceLower) {
+      case 'youtube':
+        return {
+          text: 'Visit Channel',
+          icon: <Youtube size={12} />,
+          link: channel?.link || link,
+        };
+      case 'instagram':
+        return {
+          text: 'Visit Account',
+          icon: <Instagram size={12} />,
+          link: affiliateData?.instagramUsername 
+            ? `https://instagram.com/${affiliateData.instagramUsername}` 
+            : link,
+        };
+      case 'tiktok':
+        return {
+          text: 'Visit Account',
+          icon: <TikTokIcon size={12} />,
+          link: affiliateData?.tiktokUsername 
+            ? `https://tiktok.com/@${affiliateData.tiktokUsername}` 
+            : link,
+        };
+      default:
+        return {
+          text: 'Visit Website',
+          icon: <Globe size={12} />,
+          link: `https://${domain}`,
+        };
+    }
+  };
+
+  // ============================================================================
+  // VIEW MODAL CONTENT RENDERERS (Added Dec 2025)
+  // Each source type has its own content layout matching existing modal sizes
+  // Note: YouTube API provides VIDEO description (snippet), not channel bio
+  // ============================================================================
+
+  // YouTube View Modal Content
+  const renderYouTubeViewContent = () => {
+    const videoDescription = snippet || affiliateData?.snippet || '';
+    const videoTitle = title;
+    const videoThumbnail = thumbnail;
+    const videoViews = views;
+    const videoDate = date;
+    const videoDuration = duration || affiliateData?.duration;
+    const videoLikes = affiliateData?.youtubeVideoLikes;
+    const videoComments = affiliateData?.youtubeVideoComments;
+    
+    return (
+      <div className="space-y-4">
+        {/* Header - Channel Name with YouTube icon */}
+        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <Youtube size={16} className="text-red-600" />
+          <h3 className="text-sm font-bold text-slate-900">{channel?.name || personName || domain}</h3>
+          {channel?.verified && (
+            <CheckCircle2 size={12} className="text-blue-500 fill-blue-500" />
+          )}
+        </div>
+
+        {/* Subscribers */}
+        <p className="text-xs text-slate-600">
+          {channel?.subscribers || '0'} subscribers
+        </p>
+
+        {/* Relevant Videos Section */}
+        <div className="pt-3 border-t border-slate-100">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+            Relevant Videos ({1 + (subItems?.length || 0)})
+          </h4>
+
+          {/* Main Video Card */}
+          <div className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+            {/* Video Thumbnail */}
+            {videoThumbnail && (
+              <a 
+                href={link} 
+                target="_blank" 
+                rel="noreferrer"
+                className="shrink-0 relative group"
+              >
+                <div className="w-28 h-16 rounded-md overflow-hidden bg-slate-200">
+                  <img 
+                    src={getProxiedImageUrl(videoThumbnail)} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                  />
+                </div>
+                {videoDuration && (
+                  <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-black/80 text-white text-[8px] font-medium rounded">
+                    {videoDuration}
+                  </span>
+                )}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow">
+                    <Play size={12} className="text-slate-900 ml-0.5" fill="currentColor" />
+                  </div>
+                </div>
+              </a>
+            )}
+
+            {/* Video Info */}
+            <div className="flex-1 min-w-0">
+              <a 
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-semibold text-slate-900 hover:text-red-600 transition-colors line-clamp-2 block mb-1"
+              >
+                {videoTitle}
+              </a>
+              
+              {videoDescription && (
+                <p className="text-[10px] text-slate-500 line-clamp-2 mb-2">
+                  {videoDescription}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                {videoViews && <span>{videoViews} views</span>}
+                {videoLikes !== undefined && <span>• {formatNumber(videoLikes)} likes</span>}
+                {videoComments !== undefined && <span>• {formatNumber(videoComments)} comments</span>}
+                {videoDate && <span>• {formatDate(videoDate)}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Videos from subItems */}
+          {subItems && subItems.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {subItems.map((item, idx) => (
+                <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                  {item.thumbnail && (
+                    <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0 relative">
+                      <div className="w-28 h-16 rounded-md overflow-hidden bg-slate-200">
+                        <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      {item.duration && (
+                        <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-black/80 text-white text-[8px] font-medium rounded">
+                          {item.duration}
+                        </span>
+                      )}
+                    </a>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <a href={item.link} target="_blank" rel="noreferrer" className="text-xs font-semibold text-slate-900 hover:text-red-600 line-clamp-2 block mb-1">
+                      {item.title}
+                    </a>
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                      {item.views && <span>{item.views} views</span>}
+                      {item.youtubeVideoLikes !== undefined && <span>• {formatNumber(item.youtubeVideoLikes)} likes</span>}
+                      {item.youtubeVideoComments !== undefined && <span>• {formatNumber(item.youtubeVideoComments)} comments</span>}
+                      {item.date && <span>• {formatDate(item.date)}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Instagram View Modal Content
+  const renderInstagramViewContent = () => {
+    const username = affiliateData?.instagramUsername || channel?.name || personName || domain;
+    const fullName = affiliateData?.instagramFullName || '';
+    const bio = affiliateData?.instagramBio || snippet || '';
+    const followers = affiliateData?.instagramFollowers;
+    const isVerified = affiliateData?.instagramIsVerified;
+    // Instagram post-level stats (Added Dec 2025)
+    const postLikes = affiliateData?.instagramPostLikes;
+    const postComments = affiliateData?.instagramPostComments;
+    const postViews = affiliateData?.instagramPostViews;
+    
+    return (
+      <div className="space-y-4">
+        {/* Header - Username with Instagram icon */}
+        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <Instagram size={16} className="text-pink-600" />
+          <h3 className="text-sm font-bold text-slate-900">
+            {username.startsWith('@') ? username : `@${username}`}
+          </h3>
+          {isVerified && (
+            <CheckCircle2 size={12} className="text-blue-500 fill-blue-500" />
+          )}
+        </div>
+
+        {/* Profile Info - Full Name + Followers */}
+        <p className="text-xs text-slate-600">
+          {fullName && <span className="font-medium text-slate-900">{fullName}</span>}
+          {fullName && followers && ' • '}
+          {followers && <span>{formatNumber(followers)} followers</span>}
+        </p>
+
+        {/* Bio */}
+        {bio && (
+          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap line-clamp-4">
+            {bio}
+          </p>
+        )}
+
+        {/* Relevant Posts Section */}
+        <div className="pt-3 border-t border-slate-100">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+            Relevant Posts ({1 + (subItems?.length || 0)})
+          </h4>
+
+          {/* Main Post Card */}
+          <div className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            {/* Post Thumbnail */}
+            {thumbnail && (
+              <a href={link} target="_blank" rel="noreferrer" className="shrink-0">
+                <div className="w-16 h-16 rounded-md overflow-hidden bg-slate-200">
+                  <img 
+                    src={getProxiedImageUrl(thumbnail)} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                  />
+                </div>
+              </a>
+            )}
+
+            {/* Post Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-slate-600 line-clamp-3 mb-2">
+                {title || snippet}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                {postLikes !== undefined && <span>{formatNumber(postLikes)} likes</span>}
+                {postComments !== undefined && <span>• {formatNumber(postComments)} comments</span>}
+                {postViews !== undefined && <span>• {formatNumber(postViews)} views</span>}
+                {date && <span>• {formatDate(date)}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Posts from subItems */}
+          {subItems && subItems.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {subItems.map((item, idx) => (
+                <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  {item.thumbnail && (
+                    <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0">
+                      <div className="w-16 h-16 rounded-md overflow-hidden bg-slate-200">
+                        <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    </a>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-600 line-clamp-3 mb-2">{item.title || item.snippet}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                      {item.instagramPostLikes !== undefined && <span>{formatNumber(item.instagramPostLikes)} likes</span>}
+                      {item.instagramPostComments !== undefined && <span>• {formatNumber(item.instagramPostComments)} comments</span>}
+                      {item.date && <span>• {formatDate(item.date)}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // TikTok View Modal Content
+  const renderTikTokViewContent = () => {
+    const username = affiliateData?.tiktokUsername || channel?.name || personName || domain;
+    const displayName = affiliateData?.tiktokDisplayName || '';
+    const bio = affiliateData?.tiktokBio || snippet || '';
+    const followers = affiliateData?.tiktokFollowers;
+    const isVerified = affiliateData?.tiktokIsVerified;
+    const avatarUrl = channel?.thumbnail || thumbnail;
+    
+    // Video stats
+    const videoPlays = affiliateData?.tiktokVideoPlays;
+    const videoLikes = affiliateData?.tiktokVideoLikes;
+    
+    return (
+      <div className="space-y-4">
+        {/* Header - Username with TikTok icon */}
+        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <TikTokIcon size={16} className="text-slate-900" />
+          <h3 className="text-sm font-bold text-slate-900">
+            {username.startsWith('@') ? username : `@${username}`}
+          </h3>
+          {isVerified && (
+            <CheckCircle2 size={12} className="text-blue-500 fill-blue-500" />
+          )}
+          {/* Country badge - if available */}
+          {affiliateData?.similarWeb?.countryCode && (
+            <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded-full border border-blue-200">
+              {affiliateData.similarWeb.countryCode}
+            </span>
+          )}
+        </div>
+
+        {/* Profile Section with Avatar */}
+        <div className="flex items-start gap-3">
+          {/* Avatar */}
+          {avatarUrl && (
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+              <img 
+                src={getProxiedImageUrl(avatarUrl)} 
+                alt="" 
+                className="w-full h-full object-cover"
+                onError={(e) => (e.currentTarget.style.display = 'none')}
+              />
+            </div>
+          )}
+          
+          <div className="flex-1">
+            {/* Display Name */}
+            {displayName && (
+              <p className="text-xs font-semibold text-slate-900">{displayName}</p>
+            )}
+            {/* Followers */}
+            {followers && (
+              <p className="text-[10px] text-slate-600">{formatNumber(followers)} followers</p>
+            )}
+          </div>
+        </div>
+
+        {/* Bio */}
+        {bio && (
+          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap line-clamp-4">
+            {bio}
+          </p>
+        )}
+
+        {/* Relevant Posts Section */}
+        <div className="pt-3 border-t border-slate-100">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+            Relevant Posts ({1 + (subItems?.length || 0)})
+          </h4>
+
+          {/* Main Video Card */}
+          <div className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            {/* Video Thumbnail */}
+            {thumbnail && (
+              <a href={link} target="_blank" rel="noreferrer" className="shrink-0 relative group">
+                <div className="w-16 h-20 rounded-md overflow-hidden bg-slate-200">
+                  <img 
+                    src={getProxiedImageUrl(thumbnail)} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                  />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow">
+                    <Play size={12} className="text-slate-900 ml-0.5" fill="currentColor" />
+                  </div>
+                </div>
+              </a>
+            )}
+
+            {/* Video Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-slate-700 line-clamp-3 mb-2">
+                {title || snippet}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                {videoPlays && <span>{formatNumber(videoPlays)} views</span>}
+                {videoLikes && <span>• {formatNumber(videoLikes)} likes</span>}
+                {date && <span>• {formatDate(date)}</span>}
+                {videoPlays && videoLikes && (
+                  <span>• {calculateEngagement(videoPlays, videoLikes)} eng.</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Videos from subItems */}
+          {subItems && subItems.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {subItems.map((item, idx) => (
+                <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  {item.thumbnail && (
+                    <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0">
+                      <div className="w-16 h-20 rounded-md overflow-hidden bg-slate-200">
+                        <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    </a>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-700 line-clamp-3 mb-2">{item.title || item.snippet}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                      {item.views && <span>{item.views} views</span>}
+                      {item.date && <span>• {formatDate(item.date)}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Main View Modal Content - Dispatches to source-specific renderer
+  const renderViewModalContent = () => {
+    const sourceLower = source.toLowerCase();
+    
+    switch (sourceLower) {
+      case 'youtube':
+        return renderYouTubeViewContent();
+      case 'instagram':
+        return renderInstagramViewContent();
+      case 'tiktok':
+        return renderTikTokViewContent();
+      default:
+        // Web source - will be implemented later
+        return (
+          <div className="text-center py-6 text-slate-500">
+            <Globe size={32} className="mx-auto mb-3 text-slate-300" />
+            <p className="text-xs">Web source view coming soon</p>
+          </div>
+        );
+    }
   };
 
   const gridClass = isPipelineView 
@@ -528,10 +1029,30 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 shrink-0">
-        <button className="w-7 h-7 flex items-center justify-center bg-red-400 text-white rounded hover:bg-red-500 transition-colors shadow-sm" title="Delete">
-          <Trash2 size={14} />
+        {/* Delete Button with Inline Confirmation (Added Dec 2025)
+            First click: Shows "Confirm?" state
+            Second click: Executes delete
+            Auto-resets after 3 seconds */}
+        <button 
+          onClick={handleDeleteClick}
+          className={`flex items-center justify-center rounded transition-all shadow-sm ${
+            isDeleteConfirming
+              ? 'w-[70px] h-7 bg-red-500 text-white hover:bg-red-600 animate-pulse'
+              : 'w-7 h-7 bg-red-400 text-white hover:bg-red-500'
+          }`}
+          title={isDeleteConfirming ? "Click again to confirm delete" : "Delete"}
+        >
+          {isDeleteConfirming ? (
+            <span className="text-[10px] font-bold">Confirm?</span>
+          ) : (
+            <Trash2 size={14} />
+          )}
         </button>
-        <button className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors shadow-sm" title="View">
+        <button 
+          onClick={() => setIsViewModalOpen(true)}
+          className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors shadow-sm" 
+          title="View details"
+        >
           <Eye size={14} />
         </button>
         {/* Save Button - Updated Dec 2025 to show saving state during bulk operations */}
@@ -820,6 +1341,66 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </button>
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* ============================================================================
+          VIEW MODAL (Added Dec 2025)
+          Displays detailed affiliate information based on source type:
+          - YouTube: Channel info, subscribers, relevant videos (video description, not channel bio)
+          - Instagram: Profile info, followers, bio, relevant posts
+          - TikTok: Profile with avatar, followers, bio, relevant posts
+          ============================================================================ */}
+      <Modal 
+        isOpen={isViewModalOpen} 
+        onClose={() => setIsViewModalOpen(false)}
+        title=""
+        width="max-w-lg"
+      >
+        {/* Modal Content - Source-specific */}
+        {renderViewModalContent()}
+
+        {/* Footer Actions - Consistent across all sources */}
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+          {/* Visit Button - Platform-specific */}
+          <a
+            href={getVisitButtonConfig().link}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
+          >
+            {getVisitButtonConfig().icon}
+            {getVisitButtonConfig().text}
+          </a>
+
+          {/* Save & Delete Buttons */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                onSave();
+                setIsViewModalOpen(false);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-sm ${
+                isSaved
+                  ? 'bg-emerald-500 text-white border border-emerald-600'
+                  : 'bg-white text-teal-600 border border-teal-200 hover:bg-teal-50'
+              }`}
+            >
+              <Save size={12} />
+              {isSaved ? 'Saved' : 'Save'}
+            </button>
+            <button
+              onClick={() => {
+                setIsViewModalOpen(false);
+                // Trigger delete with slight delay to allow modal to close
+                setTimeout(() => handleDeleteClick(), 100);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-400 hover:bg-red-500 text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
+            >
+              <Trash2 size={12} />
+              Delete
+            </button>
+          </div>
         </div>
       </Modal>
     </div>

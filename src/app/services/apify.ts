@@ -129,6 +129,9 @@ export async function searchYouTubeApify(
         channel,
         position: index + 1,
         searchQuery: keyword,
+        // YouTube-specific video stats (Added Dec 2025)
+        youtubeVideoLikes: item.likes,
+        youtubeVideoComments: item.commentsCount,
       };
     });
 
@@ -241,6 +244,9 @@ export async function searchInstagramApify(
         stats.length > 0 ? `📊 ${stats.join(' • ')}` : null,
       ].filter(Boolean).join('\n');
 
+      // Extract first (most recent) post stats from latestPosts array
+      const firstPost = item.latestPosts?.[0];
+
       return {
         title: item.fullName || `@${item.username}` || '',
         link: item.url || `https://www.instagram.com/${item.username}`,
@@ -263,6 +269,10 @@ export async function searchInstagramApify(
         instagramPostsCount: item.postsCount,
         instagramIsBusiness: item.isBusinessAccount,
         instagramIsVerified: item.verified ?? item.isVerified,
+        // Instagram post-level stats (from most recent post - Added Dec 2025)
+        instagramPostLikes: firstPost?.likesCount,
+        instagramPostComments: firstPost?.commentsCount,
+        instagramPostViews: firstPost?.videoViewCount,
       };
     });
 

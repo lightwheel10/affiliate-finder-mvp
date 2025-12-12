@@ -65,6 +65,13 @@ export interface ResultItem {
   channel?: YouTubeChannelInfo;
   duration?: string;     // Video length e.g., "12:34"
   
+  // ==========================================================================
+  // YouTube-specific fields (added to fix data pipeline)
+  // These fields come from searchYouTubeApify() in apify.ts via SearchResult
+  // ==========================================================================
+  youtubeVideoLikes?: number;
+  youtubeVideoComments?: number;
+  
   // SimilarWeb data (for Web results)
   similarWeb?: SimilarWebData;
   isEnriching?: boolean;           // True while SimilarWeb is loading
@@ -114,6 +121,10 @@ export interface ResultItem {
   instagramPostsCount?: number;
   instagramIsBusiness?: boolean;
   instagramIsVerified?: boolean;
+  // Instagram post-level stats (from most recent post in latestPosts array)
+  instagramPostLikes?: number;
+  instagramPostComments?: number;
+  instagramPostViews?: number;
   
   // ==========================================================================
   // TikTok-specific fields (added to fix data pipeline)

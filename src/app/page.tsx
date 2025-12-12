@@ -286,6 +286,7 @@ function Dashboard() {
     discoveredAffiliates, 
     saveDiscoveredAffiliate, 
     saveDiscoveredAffiliates,
+    removeDiscoveredAffiliate,       // Single item delete
     removeDiscoveredAffiliatesBulk,  // Added Dec 2025 for bulk delete
     isLoading: discoveredLoading 
   } = useDiscoveredAffiliates();
@@ -327,6 +328,15 @@ function Dashboard() {
   const [bulkSaveResult, setBulkSaveResult] = useState<{
     savedCount: number;
     duplicateCount: number;
+    show: boolean;
+  } | null>(null);
+
+  // ============================================================================
+  // DELETE FEEDBACK STATE (Added Dec 2025)
+  // Shows toast notification after single or bulk delete
+  // ============================================================================
+  const [deleteResult, setDeleteResult] = useState<{
+    count: number;
     show: boolean;
   } | null>(null);
 
@@ -744,6 +754,7 @@ function Dashboard() {
   const confirmBulkDelete = async () => {
     if (visibleSelectedLinks.size === 0) return;
     
+    const deleteCount = visibleSelectedLinks.size;
     setIsBulkDeleting(true);
     try {
       const linksToDelete = Array.from(visibleSelectedLinks);
@@ -759,6 +770,12 @@ function Dashboard() {
         return newSet;
       });
       setIsDeleteModalOpen(false);
+      
+      // Show delete feedback toast
+      setDeleteResult({ count: deleteCount, show: true });
+      setTimeout(() => {
+        setDeleteResult(prev => prev ? { ...prev, show: false } : null);
+      }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
     } finally {
@@ -772,6 +789,33 @@ function Dashboard() {
       setSelectedLinks(new Set());
     }
   }, [loading]);
+
+  /**
+   * Handle single item delete (Added Dec 2025)
+   * Removes from both local results state and discovered affiliates database
+   */
+  /**
+   * Handle single item delete with feedback toast (Added Dec 2025)
+   * Removes from both local results state and discovered affiliates database
+   */
+  const handleSingleDelete = async (link: string) => {
+    // Remove from local state immediately for responsive UI
+    setResults(prev => prev.filter(r => r.link !== link));
+    // Also remove from selection if selected
+    setSelectedLinks(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(link);
+      return newSet;
+    });
+    // Remove from database
+    await removeDiscoveredAffiliate(link);
+    
+    // Show delete feedback toast
+    setDeleteResult({ count: 1, show: true });
+    setTimeout(() => {
+      setDeleteResult(prev => prev ? { ...prev, show: false } : null);
+    }, 3000);
+  };
 
   return (
     <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
@@ -1071,6 +1115,10 @@ function Dashboard() {
                           onSelect={toggleSelectItem}
                           // Bulk save visual feedback (Added Dec 2025)
                           isSaving={savingLinks.has(group.main.link)}
+                          // Single item delete (Added Dec 2025)
+                          onDelete={() => handleSingleDelete(group.main.link)}
+                          // View modal data (Added Dec 2025)
+                          affiliateData={group.main}
                         />
                       </div>
                     ))}
@@ -1120,6 +1168,10 @@ function Dashboard() {
                         onSelect={toggleSelectItem}
                         // Bulk save visual feedback (Added Dec 2025)
                         isSaving={savingLinks.has(group.main.link)}
+                        // Single item delete (Added Dec 2025)
+                        onDelete={() => handleSingleDelete(group.main.link)}
+                        // View modal data (Added Dec 2025)
+                        affiliateData={group.main}
                       />
                     </div>
                   ))
@@ -1433,6 +1485,39 @@ function Dashboard() {
               </div>
               <button
                 onClick={() => setBulkSaveResult(prev => prev ? { ...prev, show: false } : null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================================
+          DELETE FEEDBACK TOAST (Added Dec 2025)
+          Shows confirmation after single or bulk delete
+          ============================================================================ */}
+      {deleteResult?.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-w-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-slate-900">
+                  {deleteResult.count === 1 
+                    ? 'Affiliate deleted'
+                    : `${deleteResult.count} affiliates deleted`
+                  }
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Successfully removed from discovered list.
+                </p>
+              </div>
+              <button
+                onClick={() => setDeleteResult(prev => prev ? { ...prev, show: false } : null)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X size={16} />

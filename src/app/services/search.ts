@@ -51,6 +51,13 @@ export interface SearchResult {
   personName?: string;
   
   // ==========================================================================
+  // YouTube-specific fields (added to fix data pipeline)
+  // These fields are populated by searchYouTubeApify() in apify.ts
+  // ==========================================================================
+  youtubeVideoLikes?: number;
+  youtubeVideoComments?: number;
+  
+  // ==========================================================================
   // Instagram-specific fields (added to fix data pipeline)
   // These fields are populated by searchInstagramApify() in apify.ts
   // and flow through to the database via useAffiliates.ts
@@ -63,6 +70,10 @@ export interface SearchResult {
   instagramPostsCount?: number;
   instagramIsBusiness?: boolean;
   instagramIsVerified?: boolean;
+  // Instagram post-level stats (from most recent post in latestPosts array)
+  instagramPostLikes?: number;
+  instagramPostComments?: number;
+  instagramPostViews?: number;
   
   // ==========================================================================
   // TikTok-specific fields (added to fix data pipeline)

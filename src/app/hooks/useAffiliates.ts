@@ -87,6 +87,10 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     instagramPostsCount: dbAffiliate.instagram_posts_count,
     instagramIsBusiness: dbAffiliate.instagram_is_business,
     instagramIsVerified: dbAffiliate.instagram_is_verified,
+    // Instagram post-level stats (Added Dec 2025)
+    instagramPostLikes: dbAffiliate.instagram_post_likes,
+    instagramPostComments: dbAffiliate.instagram_post_comments,
+    instagramPostViews: dbAffiliate.instagram_post_views,
     
     // ==========================================================================
     // TikTok fields (FIX: now properly reading from database)
@@ -104,6 +108,13 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     tiktokVideoLikes: dbAffiliate.tiktok_video_likes,
     tiktokVideoComments: dbAffiliate.tiktok_video_comments,
     tiktokVideoShares: dbAffiliate.tiktok_video_shares,
+    
+    // ==========================================================================
+    // YouTube fields (Added Dec 2025)
+    // Maps DB columns youtube_video_x → ResultItem.youtubeVideoX
+    // ==========================================================================
+    youtubeVideoLikes: dbAffiliate.youtube_video_likes,
+    youtubeVideoComments: dbAffiliate.youtube_video_comments,
   };
 }
 
@@ -171,6 +182,10 @@ function buildAffiliatePayloadWithoutUserId(a: ResultItem) {
     instagramPostsCount: a.instagramPostsCount,
     instagramIsBusiness: a.instagramIsBusiness,
     instagramIsVerified: a.instagramIsVerified,
+    // Instagram post-level stats (Added Dec 2025)
+    instagramPostLikes: a.instagramPostLikes,
+    instagramPostComments: a.instagramPostComments,
+    instagramPostViews: a.instagramPostViews,
     
     // ==========================================================================
     // TikTok fields (FIX: these were missing, causing NULL values in database)
@@ -188,6 +203,10 @@ function buildAffiliatePayloadWithoutUserId(a: ResultItem) {
     tiktokVideoLikes: a.tiktokVideoLikes,
     tiktokVideoComments: a.tiktokVideoComments,
     tiktokVideoShares: a.tiktokVideoShares,
+    
+    // YouTube fields (Added Dec 2025)
+    youtubeVideoLikes: a.youtubeVideoLikes,
+    youtubeVideoComments: a.youtubeVideoComments,
     
     // SimilarWeb fields
     similarwebMonthlyVisits: a.similarWeb?.monthlyVisits,

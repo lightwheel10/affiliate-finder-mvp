@@ -54,6 +54,7 @@ function DiscoveredContent() {
   // Data hooks
   const { 
     discoveredAffiliates, 
+    removeDiscoveredAffiliate,       // Single item delete
     removeDiscoveredAffiliatesBulk,  // Added Dec 2025 for bulk delete
     isLoading: loading 
   } = useDiscoveredAffiliates();
@@ -83,6 +84,15 @@ function DiscoveredContent() {
     duplicateCount: number;
     show: boolean;
   } | null>(null);
+  
+  // ============================================================================
+  // DELETE FEEDBACK STATE (Added Dec 2025)
+  // Shows toast notification after single or bulk delete
+  // ============================================================================
+  const [deleteResult, setDeleteResult] = useState<{
+    count: number;
+    show: boolean;
+  } | null>(null);
 
   const toggleSave = (item: ResultItem) => {
     if (isAffiliateSaved(item.link)) {
@@ -90,6 +100,19 @@ function DiscoveredContent() {
     } else {
       saveAffiliate(item);
     }
+  };
+
+  /**
+   * Handle single item delete with feedback toast (Added Dec 2025)
+   */
+  const handleSingleDelete = async (link: string) => {
+    await removeDiscoveredAffiliate(link);
+    // Show delete feedback toast
+    setDeleteResult({ count: 1, show: true });
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setDeleteResult(prev => prev ? { ...prev, show: false } : null);
+    }, 3000);
   };
 
   // ============================================================================
@@ -182,6 +205,7 @@ function DiscoveredContent() {
    */
   const confirmBulkDelete = async () => {
     if (visibleSelectedLinks.size === 0) return;
+    const deleteCount = visibleSelectedLinks.size;
     setIsBulkDeleting(true);
     try {
       await removeDiscoveredAffiliatesBulk(Array.from(visibleSelectedLinks));
@@ -192,6 +216,12 @@ function DiscoveredContent() {
         return newSet;
       });
       setIsDeleteModalOpen(false);
+      
+      // Show delete feedback toast
+      setDeleteResult({ count: deleteCount, show: true });
+      setTimeout(() => {
+        setDeleteResult(prev => prev ? { ...prev, show: false } : null);
+      }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
     } finally {
@@ -479,6 +509,10 @@ function DiscoveredContent() {
                     onSelect={toggleSelectItem}
                     // Bulk save visual feedback (Added Dec 2025)
                     isSaving={savingLinks.has(item.link)}
+                    // Single item delete (Added Dec 2025)
+                    onDelete={() => handleSingleDelete(item.link)}
+                    // View modal data (Added Dec 2025)
+                    affiliateData={item}
                   />
                ))
              ) : (
@@ -535,6 +569,39 @@ function DiscoveredContent() {
               </div>
               <button
                 onClick={() => setBulkSaveResult(prev => prev ? { ...prev, show: false } : null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================================
+          DELETE FEEDBACK TOAST (Added Dec 2025)
+          Shows confirmation after single or bulk delete
+          ============================================================================ */}
+      {deleteResult?.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-w-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-slate-900">
+                  {deleteResult.count === 1 
+                    ? 'Affiliate deleted'
+                    : `${deleteResult.count} affiliates deleted`
+                  }
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Successfully removed from discovered list.
+                </p>
+              </div>
+              <button
+                onClick={() => setDeleteResult(prev => prev ? { ...prev, show: false } : null)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X size={16} />
