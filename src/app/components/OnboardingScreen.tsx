@@ -374,11 +374,16 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       });
 
       if (!onboardingRes.ok) {
-        // Subscription was created but onboarding failed - log but don't block
-        console.error('[Stripe] Onboarding data save failed, but subscription is active');
+        // CRITICAL: Onboarding data must be saved for the user to have a complete profile.
+        // If this fails, throw an error to prevent marking user as onboarded.
+        // The subscription is already created, but we cannot proceed without profile data.
+        // Fixed December 2025 - previously this would silently continue and leave user in inconsistent state.
+        const onboardingError = await onboardingRes.json().catch(() => ({}));
+        console.error('[Stripe] Onboarding data save failed:', onboardingError);
+        throw new Error(onboardingError.error || 'Failed to save your profile information. Please try again.');
       }
 
-      // Success!
+      // Success - both subscription and onboarding data saved successfully!
       onComplete();
 
     } catch (error) {
