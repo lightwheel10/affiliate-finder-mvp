@@ -66,8 +66,11 @@ export async function POST(request: NextRequest) {
   try {
     // ==========================================================================
     // GET RAW BODY FOR SIGNATURE VERIFICATION
+    // Using arrayBuffer() and Buffer.from() to ensure we get the exact raw bytes
+    // This is critical for Stripe webhook signature verification
     // ==========================================================================
-    const body = await request.text();
+    const arrayBuffer = await request.arrayBuffer();
+    const body = Buffer.from(arrayBuffer).toString('utf8');
     const signature = request.headers.get('stripe-signature');
 
     if (!signature) {
