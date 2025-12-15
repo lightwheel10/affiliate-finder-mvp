@@ -41,10 +41,16 @@ export function sendUserToN8N(data: N8NUserData): void {
 
   // Skip if webhook URL is not configured
   if (!webhookUrl) {
+    console.log('[N8N] ⚠️ Webhook URL not configured, skipping');
     return;
   }
 
-  // Fire and forget - don't await, don't care about response
+  console.log(`[N8N] 🚀 Firing webhook for: ${data.email}`);
+  console.log(`[N8N] 🔗 URL: ${webhookUrl.substring(0, 50)}...`);
+
+  const startTime = Date.now();
+
+  // Fire and forget - but log the result for debugging
   fetch(webhookUrl, {
     method: 'POST',
     headers: {
@@ -56,9 +62,15 @@ export function sendUserToN8N(data: N8NUserData): void {
       source: 'crewcast_signup',
       timestamp: new Date().toISOString(),
     }),
-  }).catch(() => {
-    // Silently ignore errors - this is fire-and-forget
-  });
+  })
+    .then((response) => {
+      const elapsed = Date.now() - startTime;
+      console.log(`[N8N] ✅ Response: ${response.status} in ${elapsed}ms for ${data.email}`);
+    })
+    .catch((error) => {
+      const elapsed = Date.now() - startTime;
+      console.log(`[N8N] ❌ Failed after ${elapsed}ms for ${data.email}: ${error.message}`);
+    });
 }
 
 /**
