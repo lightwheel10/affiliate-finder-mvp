@@ -49,16 +49,16 @@ export function sendUserToN8N(data: N8NUserData): Promise<void> {
 
   // Return the promise so it can be passed to waitUntil
   return fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'CrewCast-Studio/1.0',
-    },
-    body: JSON.stringify({
-      ...data,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'CrewCast-Studio/1.0',
+      },
+      body: JSON.stringify({
+        ...data,
       source: 'crewcast_signup',
-      timestamp: new Date().toISOString(),
-    }),
+        timestamp: new Date().toISOString(),
+      }),
   })
     .then((response) => {
       const elapsed = Date.now() - startTime;

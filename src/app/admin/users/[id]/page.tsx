@@ -74,7 +74,7 @@ interface CostBreakdown {
 export default function UserDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const userId = params.id as string;
+  const userId = params?.id as string;
 
   const [user, setUser] = useState<UserDetail | null>(null);
   const [apiCalls, setApiCalls] = useState<ApiCall[]>([]);
