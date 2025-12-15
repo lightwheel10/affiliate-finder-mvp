@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import Stripe from 'stripe';
@@ -62,15 +62,14 @@ function markEventProcessed(eventId: string): void {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     // ==========================================================================
     // GET RAW BODY FOR SIGNATURE VERIFICATION
-    // Using arrayBuffer() and Buffer.from() to ensure we get the exact raw bytes
-    // This is critical for Stripe webhook signature verification
+    // Using request.text() as recommended by Next.js and Stripe docs
+    // This returns the raw body as a string without any parsing
     // ==========================================================================
-    const arrayBuffer = await request.arrayBuffer();
-    const body = Buffer.from(arrayBuffer).toString('utf8');
+    const body = await request.text();
     const signature = request.headers.get('stripe-signature');
 
     if (!signature) {
