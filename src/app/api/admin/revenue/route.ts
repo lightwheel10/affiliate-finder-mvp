@@ -213,14 +213,15 @@ export async function GET(request: NextRequest) {
 
     // Combine revenue and cost trends
     const combinedTrend: { date: string; revenue: number; cost: number; profit: number }[] = [];
+    const costTrendTyped = costTrend as { date: string; cost: number }[];
     const allDates = new Set([
       ...Object.keys(revenueTrend),
-      ...costTrend.map((c: { date: string }) => c.date),
+      ...costTrendTyped.map((c) => c.date),
     ]);
 
     Array.from(allDates).sort().forEach(date => {
       const revenue = revenueTrend[date]?.revenue || 0;
-      const costItem = costTrend.find((c: { date: string }) => c.date === date);
+      const costItem = costTrendTyped.find((c) => c.date === date);
       const cost = costItem ? Number(costItem.cost) : 0;
       combinedTrend.push({
         date,
