@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbUser } from '@/lib/db';
 import { sendUserToN8N, formatUserDataForN8N } from '@/lib/n8n-webhook';
+import { waitUntil } from '@vercel/functions';
 
 // GET /api/users?email=xxx - Get user by email
 export async function GET(request: NextRequest) {
@@ -59,8 +60,9 @@ export async function POST(request: NextRequest) {
 
     const newUser = result[0] as DbUser;
 
-    // Send user data to N8N webhook (fire-and-forget)
-    sendUserToN8N(formatUserDataForN8N(newUser));
+    // Send user data to N8N webhook (background task)
+    // waitUntil keeps the function alive until the webhook completes
+    waitUntil(sendUserToN8N(formatUserDataForN8N(newUser)));
 
     return NextResponse.json({ user: newUser, created: true });
   } catch (error) {

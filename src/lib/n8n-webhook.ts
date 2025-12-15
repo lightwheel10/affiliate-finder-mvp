@@ -29,29 +29,29 @@ export interface N8NUserData {
 }
 
 /**
- * Send user signup data to n8n webhook (Fire-and-Forget)
+ * Send user signup data to n8n webhook
  * 
  * This is called after user creation in the database.
- * We don't wait for a response - just send and move on.
+ * Returns a promise that the caller should pass to waitUntil().
  * 
  * @param data User data to send
+ * @returns Promise that resolves when webhook completes
  */
-export function sendUserToN8N(data: N8NUserData): void {
+export function sendUserToN8N(data: N8NUserData): Promise<void> {
   const webhookUrl = process.env.N8N_WEBHOOK_URL;
 
   // Skip if webhook URL is not configured
   if (!webhookUrl) {
     console.log('[N8N] ⚠️ Webhook URL not configured, skipping');
-    return;
+    return Promise.resolve();
   }
 
   console.log(`[N8N] 🚀 Firing webhook for: ${data.email}`);
-  console.log(`[N8N] 🔗 URL: ${webhookUrl.substring(0, 50)}...`);
 
   const startTime = Date.now();
 
-  // Fire and forget - but log the result for debugging
-  fetch(webhookUrl, {
+  // Return the promise so it can be passed to waitUntil
+  return fetch(webhookUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
