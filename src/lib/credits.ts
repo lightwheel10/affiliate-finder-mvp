@@ -200,8 +200,129 @@ export async function checkCredits(
       WHERE user_id = ${userId}
     `;
 
-    // No credit record found - user might be in read-only mode (canceled)
+    // No credit record found - check if user has active subscription and initialize credits
     if (result.length === 0) {
+      console.log(`[Credits] No credit record for user ${userId}, checking for active subscription...`);
+      
+      // Check if user has an active subscription
+      const subResult = await sql`
+        SELECT s.status, s.trial_end, s.current_period_start, s.current_period_end, s.plan
+        FROM subscriptions s
+        WHERE s.user_id = ${userId}
+          AND s.status IN ('active', 'trialing')
+        ORDER BY s.created_at DESC
+        LIMIT 1
+      `;
+      
+      if (subResult.length > 0) {
+        const sub = subResult[0];
+        console.log(`[Credits] Found active subscription for user ${userId}: status=${sub.status}, plan=${sub.plan}`);
+        
+        // Initialize credits based on subscription status
+        if (sub.status === 'trialing' && sub.trial_end) {
+          const trialStart = sub.current_period_start 
+            ? new Date(sub.current_period_start) 
+            : new Date();
+          const trialEnd = new Date(sub.trial_end);
+          
+          console.log(`[Credits] Initializing trial credits for user ${userId} (webhook fallback)`);
+          await initializeTrialCredits(userId, trialStart, trialEnd);
+        } else if (sub.status === 'active') {
+          const plan = normalizePlan(sub.plan || 'pro');
+          const periodStart = sub.current_period_start 
+            ? new Date(sub.current_period_start) 
+            : new Date();
+          const periodEnd = sub.current_period_end 
+            ? new Date(sub.current_period_end) 
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days default
+          
+          console.log(`[Credits] Initializing plan credits for user ${userId}: plan=${plan} (webhook fallback)`);
+          await resetCreditsForNewPeriod(userId, plan, periodStart, periodEnd);
+        }
+        
+        // Retry fetching credits after initialization
+        const retryResult = await sql`
+          SELECT 
+            topic_search_credits_total,
+            topic_search_credits_used,
+            email_credits_total,
+            email_credits_used,
+            ai_credits_total,
+            ai_credits_used,
+            period_end
+          FROM user_credits 
+          WHERE user_id = ${userId}
+        `;
+        
+        if (retryResult.length > 0) {
+          console.log(`[Credits] Successfully initialized credits for user ${userId}`);
+          // Continue with the newly created credit record
+          const row = retryResult[0];
+          
+          // Check if period has expired
+          const periodEnd = new Date(row.period_end);
+          if (new Date() > periodEnd) {
+            return {
+              allowed: false,
+              remaining: 0,
+              isUnlimited: false,
+              isReadOnly: true,
+              message: 'Subscription period has ended. Please renew to continue.',
+            };
+          }
+
+          // Get the relevant credit values based on type
+          let total: number;
+          let used: number;
+          
+          switch (creditType) {
+            case 'topic_search':
+              total = row.topic_search_credits_total;
+              used = row.topic_search_credits_used;
+              break;
+            case 'email':
+              total = row.email_credits_total;
+              used = row.email_credits_used;
+              break;
+            case 'ai':
+              total = row.ai_credits_total;
+              used = row.ai_credits_used;
+              break;
+            default:
+              return {
+                allowed: false,
+                remaining: 0,
+                isUnlimited: false,
+                isReadOnly: false,
+                message: 'Invalid credit type',
+              };
+          }
+
+          // Check if unlimited
+          if (total === -1) {
+            return {
+              allowed: true,
+              remaining: -1,
+              isUnlimited: true,
+              isReadOnly: false,
+            };
+          }
+
+          const remaining = Math.max(0, total - used);
+          const allowed = remaining >= amount;
+
+          return {
+            allowed,
+            remaining,
+            isUnlimited: false,
+            isReadOnly: false,
+            message: allowed ? undefined : `Insufficient ${creditType.replace('_', ' ')} credits. You have ${remaining} remaining.`,
+          };
+        }
+      }
+      
+      // No subscription found or credit initialization failed
+      console.log(`[Credits] No active subscription found for user ${userId}`);
       return {
         allowed: false,
         remaining: 0,
