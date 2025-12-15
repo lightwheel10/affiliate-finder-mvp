@@ -7,7 +7,7 @@
  * - Server-side only (never expose webhook URL to client)
  * - HTTPS connection (encrypted in transit)
  * - Non-blocking (doesn't fail user signup if webhook fails)
- * - Timeout protection (5 second max)
+ * - Timeout protection (15 second max, handles n8n cold starts)
  * - Error logging for monitoring
  * 
  * Created: December 2025
@@ -55,7 +55,7 @@ export async function sendUserToN8N(data: N8NUserData): Promise<boolean> {
     console.log(`[N8N] Sending user data for: ${data.email}`);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (handles n8n cold starts)
 
     const response = await fetch(webhookUrl, {
       method: 'POST',
