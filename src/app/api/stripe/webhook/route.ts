@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import Stripe from 'stripe';
+import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan } from '@/lib/credits';
 
 // =============================================================================
 // POST /api/stripe/webhook
@@ -376,6 +377,25 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   `;
 
   console.log(`[Webhook] Updated subscription for user ${dbUserId} to status: ${dbStatus}, plan: ${plan}, interval: ${billingInterval}`);
+
+  // =========================================================================
+  // INITIALIZE TRIAL CREDITS (December 2025)
+  // When a new trial subscription is created, initialize credits
+  // =========================================================================
+  if (dbStatus === 'trialing' && subData.trial_end) {
+    const trialStart = subData.current_period_start 
+      ? new Date(subData.current_period_start * 1000) 
+      : new Date();
+    const trialEnd = new Date(subData.trial_end * 1000);
+    
+    try {
+      await initializeTrialCredits(dbUserId, trialStart, trialEnd);
+      console.log(`[Webhook] Initialized trial credits for user ${dbUserId}`);
+    } catch (creditError) {
+      // Log error but don't fail the webhook - subscription is still valid
+      console.error(`[Webhook] Failed to initialize trial credits for user ${dbUserId}:`, creditError);
+    }
+  }
 }
 
 /**
@@ -439,6 +459,8 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
 
 /**
  * Handle successful invoice payment
+ * 
+ * Updated December 2025 to reset credits for new billing period
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // Cast invoice to access properties (Stripe SDK type handling)
@@ -460,7 +482,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   const users = await sql`
-    SELECT u.id FROM users u
+    SELECT u.id, u.plan FROM users u
     JOIN subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
@@ -471,6 +493,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   const dbUserId = users[0].id;
+  const userPlan = users[0].plan;
 
   // Update subscription to active (in case it was trialing)
   await sql`
@@ -490,6 +513,36 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   `;
 
   console.log(`[Webhook] Payment successful for user ${dbUserId}`);
+
+  // =========================================================================
+  // RESET CREDITS FOR NEW BILLING PERIOD (December 2025)
+  // When invoice is paid, reset credits based on user's plan
+  // This handles both trial-to-paid conversion and monthly renewals
+  // =========================================================================
+  try {
+    // Get subscription details from Stripe for period dates
+    const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subObj = stripeSubscription as any;
+    
+    const periodStart = typeof subObj.current_period_start === 'number'
+      ? new Date(subObj.current_period_start * 1000)
+      : new Date();
+    const periodEnd = typeof subObj.current_period_end === 'number'
+      ? new Date(subObj.current_period_end * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default 30 days
+    
+    // Get plan from subscription metadata or user's current plan
+    const plan = stripeSubscription.metadata?.plan || userPlan || 'pro';
+    const normalizedPlan = normalizePlan(plan);
+    
+    await resetCreditsForNewPeriod(dbUserId, normalizedPlan, periodStart, periodEnd);
+    console.log(`[Webhook] Reset credits for user ${dbUserId} to ${normalizedPlan} plan`);
+  } catch (creditError) {
+    // Log error but don't fail the webhook - payment is still successful
+    console.error(`[Webhook] Failed to reset credits for user ${dbUserId}:`, creditError);
+  }
 }
 
 /**

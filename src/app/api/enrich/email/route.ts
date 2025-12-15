@@ -43,6 +43,15 @@ import {
   EnrichmentRequest 
 } from '@/app/services/enrichment/index';
 import { trackApiCall, API_COSTS } from '@/app/services/tracking';
+import { stackServerApp } from '@/stack/server';
+import { checkCredits, consumeCredits } from '@/lib/credits';
+
+// Check if credit enforcement is enabled
+function isCreditEnforcementEnabled(): boolean {
+  const flag = process.env.ENFORCE_CREDITS;
+  if (!flag) return false;
+  return flag.toLowerCase() === 'true' || flag === '1';
+}
 
 /**
  * Helper to extract a clean domain from various URL formats
@@ -87,10 +96,23 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
   try {
+    // ==========================================================================
+    // AUTHENTICATION CHECK (December 2025)
+    // Verify user is authenticated via Stack Auth
+    // ==========================================================================
+    const authUser = await stackServerApp.getUser();
+    
+    if (!authUser) {
+      console.error('[Email Enrich] Unauthorized: No authenticated user');
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { 
       affiliateId, 
-      userId, 
       domain,
       originalDomain,
       personName,
@@ -107,11 +129,51 @@ export async function POST(request: NextRequest) {
     // VALIDATION
     // ==========================================================================
     
-    if (!affiliateId || !userId || !domain) {
+    if (!affiliateId || !domain) {
       return NextResponse.json(
-        { error: 'affiliateId, userId, and domain are required' },
+        { error: 'affiliateId and domain are required' },
         { status: 400 }
       );
+    }
+
+    // ==========================================================================
+    // GET USER FROM DATABASE (December 2025)
+    // Use authenticated email to get userId - never trust client-provided userId
+    // ==========================================================================
+    const users = await sql`
+      SELECT id FROM users WHERE email = ${authUser.primaryEmail}
+    `;
+
+    if (users.length === 0) {
+      console.error(`[Email Enrich] User not found in database: ${authUser.primaryEmail}`);
+      return NextResponse.json(
+        { error: 'User account not found. Please complete onboarding.' },
+        { status: 404 }
+      );
+    }
+
+    const userId = users[0].id as number;
+
+    // ==========================================================================
+    // CREDIT CHECK (December 2025)
+    // Verify user has email credits before proceeding
+    // ==========================================================================
+    const enforceCredits = isCreditEnforcementEnabled();
+    
+    if (enforceCredits) {
+      const creditCheck = await checkCredits(userId, 'email', 1);
+      
+      if (!creditCheck.allowed) {
+        console.log(`[Email Enrich] Credit check failed for user ${userId}: ${creditCheck.message}`);
+        return NextResponse.json({ 
+          error: creditCheck.message || 'Insufficient email credits',
+          creditError: true,
+          remaining: creditCheck.remaining,
+          isReadOnly: creditCheck.isReadOnly,
+        }, { status: 402 }); // Payment Required
+      }
+      
+      console.log(`[Email Enrich] Credit check passed for user ${userId}. Remaining: ${creditCheck.remaining}`);
     }
 
     // Validate forced provider if specified
@@ -146,12 +208,6 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     // UPDATE STATUS TO SEARCHING
     // ==========================================================================
-    
-    // TODO: Check user credits before proceeding
-    // const hasCredits = await checkUserCredits(userId, 'email_lookup');
-    // if (!hasCredits) {
-    //   return NextResponse.json({ error: 'Insufficient email credits' }, { status: 402 });
-    // }
 
     await sql`
       UPDATE saved_affiliates 
@@ -290,8 +346,25 @@ export async function POST(request: NextRequest) {
       WHERE id = ${affiliateId} AND user_id = ${userId}
     `;
 
-    // TODO: Deduct user credits after successful lookup
-    // await deductCredits(userId, 'email_lookup', 1);
+    // ==========================================================================
+    // CONSUME CREDIT (December 2025)
+    // Deduct 1 email credit after successful lookup
+    // Only consume if enforcement is enabled AND email was found
+    // ==========================================================================
+    if (enforceCredits && emailStatus === 'found') {
+      const consumeResult = await consumeCredits(
+        userId, 
+        'email', 
+        1, 
+        affiliateId.toString(), 
+        'affiliate'
+      );
+      if (consumeResult.success) {
+        console.log(`💳 [Email Enrich] Consumed 1 email credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
+      } else {
+        console.error(`❌ [Email Enrich] Failed to consume credit for user ${userId}`);
+      }
+    }
 
     // ==========================================================================
     // RETURN RESPONSE

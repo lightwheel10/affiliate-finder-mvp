@@ -2,6 +2,9 @@ import { searchMultiPlatform, Platform, SearchResult } from '../../services/sear
 import { analyzeContent } from '../../services/analysis';
 import { trackSearch, completeSearch, API_COSTS } from '../../services/tracking';
 import { enrichDomainsWithSimilarWeb, SimilarWebData } from '../../services/apify';
+import { stackServerApp } from '@/stack/server';
+import { sql } from '@/lib/db';
+import { checkCredits, consumeCredits } from '@/lib/credits';
 
 /**
  * Scout API - Searches for affiliates across multiple platforms
@@ -12,16 +15,89 @@ import { enrichDomainsWithSimilarWeb, SimilarWebData } from '../../services/apif
  * 
  * Mode 1 (default): Fast mode - returns raw search results immediately
  * Mode 2 (analyze=true): Slow mode - includes AI analysis (takes longer)
+ * 
+ * SECURITY (December 2025):
+ * - Requires authenticated Stack Auth session
+ * - Verifies user has topic_search credits
+ * - Consumes 1 credit per successful search
+ * - ENFORCE_CREDITS flag controls enforcement (default: false for safe rollout)
  */
+
+// Check if credit enforcement is enabled
+function isCreditEnforcementEnabled(): boolean {
+  const flag = process.env.ENFORCE_CREDITS;
+  if (!flag) return false;
+  return flag.toLowerCase() === 'true' || flag === '1';
+}
+
 export async function POST(req: Request) {
   try {
-    const { keyword, sources, analyze = false, userId } = await req.json();
+    const { keyword, sources, analyze = false } = await req.json();
 
     if (!keyword) {
       return new Response(JSON.stringify({ error: 'Keyword is required' }), { 
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // ==========================================================================
+    // AUTHENTICATION CHECK (December 2025)
+    // Verify user is authenticated via Stack Auth
+    // ==========================================================================
+    const authUser = await stackServerApp.getUser();
+    
+    if (!authUser) {
+      console.error('[Scout] Unauthorized: No authenticated user');
+      return new Response(JSON.stringify({ error: 'Unauthorized. Please sign in.' }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ==========================================================================
+    // GET USER FROM DATABASE (December 2025)
+    // Use authenticated email to get userId - never trust client-provided userId
+    // ==========================================================================
+    const users = await sql`
+      SELECT id FROM users WHERE email = ${authUser.primaryEmail}
+    `;
+
+    if (users.length === 0) {
+      console.error(`[Scout] User not found in database: ${authUser.primaryEmail}`);
+      return new Response(JSON.stringify({ error: 'User account not found. Please complete onboarding.' }), { 
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const userId = users[0].id as number;
+
+    // ==========================================================================
+    // CREDIT CHECK (December 2025)
+    // Verify user has topic_search credits before proceeding
+    // ==========================================================================
+    const enforceCredits = isCreditEnforcementEnabled();
+    
+    if (enforceCredits) {
+      const creditCheck = await checkCredits(userId, 'topic_search', 1);
+      
+      if (!creditCheck.allowed) {
+        console.log(`[Scout] Credit check failed for user ${userId}: ${creditCheck.message}`);
+        return new Response(JSON.stringify({ 
+          error: creditCheck.message || 'Insufficient credits',
+          creditError: true,
+          remaining: creditCheck.remaining,
+          isReadOnly: creditCheck.isReadOnly,
+        }), { 
+          status: 402, // Payment Required
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log(`[Scout] Credit check passed for user ${userId}. Remaining: ${creditCheck.remaining}`);
+    } else {
+      console.log(`[Scout] Credit enforcement disabled. Proceeding for user ${userId}.`);
     }
 
     // Filter out unsupported platforms (Reddit was removed)
@@ -203,6 +279,26 @@ export async function POST(req: Request) {
             if (searchId) {
               await completeSearch(searchId, resultsToProcess.length, totalCost);
               console.log(`📝 Search ${searchId} completed: ${resultsToProcess.length} results, $${totalCost.toFixed(4)} cost`);
+            }
+            
+            // ================================================================
+            // CONSUME CREDIT (December 2025)
+            // Deduct 1 topic_search credit after successful search
+            // Only consume if enforcement is enabled
+            // ================================================================
+            if (enforceCredits && resultsToProcess.length > 0) {
+              const consumeResult = await consumeCredits(
+                userId, 
+                'topic_search', 
+                1, 
+                searchId?.toString(), 
+                'search'
+              );
+              if (consumeResult.success) {
+                console.log(`💳 [Scout] Consumed 1 topic_search credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
+              } else {
+                console.error(`❌ [Scout] Failed to consume credit for user ${userId}`);
+              }
             }
           } catch (closeError) {
             // Ignore close errors

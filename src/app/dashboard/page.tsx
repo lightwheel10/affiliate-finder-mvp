@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AuthGuard } from '../components/AuthGuard';
 import { ScanCountdown } from '../components/ScanCountdown';
+import { CreditsDisplay } from '../components/CreditsDisplay';
 import { AffiliateCard } from '../components/AffiliateCard';
 import { TopCompetitorsChart } from '../components/charts/TopCompetitorsChart';
 import { MarketShareChart } from '../components/charts/MarketShareChart';
@@ -315,14 +316,9 @@ function DashboardContent() {
               <Users size={10} className="text-[#1A1D21]" />
               <span className="font-semibold text-[#1A1D21]">{discoveredAffiliates.length} Discovered</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md">
-              <Mail size={10} className="text-slate-600" />
-              <span className="font-semibold text-slate-800">150/150 Email Credits</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-200 rounded-md">
-              <Sparkles size={10} className="text-slate-600" />
-              <span className="font-semibold text-slate-800">100 AI Credits</span>
-            </div>
+            
+            {/* Credits Display - December 2025 (no Topic Searches on dashboard) */}
+            <CreditsDisplay showTopicSearches={false} />
             
             {/* Action Button */}
             <button 

@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { ScanCountdown } from '../components/ScanCountdown';
 import { AuthGuard } from '../components/AuthGuard';
+import { CreditsDisplay } from '../components/CreditsDisplay';
 import { useSavedAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { 
@@ -182,19 +183,8 @@ function OutreachContent() {
           <ScanCountdown />
           
           <div className="flex items-center gap-3 text-xs">
-            {/* Stats Display */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg">
-              <Search size={12} className="text-[#1A1D21]" />
-              <span className="font-semibold text-[#1A1D21]">14/15 Topic Searches</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-              <Mail size={12} className="text-slate-600" />
-              <span className="font-semibold text-slate-800">150/150 Email Credits</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-              <Sparkles size={12} className="text-slate-600" />
-              <span className="font-semibold text-slate-800">100 AI Credits</span>
-            </div>
+            {/* Credits Display - December 2025 */}
+            <CreditsDisplay />
             
             {/* Action Button */}
             <button 

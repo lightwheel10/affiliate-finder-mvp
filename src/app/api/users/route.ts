@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbUser } from '@/lib/db';
+import { sendUserToN8N, formatUserDataForN8N } from '@/lib/n8n-webhook';
 
 // GET /api/users?email=xxx - Get user by email
 export async function GET(request: NextRequest) {
@@ -56,7 +57,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ user: existingUsers[0] as DbUser, created: false });
     }
 
-    return NextResponse.json({ user: result[0] as DbUser, created: true });
+    const newUser = result[0] as DbUser;
+
+    // =========================================================================
+    // SEND USER DATA TO N8N WEBHOOK (Option 1: After user creation)
+    // 
+    // This sends basic user info immediately after signup.
+    // Non-blocking: User signup continues even if webhook fails.
+    // 
+    // NOTE: If needed in the future, we can also send data after onboarding
+    // completion (Option 2) which would include additional fields like:
+    // - role, brand, targetCountry, targetLanguage
+    // - competitors, topics, affiliateTypes
+    // =========================================================================
+    sendUserToN8N(formatUserDataForN8N(newUser)).catch(err => {
+      // Log error but don't fail the request
+      console.error('[N8N] Background webhook failed:', err);
+    });
+
+    return NextResponse.json({ user: newUser, created: true });
   } catch (error) {
     console.error('Error creating/updating user:', error);
     return NextResponse.json({ error: 'Failed to create/update user' }, { status: 500 });

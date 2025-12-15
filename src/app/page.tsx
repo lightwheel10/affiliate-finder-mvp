@@ -12,6 +12,7 @@ import { ScanCountdown } from './components/ScanCountdown';
 import { LandingPage } from './components/landing/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { LoadingOnboardingScreen } from './components/LoadingOnboardingScreen';
+import { CreditsDisplay } from './components/CreditsDisplay';
 import { useNeonUser } from './hooks/useNeonUser';
 import { 
   Plus, 
@@ -305,7 +306,6 @@ function Dashboard() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFindModalOpen, setIsFindModalOpen] = useState(false);
-  const [expectedResultsCount, setExpectedResultsCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10); // Show 10 results per page
   const [showWarning, setShowWarning] = useState(false);
@@ -394,9 +394,6 @@ function Dashboard() {
       setShowWarning(true);
       setTimeout(() => setShowWarning(false), 4000);
     }
-    
-    // Estimate: 4 platforms × 10 results × number of keywords
-    setExpectedResultsCount(40 * keywords.length);
 
     // Combined keyword string for storage
     const combinedKeyword = keywords.join(' | ');
@@ -565,6 +562,41 @@ function Dashboard() {
       TikTok: results.filter(r => r.source === 'TikTok').length,
     };
   }, [results, hasSearched]);
+
+  // Generate dynamic loading message based on which platforms have returned results
+  const loadingMessage = useMemo(() => {
+    if (results.length === 0) {
+      return {
+        title: "Scanning the web for affiliates...",
+        subtitle: "Searching YouTube, Instagram, TikTok & websites",
+        badge: "Starting scan"
+      };
+    }
+    
+    // Build platform breakdown
+    const platformResults: string[] = [];
+    if (counts.YouTube > 0) platformResults.push(`${counts.YouTube} from YouTube`);
+    if (counts.Instagram > 0) platformResults.push(`${counts.Instagram} from Instagram`);
+    if (counts.TikTok > 0) platformResults.push(`${counts.TikTok} from TikTok`);
+    if (counts.Web > 0) platformResults.push(`${counts.Web} from websites`);
+    
+    // Dynamic titles based on progress
+    const titles = [
+      "Great finds coming in!",
+      "Discovering potential partners...",
+      "Building your affiliate list...",
+      "Uncovering hidden gems...",
+    ];
+    const titleIndex = Math.min(Math.floor(results.length / 10), titles.length - 1);
+    
+    return {
+      title: titles[titleIndex],
+      subtitle: platformResults.length > 0 
+        ? platformResults.join(" • ") 
+        : "Analyzing results...",
+      badge: `${results.length} found`
+    };
+  }, [results.length, counts]);
 
   // Filter tabs data with real counts
   const filterTabs = [
@@ -837,19 +869,8 @@ function Dashboard() {
           <ScanCountdown />
           
           <div className="flex items-center gap-3 text-xs">
-            {/* Stats Display */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg">
-              <Search size={12} className="text-[#1A1D21]" />
-              <span className="font-semibold text-[#1A1D21]">14/15 Topic Searches</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-              <Mail size={12} className="text-slate-600" />
-              <span className="font-semibold text-slate-800">150/150 Email Credits</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
-              <Sparkles size={12} className="text-slate-600" />
-              <span className="font-semibold text-slate-800">100 AI Credits</span>
-            </div>
+            {/* Credits Display - December 2025 */}
+            <CreditsDisplay />
             
             {/* Action Buttons */}
             <button 
@@ -1065,22 +1086,14 @@ function Dashboard() {
                       <div className="w-5 h-5 border-2 border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-[#1A1D21]">
-                          Discovering affiliates...
+                          {loadingMessage.title}
                         </p>
                         <p className="text-xs text-slate-600">
-                          {results.length > 0 
-                            ? `${groupedResults.length} unique affiliates from ${results.length} results • Analyzing more...`
-                            : 'Searching across platforms...'}
+                          {loadingMessage.subtitle}
                         </p>
                       </div>
-                      <div className="text-xs font-mono text-[#1A1D21] bg-[#D4E815]/20 px-2 py-1 rounded flex items-center gap-2">
-                        <span>{results.length}/{expectedResultsCount} analyzed</span>
-                        {groupedResults.length > 0 && (
-                          <>
-                            <span className="text-[#1A1D21]/30">•</span>
-                            <span className="text-[#1A1D21] font-semibold">{groupedResults.length} affiliates</span>
-                          </>
-                        )}
+                      <div className="text-xs font-semibold text-[#1A1D21] bg-[#D4E815]/20 px-2.5 py-1 rounded-full">
+                        {loadingMessage.badge}
                       </div>
                     </div>
                      
@@ -1127,8 +1140,8 @@ function Dashboard() {
                       </div>
                     ))}
                     
-                    {/* Skeletons for upcoming results (show 3 max) */}
-                     {Array.from({ length: Math.min(3, Math.max(0, expectedResultsCount - results.length)) }).map((_, idx) => (
+                    {/* Skeletons for upcoming results (show 3 while loading) */}
+                     {Array.from({ length: 3 }).map((_, idx) => (
                        <div
                          key={`skeleton-${animationKey}-${idx}`}
                          className="opacity-50"
