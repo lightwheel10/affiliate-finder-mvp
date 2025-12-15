@@ -85,6 +85,9 @@ export async function POST(request: NextRequest) {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const isProduction = process.env.NODE_ENV === 'production';
     
+    // DEBUG: Log secret prefix to verify correct env var is loaded
+    console.log(`[Webhook] Debug: Secret prefix: ${webhookSecret?.substring(0, 15)}..., Body length: ${body.length}, Sig prefix: ${signature.substring(0, 20)}`);
+    
     if (!webhookSecret) {
       console.error('[Webhook] STRIPE_WEBHOOK_SECRET not configured');
       
