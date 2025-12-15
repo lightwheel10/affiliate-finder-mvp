@@ -19,9 +19,6 @@ export interface N8NUserData {
   
   // Subscription Info
   plan: 'free_trial' | 'pro' | 'business' | 'enterprise';
-  trialPlan: 'pro' | 'business' | null;
-  trialStartDate: string | null;
-  trialEndDate: string | null;
   
   // Metadata
   onboardingCompleted: boolean;
@@ -83,9 +80,6 @@ export function formatUserDataForN8N(user: {
   email: string;
   name: string;
   plan: 'free_trial' | 'pro' | 'business' | 'enterprise';
-  trial_plan: 'pro' | 'business' | null;
-  trial_start_date: string | null;
-  trial_end_date: string | null;
   is_onboarded: boolean;
   created_at: string;
 }): N8NUserData {
@@ -93,9 +87,6 @@ export function formatUserDataForN8N(user: {
     email: user.email,
     name: user.name,
     plan: user.plan,
-    trialPlan: user.trial_plan,
-    trialStartDate: user.trial_start_date,
-    trialEndDate: user.trial_end_date,
     onboardingCompleted: user.is_onboarded,
     signupDate: user.created_at,
   };
