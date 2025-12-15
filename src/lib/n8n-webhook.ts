@@ -6,9 +6,8 @@
  * SECURITY:
  * - Server-side only (never expose webhook URL to client)
  * - HTTPS connection (encrypted in transit)
+ * - Fire-and-forget (doesn't wait for response)
  * - Non-blocking (doesn't fail user signup if webhook fails)
- * - Timeout protection (15 second max, handles n8n cold starts)
- * - Error logging for monitoring
  * 
  * Created: December 2025
  */
@@ -30,73 +29,36 @@ export interface N8NUserData {
 }
 
 /**
- * Send user signup data to n8n webhook
+ * Send user signup data to n8n webhook (Fire-and-Forget)
  * 
- * This is called after user creation in the database (Option 1).
- * 
- * NOTE: If needed in the future, we can also send data after onboarding
- * completion (Option 2) which would include additional fields like:
- * - role, brand, targetCountry, targetLanguage
- * - competitors, topics, affiliateTypes
+ * This is called after user creation in the database.
+ * We don't wait for a response - just send and move on.
  * 
  * @param data User data to send
- * @returns Promise<boolean> - true if successful, false if failed
  */
-export async function sendUserToN8N(data: N8NUserData): Promise<boolean> {
+export function sendUserToN8N(data: N8NUserData): void {
   const webhookUrl = process.env.N8N_WEBHOOK_URL;
 
   // Skip if webhook URL is not configured
   if (!webhookUrl) {
-    console.warn('[N8N] Webhook URL not configured, skipping...');
-    return false;
+    return;
   }
 
-  try {
-    console.log(`[N8N] Sending user data for: ${data.email}`);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (handles n8n cold starts)
-
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'CrewCast-Studio/1.0',
-      },
-      body: JSON.stringify({
-        ...data,
-        source: 'crewcast_signup', // Identify the source
-        timestamp: new Date().toISOString(),
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`N8N webhook returned ${response.status}: ${response.statusText}`);
-    }
-
-    console.log(`[N8N] ✅ Successfully sent data for: ${data.email}`);
-    return true;
-
-  } catch (error) {
-    // DON'T throw - we don't want to break user signup if n8n is down
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        console.error(`[N8N] ❌ Timeout sending data for: ${data.email}`);
-      } else {
-        console.error(`[N8N] ❌ Failed to send data for: ${data.email}`, error.message);
-      }
-    } else {
-      console.error(`[N8N] ❌ Unknown error for: ${data.email}`, error);
-    }
-    
-    // TODO: Consider implementing a retry queue for failed webhooks
-    // For now, we just log and continue
-    
-    return false;
-  }
+  // Fire and forget - don't await, don't care about response
+  fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'CrewCast-Studio/1.0',
+    },
+    body: JSON.stringify({
+      ...data,
+      source: 'crewcast_signup',
+      timestamp: new Date().toISOString(),
+    }),
+  }).catch(() => {
+    // Silently ignore errors - this is fire-and-forget
+  });
 }
 
 /**

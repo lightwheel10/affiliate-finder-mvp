@@ -59,21 +59,8 @@ export async function POST(request: NextRequest) {
 
     const newUser = result[0] as DbUser;
 
-    // =========================================================================
-    // SEND USER DATA TO N8N WEBHOOK (Option 1: After user creation)
-    // 
-    // This sends basic user info immediately after signup.
-    // Non-blocking: User signup continues even if webhook fails.
-    // 
-    // NOTE: If needed in the future, we can also send data after onboarding
-    // completion (Option 2) which would include additional fields like:
-    // - role, brand, targetCountry, targetLanguage
-    // - competitors, topics, affiliateTypes
-    // =========================================================================
-    sendUserToN8N(formatUserDataForN8N(newUser)).catch(err => {
-      // Log error but don't fail the request
-      console.error('[N8N] Background webhook failed:', err);
-    });
+    // Send user data to N8N webhook (fire-and-forget)
+    sendUserToN8N(formatUserDataForN8N(newUser));
 
     return NextResponse.json({ user: newUser, created: true });
   } catch (error) {
