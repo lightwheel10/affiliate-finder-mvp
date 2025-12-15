@@ -35,8 +35,9 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ResultItem } from './types';
+import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from './types';
 import { useSavedAffiliates, useDiscoveredAffiliates } from './hooks/useAffiliates';
+import { FilterPanel } from './components/FilterPanel';
 
 const MAX_KEYWORDS = 5;
 
@@ -344,6 +345,13 @@ function Dashboard() {
     show: boolean;
   } | null>(null);
 
+  // ============================================================================
+  // ADVANCED FILTER STATE (Added Dec 2025)
+  // For FilterPanel component - filters by competitors, topics, subscribers, etc.
+  // ============================================================================
+  const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
   // Add keyword to list
   const addKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -607,28 +615,110 @@ function Dashboard() {
     { id: 'TikTok', icon: <Music size={14} className="text-cyan-500" />, count: counts.TikTok },
   ];
 
-  // Filter results based on active filter AND search query
+  // Filter results based on active filter, search query, AND advanced filters
   const filteredResults = useMemo(() => {
     let filtered = results;
-    
+
     // Filter by source
     if (activeFilter !== 'All') {
       filtered = filtered.filter(r => r.source === activeFilter);
     }
-    
+
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.title.toLowerCase().includes(query) ||
         r.domain.toLowerCase().includes(query) ||
         r.snippet?.toLowerCase().includes(query) ||
         r.keyword?.toLowerCase().includes(query)
       );
     }
-    
+
+    // ============================================================================
+    // ADVANCED FILTERS (Added Dec 2025)
+    // Apply filters from FilterPanel component
+    // ============================================================================
+
+    // Filter by competitors
+    if (advancedFilters.competitors.length > 0) {
+      filtered = filtered.filter(r =>
+        r.discoveryMethod?.type === 'competitor' &&
+        advancedFilters.competitors.includes(r.discoveryMethod.value)
+      );
+    }
+
+    // Filter by topics
+    if (advancedFilters.topics.length > 0) {
+      filtered = filtered.filter(r =>
+        (r.discoveryMethod?.type === 'topic' && advancedFilters.topics.includes(r.discoveryMethod.value)) ||
+        (r.discoveryMethod?.type === 'keyword' && advancedFilters.topics.includes(r.discoveryMethod.value)) ||
+        (r.keyword && advancedFilters.topics.includes(r.keyword))
+      );
+    }
+
+    // Filter by subscribers/followers
+    if (advancedFilters.subscribers) {
+      const { min, max } = advancedFilters.subscribers;
+      filtered = filtered.filter(r => {
+        let subCount = 0;
+        if (r.channel?.subscribers) {
+          subCount = parseSubscriberCount(r.channel.subscribers) || 0;
+        } else if (r.instagramFollowers) {
+          subCount = r.instagramFollowers;
+        } else if (r.tiktokFollowers) {
+          subCount = r.tiktokFollowers;
+        }
+        if (subCount === 0) return false; // No subscriber data
+        if (min !== undefined && subCount < min) return false;
+        if (max !== undefined && subCount > max) return false;
+        return true;
+      });
+    }
+
+    // Filter by date published
+    if (advancedFilters.datePublished) {
+      const { start, end } = advancedFilters.datePublished;
+      filtered = filtered.filter(r => {
+        if (!r.date) return false;
+        const itemDate = new Date(r.date);
+        if (start && itemDate < new Date(start)) return false;
+        if (end && itemDate > new Date(end)) return false;
+        return true;
+      });
+    }
+
+    // Filter by last posted (same as date published for now)
+    if (advancedFilters.lastPosted) {
+      const { start, end } = advancedFilters.lastPosted;
+      filtered = filtered.filter(r => {
+        if (!r.date) return false;
+        const itemDate = new Date(r.date);
+        if (start && itemDate < new Date(start)) return false;
+        if (end && itemDate > new Date(end)) return false;
+        return true;
+      });
+    }
+
+    // Filter by content count
+    if (advancedFilters.contentCount) {
+      const { min, max } = advancedFilters.contentCount;
+      filtered = filtered.filter(r => {
+        let contentCount = 0;
+        if (r.instagramPostsCount) {
+          contentCount = r.instagramPostsCount;
+        } else if (r.tiktokVideosCount) {
+          contentCount = r.tiktokVideosCount;
+        }
+        if (contentCount === 0) return false; // No content count data
+        if (min !== undefined && contentCount < min) return false;
+        if (max !== undefined && contentCount > max) return false;
+        return true;
+      });
+    }
+
     return filtered;
-  }, [results, activeFilter, searchQuery]);
+  }, [results, activeFilter, searchQuery, advancedFilters]);
 
   // Group filtered results by domain OR show all individually
   const groupedResults = useMemo(() => {
@@ -962,6 +1052,18 @@ function Dashboard() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Right: Advanced Filter Button (Added Dec 2025) */}
+              <div className="flex items-center">
+                <FilterPanel
+                  affiliates={results}
+                  activeFilters={advancedFilters}
+                  onFilterChange={setAdvancedFilters}
+                  isOpen={isFilterPanelOpen}
+                  onClose={() => setIsFilterPanelOpen(false)}
+                  onOpen={() => setIsFilterPanelOpen(true)}
+                />
               </div>
             </div>
           </div>

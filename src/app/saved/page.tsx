@@ -39,6 +39,8 @@ import {
   AlertCircle,
   XCircle
 } from 'lucide-react';
+import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../types';
+import { FilterPanel } from '../components/FilterPanel';
 
 export default function SavedPage() {
   return (
@@ -93,6 +95,13 @@ function SavedContent() {
     count: number;
     show: boolean;
   } | null>(null);
+
+  // ============================================================================
+  // ADVANCED FILTER STATE (Added Dec 2025)
+  // For FilterPanel component - filters by competitors, topics, subscribers, etc.
+  // ============================================================================
+  const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   /**
    * Handle single item delete with feedback toast (Added Dec 2025)
@@ -253,25 +262,98 @@ function SavedContent() {
     }
   };
 
-  // Filter and Search Logic
+  // Filter and Search Logic (Updated Dec 2025 - includes advanced filters)
   const filteredResults = useMemo(() => {
     return savedAffiliates.filter(item => {
       // Filter by Source
       if (activeFilter !== 'All' && item.source !== activeFilter) return false;
-      
+
       // Filter by Search Query
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        return (
+        const matchesSearch = (
           item.title.toLowerCase().includes(q) ||
           item.domain.toLowerCase().includes(q) ||
           (item.keyword && item.keyword.toLowerCase().includes(q))
         );
+        if (!matchesSearch) return false;
       }
-      
+
+      // ============================================================================
+      // ADVANCED FILTERS (Added Dec 2025)
+      // Apply filters from FilterPanel component
+      // ============================================================================
+
+      // Filter by competitors
+      if (advancedFilters.competitors.length > 0) {
+        if (
+          item.discoveryMethod?.type !== 'competitor' ||
+          !advancedFilters.competitors.includes(item.discoveryMethod.value)
+        ) {
+          return false;
+        }
+      }
+
+      // Filter by topics
+      if (advancedFilters.topics.length > 0) {
+        const matchesTopic =
+          (item.discoveryMethod?.type === 'topic' && advancedFilters.topics.includes(item.discoveryMethod.value)) ||
+          (item.discoveryMethod?.type === 'keyword' && advancedFilters.topics.includes(item.discoveryMethod.value)) ||
+          (item.keyword && advancedFilters.topics.includes(item.keyword));
+        if (!matchesTopic) return false;
+      }
+
+      // Filter by subscribers/followers
+      if (advancedFilters.subscribers) {
+        const { min, max } = advancedFilters.subscribers;
+        let subCount = 0;
+        if (item.channel?.subscribers) {
+          subCount = parseSubscriberCount(item.channel.subscribers) || 0;
+        } else if (item.instagramFollowers) {
+          subCount = item.instagramFollowers;
+        } else if (item.tiktokFollowers) {
+          subCount = item.tiktokFollowers;
+        }
+        if (subCount === 0) return false;
+        if (min !== undefined && subCount < min) return false;
+        if (max !== undefined && subCount > max) return false;
+      }
+
+      // Filter by date published
+      if (advancedFilters.datePublished) {
+        const { start, end } = advancedFilters.datePublished;
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        if (start && itemDate < new Date(start)) return false;
+        if (end && itemDate > new Date(end)) return false;
+      }
+
+      // Filter by last posted (same as date published for now)
+      if (advancedFilters.lastPosted) {
+        const { start, end } = advancedFilters.lastPosted;
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        if (start && itemDate < new Date(start)) return false;
+        if (end && itemDate > new Date(end)) return false;
+      }
+
+      // Filter by content count
+      if (advancedFilters.contentCount) {
+        const { min, max } = advancedFilters.contentCount;
+        let contentCount = 0;
+        if (item.instagramPostsCount) {
+          contentCount = item.instagramPostsCount;
+        } else if (item.tiktokVideosCount) {
+          contentCount = item.tiktokVideosCount;
+        }
+        if (contentCount === 0) return false;
+        if (min !== undefined && contentCount < min) return false;
+        if (max !== undefined && contentCount > max) return false;
+      }
+
       return true;
     });
-  }, [savedAffiliates, activeFilter, searchQuery]);
+  }, [savedAffiliates, activeFilter, searchQuery, advancedFilters]);
 
   // ============================================================================
   // VISIBLE SELECTION - Computed from selectedLinks and filteredResults
@@ -407,13 +489,25 @@ function SavedContent() {
                   ))}
                 </div>
               </div>
+
+              {/* Right: Advanced Filter Button (Added Dec 2025) */}
+              <div className="flex items-center">
+                <FilterPanel
+                  affiliates={savedAffiliates}
+                  activeFilters={advancedFilters}
+                  onFilterChange={setAdvancedFilters}
+                  isOpen={isFilterPanelOpen}
+                  onClose={() => setIsFilterPanelOpen(false)}
+                  onOpen={() => setIsFilterPanelOpen(true)}
+                />
+              </div>
             </div>
           </div>
 
           {/* ============================================================================
               BULK ACTIONS BAR (Added Dec 2025)
               Uses light background to match page aesthetic
-              
+
               FIX (Dec 2025): Use visibleSelectedLinks for UI display/counts
               This shows only items selected in the CURRENT filter view
               

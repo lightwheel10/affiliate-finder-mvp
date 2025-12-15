@@ -159,3 +159,94 @@ export interface ResultItem {
   tiktokVideoComments?: number;
   tiktokVideoShares?: number;
 }
+
+// =============================================================================
+// ADVANCED FILTER TYPES (Added Dec 2025)
+// Used by FilterPanel component for advanced affiliate filtering
+// =============================================================================
+
+/**
+ * Range filter for numeric values (subscribers, content count, etc.)
+ */
+export interface RangeFilter {
+  min?: number;
+  max?: number;
+}
+
+/**
+ * Date range filter
+ */
+export interface DateRangeFilter {
+  start?: string;  // ISO date string
+  end?: string;    // ISO date string
+}
+
+/**
+ * State for all advanced filters
+ * Used by FilterPanel and parent pages
+ */
+export interface FilterState {
+  competitors: string[];              // Selected competitor values from discoveryMethod
+  topics: string[];                   // Selected topic/keyword values
+  subscribers: RangeFilter | null;    // Follower/subscriber count range
+  datePublished: DateRangeFilter | null;  // When content was published
+  lastPosted: DateRangeFilter | null;     // Recent activity filter
+  contentCount: RangeFilter | null;   // Number of posts/videos
+}
+
+/**
+ * Default empty filter state
+ */
+export const DEFAULT_FILTER_STATE: FilterState = {
+  competitors: [],
+  topics: [],
+  subscribers: null,
+  datePublished: null,
+  lastPosted: null,
+  contentCount: null,
+};
+
+/**
+ * Check if any filters are active
+ */
+export function hasActiveFilters(filters: FilterState): boolean {
+  return (
+    filters.competitors.length > 0 ||
+    filters.topics.length > 0 ||
+    filters.subscribers !== null ||
+    filters.datePublished !== null ||
+    filters.lastPosted !== null ||
+    filters.contentCount !== null
+  );
+}
+
+/**
+ * Count number of active filter categories
+ */
+export function countActiveFilters(filters: FilterState): number {
+  let count = 0;
+  if (filters.competitors.length > 0) count++;
+  if (filters.topics.length > 0) count++;
+  if (filters.subscribers !== null) count++;
+  if (filters.datePublished !== null) count++;
+  if (filters.lastPosted !== null) count++;
+  if (filters.contentCount !== null) count++;
+  return count;
+}
+
+/**
+ * Parse subscriber string to number (e.g., "1.9K" -> 1900, "2.5M" -> 2500000)
+ */
+export function parseSubscriberCount(str?: string): number | null {
+  if (!str) return null;
+  const match = str.match(/^([\d.]+)\s*([KMB])?/i);
+  if (!match) return null;
+  
+  const num = parseFloat(match[1]);
+  const suffix = match[2]?.toUpperCase();
+  
+  if (suffix === 'K') return Math.round(num * 1000);
+  if (suffix === 'M') return Math.round(num * 1000000);
+  if (suffix === 'B') return Math.round(num * 1000000000);
+  return Math.round(num);
+}
