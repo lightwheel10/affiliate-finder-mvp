@@ -1528,7 +1528,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </Modal>
 
-      {/* Email Results Modal */}
+      {/* Email Results Modal - Updated Dec 2025 to match brand design */}
       <Modal 
         isOpen={isEmailModalOpen} 
         onClose={() => setIsEmailModalOpen(false)}
@@ -1539,23 +1539,33 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-bold text-slate-900">
-                Email <span className="italic text-[#1A9A6D]">Results</span> for {personName || channel?.name || domain.split('.')[0]}
-              </h3>
+              <div className="w-10 h-10 bg-[#1A1D21] rounded-xl flex items-center justify-center shadow-lg shadow-[#1A1D21]/20">
+                <Mail size={18} className="text-[#D4E815]" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Email Results
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {personName || channel?.name || domain.replace(/^www\./, '').split('.')[0]}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {emailResults?.provider && (
+                <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                  via {emailResults.provider}
+                </span>
+              )}
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
                 (emailResults?.emails?.length || (email ? 1 : 0)) > 0 
-                  ? 'bg-[#1A9A6D]/10 text-[#1A9A6D] border border-[#1A9A6D]/20' 
+                  ? 'bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40' 
                   : 'bg-slate-100 text-slate-500 border border-slate-200'
               }`}>
                 <Mail size={12} />
-                {emailResults?.emails?.length || (email ? 1 : 0)} Email{(emailResults?.emails?.length || 0) !== 1 ? 's' : ''} • {emailResults?.contacts?.length || (emailResults?.firstName ? 1 : 0)} Contact{(emailResults?.contacts?.length || 0) !== 1 ? 's' : ''}
+                {emailResults?.emails?.length || (email ? 1 : 0)} Found
               </span>
             </div>
-            {emailResults?.provider && (
-              <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                via {emailResults.provider}
-              </span>
-            )}
           </div>
 
           {/* Show all contacts if available, otherwise show simple email list */}
@@ -1571,8 +1581,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                     {/* Contact Header */}
                     <div className="p-4 bg-white border-b border-slate-100">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1A9A6D]/20 to-[#1A9A6D]/5 border border-[#1A9A6D]/20 flex items-center justify-center flex-shrink-0">
-                          <User size={18} className="text-[#1A9A6D]" />
+                        <div className="w-10 h-10 rounded-full bg-[#1A1D21] flex items-center justify-center flex-shrink-0">
+                          <User size={18} className="text-[#D4E815]" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-slate-900 truncate">{contactName}</h4>
@@ -1595,7 +1605,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                             </a>
                           )}
                         </div>
-                        <span className="text-[10px] font-bold text-[#1A9A6D] bg-[#1A9A6D]/10 px-2 py-0.5 rounded-full border border-[#1A9A6D]/20">
+                        <span className="text-[10px] font-bold text-[#1A1D21] bg-[#D4E815]/20 px-2 py-0.5 rounded-full border border-[#D4E815]/40">
                           {contact.emails.length} email{contact.emails.length !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -1606,11 +1616,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                       {contact.emails.map((emailAddr, emailIdx) => (
                         <div 
                           key={emailIdx}
-                          className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:border-[#1A9A6D]/30 hover:bg-[#1A9A6D]/5 transition-all"
+                          className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:border-[#D4E815]/50 hover:bg-[#D4E815]/5 transition-all"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-md bg-[#1A9A6D]/10 flex items-center justify-center flex-shrink-0">
-                              <Mail size={12} className="text-[#1A9A6D]" />
+                            <div className="w-7 h-7 rounded-md bg-[#D4E815]/20 flex items-center justify-center flex-shrink-0">
+                              <Mail size={12} className="text-[#1A1D21]" />
                             </div>
                             <span className="font-medium text-slate-900 text-sm truncate">{emailAddr}</span>
                           </div>
@@ -1618,8 +1628,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                             onClick={() => copyEmail(emailAddr)}
                             className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all flex-shrink-0 ${
                               copiedEmail === emailAddr
-                                ? 'bg-[#1A9A6D] text-white'
-                                : 'bg-[#1A9A6D]/10 text-[#1A9A6D] hover:bg-[#1A9A6D]/20 border border-[#1A9A6D]/20'
+                                ? 'bg-[#1A1D21] text-[#D4E815]'
+                                : 'bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] border border-[#D4E815]'
                             }`}
                           >
                             {copiedEmail === emailAddr ? <Check size={10} /> : <Copy size={10} />}
@@ -1634,11 +1644,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                           {contact.phoneNumbers.map((phone, phoneIdx) => (
                             <div 
                               key={phoneIdx}
-                              className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                              className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:border-slate-300 hover:bg-slate-50 transition-all"
                             >
                               <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center">
-                                  <Phone size={12} className="text-blue-600" />
+                                <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
+                                  <Phone size={12} className="text-slate-600" />
                                 </div>
                                 <span className="font-medium text-slate-900 text-sm">{phone}</span>
                               </div>
@@ -1650,8 +1660,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                                 }}
                                 className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
                                   copiedEmail === phone
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                                    ? 'bg-[#1A1D21] text-white'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
                                 }`}
                               >
                                 {copiedEmail === phone ? <Check size={10} /> : <Copy size={10} />}
@@ -1674,11 +1684,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 {(emailResults?.emails || (email ? [email] : [])).map((emailAddr, idx) => (
                   <div 
                     key={idx}
-                    className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:border-[#1A9A6D]/30 hover:bg-[#1A9A6D]/5 transition-all"
+                    className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:border-[#D4E815]/50 hover:bg-[#D4E815]/5 transition-all"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#1A9A6D]/10 flex items-center justify-center">
-                        <Mail size={14} className="text-[#1A9A6D]" />
+                      <div className="w-8 h-8 rounded-lg bg-[#D4E815]/20 flex items-center justify-center">
+                        <Mail size={14} className="text-[#1A1D21]" />
                       </div>
                       <span className="font-medium text-slate-900">{emailAddr}</span>
                     </div>
@@ -1686,8 +1696,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                       onClick={() => copyEmail(emailAddr)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                         copiedEmail === emailAddr
-                          ? 'bg-[#1A9A6D] text-white'
-                          : 'bg-[#1A9A6D]/10 text-[#1A9A6D] hover:bg-[#1A9A6D]/20 border border-[#1A9A6D]/20'
+                          ? 'bg-[#1A1D21] text-[#D4E815]'
+                          : 'bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] border border-[#D4E815]'
                       }`}
                     >
                       {copiedEmail === emailAddr ? <Check size={12} /> : <Copy size={12} />}
@@ -1710,7 +1720,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   setIsEmailModalOpen(false);
                   onFindEmail?.();
                 }}
-                className="mt-4 px-4 py-2 bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40 rounded-lg text-xs font-bold hover:bg-[#D4E815]/40 transition-all inline-flex items-center gap-2"
+                className="mt-4 px-4 py-2 bg-[#D4E815] text-[#1A1D21] rounded-lg text-xs font-bold hover:bg-[#c5d913] transition-all inline-flex items-center gap-2 shadow-sm"
               >
                 <RotateCw size={12} />
                 Search Again
