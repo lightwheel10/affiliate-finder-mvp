@@ -575,8 +575,15 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   // ==========================================================================
   // RESET CREDITS FOR NEW BILLING PERIOD
-  // This is the critical part - we MUST reset credits when payment succeeds
+  // IMPORTANT: Only reset credits for ACTUAL payments (amountPaid > 0)
+  // Trial invoices have amountPaid = 0 and should NOT reset credits
+  // (trial credits are already initialized by handleSubscriptionUpdate)
   // ==========================================================================
+  if (amountPaid === 0) {
+    console.log(`[Webhook] Skipping credit reset for $0 trial invoice`);
+    return;
+  }
+
   try {
     let periodStart = new Date();
     let periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default 30 days

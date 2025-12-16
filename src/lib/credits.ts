@@ -306,6 +306,12 @@ export async function consumeCredits(
   referenceType?: string
 ): Promise<{ success: boolean; newBalance: number }> {
   try {
+    // SECURITY: Validate amount is positive to prevent credit injection
+    if (amount <= 0 || !Number.isInteger(amount)) {
+      console.error(`[Credits] SECURITY: Invalid amount ${amount} rejected for user ${userId}`);
+      return { success: false, newBalance: 0 };
+    }
+
     let updateResult;
     
     // Use separate queries for each credit type (Neon doesn't support dynamic column names)
@@ -392,12 +398,75 @@ export async function initializeTrialCredits(
   try {
     // Check if user already has credits
     const existing = await sql`
-      SELECT id FROM user_credits WHERE user_id = ${userId}
+      SELECT id, period_end, is_trial_period FROM user_credits WHERE user_id = ${userId}
     `;
 
     if (existing.length > 0) {
-      console.log(`[Credits] User ${userId} already has credits, skipping initialization`);
+      const existingCredits = existing[0];
+      const existingPeriodEnd = new Date(existingCredits.period_end);
+      const now = new Date();
+      
+      // If existing credits are EXPIRED, check if user already used their trial
+      if (existingPeriodEnd < now) {
+        // SECURITY: Check if user already had a trial to prevent trial abuse
+        // Users who already used a trial should NOT get another free trial
+        const userCheck = await sql`
+          SELECT trial_start_date FROM users WHERE id = ${userId}
+        `;
+        
+        if (userCheck.length > 0 && userCheck[0].trial_start_date) {
+          // User already had a trial before - DO NOT give another trial
+          console.log(`[Credits] SECURITY: User ${userId} already used trial (started ${userCheck[0].trial_start_date}). Blocking new trial.`);
+          // Leave their expired credits as-is - they need to subscribe to continue
+          return true;
+        }
+        
+        // First-time trial user with somehow expired credits - reset for new trial
+        console.log(`[Credits] User ${userId} has EXPIRED credits (ended ${existingPeriodEnd.toISOString()}), resetting for new trial`);
+        
+        await sql`
+          UPDATE user_credits
+          SET
+            topic_search_credits_total = ${PLAN_CREDITS.trial.topicSearches},
+            email_credits_total = ${PLAN_CREDITS.trial.email},
+            ai_credits_total = ${PLAN_CREDITS.trial.ai},
+            topic_search_credits_used = 0,
+            email_credits_used = 0,
+            ai_credits_used = 0,
+            period_start = ${periodStart.toISOString()},
+            period_end = ${periodEnd.toISOString()},
+            is_trial_period = true,
+            updated_at = NOW()
+          WHERE user_id = ${userId}
+        `;
+        
+        // Log the transaction
+        await sql`
+          INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
+          VALUES 
+            (${userId}, 'topic_search', ${PLAN_CREDITS.trial.topicSearches}, ${PLAN_CREDITS.trial.topicSearches}, 'trial_restart', 'subscription'),
+            (${userId}, 'email', ${PLAN_CREDITS.trial.email}, ${PLAN_CREDITS.trial.email}, 'trial_restart', 'subscription'),
+            (${userId}, 'ai', ${PLAN_CREDITS.trial.ai}, ${PLAN_CREDITS.trial.ai}, 'trial_restart', 'subscription')
+        `;
+        
+        console.log(`[Credits] Reset expired credits for user ${userId} to new trial`);
+        return true;
+      }
+      
+      // Credits exist and are not expired - skip (prevent duplicate initialization)
+      console.log(`[Credits] User ${userId} already has valid credits (ends ${existingPeriodEnd.toISOString()}), skipping initialization`);
       return true;
+    }
+
+    // SECURITY: Check if user already had a trial before (no credit record but used trial)
+    const userCheck = await sql`
+      SELECT trial_start_date FROM users WHERE id = ${userId}
+    `;
+    
+    if (userCheck.length > 0 && userCheck[0].trial_start_date) {
+      // User already had a trial before - DO NOT give another trial
+      console.log(`[Credits] SECURITY: User ${userId} already used trial (started ${userCheck[0].trial_start_date}). Blocking new trial - no credit record.`);
+      return false;
     }
 
     // Create credit record with trial credits (same for all users)
@@ -464,7 +533,21 @@ export async function resetCreditsForNewPeriod(
   periodEnd: Date
 ): Promise<boolean> {
   try {
-    const planCredits = PLAN_CREDITS[plan];
+    // SECURITY: Enterprise plan grants unlimited credits (-1)
+    // Only allow enterprise if explicitly verified from database
+    // This prevents plan injection attacks
+    let verifiedPlan = plan;
+    if (plan === 'enterprise') {
+      const userCheck = await sql`
+        SELECT plan FROM users WHERE id = ${userId}
+      `;
+      if (userCheck.length === 0 || userCheck[0].plan !== 'enterprise') {
+        console.error(`[Credits] SECURITY: User ${userId} attempted enterprise credits but is not enterprise. Falling back to pro.`);
+        verifiedPlan = 'pro';
+      }
+    }
+
+    const planCredits = PLAN_CREDITS[verifiedPlan];
 
     // Update or insert credit record
     const existing = await sql`

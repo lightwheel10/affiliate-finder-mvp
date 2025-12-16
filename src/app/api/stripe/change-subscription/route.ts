@@ -406,19 +406,31 @@ export async function POST(request: NextRequest) {
     console.log(`[Stripe Change] Database updated for user ${userId}`);
 
     // =========================================================================
-    // STEP 12.5: RESET CREDITS IMMEDIATELY IF TRIAL ENDED
+    // STEP 12.5: RESET CREDITS IMMEDIATELY FOR UPGRADES AND TRIAL ENDINGS
     // 
-    // CRITICAL FIX (Dec 2025): When user ends trial early (endTrialNow=true),
-    // we must reset credits IMMEDIATELY. Previously, we relied on the webhook
-    // (invoice.paid event) to reset credits, but this had issues:
-    // 1. Webhook delay - user sees "active" but has trial credits
-    // 2. Webhook parsing bug - invoice.subscription field wasn't being read correctly
+    // CRITICAL FIX (Dec 2025): Reset credits immediately when:
+    // 1. Trial user ends trial early (endTrialNow=true) - gets paid plan credits
+    // 2. Active user UPGRADES (Pro → Business) - gets new plan credits immediately
     // 
-    // By resetting here, we guarantee the user gets their plan credits instantly
-    // after Stripe confirms the subscription update. The webhook acts as backup.
+    // Why immediate reset is needed:
+    // - The invoice.paid webhook may be delayed or only fire at next billing cycle
+    // - User sees new plan in UI but would have old credits without this fix
+    // - Downgrades should NOT reset immediately (change takes effect at period end)
+    // 
+    // The webhook still acts as a backup/sync mechanism.
     // =========================================================================
-    if (isTrialing && endTrialNow && newStatus === 'active') {
-      console.log(`[Stripe Change] Trial ended - resetting credits immediately for user ${userId}`);
+    const shouldResetCredits = 
+      (isTrialing && endTrialNow && newStatus === 'active') || // Trial → Paid
+      (isUpgrade && newStatus === 'active') || // Pro → Business upgrade
+      (isSamePlanIntervalChange && newStatus === 'active'); // Monthly → Annual (or vice versa)
+    
+    if (shouldResetCredits) {
+      const reason = isTrialing && endTrialNow 
+        ? 'Trial ended' 
+        : isUpgrade 
+          ? 'Plan upgraded' 
+          : 'Billing interval changed';
+      console.log(`[Stripe Change] ${reason} - resetting credits immediately for user ${userId}`);
       
       try {
         const periodStart = new Date();
