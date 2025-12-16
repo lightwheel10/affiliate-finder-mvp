@@ -553,7 +553,18 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   // ==========================================================================
-  // UPDATE SUBSCRIPTION STATUS
+  // IMPORTANT: Skip $0 trial invoices ENTIRELY
+  // Trial invoices have amountPaid = 0 and should NOT:
+  // 1. Update subscription status to 'active' (it should stay 'trialing')
+  // 2. Reset credits (trial credits are initialized by handleSubscriptionUpdate)
+  // ==========================================================================
+  if (amountPaid === 0) {
+    console.log(`[Webhook] Skipping $0 trial invoice - no status change, no credit reset`);
+    return;
+  }
+
+  // ==========================================================================
+  // UPDATE SUBSCRIPTION STATUS (only for actual payments)
   // ==========================================================================
   await sql`
     UPDATE subscriptions
@@ -572,17 +583,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   `;
 
   console.log(`[Webhook] Payment successful for user ${dbUserId}`);
-
-  // ==========================================================================
-  // RESET CREDITS FOR NEW BILLING PERIOD
-  // IMPORTANT: Only reset credits for ACTUAL payments (amountPaid > 0)
-  // Trial invoices have amountPaid = 0 and should NOT reset credits
-  // (trial credits are already initialized by handleSubscriptionUpdate)
-  // ==========================================================================
-  if (amountPaid === 0) {
-    console.log(`[Webhook] Skipping credit reset for $0 trial invoice`);
-    return;
-  }
 
   try {
     let periodStart = new Date();
