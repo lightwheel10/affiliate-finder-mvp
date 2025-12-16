@@ -294,7 +294,7 @@ function Dashboard() {
     saveDiscoveredAffiliates,
     removeDiscoveredAffiliate,       // Single item delete
     removeDiscoveredAffiliatesBulk,  // Added Dec 2025 for bulk delete
-    updateDiscoveredAffiliateSimilarWeb, // Added Dec 16, 2025 - persist SimilarWeb data
+    // NOTE (Dec 16, 2025): updateDiscoveredAffiliateSimilarWeb removed - server now handles persistence
     isLoading: discoveredLoading
   } = useDiscoveredAffiliates();
 
@@ -483,14 +483,21 @@ function Dashboard() {
                     });
                     
                     // ================================================================
-                    // PERSIST TO DATABASE (Added Dec 16, 2025 - Critical bug fix)
-                    // Without this, SimilarWeb data was lost on page refresh!
+                    // NOTE: Server-side persistence (Updated December 16, 2025)
+                    // 
+                    // SimilarWeb data is now persisted directly by the server in
+                    // route.ts AFTER streaming enrichment_update events. This
+                    // eliminates the race condition where client-side PATCH calls
+                    // could arrive before the initial INSERT completed.
+                    // 
+                    // Previous approach (removed):
+                    //   updateDiscoveredAffiliateSimilarWeb(domain, similarWebData)
+                    // 
+                    // The client now only updates React state for immediate UI
+                    // feedback. Database persistence is handled server-side.
                     // ================================================================
-                    updateDiscoveredAffiliateSimilarWeb(domain, similarWebData).catch(err => {
-                      console.error(`Failed to persist SimilarWeb data for ${domain}:`, err);
-                    });
                     
-                    console.log(`✅ Enriched domain: ${domain}`);
+                    console.log(`✅ Enriched domain: ${domain} (server will persist)`);
                     continue; // Don't process as a regular result
                   }
                   

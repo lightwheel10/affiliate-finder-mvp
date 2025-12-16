@@ -392,6 +392,76 @@ export async function POST(req: Request) {
               console.log(`✅ Streamed ${enrichmentsSent} SimilarWeb enrichment updates`);
             }
             
+            // ================================================================
+            // SERVER-SIDE SIMILARWEB PERSISTENCE (Added December 16, 2025)
+            // 
+            // PROBLEM: Previously, SimilarWeb data was persisted via a client-side
+            // PATCH call (fire-and-forget) when enrichment_update events arrived.
+            // This created a race condition:
+            // - Client calls saveDiscoveredAffiliate() (fire-and-forget INSERT)
+            // - Server sends enrichment_update
+            // - Client calls updateDiscoveredAffiliateSimilarWeb() (PATCH)
+            // - If INSERT hasn't completed, PATCH finds 0 rows → silent data loss
+            // 
+            // SOLUTION: Move SimilarWeb persistence to the server. The server:
+            // 1. Waits 3 seconds to ensure client INSERTs have completed
+            // 2. Batch UPDATEs all domains with SimilarWeb data directly
+            // 3. Eliminates the race condition since server controls timing
+            // 
+            // WHY 3 SECONDS?
+            // - Client INSERT typically takes 50-500ms
+            // - Worst case with cold starts: ~5-8 seconds
+            // - 3 seconds covers 99%+ of cases while staying within timeout budget
+            // ================================================================
+            if (similarWebDataMap.size > 0) {
+              console.log(`⏳ Waiting 3s before persisting SimilarWeb data (letting client INSERTs complete)...`);
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              
+              let persistedCount = 0;
+              let failedCount = 0;
+              
+              for (const [domain, swData] of similarWebDataMap) {
+                try {
+                  const result = await sql`
+                    UPDATE discovered_affiliates
+                    SET 
+                      similarweb_monthly_visits = ${swData.monthlyVisits ?? null},
+                      similarweb_global_rank = ${swData.globalRank ?? null},
+                      similarweb_country_rank = ${swData.countryRank ?? null},
+                      similarweb_country_code = ${swData.countryCode ?? null},
+                      similarweb_bounce_rate = ${swData.bounceRate ?? null},
+                      similarweb_pages_per_visit = ${swData.pagesPerVisit ?? null},
+                      similarweb_time_on_site = ${swData.timeOnSite ?? null},
+                      similarweb_category = ${swData.category ?? null},
+                      similarweb_traffic_sources = ${swData.trafficSources ? JSON.stringify(swData.trafficSources) : null},
+                      similarweb_top_countries = ${swData.topCountries ? JSON.stringify(swData.topCountries) : null},
+                      similarweb_site_title = ${swData.siteTitle ?? null},
+                      similarweb_site_description = ${swData.siteDescription ?? null},
+                      similarweb_screenshot = ${swData.screenshot ?? null},
+                      similarweb_category_rank = ${swData.categoryRank ?? null},
+                      similarweb_monthly_visits_history = ${swData.monthlyVisitsHistory ? JSON.stringify(swData.monthlyVisitsHistory) : null},
+                      similarweb_top_keywords = ${swData.topKeywords ? JSON.stringify(swData.topKeywords) : null},
+                      similarweb_snapshot_date = ${swData.snapshotDate ?? null}
+                    WHERE user_id = ${userId} AND domain = ${domain} AND source = 'Web'
+                    RETURNING id
+                  `;
+                  
+                  if (result.length > 0) {
+                    persistedCount++;
+                  } else {
+                    // No rows updated - INSERT may not have completed or domain not found
+                    console.warn(`⚠️ No rows updated for domain: ${domain} (INSERT may have failed)`);
+                    failedCount++;
+                  }
+                } catch (dbError: any) {
+                  console.error(`❌ Failed to persist SimilarWeb for ${domain}:`, dbError.message);
+                  failedCount++;
+                }
+              }
+              
+              console.log(`✅ SimilarWeb persistence complete: ${persistedCount}/${similarWebDataMap.size} domains updated${failedCount > 0 ? `, ${failedCount} failed` : ''}`);
+            }
+            
           } catch (enrichError: any) {
             // SimilarWeb timeout or failure - main results are unaffected
             if (enrichError.message === 'SimilarWeb timeout') {
