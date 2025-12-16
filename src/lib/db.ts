@@ -109,6 +109,41 @@ export interface DbSavedAffiliate {
   email_status: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
   email_searched_at: string | null;
   email_provider: string | null;
+  
+  // ==========================================================================
+  // EMAIL RESULTS - Full enrichment data (Added Dec 2025)
+  // 
+  // CRITICAL FIX: Previously, only the primary email was saved to the `email`
+  // column. Lusha can return 1-50 emails across multiple contacts, along with
+  // phone numbers, job titles, LinkedIn URLs, etc. All this data was being
+  // lost on page refresh because it was only stored in React state.
+  //
+  // This JSONB column stores the complete enrichment response so that:
+  // - All emails are preserved (not just the first one)
+  // - Contact details (name, title, LinkedIn) are preserved
+  // - Phone numbers are preserved (Lusha only)
+  // - Data persists across page refreshes
+  //
+  // Structure matches ResultItem.emailResults in types.ts
+  // ==========================================================================
+  email_results: {
+    emails: string[];
+    contacts?: Array<{
+      firstName?: string;
+      lastName?: string;
+      fullName?: string;
+      title?: string;
+      linkedinUrl?: string;
+      emails: string[];
+      phoneNumbers?: string[];
+    }>;
+    firstName?: string;
+    lastName?: string;
+    title?: string;
+    linkedinUrl?: string;
+    phoneNumbers?: string[];
+    provider?: string;
+  } | null;
 }
 
 export interface DbDiscoveredAffiliate {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, getPriceId, isValidPlan, isValidInterval, PLAN_DETAILS } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import { stackServerApp } from '@/stack/server';
+import { resetCreditsForNewPeriod, normalizePlan } from '@/lib/credits';
 
 // =============================================================================
 // POST /api/stripe/change-subscription
@@ -403,6 +404,40 @@ export async function POST(request: NextRequest) {
     `;
 
     console.log(`[Stripe Change] Database updated for user ${userId}`);
+
+    // =========================================================================
+    // STEP 12.5: RESET CREDITS IMMEDIATELY IF TRIAL ENDED
+    // 
+    // CRITICAL FIX (Dec 2025): When user ends trial early (endTrialNow=true),
+    // we must reset credits IMMEDIATELY. Previously, we relied on the webhook
+    // (invoice.paid event) to reset credits, but this had issues:
+    // 1. Webhook delay - user sees "active" but has trial credits
+    // 2. Webhook parsing bug - invoice.subscription field wasn't being read correctly
+    // 
+    // By resetting here, we guarantee the user gets their plan credits instantly
+    // after Stripe confirms the subscription update. The webhook acts as backup.
+    // =========================================================================
+    if (isTrialing && endTrialNow && newStatus === 'active') {
+      console.log(`[Stripe Change] Trial ended - resetting credits immediately for user ${userId}`);
+      
+      try {
+        const periodStart = new Date();
+        const periodEndTimestampNum = typeof updatedSubObj.current_period_end === 'number' 
+          ? updatedSubObj.current_period_end 
+          : null;
+        const periodEnd = periodEndTimestampNum 
+          ? new Date(periodEndTimestampNum * 1000)
+          : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // Default 1 year for annual
+        
+        const normalizedPlan = normalizePlan(newPlan);
+        
+        await resetCreditsForNewPeriod(userId, normalizedPlan, periodStart, periodEnd);
+        console.log(`[Stripe Change] ✅ Credits reset for user ${userId} to ${normalizedPlan} plan`);
+      } catch (creditError) {
+        // Log error but don't fail the request - webhook will retry
+        console.error(`[Stripe Change] Failed to reset credits for user ${userId}:`, creditError);
+      }
+    }
 
     // =========================================================================
     // STEP 13: CALCULATE PRORATION AMOUNT FOR RESPONSE

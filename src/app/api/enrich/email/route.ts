@@ -334,7 +334,35 @@ export async function POST(request: NextRequest) {
 
     // ==========================================================================
     // UPDATE DATABASE WITH RESULTS
+    // 
+    // CRITICAL FIX (Dec 2025): Save full email_results JSON, not just primary email
+    // 
+    // Previously, only `result.email` (single string) was saved. Lusha can return
+    // 1-50 emails across multiple contacts, plus phone numbers, job titles, etc.
+    // All this rich data was lost on page refresh because it only existed in
+    // React state (via the API response).
+    //
+    // Now we save the complete enrichment response to `email_results` JSONB column.
+    // This ensures:
+    // - All emails persist (not just the first one)
+    // - Contact details persist (firstName, lastName, title, LinkedIn)
+    // - Phone numbers persist (Lusha provides these)
+    // - Users see full data even after page refresh
+    //
+    // The `email` column still stores the primary email for quick access/queries.
     // ==========================================================================
+    
+    // Build email_results object with all enrichment data
+    const emailResultsData = result.found ? {
+      emails: result.emails || (result.email ? [result.email] : []),
+      contacts: result.contacts || [],
+      firstName: result.firstName,
+      lastName: result.lastName,
+      title: result.title,
+      linkedinUrl: result.linkedinUrl,
+      phoneNumbers: result.phoneNumbers,
+      provider: result.provider,
+    } : null;
     
     await sql`
       UPDATE saved_affiliates 
@@ -342,7 +370,8 @@ export async function POST(request: NextRequest) {
         email = ${result.email || null},
         email_status = ${emailStatus},
         email_searched_at = NOW(),
-        email_provider = ${result.provider}
+        email_provider = ${result.provider},
+        email_results = ${emailResultsData ? JSON.stringify(emailResultsData) : null}
       WHERE id = ${affiliateId} AND user_id = ${userId}
     `;
 

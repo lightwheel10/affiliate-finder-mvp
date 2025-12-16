@@ -216,11 +216,21 @@ export default async function handler(
 
 /**
  * Handle subscription created or updated
+ * 
+ * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
  */
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   console.log(`[Webhook] Processing subscription update: ${subscription.id}, status: ${subscription.status}`);
 
-  const customerId = subscription.customer as string;
+  // Safely extract customer ID (can be string or Customer object)
+  const customerId = typeof subscription.customer === 'string' 
+    ? subscription.customer 
+    : (subscription.customer as { id: string })?.id;
+  
+  if (!customerId) {
+    console.error(`[Webhook] Subscription ${subscription.id} has no customer ID`);
+    return;
+  }
 
   const users = await sql`
     SELECT u.id FROM users u
@@ -368,11 +378,21 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 
 /**
  * Handle subscription canceled
+ * 
+ * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
  */
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   console.log(`[Webhook] Processing subscription cancellation: ${subscription.id}`);
 
-  const customerId = subscription.customer as string;
+  // Safely extract customer ID (can be string or Customer object)
+  const customerId = typeof subscription.customer === 'string' 
+    ? subscription.customer 
+    : (subscription.customer as { id: string })?.id;
+  
+  if (!customerId) {
+    console.error(`[Webhook] Subscription ${subscription.id} has no customer ID`);
+    return;
+  }
 
   const users = await sql`
     SELECT u.id FROM users u
@@ -410,36 +430,105 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
 
 /**
  * Handle trial ending soon (3 days before)
+ * 
+ * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
  */
 async function handleTrialWillEnd(subscription: Stripe.Subscription) {
   console.log(`[Webhook] Trial will end soon for subscription: ${subscription.id}`);
-  const customerId = subscription.customer as string;
-  console.log(`[Webhook] Trial ending soon for customer: ${customerId}`);
+  
+  // Safely extract customer ID (can be string or Customer object)
+  const customerId = typeof subscription.customer === 'string' 
+    ? subscription.customer 
+    : (subscription.customer as { id: string })?.id;
+    
+  console.log(`[Webhook] Trial ending soon for customer: ${customerId || 'unknown'}`);
+  
+  // TODO: Send email notification to user about trial ending
 }
 
 /**
  * Handle successful invoice payment
+ * 
+ * CRITICAL FIX (Dec 2025): Properly extract subscription ID from both string and object formats.
+ * The Stripe API (especially version 2025-11-17.clover) can return subscription as:
+ * - A string: 'sub_xxx'
+ * - An expanded object: { id: 'sub_xxx', ... }
+ * - null: for one-time payments
+ * 
+ * Previous code used dangerous `as unknown as` type casting which broke when
+ * subscription was an object, causing credits to never reset after payment.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  const invoiceData = invoice as unknown as {
-    id: string;
-    amount_paid: number;
-    customer: string;
-    subscription: string | null;
-  };
+  // ==========================================================================
+  // SAFELY EXTRACT INVOICE DATA
+  // Handle both string and object formats for customer and subscription
+  // ==========================================================================
   
-  console.log(`[Webhook] Invoice paid: ${invoiceData.id}, amount: ${invoiceData.amount_paid}`);
+  // Use 'any' cast to safely access properties that may vary across Stripe API versions
+  // The Stripe SDK types may not reflect all properties returned by the webhook
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const invoiceObj = invoice as any;
+  
+  // Extract customer ID (can be string or Customer object)
+  let customerId: string | null = null;
+  const customerField = invoiceObj.customer;
+  if (typeof customerField === 'string') {
+    customerId = customerField;
+  } else if (customerField && typeof customerField === 'object' && customerField.id) {
+    customerId = customerField.id;
+  }
+  
+  // Extract subscription ID - IMPORTANT: API version 2025-11-17.clover changed the structure!
+  // OLD location: invoice.subscription (string or object)
+  // NEW location: invoice.parent.subscription_details.subscription (string)
+  let subscriptionId: string | null = null;
+  
+  // Try OLD location first (for backwards compatibility)
+  const subscriptionField = invoiceObj.subscription;
+  if (typeof subscriptionField === 'string') {
+    subscriptionId = subscriptionField;
+  } else if (subscriptionField && typeof subscriptionField === 'object' && subscriptionField.id) {
+    subscriptionId = subscriptionField.id;
+  }
+  
+  // Try NEW location (API version 2025-11-17.clover)
+  // Structure: invoice.parent.subscription_details.subscription
+  if (!subscriptionId && invoiceObj.parent?.subscription_details?.subscription) {
+    const parentSubId = invoiceObj.parent.subscription_details.subscription;
+    if (typeof parentSubId === 'string') {
+      subscriptionId = parentSubId;
+      console.log(`[Webhook] Found subscription ID in new location (parent.subscription_details): ${subscriptionId}`);
+    }
+  }
+  
+  // Also check line items as another fallback
+  // Structure: invoice.lines.data[0].parent.subscription_item_details.subscription
+  if (!subscriptionId && invoiceObj.lines?.data?.[0]?.parent?.subscription_item_details?.subscription) {
+    const lineSubId = invoiceObj.lines.data[0].parent.subscription_item_details.subscription;
+    if (typeof lineSubId === 'string') {
+      subscriptionId = lineSubId;
+      console.log(`[Webhook] Found subscription ID in line items: ${subscriptionId}`);
+    }
+  }
+  
+  // Get amount safely
+  const amountPaid = typeof invoiceObj.amount_paid === 'number' ? invoiceObj.amount_paid : 0;
+  
+  console.log(`[Webhook] Invoice paid: ${invoice.id}, amount: ${amountPaid}, customer: ${customerId}, subscription: ${subscriptionId}`);
 
-  const customerId = invoiceData.customer;
-  const subscriptionId = invoiceData.subscription;
-
-  if (!subscriptionId) {
-    console.log(`[Webhook] Invoice ${invoiceData.id} has no subscription (one-time payment)`);
+  // ==========================================================================
+  // VALIDATE CUSTOMER ID
+  // ==========================================================================
+  if (!customerId) {
+    console.error(`[Webhook] Invoice ${invoice.id} has no customer ID - cannot process`);
     return;
   }
 
+  // ==========================================================================
+  // FIND USER BY CUSTOMER ID
+  // ==========================================================================
   const users = await sql`
-    SELECT u.id, u.plan FROM users u
+    SELECT u.id, u.plan, s.stripe_subscription_id FROM users u
     JOIN subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
@@ -451,7 +540,21 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   const dbUserId = users[0].id;
   const userPlan = users[0].plan;
+  const dbSubscriptionId = users[0].stripe_subscription_id;
 
+  // ==========================================================================
+  // FALLBACK: If invoice doesn't have subscription ID, use the one from DB
+  // This handles cases where Stripe's invoice.subscription is null but we
+  // know the user has a subscription (e.g., trial-to-paid conversion)
+  // ==========================================================================
+  if (!subscriptionId && dbSubscriptionId) {
+    console.log(`[Webhook] Using subscription ID from database: ${dbSubscriptionId}`);
+    subscriptionId = dbSubscriptionId;
+  }
+
+  // ==========================================================================
+  // UPDATE SUBSCRIPTION STATUS
+  // ==========================================================================
   await sql`
     UPDATE subscriptions
     SET
@@ -470,21 +573,43 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   console.log(`[Webhook] Payment successful for user ${dbUserId}`);
 
-  // Reset credits for new billing period
+  // ==========================================================================
+  // RESET CREDITS FOR NEW BILLING PERIOD
+  // This is the critical part - we MUST reset credits when payment succeeds
+  // ==========================================================================
   try {
-    const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+    let periodStart = new Date();
+    let periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default 30 days
+    let plan = userPlan || 'pro';
+
+    // Try to get accurate period from Stripe subscription
+    if (subscriptionId) {
+      try {
+        const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const subObj = stripeSubscription as any;
+        
+        if (typeof subObj.current_period_start === 'number') {
+          periodStart = new Date(subObj.current_period_start * 1000);
+        }
+        if (typeof subObj.current_period_end === 'number') {
+          periodEnd = new Date(subObj.current_period_end * 1000);
+        }
+        
+        // Get plan from subscription metadata (most accurate source)
+        if (stripeSubscription.metadata?.plan) {
+          plan = stripeSubscription.metadata.plan;
+        }
+        
+        console.log(`[Webhook] Got subscription details: plan=${plan}, period=${periodStart.toISOString()} to ${periodEnd.toISOString()}`);
+      } catch (subError) {
+        console.error(`[Webhook] Failed to retrieve subscription ${subscriptionId}, using defaults:`, subError);
+      }
+    } else {
+      console.log(`[Webhook] No subscription ID available, using defaults for credit reset`);
+    }
     
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subObj = stripeSubscription as any;
-    
-    const periodStart = typeof subObj.current_period_start === 'number'
-      ? new Date(subObj.current_period_start * 1000)
-      : new Date();
-    const periodEnd = typeof subObj.current_period_end === 'number'
-      ? new Date(subObj.current_period_end * 1000)
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    
-    const plan = stripeSubscription.metadata?.plan || userPlan || 'pro';
     const normalizedPlan = normalizePlan(plan);
     
     await resetCreditsForNewPeriod(dbUserId, normalizedPlan, periodStart, periodEnd);
@@ -496,11 +621,21 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
 /**
  * Handle failed invoice payment
+ * 
+ * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   console.log(`[Webhook] Invoice payment failed: ${invoice.id}`);
 
-  const customerId = invoice.customer as string;
+  // Safely extract customer ID (can be string or Customer object)
+  const customerId = typeof invoice.customer === 'string' 
+    ? invoice.customer 
+    : (invoice.customer as { id: string })?.id;
+  
+  if (!customerId) {
+    console.error(`[Webhook] Invoice ${invoice.id} has no customer ID`);
+    return;
+  }
 
   const users = await sql`
     SELECT u.id FROM users u
@@ -528,11 +663,16 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
 /**
  * Handle payment method attached to customer
+ * 
+ * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
  */
 async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) {
   console.log(`[Webhook] Payment method attached: ${paymentMethod.id}`);
 
-  const customerId = paymentMethod.customer as string;
+  // Safely extract customer ID (can be string or Customer object)
+  const customerId = typeof paymentMethod.customer === 'string' 
+    ? paymentMethod.customer 
+    : (paymentMethod.customer as { id: string })?.id;
   
   if (!customerId) {
     console.log(`[Webhook] Payment method ${paymentMethod.id} has no customer`);
