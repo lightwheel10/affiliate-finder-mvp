@@ -406,50 +406,12 @@ export async function initializeTrialCredits(
       const existingPeriodEnd = new Date(existingCredits.period_end);
       const now = new Date();
       
-      // If existing credits are EXPIRED, check if user already used their trial
+      // If existing credits are EXPIRED, the user already used their trial
+      // They should NOT get another free trial - they need to subscribe
       if (existingPeriodEnd < now) {
-        // SECURITY: Check if user already had a trial to prevent trial abuse
-        // Users who already used a trial should NOT get another free trial
-        const userCheck = await sql`
-          SELECT trial_start_date FROM users WHERE id = ${userId}
-        `;
-        
-        if (userCheck.length > 0 && userCheck[0].trial_start_date) {
-          // User already had a trial before - DO NOT give another trial
-          console.log(`[Credits] SECURITY: User ${userId} already used trial (started ${userCheck[0].trial_start_date}). Blocking new trial.`);
-          // Leave their expired credits as-is - they need to subscribe to continue
-          return true;
-        }
-        
-        // First-time trial user with somehow expired credits - reset for new trial
-        console.log(`[Credits] User ${userId} has EXPIRED credits (ended ${existingPeriodEnd.toISOString()}), resetting for new trial`);
-        
-        await sql`
-          UPDATE user_credits
-          SET
-            topic_search_credits_total = ${PLAN_CREDITS.trial.topicSearches},
-            email_credits_total = ${PLAN_CREDITS.trial.email},
-            ai_credits_total = ${PLAN_CREDITS.trial.ai},
-            topic_search_credits_used = 0,
-            email_credits_used = 0,
-            ai_credits_used = 0,
-            period_start = ${periodStart.toISOString()},
-            period_end = ${periodEnd.toISOString()},
-            is_trial_period = true,
-            updated_at = NOW()
-          WHERE user_id = ${userId}
-        `;
-        
-        // Log the transaction
-        await sql`
-          INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
-          VALUES 
-            (${userId}, 'topic_search', ${PLAN_CREDITS.trial.topicSearches}, ${PLAN_CREDITS.trial.topicSearches}, 'trial_restart', 'subscription'),
-            (${userId}, 'email', ${PLAN_CREDITS.trial.email}, ${PLAN_CREDITS.trial.email}, 'trial_restart', 'subscription'),
-            (${userId}, 'ai', ${PLAN_CREDITS.trial.ai}, ${PLAN_CREDITS.trial.ai}, 'trial_restart', 'subscription')
-        `;
-        
-        console.log(`[Credits] Reset expired credits for user ${userId} to new trial`);
+        // User has expired credits = they already used their trial/subscription
+        console.log(`[Credits] SECURITY: User ${userId} has expired credits (ended ${existingPeriodEnd.toISOString()}). Blocking new trial - must subscribe.`);
+        // Leave their expired credits as-is - they need to subscribe to continue
         return true;
       }
       
@@ -458,14 +420,19 @@ export async function initializeTrialCredits(
       return true;
     }
 
-    // SECURITY: Check if user already had a trial before (no credit record but used trial)
-    const userCheck = await sql`
-      SELECT trial_start_date FROM users WHERE id = ${userId}
+    // SECURITY: Check if user already had a trial before by looking at credit transactions
+    // NOTE: We can't use trial_start_date from users table because it's set DURING signup
+    // before this function is called. Instead, check if there's a previous trial_start transaction.
+    const previousTrialCheck = await sql`
+      SELECT id FROM credit_transactions 
+      WHERE user_id = ${userId} 
+      AND reason IN ('trial_start', 'trial_restart')
+      LIMIT 1
     `;
     
-    if (userCheck.length > 0 && userCheck[0].trial_start_date) {
+    if (previousTrialCheck.length > 0) {
       // User already had a trial before - DO NOT give another trial
-      console.log(`[Credits] SECURITY: User ${userId} already used trial (started ${userCheck[0].trial_start_date}). Blocking new trial - no credit record.`);
+      console.log(`[Credits] SECURITY: User ${userId} already used trial (found previous trial transaction). Blocking new trial.`);
       return false;
     }
 
