@@ -169,8 +169,13 @@ async function serperFetch(endpoint: string, query: string, options: Record<stri
 
 /**
  * Search Google for web results using Serper.dev
+ * 
+ * Updated December 16, 2025: Exported this function so it can be called
+ * directly from the scout route for per-platform streaming. Previously
+ * this was only accessible via searchMultiPlatform which waited for all
+ * platforms to complete before returning.
  */
-async function searchWeb(keyword: string): Promise<SearchResult[]> {
+export async function searchWeb(keyword: string): Promise<SearchResult[]> {
   // Add "affiliate" to the search query for better results
   const query = `${keyword} affiliate`;
 

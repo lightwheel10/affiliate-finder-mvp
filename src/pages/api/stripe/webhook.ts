@@ -106,12 +106,6 @@ export default async function handler(
     // =========================================================================
     const rawBody = await buffer(req);
     const signature = req.headers['stripe-signature'] as string;
-    
-    // DEBUG: Log detailed info about what we received
-    const bodyStr = rawBody.toString('utf8');
-    console.log(`[Webhook] DEBUG: Body type=${typeof rawBody}, isBuffer=${Buffer.isBuffer(rawBody)}, length=${rawBody.length}`);
-    console.log(`[Webhook] DEBUG: First 100 chars: ${bodyStr.substring(0, 100)}`);
-    console.log(`[Webhook] DEBUG: Signature header: ${signature?.substring(0, 50)}...`);
 
     if (!signature) {
       console.error('[Webhook] No Stripe signature found');
@@ -131,23 +125,14 @@ export default async function handler(
     let event: Stripe.Event;
 
     try {
-      // Try with Buffer first
+      // Use rawBody directly - it's a Buffer which Stripe SDK accepts
       event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
     } catch (err) {
       const error = err as Error;
       console.error('[Webhook] Signature verification failed:', error.message);
-      
-      // DEBUG: Try with string to see if that makes a difference
-      console.log('[Webhook] DEBUG: Attempting with string body...');
-      try {
-        event = stripe.webhooks.constructEvent(bodyStr, signature, webhookSecret);
-        console.log('[Webhook] DEBUG: String body worked!');
-      } catch (err2) {
-        console.error('[Webhook] DEBUG: String body also failed');
-        return res.status(400).json({ 
-          error: `Webhook signature verification failed: ${error.message}` 
-        });
-      }
+      return res.status(400).json({ 
+        error: `Webhook signature verification failed: ${error.message}` 
+      });
     }
 
     console.log(`[Webhook] ✅ Verified event: ${event.type} (${event.id})`);

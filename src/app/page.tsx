@@ -441,6 +441,50 @@ function Dashboard() {
                 try {
                   const result = JSON.parse(data);
                   
+                  // ================================================================
+                  // ENRICHMENT UPDATE HANDLER (December 16, 2025)
+                  // 
+                  // The server now sends two types of events:
+                  // 1. Regular results (affiliate data from YouTube/Instagram/TikTok/Web)
+                  // 2. Enrichment updates (SimilarWeb data for Web domains)
+                  //
+                  // Enrichment updates arrive AFTER the initial Web results because
+                  // SimilarWeb batch processing runs in the background. We merge the
+                  // SimilarWeb data into existing Web results and remove isEnriching flag.
+                  // ================================================================
+                  if (result.type === 'enrichment_update') {
+                    // This is a SimilarWeb enrichment update for a domain
+                    // Find all results with this domain and merge the data
+                    const domain = result.domain;
+                    const similarWebData = result.similarWeb;
+                    
+                    setResults(prev => prev.map(r => {
+                      if (r.domain === domain && r.source === 'Web') {
+                        return {
+                          ...r,
+                          similarWeb: similarWebData,
+                          isEnriching: false, // Clear the loading indicator
+                        };
+                      }
+                      return r;
+                    }));
+                    
+                    // Also update streamedResults array so subsequent setResults calls don't lose data
+                    streamedResults.forEach((r, idx) => {
+                      if (r.domain === domain && r.source === 'Web') {
+                        streamedResults[idx] = {
+                          ...r,
+                          similarWeb: similarWebData,
+                          isEnriching: false,
+                        };
+                      }
+                    });
+                    
+                    console.log(`✅ Enriched domain: ${domain}`);
+                    continue; // Don't process as a regular result
+                  }
+                  
+                  // Regular affiliate result processing
                   const isCompetitor = kw.toLowerCase().includes('alternative') || 
                                      kw.toLowerCase().includes('vs') || 
                                      kw.toLowerCase().includes('competitor');
@@ -464,7 +508,7 @@ function Dashboard() {
                   streamedResults.push(enhancedResult);
                   setResults([...streamedResults]);
                   
-                  // Save to Convex in real-time (one at a time during streaming)
+                  // Save to database in real-time (one at a time during streaming)
                   // Note: We don't await here to avoid blocking the UI stream
                   // The mutation will complete in the background
                   saveDiscoveredAffiliate(enhancedResult, combinedKeyword).catch(err => {

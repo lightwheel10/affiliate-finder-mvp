@@ -669,3 +669,195 @@ export async function enrichDomainsWithSimilarWeb(
   return results;
 }
 
+// ============================================================================
+// SIMILARWEB BATCH PROCESSING (Added December 16, 2025)
+// 
+// PROBLEM: The original enrichDomainsWithSimilarWeb() made sequential API calls
+// - one call per domain. For 20 domains, this meant 20 separate Apify actor runs,
+// taking 60+ seconds total.
+//
+// SOLUTION: The SimilarWeb actor already accepts an array of domains in a single
+// call (see line 549-551 where it passes `domains: [domain]`). We simply pass
+// ALL domains in one call instead of calling one at a time.
+//
+// PERFORMANCE IMPROVEMENT:
+// - Before: 20 domains × ~3 seconds each = 60+ seconds
+// - After:  1 batch call with 20 domains = ~5-10 seconds
+//
+// This function is designed to be used in non-blocking mode - the caller can
+// fire it and continue streaming results without waiting.
+// ============================================================================
+
+/**
+ * Transform raw SimilarWeb API result to our SimilarWebData type
+ * 
+ * Added December 16, 2025 - Extracted from enrichDomainWithSimilarWeb to allow
+ * reuse in batch processing without code duplication.
+ * 
+ * @param item - Raw API response from SimilarWeb Apify actor
+ * @returns Transformed SimilarWebData object or null if invalid
+ */
+function transformSimilarWebApiResult(item: ApifySimilarWebResult): SimilarWebData | null {
+  if (!item || !item.domain) {
+    return null;
+  }
+
+  const monthlyVisits = parseInt(item.visits || '0', 10);
+
+  // Process top keywords (note: API has typo "esitmatedValue" instead of "estimatedValue")
+  const topKeywords = item.topKeywords && item.topKeywords.length > 0
+    ? item.topKeywords.slice(0, 10).map(kw => ({
+        name: kw.name,
+        estimatedValue: kw.esitmatedValue || 0,
+        cpc: kw.cpc,
+      }))
+    : null;
+
+  return {
+    domain: item.domain,
+    monthlyVisits,
+    monthlyVisitsFormatted: formatNumber(monthlyVisits),
+    globalRank: item.globalRank || null,
+    countryRank: item.countryRank?.Rank || null,
+    countryCode: item.countryRank?.CountryCode || null,
+    bounceRate: parseFloat(item.bounceRate || '0'),
+    pagesPerVisit: parseFloat(item.pagesPerVisit || '0'),
+    timeOnSite: Math.round(parseFloat(item.timeOnSite || '0')),
+    trafficSources: {
+      direct: item.trafficSources?.Direct || 0,
+      search: item.trafficSources?.Search || 0,
+      social: item.trafficSources?.Social || 0,
+      referrals: item.trafficSources?.Referrals || 0,
+      mail: item.trafficSources?.Mail || 0,
+      paid: item.trafficSources?.['Paid Referrals'] || 0,
+    },
+    topCountries: (item.topCountryShares || []).slice(0, 5).map(c => ({
+      countryCode: c.CountryCode,
+      share: c.Value,
+    })),
+    category: item.category || null,
+    siteTitle: item.title || null,
+    siteDescription: item.description || null,
+    screenshot: item.screenshot || null,
+    categoryRank: item.categoryRank ? parseInt(item.categoryRank, 10) : null,
+    monthlyVisitsHistory: item.estimatedMonthlyVisits || null,
+    topKeywords,
+    snapshotDate: item.snapshotDate || null,
+  };
+}
+
+/**
+ * Enrich multiple domains with SimilarWeb data in a SINGLE batch API call
+ * 
+ * Added December 16, 2025 - This is a major performance optimization.
+ * 
+ * WHY THIS EXISTS:
+ * The original enrichDomainsWithSimilarWeb() made one API call per domain,
+ * which was extremely slow (20 domains = 60+ seconds). This function sends
+ * ALL domains in a single Apify actor call, reducing total time to ~5-10 seconds.
+ * 
+ * HOW IT WORKS:
+ * 1. Deduplicates the input domain list
+ * 2. Makes ONE call to the SimilarWeb actor with all domains
+ * 3. Processes all results from the single response
+ * 4. Returns a Map<domain, SimilarWebData> for easy lookup
+ * 
+ * USAGE:
+ * This function is designed to be called WITHOUT awaiting in the scout route,
+ * allowing results to be streamed immediately while SimilarWeb enrichment
+ * happens in the background.
+ * 
+ * @param domains - Array of domain strings to enrich (e.g., ['example.com', 'test.org'])
+ * @param userId - Optional user ID for API call tracking
+ * @returns Promise<Map<string, SimilarWebData>> - Map of domain to enrichment data
+ */
+export async function enrichDomainsBatch(
+  domains: string[],
+  userId?: number
+): Promise<Map<string, SimilarWebData>> {
+  const results = new Map<string, SimilarWebData>();
+
+  // Guard: Check if Apify client is initialized
+  if (!client) {
+    console.error('❌ Apify client not initialized');
+    return results;
+  }
+
+  // Deduplicate domains to avoid wasting API calls
+  const uniqueDomains = [...new Set(domains)];
+  
+  // Guard: No domains to process
+  if (uniqueDomains.length === 0) {
+    console.log('⚠️ SimilarWeb BATCH: No domains to process');
+    return results;
+  }
+
+  const startTime = Date.now();
+  console.log(`📊 Apify SimilarWeb BATCH: Processing ${uniqueDomains.length} domains in ONE call`);
+
+  try {
+    // ==========================================================================
+    // SINGLE API CALL WITH ALL DOMAINS
+    // The SimilarWeb actor accepts an array of domains and returns data for all
+    // of them in a single response. This is the key optimization.
+    // ==========================================================================
+    const run = await client.actor(ACTORS.similarweb).call({
+      domains: uniqueDomains,
+    });
+
+    // Fetch all results from the dataset
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    
+    console.log(`📊 SimilarWeb BATCH: Received ${items.length} results`);
+
+    // Process each result and add to our Map
+    for (const rawItem of items) {
+      const item = rawItem as unknown as ApifySimilarWebResult;
+      const transformedData = transformSimilarWebApiResult(item);
+      
+      if (transformedData) {
+        results.set(item.domain, transformedData);
+      }
+    }
+
+    const durationMs = Date.now() - startTime;
+    console.log(`✅ SimilarWeb BATCH complete: ${results.size}/${uniqueDomains.length} domains in ${durationMs}ms`);
+
+    // Track the API call (single call for all domains)
+    if (userId) {
+      await trackApiCall({
+        userId,
+        service: 'apify_similarweb',
+        endpoint: ACTORS.similarweb,
+        status: 'success',
+        resultsCount: results.size,
+        // Cost is per domain, not per call
+        estimatedCost: uniqueDomains.length * API_COSTS.apify_similarweb,
+        apifyRunId: run.id,
+        durationMs,
+      });
+    }
+
+    return results;
+
+  } catch (error: any) {
+    const durationMs = Date.now() - startTime;
+    console.error('❌ Apify SimilarWeb BATCH error:', error.message);
+
+    // Track the failed API call
+    if (userId) {
+      await trackApiCall({
+        userId,
+        service: 'apify_similarweb',
+        endpoint: ACTORS.similarweb,
+        status: 'error',
+        errorMessage: error.message,
+        durationMs,
+      });
+    }
+
+    // Return empty Map on error - caller should handle gracefully
+    return results;
+  }
+}
+

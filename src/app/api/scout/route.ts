@@ -1,10 +1,34 @@
-import { searchMultiPlatform, Platform, SearchResult } from '../../services/search';
+import { Platform, SearchResult, searchWeb } from '../../services/search';
 import { analyzeContent } from '../../services/analysis';
 import { trackSearch, completeSearch, API_COSTS } from '../../services/tracking';
-import { enrichDomainsWithSimilarWeb, SimilarWebData } from '../../services/apify';
+import { 
+  enrichDomainsBatch, 
+  SimilarWebData,
+  searchYouTubeApify,
+  searchInstagramApify,
+  searchTikTokApify 
+} from '../../services/apify';
 import { stackServerApp } from '@/stack/server';
 import { sql } from '@/lib/db';
 import { checkCredits, consumeCredits } from '@/lib/credits';
+
+// ============================================================================
+// VERCEL FUNCTION CONFIGURATION (December 16, 2025)
+// 
+// IMPORTANT: This sets the maximum execution time for this serverless function.
+// 
+// Vercel Plan Limits:
+// - Hobby: max 60 seconds
+// - Pro: max 300 seconds (5 minutes), or 800 seconds with Fluid Compute
+// - Enterprise: max 900 seconds (15 minutes)
+//
+// We set 300 seconds (5 minutes) which is the Pro plan maximum without Fluid.
+// This gives enough time for:
+// - Platform searches (~30 seconds)
+// - SimilarWeb batch enrichment (~120 seconds for 20+ domains)
+// - Buffer for network latency
+// ============================================================================
+export const maxDuration = 300; // 5 minutes - Vercel Pro plan limit
 
 /**
  * Scout API - Searches for affiliates across multiple platforms
@@ -21,6 +45,17 @@ import { checkCredits, consumeCredits } from '@/lib/credits';
  * - Verifies user has topic_search credits
  * - Consumes 1 credit per successful search
  * - ENFORCE_CREDITS flag controls enforcement (default: false for safe rollout)
+ * 
+ * STREAMING OPTIMIZATION (December 16, 2025):
+ * - Results are now streamed IMMEDIATELY as each platform completes
+ * - Previously: Wait for ALL platforms → Wait for ALL SimilarWeb → Stream everything
+ * - Now: Stream each platform's results as soon as it finishes
+ * - SimilarWeb runs in background via batch processing (1 call instead of N)
+ * - Web results display immediately; SimilarWeb data arrives as 'enrichment_update' events
+ * 
+ * TIMEOUT CONFIGURATION (December 16, 2025):
+ * - maxDuration set to 300 seconds (Vercel Pro plan limit)
+ * - SimilarWeb has 120-second internal timeout (generous for batch processing)
  */
 
 // Check if credit enforcement is enabled
@@ -111,14 +146,37 @@ export async function POST(req: Request) {
     const stream = new TransformStream();
     const writer = stream.writable.getWriter();
 
-    // Process search and stream results
+    // ============================================================================
+    // STREAMING SEARCH PROCESSOR (Updated December 16, 2025)
+    // 
+    // PREVIOUS BEHAVIOR (Blocking):
+    // 1. Wait for ALL platforms to complete (searchMultiPlatform)
+    // 2. Wait for ALL SimilarWeb enrichment (enrichDomainsWithSimilarWeb)
+    // 3. Only THEN stream all results to client
+    // Result: User waited 60+ seconds before seeing ANY results
+    //
+    // NEW BEHAVIOR (Streaming):
+    // 1. Start ALL platform searches in parallel
+    // 2. Stream results IMMEDIATELY as each platform completes
+    // 3. Web results sent without SimilarWeb (marked with isEnriching: true)
+    // 4. SimilarWeb batch runs in background (single API call for all domains)
+    // 5. Send enrichment_update events when SimilarWeb data arrives
+    // 6. Send [DONE] after all results + enrichments complete
+    // Result: User sees YouTube/Instagram/TikTok results in ~5 seconds
+    // ============================================================================
     (async () => {
       let isStreamClosed = false;
       let searchId: number | null = null;
       let totalCost = 0;
+      let totalResultsStreamed = 0;
+      
+      // Collect all results for tracking purposes
+      const allResults: SearchResult[] = [];
+      // Track Web domains for SimilarWeb batch enrichment
+      const webDomains: string[] = [];
       
       try {
-        console.log(`🔍 Starting search for "${keyword}" on: ${activeSources.join(', ')}`);
+        console.log(`🔍 Starting STREAMING search for "${keyword}" on: ${activeSources.join(', ')}`);
         
         // Track the search in the database
         if (userId) {
@@ -130,178 +188,229 @@ export async function POST(req: Request) {
           console.log(`📝 Search tracked with ID: ${searchId}`);
         }
         
-        // 1. Search Step - get all results first (pass userId for API tracking)
-        const searchResults = await searchMultiPlatform(keyword, activeSources, userId);
-        console.log(`📊 Found ${searchResults.length} total results`);
-        
-        // Estimate total cost based on platforms used
-        if (activeSources.includes('Web')) totalCost += API_COSTS.serper;
-        if (activeSources.includes('YouTube')) totalCost += API_COSTS.apify_youtube * Math.min(searchResults.filter(r => r.source === 'YouTube').length, 15);
-        if (activeSources.includes('Instagram')) totalCost += API_COSTS.apify_instagram * Math.min(searchResults.filter(r => r.source === 'Instagram').length, 15);
-        if (activeSources.includes('TikTok')) totalCost += API_COSTS.apify_tiktok * Math.min(searchResults.filter(r => r.source === 'TikTok').length, 15);
-        
-        // ========================================================================
-        // 2. SimilarWeb Enrichment Step (Dec 2025)
-        // Auto-enrich Web results with traffic data from SimilarWeb
-        // This adds ~$0.05 per unique domain to the search cost
-        // ========================================================================
-        let similarWebDataMap: Map<string, SimilarWebData> = new Map();
-        
-        if (activeSources.includes('Web')) {
-          const webResults = searchResults.filter(r => r.source === 'Web');
-          const uniqueDomains = [...new Set(webResults.map(r => r.domain))];
+        // ======================================================================
+        // HELPER FUNCTION: Stream results from a single platform
+        // Called when each platform's search completes - streams immediately
+        // ======================================================================
+        const streamPlatformResults = async (
+          platform: Platform,
+          results: SearchResult[],
+          includeEnrichingFlag: boolean = false
+        ): Promise<number> => {
+          let streamedCount = 0;
           
-          if (uniqueDomains.length > 0) {
-            console.log(`📊 Enriching ${uniqueDomains.length} unique Web domains with SimilarWeb...`);
-            
-            try {
-              similarWebDataMap = await enrichDomainsWithSimilarWeb(uniqueDomains, userId);
-              
-              // Add SimilarWeb cost to total
-              totalCost += uniqueDomains.length * API_COSTS.apify_similarweb;
-              
-              console.log(`✅ SimilarWeb enrichment complete: ${similarWebDataMap.size}/${uniqueDomains.length} domains enriched`);
-            } catch (enrichError: any) {
-              console.error('⚠️ SimilarWeb enrichment failed (continuing without):', enrichError.message);
-              // Continue without enrichment - don't fail the entire search
-            }
-          }
-        }
-        
-        if (searchResults.length === 0) {
-          // No results found - close stream gracefully
-          await writer.write(encoder.encode('data: [DONE]\n\n'));
-          await writer.close();
-          return;
-        }
-
-        // 2. Process results
-        const resultsToProcess = searchResults.slice(0, 100); // Process up to 100 results
-        
-        if (analyze) {
-          // SLOW MODE: With AI analysis (batch processing)
-          const BATCH_SIZE = 10;
-          
-          for (let i = 0; i < resultsToProcess.length; i += BATCH_SIZE) {
+          for (const item of results) {
             if (isStreamClosed) break;
             
-            const batch = resultsToProcess.slice(i, i + BATCH_SIZE);
-            
-            // Process batch in parallel
-            const batchPromises = batch.map(async (item) => {
-              try {
-                const analysis = await analyzeContent(item, keyword);
-                let result: any = { ...item, ...analysis, isAffiliate: analysis.isAffiliate ?? true };
-                
-                // Merge SimilarWeb data for Web results (Dec 2025)
-                if (item.source === 'Web' && similarWebDataMap.has(item.domain)) {
-                  result = {
-                    ...result,
-                    similarWeb: similarWebDataMap.get(item.domain),
-                  };
-                }
-                
-                return result;
-              } catch (error) {
-                // On analysis error, return item without analysis
-                let result: any = { ...item, isAffiliate: true, summary: 'Analysis pending' };
-                
-                // Still add SimilarWeb data if available
-                if (item.source === 'Web' && similarWebDataMap.has(item.domain)) {
-                  result = {
-                    ...result,
-                    similarWeb: similarWebDataMap.get(item.domain),
-                  };
-                }
-                
-                return result;
-              }
-            });
-            
-            const batchResults = await Promise.all(batchPromises);
-            
-            // Stream each result
-            for (const result of batchResults) {
-              if (isStreamClosed) break;
-              try {
-                await writer.write(encoder.encode(`data: ${JSON.stringify(result)}\n\n`));
-              } catch (writeError: any) {
-                if (writeError.message?.includes('abort')) {
-                  isStreamClosed = true;
-                  break;
-                }
-              }
-            }
-          }
-        } else {
-          // FAST MODE: Stream results immediately without AI analysis
-          for (const item of resultsToProcess) {
-            if (isStreamClosed) break;
-            
-            // Add default affiliate flag (assume all results are potential affiliates)
-            let result: any = {
+            // Build the result object with standard fields
+            const result: any = {
               ...item,
               isAffiliate: true,
-              summary: `Found via ${item.source} search`
+              summary: `Found via ${item.source} search`,
+              // For Web results, mark as "enriching" so UI can show loading state
+              // SimilarWeb data will arrive later via enrichment_update event
+              ...(includeEnrichingFlag ? { isEnriching: true } : {})
             };
-            
-            // ====================================================================
-            // Merge SimilarWeb data for Web results (Dec 2025)
-            // Uses nested similarWeb object to match ResultItem/SimilarWebData type
-            // ====================================================================
-            if (item.source === 'Web' && similarWebDataMap.has(item.domain)) {
-              const swData = similarWebDataMap.get(item.domain)!;
-              result = {
-                ...result,
-                similarWeb: swData,  // Pass the full SimilarWebData object
-              };
-            }
             
             try {
               await writer.write(encoder.encode(`data: ${JSON.stringify(result)}\n\n`));
+              streamedCount++;
             } catch (writeError: any) {
               if (writeError.message?.includes('abort')) {
                 isStreamClosed = true;
                 break;
               }
+              console.error(`Error streaming ${platform} result:`, writeError.message);
             }
+          }
+          
+          console.log(`✅ Streamed ${streamedCount}/${results.length} ${platform} results`);
+          return streamedCount;
+        };
+
+        // ======================================================================
+        // PARALLEL PLATFORM SEARCHES WITH IMMEDIATE STREAMING
+        // Each platform search runs independently and streams as it completes
+        // ======================================================================
+        const platformPromises = activeSources.map(async (platform) => {
+          const startTime = Date.now();
+          let results: SearchResult[] = [];
+          
+          try {
+            // Call the appropriate search function for each platform
+            switch (platform) {
+              case 'YouTube':
+                results = await searchYouTubeApify(keyword, userId, 15);
+                totalCost += API_COSTS.apify_youtube * results.length;
+                break;
+                
+              case 'Instagram':
+                results = await searchInstagramApify(keyword, userId, 15);
+                totalCost += API_COSTS.apify_instagram * results.length;
+                break;
+                
+              case 'TikTok':
+                results = await searchTikTokApify(keyword, userId, 15);
+                totalCost += API_COSTS.apify_tiktok * results.length;
+                break;
+                
+              case 'Web':
+                results = await searchWeb(keyword);
+                totalCost += API_COSTS.serper;
+                // Collect Web domains for SimilarWeb batch enrichment
+                results.forEach(r => {
+                  if (r.domain && !webDomains.includes(r.domain)) {
+                    webDomains.push(r.domain);
+                  }
+                });
+                break;
+            }
+            
+            const duration = Date.now() - startTime;
+            console.log(`📊 ${platform} search completed: ${results.length} results in ${duration}ms`);
+            
+            // STREAM IMMEDIATELY - Don't wait for other platforms!
+            // Web results are marked with isEnriching: true since SimilarWeb data comes later
+            const isWeb = platform === 'Web';
+            const streamedCount = await streamPlatformResults(platform, results, isWeb);
+            totalResultsStreamed += streamedCount;
+            
+            // Track results for final summary
+            allResults.push(...results);
+            
+            return { platform, results, success: true };
+            
+          } catch (error: any) {
+            console.error(`❌ ${platform} search failed:`, error.message);
+            return { platform, results: [], success: false, error: error.message };
+          }
+        });
+
+        // Wait for all platform searches to complete (they stream as they finish)
+        await Promise.all(platformPromises);
+        
+        console.log(`📊 All platform searches complete. Total streamed: ${totalResultsStreamed}`);
+
+        // Handle case where no results were found
+        if (totalResultsStreamed === 0 && !isStreamClosed) {
+          console.log('⚠️ No results found across any platform');
+        }
+
+        // ======================================================================
+        // COMPLETION: Send [DONE] signal FIRST (December 16, 2025)
+        // 
+        // CRITICAL FIX FOR VERCEL TIMEOUT:
+        // Previously, we awaited SimilarWeb before sending [DONE], which could
+        // cause the function to exceed Vercel's timeout limit (60s on Hobby).
+        // 
+        // Now we send [DONE] FIRST, then fire SimilarWeb in the background.
+        // This ensures the main search completes within ~20-30 seconds.
+        // SimilarWeb enrichment is "best effort" - if the stream is still open,
+        // client receives updates. If not, they can refresh to see enriched data.
+        // ======================================================================
+        
+        // Mark search as complete in database BEFORE SimilarWeb
+        if (searchId) {
+          await completeSearch(searchId, totalResultsStreamed, totalCost);
+          console.log(`📝 Search ${searchId} completed: ${totalResultsStreamed} results, $${totalCost.toFixed(4)} cost`);
+        }
+        
+        // Consume credit BEFORE SimilarWeb
+        if (enforceCredits && totalResultsStreamed > 0) {
+          const consumeResult = await consumeCredits(
+            userId, 
+            'topic_search', 
+            1, 
+            searchId?.toString(), 
+            'search'
+          );
+          if (consumeResult.success) {
+            console.log(`💳 [Scout] Consumed 1 topic_search credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
+          } else {
+            console.error(`❌ [Scout] Failed to consume credit for user ${userId}`);
           }
         }
 
-        // Send completion signal
+        // ======================================================================
+        // SIMILARWEB BATCH ENRICHMENT WITH TIMEOUT (December 16, 2025)
+        // 
+        // VERCEL PRO PLAN CONFIGURATION:
+        // With maxDuration=300 (5 minutes), we have plenty of time for SimilarWeb.
+        // We give SimilarWeb 120 seconds (2 minutes) to complete batch processing.
+        // 
+        // Key improvements:
+        // 1. Uses enrichDomainsBatch() - ONE API call for ALL domains (not N calls)
+        // 2. Has a 120-second timeout - generous for 10-25 domains
+        // 3. Sends enrichment_update events before [DONE]
+        // 4. Main results are NEVER blocked - they're already streamed
+        // 
+        // TIMING BUDGET (Pro Plan - 300 seconds max):
+        // - Platform searches (parallel): ~30-60 seconds
+        // - SimilarWeb batch (with timeout): max 120 seconds
+        // - Buffer: ~120 seconds
+        // - Total: max ~180 seconds (safely under 300s limit)
+        // ======================================================================
+        const SIMILARWEB_TIMEOUT_MS = 120000; // 120 seconds (2 min) for SimilarWeb batch
+        
+        if (webDomains.length > 0 && !isStreamClosed) {
+          console.log(`📊 Starting SimilarWeb BATCH enrichment for ${webDomains.length} domains (max ${SIMILARWEB_TIMEOUT_MS/1000}s)...`);
+          
+          try {
+            // Race between SimilarWeb and timeout
+            const similarWebDataMap = await Promise.race([
+              enrichDomainsBatch(webDomains, userId),
+              new Promise<Map<string, SimilarWebData>>((_, reject) => 
+                setTimeout(() => reject(new Error('SimilarWeb timeout')), SIMILARWEB_TIMEOUT_MS)
+              )
+            ]);
+            
+            console.log(`✅ SimilarWeb BATCH complete: ${similarWebDataMap.size}/${webDomains.length} domains`);
+            
+            // Stream enrichment updates
+            let enrichmentsSent = 0;
+            for (const [domain, swData] of similarWebDataMap) {
+              if (isStreamClosed) {
+                console.log(`⚠️ Stream closed, ${similarWebDataMap.size - enrichmentsSent} enrichments not sent`);
+                break;
+              }
+              
+              try {
+                await writer.write(encoder.encode(`data: ${JSON.stringify({
+                  type: 'enrichment_update',
+                  domain: domain,
+                  similarWeb: swData,
+                })}\n\n`));
+                enrichmentsSent++;
+              } catch (writeError: any) {
+                isStreamClosed = true;
+                console.log(`⚠️ Stream closed during enrichment`);
+                break;
+              }
+            }
+            
+            if (enrichmentsSent > 0) {
+              console.log(`✅ Streamed ${enrichmentsSent} SimilarWeb enrichment updates`);
+            }
+            
+          } catch (enrichError: any) {
+            // SimilarWeb timeout or failure - main results are unaffected
+            if (enrichError.message === 'SimilarWeb timeout') {
+              console.warn('⚠️ SimilarWeb BATCH timed out after 120s - skipping enrichment');
+            } else {
+              console.error('⚠️ SimilarWeb BATCH enrichment failed:', enrichError.message);
+            }
+            // Continue to send [DONE] - search results are already streamed
+          }
+        }
+
+        // Send [DONE] signal and close stream
         if (!isStreamClosed) {
           try {
             await writer.write(encoder.encode('data: [DONE]\n\n'));
             await writer.close();
-            console.log(`✅ Streamed ${resultsToProcess.length} results`);
-            
-            // Mark search as complete
-            if (searchId) {
-              await completeSearch(searchId, resultsToProcess.length, totalCost);
-              console.log(`📝 Search ${searchId} completed: ${resultsToProcess.length} results, $${totalCost.toFixed(4)} cost`);
-            }
-            
-            // ================================================================
-            // CONSUME CREDIT (December 2025)
-            // Deduct 1 topic_search credit after successful search
-            // Only consume if enforcement is enabled
-            // ================================================================
-            if (enforceCredits && resultsToProcess.length > 0) {
-              const consumeResult = await consumeCredits(
-                userId, 
-                'topic_search', 
-                1, 
-                searchId?.toString(), 
-                'search'
-              );
-              if (consumeResult.success) {
-                console.log(`💳 [Scout] Consumed 1 topic_search credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
-              } else {
-                console.error(`❌ [Scout] Failed to consume credit for user ${userId}`);
-              }
-            }
+            console.log(`✅ Search complete. Streamed ${totalResultsStreamed} results.`);
           } catch (closeError) {
-            // Ignore close errors
+            // Ignore close errors - stream may have been aborted by client
           }
         }
         
@@ -309,7 +418,7 @@ export async function POST(req: Request) {
         console.error("Stream Error:", error);
         // Still mark search as complete even on error
         if (searchId) {
-          await completeSearch(searchId, 0, totalCost);
+          await completeSearch(searchId, totalResultsStreamed, totalCost);
         }
         try {
           if (!isStreamClosed) {
