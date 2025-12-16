@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNeonUser } from './useNeonUser';
-import { ResultItem } from '../types';
+import { ResultItem, SimilarWebData } from '../types';
 
 // Transform database affiliate to ResultItem format
 // This function maps database columns (snake_case) to ResultItem fields (camelCase)
@@ -949,6 +949,54 @@ export function useDiscoveredAffiliates() {
     }
   }, [userId]);
 
+  // ============================================================================
+  // UPDATE SIMILARWEB DATA (Added December 16, 2025)
+  // 
+  // CRITICAL BUG FIX: SimilarWeb data was never persisted to the database.
+  // 
+  // When enrichment_update events arrive from the server, this function
+  // updates the SimilarWeb fields for all discovered affiliates matching
+  // the domain. This ensures data persists across page refreshes.
+  // ============================================================================
+  const updateDiscoveredAffiliateSimilarWeb = useCallback(async (
+    domain: string, 
+    similarWeb: SimilarWebData
+  ) => {
+    if (!userId) return;
+
+    try {
+      const response = await fetch('/api/affiliates/discovered', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          domain,
+          similarWeb,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update SimilarWeb data');
+      }
+
+      // Optimistic update - update local state with SimilarWeb data
+      setDiscoveredAffiliates(prev => prev.map(affiliate => {
+        if (affiliate.domain === domain && affiliate.source === 'Web') {
+          return {
+            ...affiliate,
+            similarWeb,
+            isEnriching: false,
+          };
+        }
+        return affiliate;
+      }));
+
+      console.log(`✅ Persisted SimilarWeb data for domain: ${domain}`);
+    } catch (err) {
+      console.error('Error updating SimilarWeb data:', err);
+    }
+  }, [userId]);
+
   return {
     discoveredAffiliates,
     saveDiscoveredAffiliate,
@@ -957,6 +1005,8 @@ export function useDiscoveredAffiliates() {
     clearAllDiscovered,
     // Bulk operations (Added Dec 2025)
     removeDiscoveredAffiliatesBulk,
+    // SimilarWeb update (Added Dec 16, 2025 - Critical bug fix)
+    updateDiscoveredAffiliateSimilarWeb,
     isLoading: userLoading || isLoading,
     count: discoveredAffiliates.length,
     refetch: fetchDiscoveredAffiliates,

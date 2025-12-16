@@ -182,6 +182,74 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// ============================================================================
+// PATCH /api/affiliates/discovered - Update SimilarWeb data for existing affiliates
+// 
+// Added December 16, 2025 - CRITICAL BUG FIX
+// 
+// PROBLEM: SimilarWeb data arrives AFTER the initial save via enrichment_update
+// events. The original flow only inserted new records and returned early for
+// duplicates, meaning SimilarWeb data was never persisted.
+// 
+// SOLUTION: This PATCH endpoint updates SimilarWeb fields for all affiliates
+// matching a domain (for a given user). Called from the client when
+// enrichment_update events arrive.
+// ============================================================================
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const {
+      userId,
+      domain,
+      similarWeb, // The full SimilarWebData object from enrichment_update
+    } = body;
+
+    if (!userId || !domain) {
+      return NextResponse.json({ error: 'userId and domain are required' }, { status: 400 });
+    }
+
+    if (!similarWeb) {
+      return NextResponse.json({ error: 'similarWeb data is required' }, { status: 400 });
+    }
+
+    // Update all discovered affiliates for this user + domain with SimilarWeb data
+    const result = await sql`
+      UPDATE discovered_affiliates
+      SET 
+        similarweb_monthly_visits = ${similarWeb.monthlyVisits ?? null},
+        similarweb_global_rank = ${similarWeb.globalRank ?? null},
+        similarweb_country_rank = ${similarWeb.countryRank ?? null},
+        similarweb_country_code = ${similarWeb.countryCode ?? null},
+        similarweb_bounce_rate = ${similarWeb.bounceRate ?? null},
+        similarweb_pages_per_visit = ${similarWeb.pagesPerVisit ?? null},
+        similarweb_time_on_site = ${similarWeb.timeOnSite ?? null},
+        similarweb_category = ${similarWeb.category ?? null},
+        similarweb_traffic_sources = ${similarWeb.trafficSources ? JSON.stringify(similarWeb.trafficSources) : null},
+        similarweb_top_countries = ${similarWeb.topCountries ? JSON.stringify(similarWeb.topCountries) : null},
+        similarweb_site_title = ${similarWeb.siteTitle ?? null},
+        similarweb_site_description = ${similarWeb.siteDescription ?? null},
+        similarweb_screenshot = ${similarWeb.screenshot ?? null},
+        similarweb_category_rank = ${similarWeb.categoryRank ?? null},
+        similarweb_monthly_visits_history = ${similarWeb.monthlyVisitsHistory ? JSON.stringify(similarWeb.monthlyVisitsHistory) : null},
+        similarweb_top_keywords = ${similarWeb.topKeywords ? JSON.stringify(similarWeb.topKeywords) : null},
+        similarweb_snapshot_date = ${similarWeb.snapshotDate ?? null}
+      WHERE user_id = ${userId} AND domain = ${domain} AND source = 'Web'
+      RETURNING id
+    `;
+
+    console.log(`✅ Updated SimilarWeb data for ${result.length} affiliates (domain: ${domain})`);
+
+    return NextResponse.json({ 
+      success: true, 
+      updatedCount: result.length,
+      domain 
+    });
+  } catch (error) {
+    console.error('Error updating SimilarWeb data:', error);
+    return NextResponse.json({ error: 'Failed to update SimilarWeb data' }, { status: 500 });
+  }
+}
+
 // DELETE /api/affiliates/discovered - Remove or clear discovered affiliates
 export async function DELETE(request: NextRequest) {
   try {

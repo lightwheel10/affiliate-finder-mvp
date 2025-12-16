@@ -290,11 +290,12 @@ function Dashboard() {
   
   const { 
     discoveredAffiliates, 
-    saveDiscoveredAffiliate, 
+    saveDiscoveredAffiliate,
     saveDiscoveredAffiliates,
     removeDiscoveredAffiliate,       // Single item delete
     removeDiscoveredAffiliatesBulk,  // Added Dec 2025 for bulk delete
-    isLoading: discoveredLoading 
+    updateDiscoveredAffiliateSimilarWeb, // Added Dec 16, 2025 - persist SimilarWeb data
+    isLoading: discoveredLoading
   } = useDiscoveredAffiliates();
 
   // Multiple keywords support
@@ -458,6 +459,7 @@ function Dashboard() {
                     const domain = result.domain;
                     const similarWebData = result.similarWeb;
                     
+                    // Update React state for immediate UI feedback
                     setResults(prev => prev.map(r => {
                       if (r.domain === domain && r.source === 'Web') {
                         return {
@@ -478,6 +480,14 @@ function Dashboard() {
                           isEnriching: false,
                         };
                       }
+                    });
+                    
+                    // ================================================================
+                    // PERSIST TO DATABASE (Added Dec 16, 2025 - Critical bug fix)
+                    // Without this, SimilarWeb data was lost on page refresh!
+                    // ================================================================
+                    updateDiscoveredAffiliateSimilarWeb(domain, similarWebData).catch(err => {
+                      console.error(`Failed to persist SimilarWeb data for ${domain}:`, err);
                     });
                     
                     console.log(`✅ Enriched domain: ${domain}`);

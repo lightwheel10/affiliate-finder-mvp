@@ -1201,8 +1201,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </div>
             )}
             
-            {/* Row 2: SimilarWeb Stats for Web sources (Dec 2025) */}
-            {!isSocialMedia && affiliateData?.similarWeb && (
+            {/* Row 2: SimilarWeb Stats for Web sources (Dec 2025)
+                Updated Dec 16, 2025: Show loading skeleton when isEnriching is true */}
+            {!isSocialMedia && (affiliateData?.similarWeb ? (
+              // Show actual SimilarWeb stats when data is available
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {/* Monthly Traffic */}
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
@@ -1217,7 +1219,15 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   </span>
                 )}
               </div>
-            )}
+            ) : affiliateData?.isEnriching ? (
+              // Show loading skeleton while SimilarWeb data is being fetched
+              <div className="flex items-center gap-2 mt-1">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50/50 text-blue-400 border border-blue-100/50">
+                  <Loader2 size={10} className="animate-spin" />
+                  Loading traffic data...
+                </span>
+              </div>
+            ) : null)}
           </div>
         </div>
       </div>
