@@ -1,6 +1,32 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+/**
+ * =============================================================================
+ * OUTREACH PAGE - AI Email Generation
+ * =============================================================================
+ * 
+ * This page allows users to generate AI-powered outreach emails for their
+ * saved affiliates. The AI generation is handled via n8n webhook integration.
+ * 
+ * KEY FEATURES:
+ * - Single & bulk email generation
+ * - Visual status indicators (generating, success, failed)
+ * - Progress tracking for bulk operations
+ * - Error handling with inline notifications (not alerts)
+ * - Credit consumption per generation
+ * 
+ * VISUAL STATES (December 17, 2025):
+ * 1. Default: Yellow "Generate" button
+ * 2. Generating: Grey button with spinner
+ * 3. Success: Yellow-tinted "View Message" button
+ * 4. Failed: Red-tinted "Failed - Retry" button
+ * 
+ * @see src/app/api/ai/outreach/route.ts - Backend API
+ * @see src/lib/n8n-ai-outreach.ts - n8n webhook integration
+ * =============================================================================
+ */
+
+import { useState, useMemo, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { ScanCountdown } from '../components/ScanCountdown';
 import { AuthGuard } from '../components/AuthGuard';
@@ -23,6 +49,9 @@ import {
   MessageSquare,
   ExternalLink,
   User,
+  AlertTriangle,
+  X,
+  Loader2,
 } from 'lucide-react';
 
 export default function OutreachPage() {
@@ -33,16 +62,110 @@ export default function OutreachPage() {
   );
 }
 
+// =============================================================================
+// ERROR NOTIFICATION TYPES
+// =============================================================================
+
+interface ErrorNotification {
+  id: string;
+  message: string;
+  type: 'error' | 'warning' | 'info';
+}
+
 function OutreachContent() {
+  // =========================================================================
+  // STATE MANAGEMENT
+  // =========================================================================
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedAffiliates, setSelectedAffiliates] = useState<Set<number>>(new Set());
+  
+  // Message generation state
   const [generatedMessages, setGeneratedMessages] = useState<Map<number, string>>(new Map());
-  const [generatingIds, setGeneratingIds] = useState<Set<number>>(new Set()); // Track which IDs are generating
+  const [generatingIds, setGeneratingIds] = useState<Set<number>>(new Set());
+  
+  // =========================================================================
+  // FAILED IDS TRACKING (December 17, 2025)
+  // Tracks which affiliate IDs had generation failures so we can show
+  // "Failed - Retry" button instead of the default "Generate" button
+  // =========================================================================
+  const [failedIds, setFailedIds] = useState<Set<number>>(new Set());
+  
+  // =========================================================================
+  // BULK GENERATION PROGRESS (December 17, 2025)
+  // Tracks progress during bulk generation: { current: 2, total: 5 }
+  // Shows "Generating 2/5..." in the header button
+  // =========================================================================
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
+  
+  // =========================================================================
+  // ERROR NOTIFICATIONS (December 17, 2025)
+  // Instead of using ugly alert() popups, we show inline toast notifications
+  // that auto-dismiss after 5 seconds
+  // =========================================================================
+  const [notifications, setNotifications] = useState<ErrorNotification[]>([]);
+  
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [viewingMessageId, setViewingMessageId] = useState<number | null>(null);
 
   const { savedAffiliates, isLoading: loading } = useSavedAffiliates();
+  
+  // =========================================================================
+  // LOAD SAVED AI-GENERATED MESSAGES ON MOUNT (December 17, 2025)
+  // 
+  // When affiliates are loaded from the database, populate the generatedMessages
+  // state with any previously saved AI-generated messages. This ensures that
+  // messages persist across page refreshes without re-generation.
+  // =========================================================================
+  useEffect(() => {
+    if (savedAffiliates.length > 0) {
+      const savedMessages = new Map<number, string>();
+      
+      savedAffiliates.forEach((affiliate) => {
+        if (affiliate.id && affiliate.aiGeneratedMessage) {
+          savedMessages.set(affiliate.id, affiliate.aiGeneratedMessage);
+        }
+      });
+      
+      // Only update if we found saved messages
+      if (savedMessages.size > 0) {
+        setGeneratedMessages(prev => {
+          // Merge saved messages with any new ones (new ones take precedence)
+          const merged = new Map(savedMessages);
+          prev.forEach((value, key) => {
+            merged.set(key, value);
+          });
+          return merged;
+        });
+        console.log(`[Outreach] Loaded ${savedMessages.size} saved AI messages from database`);
+      }
+    }
+  }, [savedAffiliates]);
+  
+  // =========================================================================
+  // NOTIFICATION HELPERS
+  // =========================================================================
+  
+  /**
+   * Add an error notification that auto-dismisses after 5 seconds
+   */
+  const addNotification = (message: string, type: 'error' | 'warning' | 'info' = 'error') => {
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    setNotifications(prev => [...prev, { id, message, type }]);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      removeNotification(id);
+    }, 5000);
+  };
+  
+  /**
+   * Remove a notification by ID
+   */
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   // Filter and Search Logic
   const filteredResults = useMemo(() => {
@@ -102,52 +225,199 @@ function OutreachContent() {
     }
   };
 
+  // =========================================================================
+  // SINGLE AFFILIATE EMAIL GENERATION (Updated December 17, 2025)
+  // 
+  // Generates an AI email for a single affiliate. On success, stores the
+  // message in generatedMessages map. On failure, adds the ID to failedIds
+  // set so the UI shows "Failed - Retry" button.
+  // =========================================================================
   const handleGenerateForSingle = async (id: number) => {
-    setGeneratingIds(prev => new Set(prev).add(id)); // Add this ID to generating set
+    // Add to generating set (shows spinner)
+    setGeneratingIds(prev => new Set(prev).add(id));
     
-    // Simulate AI generation (replace with actual API call later)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const newMessages = new Map(generatedMessages);
-    const affiliate = filteredResults.find(a => a.id === id);
-    if (affiliate) {
-      newMessages.set(id, `Hi ${affiliate.personName || 'there'},\n\nI came across your ${affiliate.source === 'Web' ? 'website' : 'content'} on ${affiliate.domain} and was impressed by your work.\n\nI'd love to discuss a potential partnership opportunity that could be mutually beneficial.\n\nWould you be open to a quick chat?\n\nBest regards`);
-    }
-    
-    setGeneratedMessages(newMessages);
-    setGeneratingIds(prev => {
+    // Clear any previous failure state for this ID
+    setFailedIds(prev => {
       const next = new Set(prev);
-      next.delete(id); // Remove this ID from generating set
+      next.delete(id);
       return next;
     });
+    
+    const affiliate = filteredResults.find(a => a.id === id);
+    if (!affiliate) {
+      setGeneratingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      return;
+    }
+
+    try {
+      // Call the AI outreach API
+      const response = await fetch('/api/ai/outreach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          affiliateId: id,
+          affiliate: affiliate,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // =====================================================================
+        // SUCCESS: Store the generated message
+        // The UI will automatically show "View Message" button
+        // =====================================================================
+        const newMessages = new Map(generatedMessages);
+        newMessages.set(id, data.message);
+        setGeneratedMessages(newMessages);
+      } else {
+        // =====================================================================
+        // FAILURE: Mark as failed and show notification
+        // The UI will show "Failed - Retry" button
+        // =====================================================================
+        console.error('AI generation failed:', data.error);
+        setFailedIds(prev => new Set(prev).add(id));
+        
+        // Show user-friendly error message based on error type
+        if (response.status === 402) {
+          // Credit error - show upgrade prompt
+          addNotification('Insufficient AI credits. Please upgrade your plan.', 'warning');
+        } else if (data.error?.includes('webhook not configured')) {
+          // Admin configuration error
+          addNotification('AI service not configured. Please contact support.', 'error');
+        } else {
+          // Generic error
+          addNotification(data.error || 'Failed to generate message', 'error');
+        }
+      }
+    } catch (error) {
+      // =====================================================================
+      // NETWORK ERROR: Mark as failed
+      // =====================================================================
+      console.error('Error generating message:', error);
+      setFailedIds(prev => new Set(prev).add(id));
+      addNotification('Failed to connect to AI service. Please try again.', 'error');
+    } finally {
+      // Remove from generating set (hides spinner)
+      setGeneratingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
+  // =========================================================================
+  // BULK EMAIL GENERATION (Updated December 17, 2025)
+  // 
+  // Generates AI emails for all selected affiliates sequentially.
+  // Shows progress indicator "Generating 2/5..." in the header button.
+  // Tracks failures individually so user can retry specific ones.
+  // =========================================================================
   const handleGenerateMessages = async () => {
     if (selectedAffiliates.size === 0) return;
+    
+    const idsToProcess = Array.from(selectedAffiliates);
+    const total = idsToProcess.length;
+    
+    // Initialize bulk progress tracking
+    setBulkProgress({ current: 0, total });
     
     // Add all selected IDs to generating set
     setGeneratingIds(prev => new Set([...prev, ...selectedAffiliates]));
     
-    // Simulate AI generation (replace with actual API call later)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const newMessages = new Map(generatedMessages);
-    selectedAffiliates.forEach(id => {
-      const affiliate = filteredResults.find(a => a.id === id);
-      if (affiliate) {
-        // Placeholder message - will be replaced with actual AI generation
-        newMessages.set(id, `Hi ${affiliate.personName || 'there'},\n\nI came across your ${affiliate.source === 'Web' ? 'website' : 'content'} on ${affiliate.domain} and was impressed by your work.\n\nI'd love to discuss a potential partnership opportunity that could be mutually beneficial.\n\nWould you be open to a quick chat?\n\nBest regards`);
-      }
-    });
-    
-    setGeneratedMessages(newMessages);
-    
-    // Remove all selected IDs from generating set
-    setGeneratingIds(prev => {
+    // Clear previous failure states for these IDs
+    setFailedIds(prev => {
       const next = new Set(prev);
-      selectedAffiliates.forEach(id => next.delete(id));
+      idsToProcess.forEach(id => next.delete(id));
       return next;
     });
+    
+    const newMessages = new Map(generatedMessages);
+    let successCount = 0;
+    let failCount = 0;
+    
+    // Process each affiliate sequentially to respect rate limits
+    for (let i = 0; i < idsToProcess.length; i++) {
+      const id = idsToProcess[i];
+      const affiliate = filteredResults.find(a => a.id === id);
+      
+      // Update progress indicator
+      setBulkProgress({ current: i + 1, total });
+      
+      if (!affiliate) {
+        // Remove from generating set if affiliate not found
+        setGeneratingIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        continue;
+      }
+
+      try {
+        const response = await fetch('/api/ai/outreach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            affiliateId: id,
+            affiliate: affiliate,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // SUCCESS: Store message and update UI progressively
+          newMessages.set(id, data.message);
+          setGeneratedMessages(new Map(newMessages));
+          successCount++;
+        } else {
+          // FAILURE: Mark as failed
+          console.error(`Failed to generate for ${affiliate.domain}:`, data.error);
+          setFailedIds(prev => new Set(prev).add(id));
+          failCount++;
+        }
+        
+        // Remove this ID from generating set as it completes
+        setGeneratingIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+
+        // Small delay between requests to be respectful to n8n/AI service
+        if (i < idsToProcess.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      } catch (error) {
+        // NETWORK ERROR: Mark as failed
+        console.error(`Error generating for ${affiliate.domain}:`, error);
+        setFailedIds(prev => new Set(prev).add(id));
+        failCount++;
+        
+        setGeneratingIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    }
+    
+    // Clear progress indicator
+    setBulkProgress(null);
+    
+    // Show summary notification if there were any failures
+    if (failCount > 0) {
+      addNotification(
+        `Generated ${successCount} of ${total} messages. ${failCount} failed - click "Retry" to try again.`,
+        failCount === total ? 'error' : 'warning'
+      );
+    }
   };
 
   const handleCopyMessage = (id: number) => {
@@ -274,6 +544,14 @@ function OutreachContent() {
                     Select All
                   </button>
                 )}
+                {/* ================================================================
+                    BULK GENERATE BUTTON (Updated December 17, 2025)
+                    
+                    Shows different states:
+                    - Default: "Generate Messages (X)"
+                    - In Progress: "Generating 2/5..." with spinner
+                    - Disabled: Grey when nothing selected or already generating
+                    ================================================================ */}
                 <button
                   onClick={handleGenerateMessages}
                   disabled={selectedAffiliates.size === 0 || generatingIds.size > 0}
@@ -284,12 +562,20 @@ function OutreachContent() {
                       : "bg-slate-100 text-slate-400 cursor-not-allowed"
                   )}
                 >
-                  {generatingIds.size > 0 ? (
+                  {bulkProgress ? (
+                    // Bulk generation in progress - show progress
                     <>
-                      <RefreshCw size={14} className="animate-spin" />
+                      <Loader2 size={14} className="animate-spin" />
+                      Generating {bulkProgress.current}/{bulkProgress.total}...
+                    </>
+                  ) : generatingIds.size > 0 ? (
+                    // Single generation in progress
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
                       Generating...
                     </>
                   ) : (
+                    // Default state
                     <>
                       <Wand2 size={14} />
                       Generate Messages ({selectedAffiliates.size})
@@ -320,6 +606,18 @@ function OutreachContent() {
 
           {/* Results Area */}
           <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm min-h-[400px]">
+            
+            {/* ================================================================
+                LOADING STATE (December 17, 2025)
+                Shows skeleton loader while fetching affiliates
+                ================================================================ */}
+            {loading && (
+              <div className="py-16 flex flex-col items-center justify-center">
+                <Loader2 size={32} className="text-[#D4E815] animate-spin mb-4" />
+                <p className="text-sm font-medium text-slate-600">Loading your affiliates...</p>
+              </div>
+            )}
+            
             {/* Empty State */}
             {!loading && savedAffiliates.length === 0 && (
               <div className="text-center py-16">
@@ -332,13 +630,36 @@ function OutreachContent() {
                 </p>
               </div>
             )}
+            
+            {/* No Results State (when filtering) */}
+            {!loading && savedAffiliates.length > 0 && filteredResults.length === 0 && (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                  <Search size={28} className="text-slate-400" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">No Results Found</h3>
+                <p className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
+                  Try adjusting your search or filter to find affiliates.
+                </p>
+              </div>
+            )}
 
             {/* Affiliate Rows */}
+            {/* ================================================================
+                AFFILIATE ROWS (Updated December 17, 2025)
+                
+                Each row shows the affiliate with action button states:
+                - Default: Yellow "Generate" button
+                - Generating: Grey with spinner
+                - Success: Yellow-tinted "View Message" button  
+                - Failed: Red-tinted "Failed - Retry" button
+                ================================================================ */}
             {!loading && filteredResults.length > 0 && filteredResults.map((item) => {
               const isSelected = selectedAffiliates.has(item.id!);
               const hasMessage = generatedMessages.has(item.id!);
               const isCopied = copiedId === item.id;
-              const isGenerating = generatingIds.has(item.id!); // Check if THIS specific ID is generating
+              const isGenerating = generatingIds.has(item.id!);
+              const hasFailed = failedIds.has(item.id!); // Check if THIS specific ID failed
 
               return (
                 <div
@@ -416,9 +737,18 @@ function OutreachContent() {
                     )}
                   </div>
 
-                  {/* Message Actions */}
+                  {/* ============================================================
+                      MESSAGE ACTION BUTTON (Updated December 17, 2025)
+                      
+                      Shows different states based on generation status:
+                      1. hasMessage → "View Message" (success state)
+                      2. isGenerating → Spinner + "Generating..."
+                      3. hasFailed → Red "Failed - Retry" button
+                      4. default → Yellow "Generate" button
+                      ============================================================ */}
                   <div className="text-right">
                     {hasMessage ? (
+                      // SUCCESS STATE: Show "View Message" button
                       <button
                         onClick={() => setViewingMessageId(item.id!)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40 hover:bg-[#D4E815]/30"
@@ -426,28 +756,32 @@ function OutreachContent() {
                         <MessageSquare size={12} />
                         View Message
                       </button>
-                    ) : (
+                    ) : isGenerating ? (
+                      // GENERATING STATE: Show spinner
+                      <button
+                        disabled
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-400 cursor-not-allowed"
+                      >
+                        <Loader2 size={12} className="animate-spin" />
+                        Generating...
+                      </button>
+                    ) : hasFailed ? (
+                      // FAILED STATE: Show red "Failed - Retry" button
                       <button
                         onClick={() => handleGenerateForSingle(item.id!)}
-                        disabled={isGenerating}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                          isGenerating
-                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                            : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
-                        )}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 hover:border-red-300"
                       >
-                        {isGenerating ? (
-                          <>
-                            <RefreshCw size={12} className="animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <Wand2 size={12} />
-                            Generate
-                          </>
-                        )}
+                        <AlertTriangle size={12} />
+                        Retry
+                      </button>
+                    ) : (
+                      // DEFAULT STATE: Show yellow "Generate" button
+                      <button
+                        onClick={() => handleGenerateForSingle(item.id!)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
+                      >
+                        <Wand2 size={12} />
+                        Generate
                       </button>
                     )}
                   </div>
@@ -472,8 +806,8 @@ function OutreachContent() {
                 className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Modal Header */}
-                <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-purple-50 to-white">
+                {/* Modal Header - Updated December 17, 2025 to use brand colors */}
+                <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-[#D4E815]/10 to-white">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center">
                       {getSourceIcon(affiliate?.source || 'Web')}
@@ -497,7 +831,7 @@ function OutreachContent() {
                 {/* Modal Body */}
                 <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
                   <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={14} className="text-purple-600" />
+                    <Sparkles size={14} className="text-[#1A1D21]" />
                     <span className="text-sm font-semibold text-slate-700">AI Generated Message</span>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-5 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap border border-slate-200">
@@ -558,8 +892,8 @@ function OutreachContent() {
                           : "bg-slate-200 text-slate-700 hover:bg-slate-300"
                       )}
                     >
-                      <RefreshCw size={14} className={generatingIds.has(viewingMessageId) ? "animate-spin" : ""} />
-                      Regenerate
+                      <Loader2 size={14} className={generatingIds.has(viewingMessageId) ? "animate-spin" : ""} />
+                      {generatingIds.has(viewingMessageId) ? 'Regenerating...' : 'Regenerate'}
                     </button>
                     <button
                       onClick={() => {
@@ -570,7 +904,7 @@ function OutreachContent() {
                         "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
                         isCopied
                           ? "bg-emerald-600 text-white"
-                          : "bg-purple-600 text-white hover:bg-purple-700"
+                          : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
                       )}
                     >
                       {isCopied ? (
@@ -591,6 +925,40 @@ function OutreachContent() {
             </div>
           );
         })()}
+
+        {/* ================================================================
+            ERROR NOTIFICATIONS TOAST (December 17, 2025)
+            
+            Shows inline toast notifications instead of ugly alert() popups.
+            Notifications auto-dismiss after 5 seconds.
+            Positioned at bottom-right of screen.
+            ================================================================ */}
+        {notifications.length > 0 && (
+          <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md">
+            {notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={cn(
+                  "flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg border animate-in slide-in-from-right-5 duration-300",
+                  notification.type === 'error' && "bg-red-50 border-red-200 text-red-800",
+                  notification.type === 'warning' && "bg-amber-50 border-amber-200 text-amber-800",
+                  notification.type === 'info' && "bg-blue-50 border-blue-200 text-blue-800"
+                )}
+              >
+                {notification.type === 'error' && <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />}
+                {notification.type === 'warning' && <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />}
+                {notification.type === 'info' && <MessageSquare size={16} className="text-blue-500 shrink-0 mt-0.5" />}
+                <p className="flex-1 text-sm font-medium">{notification.message}</p>
+                <button
+                  onClick={() => removeNotification(notification.id)}
+                  className="shrink-0 p-1 hover:bg-black/10 rounded transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

@@ -158,6 +158,14 @@ export interface ResultItem {
   tiktokVideoLikes?: number;
   tiktokVideoComments?: number;
   tiktokVideoShares?: number;
+  
+  // ==========================================================================
+  // AI Generated Outreach Message (Added Dec 17, 2025)
+  // These fields persist the AI-generated email across page refreshes
+  // ==========================================================================
+  aiGeneratedMessage?: string;    // Full email body
+  aiGeneratedSubject?: string;    // Email subject line
+  aiGeneratedAt?: string;         // ISO timestamp when generated
 }
 
 // =============================================================================

@@ -144,6 +144,17 @@ export interface DbSavedAffiliate {
     phoneNumbers?: string[];
     provider?: string;
   } | null;
+  
+  // ==========================================================================
+  // AI GENERATED MESSAGE - Persisted outreach email (Added Dec 17, 2025)
+  // 
+  // These fields store the AI-generated outreach email so it persists across
+  // page refreshes. Previously, generated messages were only in React state
+  // and were lost on refresh.
+  // ==========================================================================
+  ai_generated_message: string | null;   // Full email body
+  ai_generated_subject: string | null;   // Email subject line
+  ai_generated_at: string | null;        // ISO timestamp when generated
 }
 
 export interface DbDiscoveredAffiliate {

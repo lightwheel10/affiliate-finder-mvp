@@ -142,6 +142,17 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     // ==========================================================================
     youtubeVideoLikes: dbAffiliate.youtube_video_likes,
     youtubeVideoComments: dbAffiliate.youtube_video_comments,
+    
+    // ==========================================================================
+    // AI GENERATED MESSAGE (Added Dec 17, 2025)
+    // 
+    // These fields persist the AI-generated outreach email so it survives
+    // page refreshes. Previously, generated messages were only stored in
+    // React state and were lost on refresh.
+    // ==========================================================================
+    aiGeneratedMessage: dbAffiliate.ai_generated_message || undefined,
+    aiGeneratedSubject: dbAffiliate.ai_generated_subject || undefined,
+    aiGeneratedAt: dbAffiliate.ai_generated_at || undefined,
   };
 }
 
