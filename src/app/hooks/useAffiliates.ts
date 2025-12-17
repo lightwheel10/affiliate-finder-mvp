@@ -84,6 +84,25 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     emailProvider: dbAffiliate.email_provider,
     
     // ==========================================================================
+    // EMAIL RESULTS - Full enrichment data (CRITICAL FIX - Dec 17, 2025)
+    // 
+    // BUG FIXED: Previously, email_results was being saved to the database but
+    // never loaded back into the frontend. This caused the UI to only show
+    // "1 Found" after page refresh, even though Lusha may have returned multiple
+    // emails and contacts.
+    // 
+    // The email_results JSONB column contains:
+    // - emails: string[] - All emails found across all contacts
+    // - contacts: Array - Full contact details (name, title, emails, phones)
+    // - firstName, lastName, title, linkedinUrl, phoneNumbers - Primary contact
+    // - provider: 'apollo' | 'lusha'
+    // 
+    // This data is used by the Email Results modal in AffiliateRow.tsx to show
+    // all contacts and their emails, not just the primary email.
+    // ==========================================================================
+    emailResults: parseJsonField(dbAffiliate.email_results) || undefined,
+    
+    // ==========================================================================
     // Instagram fields (FIX: now properly reading from database)
     // Maps DB columns instagram_x → ResultItem.instagramX
     // ==========================================================================

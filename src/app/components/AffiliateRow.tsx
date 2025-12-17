@@ -1552,11 +1552,6 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {emailResults?.provider && (
-                <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                  via {emailResults.provider}
-                </span>
-              )}
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
                 (emailResults?.emails?.length || (email ? 1 : 0)) > 0 
                   ? 'bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40' 
@@ -1570,7 +1565,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
           {/* Show all contacts if available, otherwise show simple email list */}
           {emailResults?.contacts && emailResults.contacts.length > 0 ? (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {emailResults.contacts.map((contact, contactIdx) => {
                 const contactName = contact.firstName && contact.lastName 
                   ? `${contact.firstName} ${contact.lastName}`
