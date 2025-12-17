@@ -586,8 +586,8 @@ function OutreachContent() {
             </div>
           </div>
 
-          {/* Table Header */}
-          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_220px_1fr_140px_100px_100px_130px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
+          {/* Table Header - Updated December 17, 2025: Removed Date column, widened Email column */}
+          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_200px_1fr_130px_160px_130px] gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
             <div className="pl-1">
               <input
                 type="checkbox"
@@ -599,7 +599,6 @@ function OutreachContent() {
             <div>Affiliate</div>
             <div>Relevant Content</div>
             <div>Discovery Method</div>
-            <div>Date</div>
             <div>Email</div>
             <div className="text-right pr-2">Message</div>
           </div>
@@ -665,12 +664,12 @@ function OutreachContent() {
                 <div
                   key={item.id}
                   className={cn(
-                    "grid grid-cols-[40px_220px_1fr_140px_100px_100px_130px] items-start gap-4 px-4 py-4 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors",
+                    "grid grid-cols-[40px_200px_1fr_130px_160px_130px] items-center gap-4 px-4 py-4 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors",
                     isSelected && "bg-[#D4E815]/10 hover:bg-[#D4E815]/20"
                   )}
                 >
                   {/* Checkbox */}
-                  <div className="pt-1.5">
+                  <div className="flex items-center">
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -679,9 +678,9 @@ function OutreachContent() {
                     />
                   </div>
 
-                  {/* Affiliate Info */}
-                  <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                  {/* Affiliate Info - Shows thumbnail/icon + title + domain */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
                       {item.thumbnail ? (
                         <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -689,48 +688,45 @@ function OutreachContent() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-slate-900 line-clamp-1 mb-0.5">{item.title}</h3>
-                      <p className="text-xs text-slate-500 flex items-center gap-1">
-                        <Globe size={10} />
-                        {item.domain}
+                      <h3 className="text-sm font-bold text-slate-900 truncate">{item.title}</h3>
+                      <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                        <Globe size={10} className="shrink-0" />
+                        <span className="truncate">{item.domain}</span>
                       </p>
-                      {item.personName && (
-                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                          <User size={10} />
-                          {item.personName}
-                        </p>
-                      )}
                     </div>
                   </div>
 
-                  {/* Content */}
-                  <div className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                  {/* Relevant Content - Single line with ellipsis for overflow */}
+                  <div className="text-xs text-slate-600 truncate">
                     {item.snippet}
                   </div>
 
                   {/* Discovery Method */}
                   <div className="text-xs">
                     {item.keyword && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 rounded-md font-medium">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 rounded-md font-medium truncate max-w-full">
                         {item.keyword}
                       </span>
                     )}
                   </div>
 
-                  {/* Date */}
-                  <div className="text-xs text-slate-500">
-                    {item.date || '-'}
-                  </div>
-
-                  {/* Email Status */}
-                  <div className="text-xs">
+                  {/* Email - Shows actual email + count if multiple (Dec 17, 2025) */}
+                  <div className="text-xs min-w-0">
                     {item.email ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md font-semibold border border-emerald-100">
-                        <Mail size={10} />
-                        Found
-                      </span>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <Mail size={10} className="text-emerald-600 shrink-0" />
+                        <span className="truncate text-slate-700 font-medium" title={item.email}>
+                          {item.email}
+                        </span>
+                        {/* Show +X if there are additional emails */}
+                        {item.emailResults?.emails && item.emailResults.emails.length > 1 && (
+                          <span className="shrink-0 text-[10px] text-emerald-600 font-semibold">
+                            +{item.emailResults.emails.length - 1}
+                          </span>
+                        )}
+                      </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-500 rounded-md font-medium">
+                      <span className="inline-flex items-center gap-1 text-slate-400">
                         <Mail size={10} />
                         None
                       </span>
