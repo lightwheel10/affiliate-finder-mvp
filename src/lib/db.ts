@@ -152,9 +152,29 @@ export interface DbSavedAffiliate {
   // page refreshes. Previously, generated messages were only in React state
   // and were lost on refresh.
   // ==========================================================================
-  ai_generated_message: string | null;   // Full email body
-  ai_generated_subject: string | null;   // Email subject line
+  ai_generated_message: string | null;   // Full email body (legacy: primary contact)
+  ai_generated_subject: string | null;   // Email subject line (legacy: primary contact)
   ai_generated_at: string | null;        // ISO timestamp when generated
+  
+  // ==========================================================================
+  // AI GENERATED MESSAGES - Per-contact messages (Added Dec 25, 2025)
+  // 
+  // When Lusha returns multiple contacts for an affiliate, users can generate
+  // personalized emails for each contact. This JSONB column stores all messages
+  // keyed by contact email address.
+  //
+  // Structure: { "email@example.com": { message, subject, generatedAt } }
+  //
+  // The legacy ai_generated_message field is still updated with the most recent
+  // message for backwards compatibility.
+  // ==========================================================================
+  ai_generated_messages: {
+    [email: string]: {
+      message: string;
+      subject: string | null;
+      generatedAt: string;
+    };
+  } | null;
 }
 
 export interface DbDiscoveredAffiliate {

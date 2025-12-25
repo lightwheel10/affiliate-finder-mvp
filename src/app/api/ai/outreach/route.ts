@@ -15,6 +15,25 @@
  * full flexibility without code access.
  * 
  * Created: December 17, 2025
+ * 
+ * =============================================================================
+ * MULTI-CONTACT SUPPORT (Added December 25, 2025)
+ * =============================================================================
+ * 
+ * When Lusha returns multiple contacts for an affiliate (e.g., Marketing Director,
+ * Partnerships Manager, etc.), users can now select which specific contact to
+ * generate an email for.
+ * 
+ * New request parameters:
+ * - selectedContact: { email, firstName, lastName, title } - Optional override
+ *   for the contact to address in the email. If provided, uses this instead of
+ *   the affiliate's primary email/personName.
+ * 
+ * Credits: 1 AI credit per email generated (regardless of which contact)
+ * 
+ * Storage: Messages are now stored in a JSONB column `ai_generated_messages`
+ * keyed by contact email, allowing multiple messages per affiliate.
+ * =============================================================================
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -66,7 +85,20 @@ export async function POST(request: NextRequest) {
     // STEP 2: PARSE REQUEST BODY
     // =========================================================================
     const body = await request.json();
-    const { affiliateId, affiliate: affiliateData } = body;
+    const { affiliateId, affiliate: affiliateData, selectedContact } = body;
+    
+    // =========================================================================
+    // MULTI-CONTACT SUPPORT (December 25, 2025)
+    // 
+    // selectedContact is an optional object containing:
+    // - email: string (required) - The specific contact's email
+    // - firstName: string - Contact's first name
+    // - lastName: string - Contact's last name  
+    // - title: string - Contact's job title (e.g., "Marketing Director")
+    //
+    // When provided, this overrides the affiliate's primary email/personName
+    // to generate a more personalized email for the specific contact.
+    // =========================================================================
 
     if (!affiliateId && !affiliateData) {
       return NextResponse.json(
@@ -190,6 +222,35 @@ export async function POST(request: NextRequest) {
         channelSubscribers: a.channel_subscribers,
       };
     }
+    
+    // =========================================================================
+    // STEP 5.5: APPLY SELECTED CONTACT OVERRIDE (December 25, 2025)
+    // 
+    // If a specific contact was selected from the multi-contact picker,
+    // override the affiliate's email and personName with the selected contact's
+    // information. This allows generating personalized emails for different
+    // contacts at the same company.
+    //
+    // The selectedContact object comes from emailResults.contacts[] which
+    // Lusha provides when multiple contacts are found.
+    // =========================================================================
+    let contactEmail = affiliate.email;
+    
+    if (selectedContact && selectedContact.email) {
+      // Build full name from firstName + lastName
+      const contactFullName = [
+        selectedContact.firstName,
+        selectedContact.lastName
+      ].filter(Boolean).join(' ') || null;
+      
+      // Override affiliate's contact info with selected contact
+      affiliate.personName = contactFullName;
+      affiliate.email = selectedContact.email;
+      contactEmail = selectedContact.email;
+      
+      // Log for debugging
+      console.log(`[AI Outreach] Using selected contact: ${contactFullName || 'Unknown'} <${selectedContact.email}> (${selectedContact.title || 'No title'})`);
+    }
 
     // =========================================================================
     // STEP 6: BUILD USER BUSINESS CONTEXT
@@ -257,22 +318,45 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================================================
-    // STEP 9.5: SAVE GENERATED MESSAGE TO DATABASE (Added Dec 17, 2025)
+    // STEP 9.5: SAVE GENERATED MESSAGE TO DATABASE (Updated Dec 25, 2025)
     // 
     // Persist the AI-generated email to the database so it survives page
     // refreshes. This prevents users from losing their generated emails and
     // having to regenerate (consuming more credits).
+    //
+    // MULTI-CONTACT SUPPORT (December 25, 2025):
+    // Messages are now stored in a JSONB column `ai_generated_messages` keyed
+    // by contact email. This allows storing multiple messages per affiliate
+    // when Lusha returns multiple contacts.
+    //
+    // Structure: { "email@example.com": { message, subject, generatedAt } }
+    //
+    // We also keep updating the legacy `ai_generated_message` field with the
+    // most recent message for backwards compatibility.
     // =========================================================================
     try {
+      // Build the message entry for this contact
+      const messageEntry = {
+        message: result.message,
+        subject: result.subject || null,
+        generatedAt: new Date().toISOString(),
+      };
+      
+      // The email key to store under (use contactEmail or fallback to 'primary')
+      const emailKey = contactEmail || 'primary';
+      
+      // Use raw SQL to merge into the JSONB column
+      // This appends/updates the message for this specific email key
       await sql`
         UPDATE saved_affiliates
         SET 
           ai_generated_message = ${result.message},
           ai_generated_subject = ${result.subject || null},
-          ai_generated_at = NOW()
+          ai_generated_at = NOW(),
+          ai_generated_messages = COALESCE(ai_generated_messages, '{}'::jsonb) || ${JSON.stringify({ [emailKey]: messageEntry })}::jsonb
         WHERE id = ${affiliate.id} AND user_id = ${userId}
       `;
-      console.log(`[AI Outreach] 💾 Saved message to database for affiliate ${affiliate.id}`);
+      console.log(`[AI Outreach] 💾 Saved message to database for affiliate ${affiliate.id}, contact: ${emailKey}`);
     } catch (saveError) {
       // Log but don't fail - the message was generated successfully
       // User can still see it in the current session
@@ -285,11 +369,13 @@ export async function POST(request: NextRequest) {
     const elapsed = Date.now() - startTime;
     console.log(`[AI Outreach] ✅ Generated email in ${elapsed}ms for ${affiliate.domain}`);
 
+    // Include contactEmail in response so frontend knows which contact's message was generated
     return NextResponse.json({
       success: true,
       message: result.message,
       subject: result.subject || null,
       affiliateId: affiliate.id,
+      contactEmail: contactEmail || null, // December 25, 2025: For multi-contact support
     });
 
   } catch (error: unknown) {

@@ -153,6 +153,14 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     aiGeneratedMessage: dbAffiliate.ai_generated_message || undefined,
     aiGeneratedSubject: dbAffiliate.ai_generated_subject || undefined,
     aiGeneratedAt: dbAffiliate.ai_generated_at || undefined,
+    
+    // ==========================================================================
+    // AI GENERATED MESSAGES - Per-contact (Added Dec 25, 2025)
+    // 
+    // When Lusha returns multiple contacts, users can generate personalized
+    // emails for each. This stores all messages keyed by contact email.
+    // ==========================================================================
+    aiGeneratedMessages: parseJsonField(dbAffiliate.ai_generated_messages) || undefined,
   };
 }
 

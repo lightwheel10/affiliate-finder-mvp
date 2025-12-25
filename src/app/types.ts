@@ -163,9 +163,23 @@ export interface ResultItem {
   // AI Generated Outreach Message (Added Dec 17, 2025)
   // These fields persist the AI-generated email across page refreshes
   // ==========================================================================
-  aiGeneratedMessage?: string;    // Full email body
-  aiGeneratedSubject?: string;    // Email subject line
+  aiGeneratedMessage?: string;    // Full email body (legacy: primary contact)
+  aiGeneratedSubject?: string;    // Email subject line (legacy: primary contact)
   aiGeneratedAt?: string;         // ISO timestamp when generated
+  
+  // ==========================================================================
+  // AI Generated Messages - Per-contact (Added Dec 25, 2025)
+  // 
+  // When Lusha returns multiple contacts, users can generate personalized
+  // emails for each. This stores all messages keyed by contact email.
+  // ==========================================================================
+  aiGeneratedMessages?: {
+    [email: string]: {
+      message: string;
+      subject: string | null;
+      generatedAt: string;
+    };
+  };
 }
 
 // =============================================================================
