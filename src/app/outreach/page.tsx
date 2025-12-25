@@ -1183,16 +1183,51 @@ function OutreachContent() {
                     <button
                       onClick={() => {
                         if (affiliate) {
-                          // Find the contact if this is a specific contact message
-                          const contact = contactEmail && affiliate.emailResults?.contacts?.find(c => 
-                            c.emails?.includes(contactEmail)
-                          );
-                          handleGenerateForContact(affiliate, contact ? {
-                            email: contactEmail,
-                            firstName: contact.firstName,
-                            lastName: contact.lastName,
-                            title: contact.title,
-                          } : undefined);
+                          // ===========================================================
+                          // REGENERATE MESSAGE (Fixed December 25, 2025)
+                          //
+                          // We need to regenerate for the SAME contact email that the
+                          // original message was generated for. There are two paths:
+                          //
+                          // Path 1: Contact details exist in emailResults.contacts[]
+                          //         → Use full contact info for personalization
+                          //
+                          // Path 2: Only emails exist (no contacts array)
+                          //         → Use top-level emailResults firstName/lastName/title
+                          //
+                          // CRITICAL: Always pass the contactEmail, even if we can't
+                          // find detailed contact info. This ensures the message key
+                          // stays consistent.
+                          // ===========================================================
+                          
+                          if (contactEmail) {
+                            // Try to find contact details in Path 1 (contacts array)
+                            const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
+                              c.emails?.includes(contactEmail)
+                            );
+                            
+                            if (contactFromArray) {
+                              // Path 1: Found in contacts array with full details
+                              handleGenerateForContact(affiliate, {
+                                email: contactEmail,
+                                firstName: contactFromArray.firstName,
+                                lastName: contactFromArray.lastName,
+                                title: contactFromArray.title,
+                              });
+                            } else {
+                              // Path 2: Contact was from emails array without detailed contacts
+                              // Use top-level emailResults info (same for all emails in this case)
+                              handleGenerateForContact(affiliate, {
+                                email: contactEmail,
+                                firstName: affiliate.emailResults?.firstName,
+                                lastName: affiliate.emailResults?.lastName,
+                                title: affiliate.emailResults?.title,
+                              });
+                            }
+                          } else {
+                            // No specific contact - regenerate for primary
+                            handleGenerateForContact(affiliate);
+                          }
                         }
                       }}
                       disabled={isRegenerating}
