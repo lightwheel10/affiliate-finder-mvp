@@ -402,6 +402,65 @@ function OutreachContent() {
     }
     return count;
   };
+  
+  // =========================================================================
+  // HELPER: CHECK IF ANY CONTACT IS GENERATING (December 26, 2025)
+  //
+  // BUG FIX: Previously, the row only checked if the PRIMARY contact's 
+  // messageKey was in generatingIds. This meant if user was generating for 
+  // contact #2 or #3, the row would incorrectly show "Select Contacts" button 
+  // instead of the spinner.
+  //
+  // This helper checks ALL possible message keys for the affiliate.
+  // =========================================================================
+  const isAnyGenerating = (affiliateId: number): boolean => {
+    const prefix = `${affiliateId}:`;
+    for (const key of generatingIds) {
+      if (key === `${affiliateId}` || key.startsWith(prefix)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  
+  // =========================================================================
+  // HELPER: CHECK IF ANY CONTACT HAS FAILED (December 26, 2025)
+  //
+  // BUG FIX: Similar to isAnyGenerating, this checks all message keys for 
+  // the affiliate instead of just the primary contact's key.
+  // =========================================================================
+  const hasAnyFailed = (affiliateId: number): boolean => {
+    const prefix = `${affiliateId}:`;
+    for (const key of failedIds) {
+      if (key === `${affiliateId}` || key.startsWith(prefix)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  
+  // =========================================================================
+  // HELPER: GET ALL MESSAGES FOR AFFILIATE (December 26, 2025)
+  //
+  // Returns an array of { email, message } objects for all generated messages
+  // belonging to this affiliate. Used by the multi-message viewing modal.
+  // =========================================================================
+  const getAllMessagesForAffiliate = (affiliateId: number): Array<{ email: string; message: string }> => {
+    const prefix = `${affiliateId}:`;
+    const messages: Array<{ email: string; message: string }> = [];
+    
+    generatedMessages.forEach((message, key) => {
+      if (key === `${affiliateId}` || key.startsWith(prefix)) {
+        // Extract email from key (format: "affiliateId:email" or just "affiliateId")
+        const email = key.includes(':') 
+          ? key.split(':').slice(1).join(':') // Handle emails with colons
+          : ''; // Legacy key format without email
+        messages.push({ email, message });
+      }
+    });
+    
+    return messages;
+  };
 
   // =========================================================================
   // OPEN CONTACT PICKER MODAL (December 25, 2025)
@@ -929,8 +988,13 @@ function OutreachContent() {
               const hasMessage = hasAnyMessage(item.id!);
               const messageCount = getMessageCount(item.id!);
               const isCopied = copiedId === messageKey;
-              const isGenerating = generatingIds.has(messageKey);
-              const hasFailed = failedIds.has(messageKey);
+              // =====================================================================
+              // BUG FIX (December 26, 2025): Use isAnyGenerating/hasAnyFailed instead
+              // of checking only the primary contact's messageKey. This ensures the
+              // row shows spinner/failed state when ANY contact is being processed.
+              // =====================================================================
+              const isGenerating = isAnyGenerating(item.id!);
+              const hasFailed = hasAnyFailed(item.id!);
               const multipleContacts = getAffiliateContacts(item);
               const hasMultipleContacts = multipleContacts !== null && multipleContacts.length >= 2;
 
@@ -1019,9 +1083,15 @@ function OutreachContent() {
                       ============================================================ */}
                   <div className="text-right">
                     {hasMessage ? (
-                      // SUCCESS STATE: Show "View Message" button with count if multiple
+                      // =====================================================================
+                      // SUCCESS STATE: Show "View Message" button (Updated December 26, 2025)
+                      //
+                      // BUG FIX: When messageCount > 1, we pass just the affiliateId (e.g., "123")
+                      // so the modal knows to show ALL messages in a list view. Previously, we
+                      // always passed messageKey which only showed the primary contact's message.
+                      // =====================================================================
                       <button
-                        onClick={() => setViewingMessageId(messageKey)}
+                        onClick={() => setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40 hover:bg-[#D4E815]/30"
                       >
                         <MessageSquare size={12} />
@@ -1072,12 +1142,19 @@ function OutreachContent() {
         </div>
 
         {/* ================================================================
-            MESSAGE VIEWING MODAL (Updated December 25, 2025)
+            MESSAGE VIEWING MODAL (Updated December 26, 2025)
             
-            Now works with messageKey format "affiliateId:email".
-            Extracts affiliateId from the key to find the affiliate.
+            MULTI-MESSAGE SUPPORT:
+            - When viewingMessageId contains ":" → Single message view (affiliateId:email)
+            - When viewingMessageId has no ":" → Multi-message list view (just affiliateId)
+            
+            BUG FIX: Previously "View X Messages" only showed the primary contact's
+            message. Now it shows ALL messages for the affiliate in a scrollable list.
             ================================================================ */}
         {viewingMessageId !== null && (() => {
+          // Detect if this is a multi-message view (no colon = affiliateId only)
+          const isMultiMessageView = !viewingMessageId.includes(':');
+          
           // Extract affiliateId from messageKey (format: "affiliateId:email" or "affiliateId")
           const affiliateId = parseInt(viewingMessageId.split(':')[0], 10);
           const contactEmail = viewingMessageId.includes(':') 
@@ -1085,7 +1162,14 @@ function OutreachContent() {
             : null;
           
           const affiliate = filteredResults.find(a => a.id === affiliateId);
-          const message = generatedMessages.get(viewingMessageId);
+          
+          // For multi-message view, get ALL messages for this affiliate
+          const allMessages = isMultiMessageView 
+            ? getAllMessagesForAffiliate(affiliateId)
+            : [];
+          
+          // For single message view
+          const message = !isMultiMessageView ? generatedMessages.get(viewingMessageId) : null;
           const isCopied = copiedId === viewingMessageId;
           const isRegenerating = generatingIds.has(viewingMessageId);
 
@@ -1109,6 +1193,11 @@ function OutreachContent() {
                       <p className="text-xs text-slate-600 flex items-center gap-1">
                         <Globe size={10} />
                         {affiliate?.domain}
+                        {isMultiMessageView && (
+                          <span className="ml-2 px-2 py-0.5 bg-[#D4E815]/20 text-[#1A1D21] rounded text-[10px] font-semibold">
+                            {allMessages.length} Messages
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1121,152 +1210,274 @@ function OutreachContent() {
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6 overflow-y-auto max-h-[calc(80vh-180px)]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={14} className="text-[#1A1D21]" />
-                    <span className="text-sm font-semibold text-slate-700">AI Generated Message</span>
-                    {/* Show which contact this message is for (December 25, 2025) */}
-                    {contactEmail && (
-                      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                        to {contactEmail}
-                      </span>
-                    )}
-                  </div>
-                  <div className="bg-slate-50 rounded-xl p-5 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap border border-slate-200">
-                    {message}
-                  </div>
-
-                  {/* Affiliate Details */}
-                  {affiliate && (
-                    <div className="mt-6 pt-6 border-t border-slate-200">
-                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Affiliate Details</h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        {affiliate.personName && (
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">Contact Name</p>
-                            <p className="text-sm font-semibold text-slate-900">{affiliate.personName}</p>
+                <div className="p-6 overflow-y-auto max-h-[calc(80vh-130px)]">
+                  {/* =====================================================================
+                      MULTI-MESSAGE LIST VIEW (December 26, 2025)
+                      
+                      When viewing multiple messages, show each in its own card with
+                      the email recipient, message content, and action buttons.
+                      ===================================================================== */}
+                  {isMultiMessageView ? (
+                    <div className="space-y-4">
+                      {allMessages.map((msg, index) => {
+                        const msgKey = getMessageKey(affiliateId, msg.email);
+                        const msgCopied = copiedId === msgKey;
+                        const msgRegenerating = generatingIds.has(msgKey);
+                        
+                        return (
+                          // Use msgKey as React key for guaranteed uniqueness
+                          <div key={msgKey} className="border border-slate-200 rounded-xl overflow-hidden">
+                            {/* Message Header with Email */}
+                            <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Mail size={12} className="text-emerald-600" />
+                                <span className="text-sm font-medium text-slate-700">{msg.email || 'Primary Contact'}</span>
+                              </div>
+                              <span className="text-xs text-slate-400">Message {index + 1}</span>
+                            </div>
+                            
+                            {/* Message Content */}
+                            <div className="p-4">
+                              <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap border border-slate-100 max-h-[200px] overflow-y-auto">
+                                {msg.message}
+                              </div>
+                              
+                              {/* Per-Message Actions */}
+                              <div className="flex items-center justify-end gap-2 mt-3">
+                                <button
+                                  onClick={() => {
+                                    if (affiliate) {
+                                      // Regenerate for this specific contact
+                                      const email = msg.email;
+                                      if (email) {
+                                        const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
+                                          c.emails?.includes(email)
+                                        );
+                                        
+                                        if (contactFromArray) {
+                                          handleGenerateForContact(affiliate, {
+                                            email: email,
+                                            firstName: contactFromArray.firstName,
+                                            lastName: contactFromArray.lastName,
+                                            title: contactFromArray.title,
+                                          });
+                                        } else {
+                                          handleGenerateForContact(affiliate, {
+                                            email: email,
+                                            firstName: affiliate.emailResults?.firstName,
+                                            lastName: affiliate.emailResults?.lastName,
+                                            title: affiliate.emailResults?.title,
+                                          });
+                                        }
+                                      } else {
+                                        handleGenerateForContact(affiliate);
+                                      }
+                                    }
+                                  }}
+                                  disabled={msgRegenerating}
+                                  className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                                    msgRegenerating
+                                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                                  )}
+                                >
+                                  <RefreshCw size={12} className={msgRegenerating ? "animate-spin" : ""} />
+                                  {msgRegenerating ? 'Regenerating...' : 'Regenerate'}
+                                </button>
+                                <button
+                                  onClick={() => handleCopyMessage(msgKey)}
+                                  className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                                    msgCopied
+                                      ? "bg-emerald-600 text-white"
+                                      : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]"
+                                  )}
+                                >
+                                  {msgCopied ? (
+                                    <>
+                                      <Check size={12} />
+                                      Copied!
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy size={12} />
+                                      Copy
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        {(contactEmail || affiliate.email) && (
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">Email</p>
-                            <p className="text-sm font-semibold text-slate-900">{contactEmail || affiliate.email}</p>
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-xs text-slate-500 mb-1">Platform</p>
-                          <div className="flex items-center gap-1.5">
-                            {getSourceIcon(affiliate.source)}
-                            <p className="text-sm font-semibold text-slate-900">{affiliate.source}</p>
-                          </div>
-                        </div>
-                        {affiliate.keyword && (
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">Keyword</p>
-                            <p className="text-sm font-semibold text-slate-900">{affiliate.keyword}</p>
-                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* =====================================================================
+                       SINGLE MESSAGE VIEW (Original behavior)
+                       ===================================================================== */
+                    <>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles size={14} className="text-[#1A1D21]" />
+                        <span className="text-sm font-semibold text-slate-700">AI Generated Message</span>
+                        {/* Show which contact this message is for (December 25, 2025) */}
+                        {contactEmail && (
+                          <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                            to {contactEmail}
+                          </span>
                         )}
                       </div>
-                    </div>
+                      <div className="bg-slate-50 rounded-xl p-5 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap border border-slate-200">
+                        {message}
+                      </div>
+
+                      {/* Affiliate Details */}
+                      {affiliate && (
+                        <div className="mt-6 pt-6 border-t border-slate-200">
+                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Affiliate Details</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {affiliate.personName && (
+                              <div>
+                                <p className="text-xs text-slate-500 mb-1">Contact Name</p>
+                                <p className="text-sm font-semibold text-slate-900">{affiliate.personName}</p>
+                              </div>
+                            )}
+                            {(contactEmail || affiliate.email) && (
+                              <div>
+                                <p className="text-xs text-slate-500 mb-1">Email</p>
+                                <p className="text-sm font-semibold text-slate-900">{contactEmail || affiliate.email}</p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs text-slate-500 mb-1">Platform</p>
+                              <div className="flex items-center gap-1.5">
+                                {getSourceIcon(affiliate.source)}
+                                <p className="text-sm font-semibold text-slate-900">{affiliate.source}</p>
+                              </div>
+                            </div>
+                            {affiliate.keyword && (
+                              <div>
+                                <p className="text-xs text-slate-500 mb-1">Keyword</p>
+                                <p className="text-sm font-semibold text-slate-900">{affiliate.keyword}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
-                {/* Modal Footer */}
-                <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-                  <button
-                    onClick={() => setViewingMessageId(null)}
-                    className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
-                  >
-                    Close
-                  </button>
-                  <div className="flex items-center gap-2">
+                {/* Modal Footer - Only show for single message view */}
+                {!isMultiMessageView && (
+                  <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
                     <button
-                      onClick={() => {
-                        if (affiliate) {
-                          // ===========================================================
-                          // REGENERATE MESSAGE (Fixed December 25, 2025)
-                          //
-                          // We need to regenerate for the SAME contact email that the
-                          // original message was generated for. There are two paths:
-                          //
-                          // Path 1: Contact details exist in emailResults.contacts[]
-                          //         → Use full contact info for personalization
-                          //
-                          // Path 2: Only emails exist (no contacts array)
-                          //         → Use top-level emailResults firstName/lastName/title
-                          //
-                          // CRITICAL: Always pass the contactEmail, even if we can't
-                          // find detailed contact info. This ensures the message key
-                          // stays consistent.
-                          // ===========================================================
-                          
-                          if (contactEmail) {
-                            // Try to find contact details in Path 1 (contacts array)
-                            const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
-                              c.emails?.includes(contactEmail)
-                            );
-                            
-                            if (contactFromArray) {
-                              // Path 1: Found in contacts array with full details
-                              handleGenerateForContact(affiliate, {
-                                email: contactEmail,
-                                firstName: contactFromArray.firstName,
-                                lastName: contactFromArray.lastName,
-                                title: contactFromArray.title,
-                              });
-                            } else {
-                              // Path 2: Contact was from emails array without detailed contacts
-                              // Use top-level emailResults info (same for all emails in this case)
-                              handleGenerateForContact(affiliate, {
-                                email: contactEmail,
-                                firstName: affiliate.emailResults?.firstName,
-                                lastName: affiliate.emailResults?.lastName,
-                                title: affiliate.emailResults?.title,
-                              });
-                            }
-                          } else {
-                            // No specific contact - regenerate for primary
-                            handleGenerateForContact(affiliate);
-                          }
-                        }
-                      }}
-                      disabled={isRegenerating}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
-                        isRegenerating
-                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                          : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                      )}
+                      onClick={() => setViewingMessageId(null)}
+                      className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
                     >
-                      <RefreshCw size={14} className={isRegenerating ? "animate-spin" : ""} />
-                      {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                      Close
                     </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          if (affiliate) {
+                            // ===========================================================
+                            // REGENERATE MESSAGE (Fixed December 25, 2025)
+                            //
+                            // We need to regenerate for the SAME contact email that the
+                            // original message was generated for. There are two paths:
+                            //
+                            // Path 1: Contact details exist in emailResults.contacts[]
+                            //         → Use full contact info for personalization
+                            //
+                            // Path 2: Only emails exist (no contacts array)
+                            //         → Use top-level emailResults firstName/lastName/title
+                            //
+                            // CRITICAL: Always pass the contactEmail, even if we can't
+                            // find detailed contact info. This ensures the message key
+                            // stays consistent.
+                            // ===========================================================
+                            
+                            if (contactEmail) {
+                              // Try to find contact details in Path 1 (contacts array)
+                              const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
+                                c.emails?.includes(contactEmail)
+                              );
+                              
+                              if (contactFromArray) {
+                                // Path 1: Found in contacts array with full details
+                                handleGenerateForContact(affiliate, {
+                                  email: contactEmail,
+                                  firstName: contactFromArray.firstName,
+                                  lastName: contactFromArray.lastName,
+                                  title: contactFromArray.title,
+                                });
+                              } else {
+                                // Path 2: Contact was from emails array without detailed contacts
+                                // Use top-level emailResults info (same for all emails in this case)
+                                handleGenerateForContact(affiliate, {
+                                  email: contactEmail,
+                                  firstName: affiliate.emailResults?.firstName,
+                                  lastName: affiliate.emailResults?.lastName,
+                                  title: affiliate.emailResults?.title,
+                                });
+                              }
+                            } else {
+                              // No specific contact - regenerate for primary
+                              handleGenerateForContact(affiliate);
+                            }
+                          }
+                        }}
+                        disabled={isRegenerating}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                          isRegenerating
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                            : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                        )}
+                      >
+                        <RefreshCw size={14} className={isRegenerating ? "animate-spin" : ""} />
+                        {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleCopyMessage(viewingMessageId);
+                          setTimeout(() => setViewingMessageId(null), 1500);
+                        }}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                          isCopied
+                            ? "bg-emerald-600 text-white"
+                            : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
+                        )}
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check size={14} />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            Copy Message
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Simple Close Footer for Multi-Message View */}
+                {isMultiMessageView && (
+                  <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center">
                     <button
-                      onClick={() => {
-                        handleCopyMessage(viewingMessageId);
-                        setTimeout(() => setViewingMessageId(null), 1500);
-                      }}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
-                        isCopied
-                          ? "bg-emerald-600 text-white"
-                          : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
-                      )}
+                      onClick={() => setViewingMessageId(null)}
+                      className="px-6 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                     >
-                      {isCopied ? (
-                        <>
-                          <Check size={14} />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={14} />
-                          Copy Message
-                        </>
-                      )}
+                      Close
                     </button>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           );
