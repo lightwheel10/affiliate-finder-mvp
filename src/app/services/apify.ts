@@ -13,14 +13,30 @@ import { ApifyClient } from 'apify-client';
 import { trackApiCall, API_COSTS } from './tracking';
 import { SearchResult, YouTubeChannelInfo, Platform } from './search';
 
-// Initialize Apify client
+// =============================================================================
+// APIFY CLIENT INITIALIZATION - Updated 29th December 2025
+// 
+// The ApifyClient SDK has built-in retry and timeout handling. We configure it
+// here with sensible defaults to handle rate limits and transient failures
+// gracefully without needing custom exponential backoff logic.
+// =============================================================================
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
 
 if (!APIFY_TOKEN) {
   console.warn('⚠️ Missing APIFY_API_TOKEN in environment variables');
 }
 
-const client = APIFY_TOKEN ? new ApifyClient({ token: APIFY_TOKEN }) : null;
+// 29th Dec 2025: Added retry configuration for rate limit handling (REV-61)
+// - maxRetries: Retry up to 3 times on transient failures
+// - timeoutSecs: 180 seconds max for long-running actor calls (SimilarWeb batch can take time)
+// These are sensible defaults - not extreme. The SDK handles exponential backoff internally.
+const client = APIFY_TOKEN 
+  ? new ApifyClient({ 
+      token: APIFY_TOKEN,
+      maxRetries: 3,        // Retry failed requests up to 3 times
+      timeoutSecs: 180,     // 3-minute timeout for actor runs
+    }) 
+  : null;
 
 // Apify Actor IDs
 const ACTORS = {

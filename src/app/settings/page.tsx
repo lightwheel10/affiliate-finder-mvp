@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { AuthGuard } from '../components/AuthGuard';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { useUser } from '@stackframe/stack';
 import { PricingModal } from '../components/PricingModal';
@@ -31,10 +32,18 @@ import {
 
 type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
 
+// =============================================================================
+// SETTINGS PAGE - Error Boundary Added 29th December 2025
+// 
+// ErrorBoundary wraps the content to catch any React errors and show a friendly
+// "Something went wrong" message instead of crashing the page.
+// =============================================================================
 export default function SettingsPage() {
   return (
     <AuthGuard>
-      <SettingsContent />
+      <ErrorBoundary>
+        <SettingsContent />
+      </ErrorBoundary>
     </AuthGuard>
   );
 }

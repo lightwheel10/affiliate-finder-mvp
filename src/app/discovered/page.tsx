@@ -39,12 +39,20 @@ import {
 } from 'lucide-react';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../types';
 import { FilterPanel } from '../components/FilterPanel';
+import ErrorBoundary from '../components/ErrorBoundary';
 
-// This page shows ALL discovered affiliates from all searches
+// =============================================================================
+// DISCOVERED PAGE - Error Boundary Added 29th December 2025
+// 
+// ErrorBoundary wraps the content to catch any React errors and show a friendly
+// "Something went wrong" message instead of crashing the page.
+// =============================================================================
 export default function DiscoveredPage() {
   return (
     <AuthGuard>
-      <DiscoveredContent />
+      <ErrorBoundary>
+        <DiscoveredContent />
+      </ErrorBoundary>
     </AuthGuard>
   );
 }

@@ -43,6 +43,7 @@ import { Sidebar } from '../components/Sidebar';
 import { ScanCountdown } from '../components/ScanCountdown';
 import { AuthGuard } from '../components/AuthGuard';
 import { CreditsDisplay } from '../components/CreditsDisplay';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { useSavedAffiliates } from '../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { ResultItem } from '../types';
@@ -98,10 +99,18 @@ interface ContactPickerState {
   selectedContacts: Set<string>; // Set of email addresses
 }
 
+// =============================================================================
+// OUTREACH PAGE - Error Boundary Added 29th December 2025
+// 
+// ErrorBoundary wraps the content to catch any React errors and show a friendly
+// "Something went wrong" message instead of crashing the page.
+// =============================================================================
 export default function OutreachPage() {
   return (
     <AuthGuard>
-      <OutreachContent />
+      <ErrorBoundary>
+        <OutreachContent />
+      </ErrorBoundary>
     </AuthGuard>
   );
 }

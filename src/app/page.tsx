@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from './types';
 import { useSavedAffiliates, useDiscoveredAffiliates } from './hooks/useAffiliates';
 import { FilterPanel } from './components/FilterPanel';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const MAX_KEYWORDS = 5;
 
@@ -270,8 +271,16 @@ export default function Home() {
 
   // ============================================
   // CASE 6: Authenticated + Onboarded → Dashboard
+  // 
+  // ErrorBoundary Added 29th December 2025:
+  // Wraps Dashboard to catch any React errors and show a friendly
+  // "Something went wrong" message instead of crashing the page.
   // ============================================
-  return <Dashboard />
+  return (
+    <ErrorBoundary>
+      <Dashboard />
+    </ErrorBoundary>
+  );
 }
 
 function Dashboard() {
