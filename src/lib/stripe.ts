@@ -3,6 +3,9 @@ import Stripe from 'stripe';
 // =============================================================================
 // STRIPE SERVER-SIDE CONFIGURATION
 // This file should only be imported in server-side code (API routes)
+// 
+// API Keys configured: 29th December 2025 (REV-68)
+// Using SANDBOX/TEST keys for development. Switch to live keys for production.
 // =============================================================================
 
 // Initialize Stripe with secret key (server-side only)

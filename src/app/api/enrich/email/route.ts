@@ -6,6 +6,17 @@
  * This endpoint uses the multi-provider enrichment service to find email
  * addresses. It supports Apollo.io and Lusha, with configurable fallback.
  * 
+ * =============================================================================
+ * PROVIDER DECISION - 29th December 2025
+ * 
+ * David decided to use LUSHA as the primary email enrichment provider.
+ * Apollo is still available as a fallback but Lusha provides better results
+ * including multiple contacts, phone numbers, and job titles.
+ * 
+ * CREDIT COST: 1 credit per email lookup
+ * (Originally planned as 2 credits in Linear, but kept at 1 for simplicity)
+ * =============================================================================
+ * 
  * The endpoint accepts data from multiple sources (Web, YouTube, Instagram, TikTok)
  * and extracts all relevant information to maximize email discovery chances.
  * 

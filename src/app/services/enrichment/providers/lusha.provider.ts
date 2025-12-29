@@ -625,13 +625,36 @@ export class LushaProvider extends BaseEnrichmentProvider {
     
     // Return results with ALL contacts
     if (allEmails.length > 0) {
-      const primaryContact = enrichedContacts[0];
+      // =========================================================================
+      // BUG FIX - 29th December 2025 (REV-71)
+      // 
+      // PROBLEM: Previously, primaryContact was always enrichedContacts[0],
+      // but allEmails[0] (the primary email) might come from a DIFFERENT contact.
+      // 
+      // Example:
+      //   Contact A (CEO): no email
+      //   Contact B (Marketing): jane@company.com
+      //   
+      //   Result before fix:
+      //   - email: "jane@company.com" (from Contact B)
+      //   - firstName: "John" (from Contact A - WRONG!)
+      //   
+      // FIX: Find the contact that actually owns the primary email (allEmails[0])
+      // so the firstName/lastName/title match the email address.
+      // =========================================================================
+      const primaryEmail = allEmails[0];
+      
+      // Find the contact that has the primary email
+      const primaryContact = enrichedContacts.find(
+        c => c.emails && c.emails.includes(primaryEmail)
+      ) || enrichedContacts[0]; // Fallback to first contact if not found
+      
       const firstName = primaryContact?.firstName || (primaryContact?.fullName?.split(' ')[0]);
       const lastName = primaryContact?.lastName || (primaryContact?.fullName?.split(' ').slice(1).join(' '));
       
       this.log(`[Prospecting] ✅ Found ${allEmails.length} email(s) from ${enrichedContacts.length} contact(s) for ${domain}`);
       
-      return this.createSuccessResponse(allEmails[0], {
+      return this.createSuccessResponse(primaryEmail, {
         emails: allEmails,
         contacts: enrichedContacts, // Include ALL contacts with their details
         firstName,

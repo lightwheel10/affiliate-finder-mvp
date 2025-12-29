@@ -3,6 +3,20 @@
  * STRIPE WEBHOOK HANDLER - Pages Router Version
  * =============================================================================
  * 
+ * TRIAL EXPIRY & SUBSCRIPTION HANDLING (REV-58) - 29th December 2025
+ * -------------------------------------------------------------------
+ * This webhook handles all subscription lifecycle events including trial expiry.
+ * 
+ * HOW TRIAL EXPIRY WORKS:
+ * 1. Stripe automatically charges the customer when trial ends
+ * 2. We receive `invoice.paid` event → status becomes 'active', credits reset
+ * 3. If payment fails → we receive `invoice.payment_failed` → status 'past_due'
+ * 4. User gets `trial_will_end` notification 3 days before expiry
+ * 
+ * NO CRON JOB NEEDED: Stripe handles trial-to-paid transitions automatically.
+ * 
+ * FUTURE: Add email notifications for trial reminders (see separate issue).
+ * 
  * WHY PAGES ROUTER INSTEAD OF APP ROUTER?
  * ----------------------------------------
  * This webhook uses the legacy Pages Router (/pages/api/) instead of the newer
@@ -32,7 +46,7 @@
  * DO NOT MIGRATE THIS TO APP ROUTER without extensive testing on Vercel production.
  * 
  * Created: December 2025
- * Last Updated: December 2025
+ * Last Updated: 29th December 2025
  * =============================================================================
  */
 
@@ -431,6 +445,10 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
 /**
  * Handle trial ending soon (3 days before)
  * 
+ * 29th December 2025 (REV-58):
+ * Stripe sends this event 3 days before trial ends. Currently we just log it.
+ * Email notifications are planned for a future update (see separate issue).
+ * 
  * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
  */
 async function handleTrialWillEnd(subscription: Stripe.Subscription) {
@@ -443,7 +461,8 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
     
   console.log(`[Webhook] Trial ending soon for customer: ${customerId || 'unknown'}`);
   
-  // TODO: Send email notification to user about trial ending
+  // TODO (29th Dec 2025): Send email notification to user about trial ending
+  // See separate Linear issue for email notifications implementation
 }
 
 /**

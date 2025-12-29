@@ -3,6 +3,9 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 // =============================================================================
 // STRIPE CLIENT-SIDE CONFIGURATION
 // This file is safe to import in client-side code (React components)
+// 
+// API Keys configured: 29th December 2025 (REV-68)
+// Using SANDBOX/TEST keys for development. Switch to live keys for production.
 // =============================================================================
 
 // Singleton promise for Stripe instance
