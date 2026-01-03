@@ -1,16 +1,33 @@
 'use client';
 
+/**
+ * =============================================================================
+ * SETTINGS PAGE
+ * =============================================================================
+ * 
+ * Updated: January 3rd, 2026
+ * 
+ * ARCHITECTURE CHANGE (January 3rd, 2026):
+ * -----------------------------------------
+ * This page is now part of the (dashboard) route group. The layout handles:
+ *   - AuthGuard (authentication + onboarding check)
+ *   - ErrorBoundary (error handling)
+ *   - Sidebar (navigation - persists across page navigation)
+ *   - Main container with ml-52 margin
+ * 
+ * This page only renders the content: header + main content area.
+ * 
+ * =============================================================================
+ */
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sidebar } from '../components/Sidebar';
-import { AuthGuard } from '../components/AuthGuard';
-import ErrorBoundary from '../components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { useUser } from '@stackframe/stack';
-import { PricingModal } from '../components/PricingModal';
-import { AddCardModal } from '../components/AddCardModal';
-import { Modal } from '../components/Modal';
-import { useNeonUser } from '../hooks/useNeonUser';
-import { useSubscription } from '../hooks/useSubscription';
+import { PricingModal } from '../../components/PricingModal';
+import { AddCardModal } from '../../components/AddCardModal';
+import { Modal } from '../../components/Modal';
+import { useNeonUser } from '../../hooks/useNeonUser';
+import { useSubscription } from '../../hooks/useSubscription';
 import { 
   User, 
   CreditCard, 
@@ -33,22 +50,12 @@ import {
 type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
 
 // =============================================================================
-// SETTINGS PAGE - Error Boundary Added 29th December 2025
+// SETTINGS PAGE - January 3rd, 2026
 // 
-// ErrorBoundary wraps the content to catch any React errors and show a friendly
-// "Something went wrong" message instead of crashing the page.
+// Layout now handles: AuthGuard, ErrorBoundary, and Sidebar.
+// This component only renders the header and main content area.
 // =============================================================================
 export default function SettingsPage() {
-  return (
-    <AuthGuard>
-      <ErrorBoundary>
-        <SettingsContent />
-      </ErrorBoundary>
-    </AuthGuard>
-  );
-}
-
-function SettingsContent() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const user = useUser();
   const { userId } = useNeonUser();
@@ -65,17 +72,20 @@ function SettingsContent() {
     { id: 'security', label: 'Security', icon: <Shield size={16} />, description: 'Protect your account' },
   ];
 
+  // ==========================================================================
+  // RENDER - January 3rd, 2026
+  // 
+  // Note: The outer container with Sidebar is now handled by the layout.
+  // This component only renders the header and main content area.
+  // ==========================================================================
   return (
-    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
-      <Sidebar />
-      
-      <main className="flex-1 flex flex-col min-h-screen ml-52">
-        {/* Header */}
-        <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
-           <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold text-slate-900">Settings</h1>
-            </div>
-        </header>
+    <>
+      {/* Header */}
+      <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-semibold text-slate-900">Settings</h1>
+        </div>
+      </header>
 
         {/* Main Content */}
         <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full">
@@ -143,7 +153,6 @@ function SettingsContent() {
 
           </div>
         </div>
-      </main>
       
       {/* Pricing Modal - Pass subscription context for plan changes */}
       {/* Updated December 2025 to support in-app plan upgrades/downgrades */}
@@ -259,7 +268,7 @@ function SettingsContent() {
           )}
         </div>
       </Modal>
-    </div>
+    </>
   );
 }
 

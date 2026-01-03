@@ -281,8 +281,81 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     'Freelancer', 'Content Creator', 'Other'
   ];
 
-  const countries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France'];
-  const languages = ['English', 'Spanish', 'German', 'French', 'Portuguese', 'Italian'];
+  // ==========================================================================
+  // COUNTRIES & LANGUAGES (January 3rd, 2026)
+  // 
+  // Expanded list of developed market countries with ISO 3166-1 alpha-2 codes.
+  // Focused on markets with strong affiliate marketing potential.
+  // Excludes developing markets to focus on high-value targets.
+  // 
+  // Flag images are loaded from flagcdn.com CDN using ISO country codes.
+  // This provides high-quality SVG flags with zero bundle size impact.
+  // ==========================================================================
+  const countries = [
+    // North America
+    { name: 'United States', code: 'us' },
+    { name: 'Canada', code: 'ca' },
+    // Europe - Major Markets
+    { name: 'United Kingdom', code: 'gb' },
+    { name: 'Germany', code: 'de' },
+    { name: 'France', code: 'fr' },
+    { name: 'Netherlands', code: 'nl' },
+    { name: 'Belgium', code: 'be' },
+    { name: 'Switzerland', code: 'ch' },
+    { name: 'Austria', code: 'at' },
+    { name: 'Ireland', code: 'ie' },
+    // Nordics
+    { name: 'Denmark', code: 'dk' },
+    { name: 'Sweden', code: 'se' },
+    { name: 'Norway', code: 'no' },
+    { name: 'Finland', code: 'fi' },
+    // Southern Europe
+    { name: 'Spain', code: 'es' },
+    { name: 'Italy', code: 'it' },
+    { name: 'Portugal', code: 'pt' },
+    // Central/Eastern Europe
+    { name: 'Poland', code: 'pl' },
+    { name: 'Czech Republic', code: 'cz' },
+    // Asia-Pacific
+    { name: 'Australia', code: 'au' },
+    { name: 'New Zealand', code: 'nz' },
+    { name: 'Japan', code: 'jp' },
+    { name: 'South Korea', code: 'kr' },
+    { name: 'Singapore', code: 'sg' },
+    // Middle East
+    { name: 'United Arab Emirates', code: 'ae' },
+    { name: 'Israel', code: 'il' },
+    { name: 'Saudi Arabia', code: 'sa' },
+  ];
+  
+  // Languages with native script characters for visual distinction (January 3rd, 2026)
+  const languages = [
+    // Major Western Languages
+    { name: 'English', symbol: 'Aa' },
+    { name: 'Spanish', symbol: 'Ñ' },
+    { name: 'German', symbol: 'Ä' },
+    { name: 'French', symbol: 'Ç' },
+    { name: 'Portuguese', symbol: 'Ã' },
+    { name: 'Italian', symbol: 'È' },
+    { name: 'Dutch', symbol: 'IJ' },
+    // Nordic Languages
+    { name: 'Swedish', symbol: 'Å' },
+    { name: 'Danish', symbol: 'Ø' },
+    { name: 'Norwegian', symbol: 'Æ' },
+    { name: 'Finnish', symbol: 'Ä' },
+    // Central/Eastern European
+    { name: 'Polish', symbol: 'Ł' },
+    { name: 'Czech', symbol: 'Č' },
+    // Asian Languages
+    { name: 'Japanese', symbol: 'あ' },
+    { name: 'Korean', symbol: '한' },
+    // Middle Eastern
+    { name: 'Arabic', symbol: 'ع' },
+    { name: 'Hebrew', symbol: 'ע' },
+  ];
+  
+  // Helper function to get flag image URL from flagcdn.com (January 3rd, 2026)
+  const getFlagUrl = (code: string) => `https://flagcdn.com/w40/${code}.png`;
 
   // ==========================================================================
   // BRAND INPUT HANDLER (January 3rd, 2026)
@@ -966,7 +1039,16 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               !targetCountry ? "text-slate-400" : "text-slate-900"
             )}
           >
-            {targetCountry || "Select your target country..."}
+            {targetCountry ? (
+              <span className="flex items-center gap-2">
+                <img 
+                  src={getFlagUrl(countries.find(c => c.name === targetCountry)?.code || '')} 
+                  alt="" 
+                  className="w-5 h-auto rounded-sm"
+                />
+                <span>{targetCountry}</span>
+              </span>
+            ) : "Select your target country..."}
             <ChevronDown className={cn("text-slate-400 transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
           </button>
           {isCountryDropdownOpen && (
@@ -985,24 +1067,27 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   />
                 </div>
               </div>
-              {/* Options */}
+              {/* Options - Now showing flag images from flagcdn.com (January 3rd, 2026) */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
-                {countries.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())).map((c) => (
+                {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).map((c) => (
                   <button
-                    key={c}
+                    key={c.name}
                     type="button"
                     onClick={() => {
-                      setTargetCountry(c);
+                      setTargetCountry(c.name);
                       setIsCountryDropdownOpen(false);
                       setCountrySearch('');
                     }}
                     className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
                   >
-                    {c}
-                    {targetCountry === c && <Check size={14} className="text-[#D4E815]" />}
+                    <span className="flex items-center gap-2">
+                      <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto rounded-sm" />
+                      <span>{c.name}</span>
+                    </span>
+                    {targetCountry === c.name && <Check size={14} className="text-[#D4E815]" />}
                   </button>
                 ))}
-                {countries.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
+                {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
                   <p className="px-4 py-2 text-sm text-slate-400">No results found</p>
                 )}
               </div>
@@ -1025,29 +1110,41 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               !targetLanguage ? "text-slate-400" : "text-slate-900"
             )}
           >
-            {targetLanguage || "Select your target language..."}
+            {targetLanguage ? (
+              <span className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center text-sm font-medium text-slate-700">
+                  {languages.find(l => l.name === targetLanguage)?.symbol}
+                </span>
+                <span>{targetLanguage}</span>
+              </span>
+            ) : "Select your target language..."}
             <ChevronDown className={cn("text-slate-400 transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
           </button>
           {isLangDropdownOpen && (
             <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
-              {/* Options first (since dropdown opens upward) */}
+              {/* Options first (since dropdown opens upward) - Native script symbols (January 3rd, 2026) */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
-                {languages.filter(l => l.toLowerCase().includes(langSearch.toLowerCase())).map((l) => (
+                {languages.filter(l => l.name.toLowerCase().includes(langSearch.toLowerCase())).map((l) => (
                   <button
-                    key={l}
+                    key={l.name}
                     type="button"
                     onClick={() => {
-                      setTargetLanguage(l);
+                      setTargetLanguage(l.name);
                       setIsLangDropdownOpen(false);
                       setLangSearch('');
                     }}
                     className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
                   >
-                    {l}
-                    {targetLanguage === l && <Check size={14} className="text-[#D4E815]" />}
+                    <span className="flex items-center gap-2.5">
+                      <span className="w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center text-sm font-medium text-slate-600 transition-colors">
+                        {l.symbol}
+                      </span>
+                      <span>{l.name}</span>
+                    </span>
+                    {targetLanguage === l.name && <Check size={14} className="text-[#D4E815]" />}
                   </button>
                 ))}
-                {languages.filter(l => l.toLowerCase().includes(langSearch.toLowerCase())).length === 0 && (
+                {languages.filter(l => l.name.toLowerCase().includes(langSearch.toLowerCase())).length === 0 && (
                   <p className="px-4 py-2 text-sm text-slate-400">No results found</p>
                 )}
               </div>

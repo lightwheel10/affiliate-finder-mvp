@@ -148,11 +148,17 @@ export const Sidebar: React.FC = () => {
                 label="Dashboard" 
                 active={pathname === '/dashboard'} 
               /> */}
+              {/* 
+                Find New - January 3rd, 2026
+                Changed from "/" to "/find" to enable the shared dashboard layout.
+                The "/" route now serves as landing page only and redirects
+                authenticated users to "/find".
+              */}
               <NavItem 
-                href="/" 
+                href="/find" 
                 icon={<Search size={14} />} 
                 label="Find New" 
-                active={pathname === '/'} 
+                active={pathname === '/find'} 
               />
               <NavItem 
                 href="/discovered"

@@ -5,17 +5,21 @@ import { useRouter } from 'next/navigation';
 import { useNeonUser } from '../hooks/useNeonUser';
 import { OnboardingScreen } from './OnboardingScreen';
 import { LoadingOnboardingScreen } from './LoadingOnboardingScreen';
+import { AuthLoadingScreen } from './AuthLoadingScreen';
 import { useState, useEffect } from 'react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
+// ============================================
 // Page skeleton that matches the general layout with sidebar
+// Updated Jan 3rd, 2026: Fixed width from w-60 to w-52 to match actual Sidebar
+// ============================================
 const PageSkeleton = () => (
   <div className="flex min-h-screen bg-[#FDFDFD] font-sans">
-    {/* Sidebar Skeleton */}
-    <aside className="min-h-screen w-60 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
+    {/* Sidebar Skeleton - Width must match Sidebar.tsx (w-52 = 208px) */}
+    <aside className="min-h-screen w-52 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
       {/* Brand / Logo Area */}
       <div className="h-14 flex items-center mt-1 mb-6 px-4">
         <div className="flex items-center gap-2.5 text-slate-900">
@@ -73,8 +77,8 @@ const PageSkeleton = () => (
 
     {/* Main Content Skeleton */}
     <main className="flex-1 flex flex-col min-h-screen ml-52">
-      {/* Header Skeleton */}
-      <header className="h-14 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+      {/* Header Skeleton - Height must match Dashboard header (h-12) - Updated Jan 3rd, 2026 */}
+      <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
         <div className="animate-pulse">
           <div className="h-5 w-32 bg-slate-200 rounded"></div>
         </div>
@@ -110,17 +114,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('AuthGuard State:', { 
-      stackUser: !!stackUser, 
-      neonLoading, 
-      userId, 
-      isOnboarded,
-      userName 
-    });
-  }, [stackUser, neonLoading, userId, isOnboarded, userName]);
-
   // Redirect to sign-in if not authenticated
   useEffect(() => {
     // stackUser is undefined while loading, null if not signed in
@@ -129,14 +122,19 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
   }, [stackUser, router]);
 
-  // Show loading state while Stack Auth or Neon is loading
+  // ============================================
+  // Show loading state while Stack Auth or Neon is loading (January 3rd, 2026)
+  // 
+  // CHANGED: Now uses AuthLoadingScreen instead of PageSkeleton to avoid
+  // showing a dashboard-like skeleton to new users during sign-up.
+  // ============================================
   if (stackUser === undefined || neonLoading) {
-    return <PageSkeleton />;
+    return <AuthLoadingScreen />;
   }
 
   // Not signed in - will redirect
   if (!stackUser) {
-    return <PageSkeleton />;
+    return <AuthLoadingScreen />;
   }
 
   // Show loading screen after onboarding completion
@@ -163,6 +161,21 @@ export function AuthGuard({ children }: AuthGuardProps) {
         }}
       />
     );
+  }
+
+  // ============================================
+  // Guard against race condition (January 3rd, 2026)
+  // 
+  // BUG FIX: If neonLoading is false but userId is still null
+  // (API error, race condition, or state update delay), the code
+  // would fall through to show children (Dashboard) briefly.
+  // 
+  // This guard ensures we never show protected content without
+  // a valid userId, preventing the "flash" issue during sign-up.
+  // Uses AuthLoadingScreen for consistency.
+  // ============================================
+  if (!userId) {
+    return <AuthLoadingScreen />;
   }
 
   // User is authenticated and onboarded - show the page

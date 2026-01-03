@@ -273,3 +273,41 @@
     transform: translateX(0);
   }
 }
+
+/* ============================================
+ * Smooth Spinner Animation (January 3rd, 2026)
+ * 
+ * Creates a natural, seamless loading spinner with:
+ * 1. Continuous rotation of the SVG container
+ * 2. Dash animation that grows/shrinks the arc smoothly
+ * 
+ * The combination creates a "chasing tail" effect without
+ * any visible reset or jump when the animation loops.
+ * ============================================ */
+.spinner-rotate {
+  animation: spinnerRotate 2s linear infinite;
+}
+
+.spinner-dash {
+  animation: spinnerDash 1.5s ease-in-out infinite;
+}
+
+@keyframes spinnerRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spinnerDash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
+}

@@ -5,8 +5,20 @@
  * OUTREACH PAGE - AI Email Generation
  * =============================================================================
  * 
+ * Updated: January 3rd, 2026
+ * 
  * This page allows users to generate AI-powered outreach emails for their
  * saved affiliates. The AI generation is handled via n8n webhook integration.
+ * 
+ * ARCHITECTURE CHANGE (January 3rd, 2026):
+ * -----------------------------------------
+ * This page is now part of the (dashboard) route group. The layout handles:
+ *   - AuthGuard (authentication + onboarding check)
+ *   - ErrorBoundary (error handling)
+ *   - Sidebar (navigation - persists across page navigation)
+ *   - Main container with ml-52 margin
+ * 
+ * This page only renders the content: header + main content area + modals.
  * 
  * KEY FEATURES:
  * - Single & bulk email generation
@@ -39,14 +51,11 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { Sidebar } from '../components/Sidebar';
-import { ScanCountdown } from '../components/ScanCountdown';
-import { AuthGuard } from '../components/AuthGuard';
-import { CreditsDisplay } from '../components/CreditsDisplay';
-import ErrorBoundary from '../components/ErrorBoundary';
-import { useSavedAffiliates } from '../hooks/useAffiliates';
+import { ScanCountdown } from '../../components/ScanCountdown';
+import { CreditsDisplay } from '../../components/CreditsDisplay';
+import { useSavedAffiliates } from '../../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
-import { ResultItem } from '../types';
+import { ResultItem } from '../../types';
 import { 
   Search, 
   Mail,
@@ -100,22 +109,6 @@ interface ContactPickerState {
 }
 
 // =============================================================================
-// OUTREACH PAGE - Error Boundary Added 29th December 2025
-// 
-// ErrorBoundary wraps the content to catch any React errors and show a friendly
-// "Something went wrong" message instead of crashing the page.
-// =============================================================================
-export default function OutreachPage() {
-  return (
-    <AuthGuard>
-      <ErrorBoundary>
-        <OutreachContent />
-      </ErrorBoundary>
-    </AuthGuard>
-  );
-}
-
-// =============================================================================
 // ERROR NOTIFICATION TYPES
 // =============================================================================
 
@@ -125,7 +118,13 @@ interface ErrorNotification {
   type: 'error' | 'warning' | 'info';
 }
 
-function OutreachContent() {
+// =============================================================================
+// OUTREACH PAGE - January 3rd, 2026
+// 
+// Layout now handles: AuthGuard, ErrorBoundary, and Sidebar.
+// This component only renders the header and main content area.
+// =============================================================================
+export default function OutreachPage() {
   // =========================================================================
   // STATE MANAGEMENT
   // =========================================================================
@@ -773,19 +772,22 @@ function OutreachContent() {
     }
   };
 
+  // ==========================================================================
+  // RENDER - January 3rd, 2026
+  // 
+  // Note: The outer container with Sidebar is now handled by the layout.
+  // This component only renders the header and main content area.
+  // ==========================================================================
   return (
-    <div className="flex min-h-screen bg-[#FDFDFD] font-sans text-slate-900 selection:bg-[#D4E815]/30 selection:text-[#1A1D21]">
-      <Sidebar />
-      
-      <main className="flex-1 flex flex-col min-h-screen ml-52">
-        {/* Header */}
-        <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-slate-900">Outreach</h1>
-          </div>
+    <>
+      {/* Header */}
+      <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-semibold text-slate-900">Outreach</h1>
+        </div>
 
-          {/* Countdown Timer */}
-          <ScanCountdown />
+        {/* Countdown Timer */}
+        <ScanCountdown />
           
           <div className="flex items-center gap-3 text-xs">
             {/* Credits Display - December 2025 */}
@@ -1687,7 +1689,6 @@ function OutreachContent() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+    </>
   );
 }

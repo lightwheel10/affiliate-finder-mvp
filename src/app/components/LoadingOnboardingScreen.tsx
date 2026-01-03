@@ -3,6 +3,17 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
+// ============================================
+// LoadingOnboardingScreen - Updated Jan 3rd, 2026
+// 
+// This screen displays briefly (2 seconds) after onboarding completion
+// while the user data is being refetched. The messaging has been updated
+// to reflect the actual duration and set proper expectations.
+// 
+// Previous issue: Messages said "90 seconds" and "1-2 hours" but the
+// screen only shows for 2 seconds, which was misleading.
+// ============================================
+
 export const LoadingOnboardingScreen = () => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#F0F2F5] font-sans p-4">
@@ -24,16 +35,16 @@ export const LoadingOnboardingScreen = () => {
 
         {/* Main Heading */}
         <h1 className="text-xl text-slate-900 font-medium tracking-tight mb-3">
-          Creating your <span className="text-[#1A1D21] font-serif italic">space!</span>
+          Setting up your <span className="text-[#1A1D21] font-serif italic">workspace!</span>
         </h1>
 
-        {/* Description Text */}
+        {/* Description Text - Updated Jan 3rd, 2026 for accurate messaging */}
         <div className="space-y-2 max-w-sm mx-auto">
            <p className="text-slate-500 text-sm leading-relaxed">
-            This may take up to 90 seconds before your first affiliates start loading.
+            Just a moment while we prepare your dashboard...
           </p>
           <p className="text-slate-400 text-xs leading-relaxed">
-            It can take up to 1-2 hours to finish finding all your potential affiliates, so grab a coffee, and come back to hundreds of perfect-fit partners.
+            Your affiliate discovery tools are being configured.
           </p>
         </div>
 
