@@ -1,62 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Clock } from 'lucide-react';
-
-interface TimeLeft {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-}
+import { useState } from 'react';
+import { Clock, Lock, Sparkles } from 'lucide-react';
+import { PricingModal } from './PricingModal';
+import { useNeonUser } from '../hooks/useNeonUser';
+import { useSubscription } from '../hooks/useSubscription';
 
 export function ScanCountdown() {
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>({
-    days: 7,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
-
-  useEffect(() => {
-    // Simple countdown starting from 7 days
-    const calculateTimeLeft = () => {
-      setTimeLeft(prev => {
-        let { days, hours, minutes, seconds } = prev;
-        
-        // Countdown logic
-        if (seconds > 0) {
-          seconds--;
-        } else if (minutes > 0) {
-          minutes--;
-          seconds = 59;
-        } else if (hours > 0) {
-          hours--;
-          minutes = 59;
-          seconds = 59;
-        } else if (days > 0) {
-          days--;
-          hours = 23;
-          minutes = 59;
-          seconds = 59;
-        }
-        
-        return { days, hours, minutes, seconds };
-      });
-    };
-
-    // Update every second
-    const timer = setInterval(calculateTimeLeft, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatNumber = (num: number) => num.toString().padStart(2, '0');
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPricingOpen, setIsPricingOpen] = useState(false);
+  
+  // Get user and subscription data for PricingModal
+  const { userId } = useNeonUser();
+  const { subscription, refetch } = useSubscription();
 
   return (
-    <div className="relative bg-[#1A1D21] rounded-lg px-3 py-1.5 text-white overflow-hidden">
+    <>
+    <div 
+      className="relative bg-[#1A1D21] rounded-lg px-3 py-1.5 text-white overflow-hidden cursor-pointer group transition-all duration-300 hover:ring-1 hover:ring-[#D4E815]/40"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => setIsPricingOpen(true)}
+    >
       {/* Background pattern */}
       <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[radial-gradient(#D4E815_1px,transparent_1px)] [background-size:12px_12px]"></div>
+      
+      {/* Shimmer effect on hover */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
       
       <div className="relative z-10 flex items-center gap-2.5">
         {/* Icon */}
@@ -70,25 +40,51 @@ export function ScanCountdown() {
         {/* Separator */}
         <div className="h-4 w-[1px] bg-white/20"></div>
         
-        {/* Numbers */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm min-w-[22px] text-center">
-            {formatNumber(timeLeft.days)}
-          </span>
-          <span className="text-[10px] text-white/60 font-bold">:</span>
-          <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm min-w-[22px] text-center">
-            {formatNumber(timeLeft.hours)}
-          </span>
-          <span className="text-[10px] text-white/60 font-bold">:</span>
-          <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm min-w-[22px] text-center">
-            {formatNumber(timeLeft.minutes)}
-          </span>
-          <span className="text-[10px] text-white/60 font-bold">:</span>
-          <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm min-w-[22px] text-center">
-            {formatNumber(timeLeft.seconds)}
-          </span>
+        {/* Numbers - Blurred with lock overlay */}
+        <div className="relative flex items-center gap-1.5">
+          {/* Blurred placeholder numbers */}
+          <div className="flex items-center gap-1.5 blur-[3px] opacity-50 select-none">
+            <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm min-w-[22px] text-center">
+              07
+            </span>
+            <span className="text-[10px] text-white/60 font-bold">:</span>
+            <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm min-w-[22px] text-center">
+              12
+            </span>
+            <span className="text-[10px] text-white/60 font-bold">:</span>
+            <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm min-w-[22px] text-center">
+              45
+            </span>
+            <span className="text-[10px] text-white/60 font-bold">:</span>
+            <span className="text-xs font-bold text-white bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm min-w-[22px] text-center">
+              23
+            </span>
+          </div>
+          
+          {/* Lock overlay */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className={`flex items-center gap-1.5 transition-all duration-300 ${isHovered ? 'scale-105' : ''}`}>
+              <Lock size={10} className="text-[#D4E815]" />
+              <span className="text-[9px] font-bold text-[#D4E815] uppercase tracking-wider">
+                {isHovered ? 'Upgrade' : 'Pro'}
+              </span>
+              {isHovered && <Sparkles size={10} className="text-[#D4E815] animate-pulse" />}
+            </div>
+          </div>
         </div>
       </div>
     </div>
+    
+    {/* Pricing Modal */}
+    <PricingModal
+      isOpen={isPricingOpen}
+      onClose={() => setIsPricingOpen(false)}
+      userId={userId}
+      currentPlan={subscription?.plan || null}
+      currentBillingInterval={subscription?.billingInterval || null}
+      isTrialing={subscription?.isTrialing || false}
+      onSuccess={refetch}
+    />
+    </>
   );
 }
