@@ -169,6 +169,35 @@ export default function FindNewPage() {
     setKeywords(keywords.filter(k => k !== keywordToRemove));
   };
 
+  // ==========================================================================
+  // PRE-POPULATE KEYWORDS FROM ONBOARDING - January 4th, 2026
+  // 
+  // When user first loads the page and hasn't searched yet, pre-populate
+  // the keywords list with their topics from onboarding. This gives them
+  // a starting point - they can remove topics or add new keywords.
+  // 
+  // Only runs once when:
+  // - User data is loaded (user?.topics exists)
+  // - Keywords are empty
+  // - No previous search has been done
+  // ==========================================================================
+  const [hasPrePopulated, setHasPrePopulated] = useState(false);
+  
+  useEffect(() => {
+    if (
+      user?.topics && 
+      user.topics.length > 0 && 
+      keywords.length === 0 && 
+      !hasSearched && 
+      !hasPrePopulated
+    ) {
+      // Take up to MAX_KEYWORDS topics
+      const topicsToAdd = user.topics.slice(0, MAX_KEYWORDS);
+      setKeywords(topicsToAdd);
+      setHasPrePopulated(true);
+    }
+  }, [user?.topics, keywords.length, hasSearched, hasPrePopulated]);
+
   // Load previously discovered affiliates from Convex (on mount)
   useEffect(() => {
     if (!discoveredLoading && discoveredAffiliates.length > 0 && !hasSearched) {
@@ -1278,50 +1307,7 @@ export default function FindNewPage() {
                 )}
               </div>
 
-              {/* ================================================================
-                  QUICK ADD FROM ONBOARDING - January 4th, 2026
-                  
-                  Shows topics from onboarding as clickable quick-add buttons.
-                  Clicking a topic adds it to the keywords list above.
-                  These are the same "topics" user entered during onboarding.
-                  ================================================================ */}
-              {user?.topics && user.topics.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-[10px] text-slate-400 mb-1.5">Quick add from onboarding:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {user.topics.map((topic, idx) => {
-                      const isAlreadyAdded = keywords.includes(topic);
-                      return (
-                        <button 
-                          key={idx}
-                          onClick={() => {
-                            if (!isAlreadyAdded && keywords.length < MAX_KEYWORDS) {
-                              setKeywords(prev => [...prev, topic]);
-                            }
-                          }}
-                          disabled={isAlreadyAdded || keywords.length >= MAX_KEYWORDS}
-                          className={`inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] rounded-full transition-all ${
-                            isAlreadyAdded
-                              ? 'bg-green-100 text-green-700 cursor-default'
-                              : keywords.length >= MAX_KEYWORDS
-                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                : 'bg-[#D4E815]/20 text-[#1A1D21] hover:bg-[#D4E815]/40 cursor-pointer'
-                          }`}
-                        >
-                          {isAlreadyAdded ? (
-                            <Check size={10} />
-                          ) : (
-                            <Plus size={10} />
-                          )}
-                          {topic}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="h-3 mt-1.5">
+              <div className="h-5 mt-1.5">
                 {keywords.length > 0 && (
                   <button
                     onClick={() => setKeywords([])}
