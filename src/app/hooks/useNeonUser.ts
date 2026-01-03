@@ -101,11 +101,26 @@ export function useNeonUser() {
   const name = stackUser?.displayName || email?.split('@')[0] || 'User';
 
   // Subscribe to cache updates on mount
+  // ==========================================================================
+  // CACHE LISTENER - January 3rd, 2026
+  // 
+  // When the global cache updates (either with new user data or null on logout),
+  // all hook instances are notified so they can update their local state.
+  // 
+  // BUG FIX: Previously, setIsLoading(false) was only called when user was
+  // not null: `if (user) setIsLoading(false)`. This meant when clearUserCache()
+  // notified listeners with null (during logout or user change), isLoading
+  // would stay stuck at true forever, blocking the UI indefinitely.
+  // 
+  // The fix: Always set isLoading to false when cache updates. Whether we
+  // received user data or null, the "loading" phase is complete.
+  // ==========================================================================
   useEffect(() => {
     if (!hasSubscribedRef.current) {
       const listener = (user: NeonUserData | null) => {
         setNeonUser(user);
-        if (user) setIsLoading(false);
+        // Always stop loading when cache updates (whether user is null or not)
+        setIsLoading(false);
       };
       cacheListeners.add(listener);
       hasSubscribedRef.current = true;

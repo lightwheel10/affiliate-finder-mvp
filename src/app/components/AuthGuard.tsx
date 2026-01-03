@@ -110,7 +110,18 @@ const PageSkeleton = () => (
  */
 export function AuthGuard({ children }: AuthGuardProps) {
   const stackUser = useUser();
-  const { userId, isOnboarded, isLoading: neonLoading, userName } = useNeonUser();
+  // ==========================================================================
+  // January 3rd, 2026 - Added `refetch` to destructuring
+  // 
+  // BUG FIX: Previously, after onboarding completed, we never refetched user
+  // data from the backend. The cache still had `is_onboarded: false` even
+  // though the database was updated to `true`. This caused an infinite loop
+  // where the onboarding screen kept reappearing after completion.
+  // 
+  // By calling `refetch()` after onboarding, we update the cache with fresh
+  // data, and the guard correctly shows the dashboard.
+  // ==========================================================================
+  const { userId, isOnboarded, isLoading: neonLoading, userName, refetch } = useNeonUser();
   const router = useRouter();
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
 
@@ -153,9 +164,29 @@ export function AuthGuard({ children }: AuthGuardProps) {
         userName={userName}
         userEmail={userEmail}
         onComplete={() => {
+          // ==========================================================================
+          // ONBOARDING COMPLETION CALLBACK - January 3rd, 2026
+          // 
+          // CRITICAL BUG FIX: After onboarding completes, the backend sets
+          // `is_onboarded = true` in the database. However, useNeonUser() caches
+          // user data at the module level to prevent duplicate API calls.
+          // 
+          // THE OLD BUG:
+          // - onComplete() showed a loading screen for 2 seconds
+          // - After 2 seconds, it just hid the loading screen
+          // - useNeonUser() returned CACHED data (is_onboarded: false)
+          // - AuthGuard saw isOnboarded=false → showed OnboardingScreen again
+          // - User was stuck in an infinite loop!
+          // 
+          // THE FIX:
+          // - Call `refetch()` to fetch fresh user data from the API
+          // - This updates the cache with `is_onboarded: true`
+          // - AuthGuard then correctly shows the dashboard (children)
+          // ==========================================================================
           setShowLoadingScreen(true);
-          // Show loading screen for 2 seconds, then show dashboard
-          setTimeout(() => {
+          // Show loading screen for 2 seconds, then refetch and show dashboard
+          setTimeout(async () => {
+            await refetch();
             setShowLoadingScreen(false);
           }, 2000);
         }}
