@@ -1278,7 +1278,50 @@ export default function FindNewPage() {
                 )}
               </div>
 
-              <div className="h-5 mt-1.5">
+              {/* ================================================================
+                  QUICK ADD FROM ONBOARDING - January 4th, 2026
+                  
+                  Shows topics from onboarding as clickable quick-add buttons.
+                  Clicking a topic adds it to the keywords list above.
+                  These are the same "topics" user entered during onboarding.
+                  ================================================================ */}
+              {user?.topics && user.topics.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-[10px] text-slate-400 mb-1.5">Quick add from onboarding:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {user.topics.map((topic, idx) => {
+                      const isAlreadyAdded = keywords.includes(topic);
+                      return (
+                        <button 
+                          key={idx}
+                          onClick={() => {
+                            if (!isAlreadyAdded && keywords.length < MAX_KEYWORDS) {
+                              setKeywords(prev => [...prev, topic]);
+                            }
+                          }}
+                          disabled={isAlreadyAdded || keywords.length >= MAX_KEYWORDS}
+                          className={`inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] rounded-full transition-all ${
+                            isAlreadyAdded
+                              ? 'bg-green-100 text-green-700 cursor-default'
+                              : keywords.length >= MAX_KEYWORDS
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'bg-[#D4E815]/20 text-[#1A1D21] hover:bg-[#D4E815]/40 cursor-pointer'
+                          }`}
+                        >
+                          {isAlreadyAdded ? (
+                            <Check size={10} />
+                          ) : (
+                            <Plus size={10} />
+                          )}
+                          {topic}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="h-3 mt-1.5">
                 {keywords.length > 0 && (
                   <button
                     onClick={() => setKeywords([])}
@@ -1291,31 +1334,38 @@ export default function FindNewPage() {
             </div>
 
             {/* ================================================================
-                RIGHT COLUMN - User's Website & Competitors
+                RIGHT COLUMN - Website & Competitors
                 January 4th, 2026
                 
-                Previously showed "COMING SOON" placeholders. Now displays
-                actual data from user's onboarding:
-                - user.brand: Their website URL
-                - user.competitors: Array of competitor URLs
+                Displays actual data from user's onboarding:
+                - user.brand: Their website URL (with favicon)
+                - user.competitors: Array of competitor URLs (with favicons)
                 
-                This helps users understand what data they provided and
-                gives context for the affiliate search.
+                Note: Topics/keywords are shown in the LEFT column as quick-add
+                buttons below the keywords input field.
                 ================================================================ */}
             <div className="flex flex-col">
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7">
                 <Globe size={14} className="text-slate-400" />
-                Your Website
+                Website
               </label>
-              <div className={`px-3 py-2.5 border rounded-lg text-sm mt-2 ${
+              <div className={`px-3 py-2.5 border rounded-lg text-sm mt-2 flex items-center gap-2 ${
                 user?.brand 
                   ? 'bg-white border-slate-200 text-slate-700' 
                   : 'bg-slate-50 border-slate-200 text-slate-400 italic'
               }`}>
+                {user?.brand && (
+                  <img 
+                    src={`https://www.google.com/s2/favicons?domain=${user.brand}&sz=16`}
+                    alt=""
+                    className="w-4 h-4"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                )}
                 {user?.brand || 'Not set during onboarding'}
               </div>
 
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7 mt-4">
+              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7 mt-3">
                 <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
@@ -1327,28 +1377,29 @@ export default function FindNewPage() {
                 )}
               </label>
               {user?.competitors && user.competitors.length > 0 ? (
-                <div className="flex-1 min-h-[88px] p-2 bg-white border border-slate-200 rounded-lg mt-2 overflow-y-auto max-h-[120px]">
+                <div className="p-2 bg-white border border-slate-200 rounded-lg mt-2 overflow-y-auto max-h-[80px]">
                   <div className="flex flex-wrap gap-1.5">
                     {user.competitors.map((competitor, idx) => (
                       <span 
                         key={idx}
-                        className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-full"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-full"
                       >
+                        <img 
+                          src={`https://www.google.com/s2/favicons?domain=${competitor}&sz=16`}
+                          alt=""
+                          className="w-3.5 h-3.5"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
                         {competitor}
                       </span>
                     ))}
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 min-h-[88px] flex items-center justify-center p-3 bg-slate-50 border border-dashed border-slate-200 rounded-lg mt-2">
-                  <div className="text-center text-slate-400">
-                    <p className="text-xs font-medium">No competitors added</p>
-                    <p className="text-[10px] mt-0.5">Add competitors in settings to see them here</p>
-                  </div>
+                <div className="p-3 bg-slate-50 border border-dashed border-slate-200 rounded-lg mt-2">
+                  <p className="text-center text-slate-400 text-xs">No competitors added</p>
                 </div>
               )}
-
-              <div className="h-5 mt-1.5"></div>
             </div>
           </div>
 
