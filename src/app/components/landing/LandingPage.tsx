@@ -92,20 +92,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           <div className="hidden md:flex items-center gap-3">
             <button 
               onClick={onLoginClick}
-              className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-3 py-2 transition-colors"
+              className="text-sm font-semibold text-slate-600 hover:text-slate-900 px-3 py-2 transition-colors cursor-pointer"
             >
               Log in
             </button>
             <button 
               onClick={onSignupClick}
-              className="px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-semibold rounded-lg hover:bg-[#c5d913] transition-all shadow-lg shadow-[#D4E815]/30 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:shadow-none"
+              className="px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-semibold rounded-lg hover:bg-[#c5d913] transition-all shadow-lg shadow-[#D4E815]/30 hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 active:shadow-none cursor-pointer"
             >
               Start Free Trial
             </button>
           </div>
 
           {/* Mobile Menu Button */}
-          <button className="md:hidden z-50 p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button className="md:hidden z-50 p-2 cursor-pointer" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
@@ -141,7 +141,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                     setMobileMenuOpen(false);
                     onLoginClick();
                   }}
-                  className="w-full px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all text-left"
+                  className="w-full px-4 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all text-left cursor-pointer"
                 >
                   Log in
                 </button>
@@ -150,7 +150,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                     setMobileMenuOpen(false);
                     onSignupClick();
                   }}
-                  className="w-full px-4 py-2.5 bg-[#D4E815] text-[#1A1D21] text-sm font-semibold rounded-lg hover:bg-[#c5d913] transition-all text-center"
+                  className="w-full px-4 py-2.5 bg-[#D4E815] text-[#1A1D21] text-sm font-semibold rounded-lg hover:bg-[#c5d913] transition-all text-center cursor-pointer"
                 >
                   Start Free Trial
                 </button>
@@ -191,13 +191,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 <button 
                   onClick={onSignupClick}
-                  className="w-full sm:w-auto px-6 py-3 bg-[#D4E815] text-[#1A1D21] text-sm font-bold rounded-lg hover:bg-[#c5d913] transition-all shadow-xl shadow-[#D4E815]/30 hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
+                  className="w-full sm:w-auto px-6 py-3 bg-[#D4E815] text-[#1A1D21] text-sm font-bold rounded-lg hover:bg-[#c5d913] transition-all shadow-xl shadow-[#D4E815]/30 hover:-translate-y-0.5 flex items-center justify-center gap-2 group cursor-pointer"
                 >
                   Try for Free
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </button>
                 <button 
-                  className="w-full sm:w-auto px-6 py-3 bg-[#333333] text-white text-sm font-bold rounded-lg hover:bg-[#444444] transition-all shadow-sm flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3 bg-[#333333] text-white text-sm font-bold rounded-lg hover:bg-[#444444] transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Play size={14} fill="currentColor" className="opacity-50" />
                   Get a Demo
@@ -457,7 +457,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
                 <button
                   onClick={onSignupClick}
-                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md"
+                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md cursor-pointer"
                 >
                   Start 7-Day Free Trial
                 </button>
@@ -504,7 +504,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
                 <button
                   onClick={onSignupClick}
-                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#333333] text-white hover:bg-[#444444] shadow-sm hover:shadow-md"
+                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-[#333333] text-white hover:bg-[#444444] shadow-sm hover:shadow-md cursor-pointer"
                 >
                   Start 7-Day Free Trial
                 </button>
@@ -550,7 +550,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
                 <button
                   onClick={onLoginClick}
-                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-white text-[#111827] border border-[#E5E7EB] hover:bg-slate-50 shadow-sm hover:shadow-md"
+                  className="w-full py-3 rounded-full text-sm font-semibold mb-6 transition-all duration-200 bg-white text-[#111827] border border-[#E5E7EB] hover:bg-slate-50 shadow-sm hover:shadow-md cursor-pointer"
                 >
                   Let's Talk
                 </button>
@@ -606,11 +606,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                 <button 
                   onClick={onSignupClick}
-                  className="px-6 py-3 bg-[#D4E815] text-[#1A1D21] text-base font-bold rounded-xl hover:bg-[#c5d913] transition-colors w-full sm:w-auto shadow-xl"
+                  className="px-6 py-3 bg-[#D4E815] text-[#1A1D21] text-base font-bold rounded-xl hover:bg-[#c5d913] transition-colors w-full sm:w-auto shadow-xl cursor-pointer"
                 >
                   Start Your 7-Day Free Trial
                 </button>
-                <button className="px-6 py-3 bg-transparent border border-slate-600 text-white text-base font-bold rounded-xl hover:bg-white/10 transition-colors w-full sm:w-auto">
+                <button className="px-6 py-3 bg-transparent border border-slate-600 text-white text-base font-bold rounded-xl hover:bg-white/10 transition-colors w-full sm:w-auto cursor-pointer">
                   Get a Demo
                 </button>
               </div>
