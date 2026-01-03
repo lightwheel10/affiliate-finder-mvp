@@ -30,7 +30,7 @@
  * =============================================================================
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { AffiliateRow } from '../../components/AffiliateRow';
 import { AffiliateRowSkeleton } from '../../components/AffiliateRowSkeleton';
 import { Modal } from '../../components/Modal';
@@ -170,49 +170,107 @@ export default function FindNewPage() {
   };
 
   // ==========================================================================
-  // PRE-POPULATE KEYWORDS FROM ONBOARDING - January 4th, 2026
-  // 
-  // When user first loads the page and hasn't searched yet, pre-populate
-  // the keywords list with their topics from onboarding. This gives them
-  // a starting point - they can remove topics or add new keywords.
-  // 
-  // Only runs once when:
-  // - User data is loaded (user?.topics exists)
-  // - Keywords are empty
-  // - No previous search has been done
+  // KEYWORDS INITIALIZATION - January 4th, 2026
   // ==========================================================================
+  // 
+  // PROBLEM (RACE CONDITION BUG):
+  // Previously, we had TWO separate useEffect hooks:
+  //   1. Effect 1: Pre-populate keywords from user.topics (onboarding)
+  //   2. Effect 2: Restore keywords from previous search (discoveredAffiliates)
+  // 
+  // Both effects ran independently and could race each other:
+  //   - SWR returns cached discoveredAffiliates INSTANTLY
+  //   - User data from useNeonUser might load slightly later
+  //   - Effect 2 would run first, set hasSearched = true
+  //   - Effect 1 would then fail its !hasSearched check
+  //   - Result: Topics never appeared, or keywords got overwritten
+  // 
+  // Additionally, both effects captured the same closure values, so even when
+  // running in the same commit phase, Effect 2's check for !hasPrePopulated
+  // would pass (seeing the old false value) and overwrite Effect 1's keywords.
+  // 
+  // SOLUTION:
+  // Use a useRef to track initialization state that persists across renders
+  // and effect runs. This ensures we only initialize keywords ONCE, with
+  // proper priority:
+  //   1. FIRST PRIORITY: User's onboarding topics (if available)
+  //   2. SECOND PRIORITY: Previous search keywords (if no topics)
+  // 
+  // The ref tracks: 'pending' | 'topics' | 'restored' | 'none'
+  //   - 'pending': Haven't decided yet (waiting for data)
+  //   - 'topics': Initialized from onboarding topics
+  //   - 'restored': Initialized from previous search
+  //   - 'none': No data to initialize from
+  // 
+  // ==========================================================================
+  const keywordsInitRef = useRef<'pending' | 'topics' | 'restored' | 'none'>('pending');
   const [hasPrePopulated, setHasPrePopulated] = useState(false);
-  
+
   useEffect(() => {
-    if (
-      user?.topics && 
-      user.topics.length > 0 && 
-      keywords.length === 0 && 
-      !hasSearched && 
-      !hasPrePopulated
-    ) {
-      // Take up to MAX_KEYWORDS topics
+    // Already initialized - don't run again
+    if (keywordsInitRef.current !== 'pending') {
+      return;
+    }
+
+    // Wait for user data to load before making any decisions
+    // This prevents the restore effect from "winning" just because SWR is faster
+    const userDataReady = user !== undefined && user !== null;
+    const discoveredDataReady = !discoveredLoading;
+
+    // If user data isn't ready yet, wait (don't let restore effect win by default)
+    if (!userDataReady) {
+      return;
+    }
+
+    // PRIORITY 1: Pre-populate from onboarding topics
+    // If user has topics from onboarding, use those as the starting keywords
+    if (user?.topics && user.topics.length > 0) {
       const topicsToAdd = user.topics.slice(0, MAX_KEYWORDS);
       setKeywords(topicsToAdd);
       setHasPrePopulated(true);
+      keywordsInitRef.current = 'topics';
+      
+      // Still restore RESULTS from previous search (just not keywords)
+      // This way user sees their previous results but with topic keywords ready
+      if (discoveredDataReady && discoveredAffiliates.length > 0) {
+        const lastKeyword = discoveredAffiliates[0]?.searchKeyword;
+        if (lastKeyword) {
+          const lastSearchResults = discoveredAffiliates.filter(
+            (d) => d.searchKeyword === lastKeyword
+          );
+          setResults(lastSearchResults);
+          setHasSearched(true);
+        }
+      }
+      return;
     }
-  }, [user?.topics, keywords.length, hasSearched, hasPrePopulated]);
 
-  // Load previously discovered affiliates from Convex (on mount)
-  useEffect(() => {
-    if (!discoveredLoading && discoveredAffiliates.length > 0 && !hasSearched) {
+    // PRIORITY 2: Restore from previous search (no topics available)
+    // Only restore keywords if user doesn't have onboarding topics
+    if (discoveredDataReady && discoveredAffiliates.length > 0) {
       const lastKeyword = discoveredAffiliates[0]?.searchKeyword;
       if (lastKeyword) {
         const lastSearchResults = discoveredAffiliates.filter(
           (d) => d.searchKeyword === lastKeyword
         );
         setResults(lastSearchResults);
+        
+        // Restore keywords from previous search
         const restoredKeywords = lastKeyword.split(' | ').filter(Boolean);
         setKeywords(restoredKeywords);
         setHasSearched(true);
+        keywordsInitRef.current = 'restored';
+        return;
       }
     }
-  }, [discoveredAffiliates, discoveredLoading, hasSearched]);
+
+    // No topics and no previous search - mark as initialized with nothing
+    if (discoveredDataReady) {
+      keywordsInitRef.current = 'none';
+    }
+  // Including all relevant dependencies for proper re-runs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, discoveredLoading, discoveredAffiliates]);
 
   const handleFindAffiliates = async () => {
     if (keywords.length === 0) return;
@@ -1491,4 +1549,5 @@ export default function FindNewPage() {
     </>
   );
 }
+
 
