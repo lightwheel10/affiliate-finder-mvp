@@ -323,6 +323,19 @@ export default function FindNewPage() {
           console.error('Failed to batch save discovered affiliates:', err);
         }
       }
+
+      // ==========================================================================
+      // CREDITS REFRESH - January 4th, 2026
+      // 
+      // After search completes, the backend has consumed topic_search credits.
+      // Dispatch event to trigger useCredits hook to refetch from database.
+      // This ensures the credit display shows the real balance without page refresh.
+      // 
+      // SAFE: Does NOT modify credits - only triggers a refetch of existing DB value.
+      // ==========================================================================
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('credits-updated'));
+      }
       
     } catch (e: unknown) {
       const error = e as Error;

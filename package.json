@@ -27,6 +27,7 @@
     "react-dom": "^19.2.1",
     "recharts": "^3.5.1",
     "stripe": "^20.0.0",
+    "swr": "^2.3.8",
     "zod": "^4.3.4"
   },
   "devDependencies": {

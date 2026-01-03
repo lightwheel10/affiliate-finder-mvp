@@ -98,12 +98,24 @@ export const Sidebar: React.FC = () => {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const pathname = usePathname();
   
-  // Hooks for real-time counts
+  // ==========================================================================
+  // REAL-TIME COUNTS WITH SWR - January 3rd, 2026
+  // 
+  // These hooks now use SWR for global cache sharing. When any component
+  // (e.g., Find New page, Saved page) saves or removes an affiliate, it calls
+  // SWR's mutate(), which updates ALL components using the same cache key.
+  // 
+  // RESULT: Sidebar counts update instantly without page refresh!
+  // 
+  // NOTE: We still need the useState/useEffect pattern below for SSR hydration
+  // to prevent the server/client mismatch on Vercel. SWR handles the cache
+  // sharing, the useEffect handles the SSR hydration.
+  // ==========================================================================
   const { count: pipelineCount } = useSavedAffiliates();
   const { count: discoveredCount } = useDiscoveredAffiliates();
 
   // ==========================================================================
-  // CLIENT-SIDE BADGE COUNTS - January 3rd, 2026
+  // CLIENT-SIDE BADGE RENDERING - January 3rd, 2026
   // 
   // ISSUE: Badge counts work locally but don't show on Vercel production.
   // 
@@ -119,7 +131,8 @@ export const Sidebar: React.FC = () => {
   // - Client useEffect runs AFTER hydration, sets actual count
   // - Badge renders correctly on client without hydration mismatch
   // 
-  // Reference: Next.js docs on preventing hydration mismatches
+  // The SWR migration above handles real-time updates across components.
+  // This pattern just handles the SSR/client rendering boundary.
   // ==========================================================================
   const [displayPipelineCount, setDisplayPipelineCount] = useState<number | null>(null);
   const [displayDiscoveredCount, setDisplayDiscoveredCount] = useState<number | null>(null);

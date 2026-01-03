@@ -1,8 +1,40 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+// =============================================================================
+// AFFILIATE HOOKS - January 3rd, 2026
+// 
+// Refactored to use SWR (Stale-While-Revalidate) for data fetching.
+// 
+// WHY SWR?
+// - Global cache: All components using the same key share data (Sidebar + Pages)
+// - When one component mutates data, ALL components update instantly
+// - No more stale counts - user sees real-time updates without page refresh
+// - Recommended by Next.js/Vercel for client-side data fetching
+// - Handles caching, deduplication, and revalidation automatically
+// 
+// BEFORE: Sidebar and Page had separate state. Saving an affiliate in Page
+//         didn't update Sidebar count until page refresh.
+// AFTER:  Both use same SWR cache key. Saving triggers mutate(), all update.
+// =============================================================================
+
+import { useState, useCallback, useMemo } from 'react';
+import useSWR, { mutate as globalMutate } from 'swr';
 import { useNeonUser } from './useNeonUser';
 import { ResultItem, SimilarWebData } from '../types';
+
+// =============================================================================
+// SWR FETCHER - January 3rd, 2026
+// 
+// Standard fetcher function for SWR. Handles API calls and error responses.
+// Used by all SWR hooks in this file.
+// =============================================================================
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error('Failed to fetch');
+  }
+  return res.json();
+};
 
 // Transform database affiliate to ResultItem format
 // This function maps database columns (snake_case) to ResultItem fields (camelCase)
@@ -284,42 +316,54 @@ function buildAffiliatePayload(userId: number, a: ResultItem) {
   };
 }
 
-/**
- * Hook for managing saved affiliates (pipeline)
- */
+// =============================================================================
+// SAVED AFFILIATES HOOK - January 3rd, 2026
+// 
+// Refactored to use SWR for global cache sharing between components.
+// All components using useSavedAffiliates() now share the same cached data.
+// When any component calls mutate(), all other components update instantly.
+// 
+// KEY BENEFIT: Sidebar count updates immediately when Page saves/removes affiliate
+// =============================================================================
 export function useSavedAffiliates() {
   const { userId, isLoading: userLoading } = useNeonUser();
-  const [savedAffiliates, setSavedAffiliates] = useState<ResultItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // ===========================================================================
+  // SWR DATA FETCHING - January 3rd, 2026
+  // 
+  // The cache key `/api/affiliates/saved?userId=${userId}` is shared globally.
+  // Any component using this key gets the same data from SWR's cache.
+  // When we call mutate() after save/remove, ALL components update.
+  // 
+  // Pass null as key when userId is not available to skip fetching.
+  // ===========================================================================
+  const swrKey = userId ? `/api/affiliates/saved?userId=${userId}` : null;
+  const { data, error, isLoading: swrLoading, mutate } = useSWR(swrKey, fetcher);
+  
+  // ===========================================================================
+  // MEMOIZED TRANSFORM - January 3rd, 2026
+  // 
+  // CRITICAL: Use useMemo to prevent creating a new array on every render.
+  // Without this, components that depend on savedAffiliates in useEffect would
+  // trigger infinite loops because the array reference changes every render.
+  // 
+  // Bug fixed: Outreach page had "Maximum update depth exceeded" error because
+  // its useEffect depended on savedAffiliates and re-ran on every render.
+  // ===========================================================================
+  const savedAffiliates: ResultItem[] = useMemo(() => {
+    return data?.affiliates?.map(transformAffiliate) || [];
+  }, [data]);
+  
+  // Combined loading state (user loading OR SWR loading)
+  const isLoading = userLoading || swrLoading;
 
-  // Fetch saved affiliates
-  const fetchSavedAffiliates = useCallback(async () => {
-    if (!userId) {
-      setSavedAffiliates([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/affiliates/saved?userId=${userId}`);
-      const data = await res.json();
-      if (data.affiliates) {
-        setSavedAffiliates(data.affiliates.map(transformAffiliate));
-      }
-    } catch (err) {
-      console.error('Error fetching saved affiliates:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
-
-  // Fetch on mount and when userId changes
-  useEffect(() => {
-    fetchSavedAffiliates();
-  }, [fetchSavedAffiliates]);
-
-  // Save an affiliate
+  // ===========================================================================
+  // SAVE AFFILIATE - January 3rd, 2026
+  // 
+  // After saving, we call mutate() with optimistic data. This:
+  // 1. Immediately updates ALL components using this cache key (including Sidebar)
+  // 2. Revalidates in background to ensure data consistency
+  // ===========================================================================
   const saveAffiliate = useCallback(async (affiliate: ResultItem) => {
     if (!userId) return;
 
@@ -330,14 +374,27 @@ export function useSavedAffiliates() {
         body: JSON.stringify(buildAffiliatePayload(userId, affiliate)),
       });
 
-      // Optimistic update
-      setSavedAffiliates(prev => [{ ...affiliate, savedAt: new Date().toISOString() }, ...prev]);
+      // Optimistic update + revalidate: Updates ALL components instantly
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: [
+            { ...affiliate, saved_at: new Date().toISOString() },
+            ...(currentData?.affiliates || [])
+          ]
+        }),
+        { revalidate: true }
+      );
     } catch (err) {
       console.error('Error saving affiliate:', err);
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
-  // Remove a saved affiliate
+  // ===========================================================================
+  // REMOVE AFFILIATE - January 3rd, 2026
+  // 
+  // After removing, mutate() updates all components using this cache key.
+  // ===========================================================================
   const removeAffiliate = useCallback(async (link: string) => {
     if (!userId) return;
 
@@ -346,12 +403,18 @@ export function useSavedAffiliates() {
         method: 'DELETE',
       });
 
-      // Optimistic update
-      setSavedAffiliates(prev => prev.filter(a => a.link !== link));
+      // Optimistic update + revalidate: Updates ALL components instantly
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).filter((a: any) => a.link !== link)
+        }),
+        { revalidate: true }
+      );
     } catch (err) {
       console.error('Error removing affiliate:', err);
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
   // Check if an affiliate is saved
   const isAffiliateSaved = useCallback((link: string) => {
@@ -385,10 +448,16 @@ export function useSavedAffiliates() {
 
     const affiliateId = affiliate.id;
 
-    // Optimistic update - set status to searching
-    setSavedAffiliates(prev => prev.map(a => 
-      a.id === affiliateId ? { ...a, emailStatus: 'searching' as const } : a
-    ));
+    // Optimistic update - set status to searching (January 3rd, 2026: uses SWR mutate)
+    mutate(
+      (currentData: any) => ({
+        ...currentData,
+        affiliates: (currentData?.affiliates || []).map((a: any) =>
+          a.id === affiliateId ? { ...a, email_status: 'searching' } : a
+        )
+      }),
+      { revalidate: false }
+    );
 
     try {
       // ==========================================================================
@@ -495,45 +564,68 @@ export function useSavedAffiliates() {
 
       const data = await res.json();
 
-      // Update local state with result (including all contacts for modal display)
-      setSavedAffiliates(prev => prev.map(a => 
-        a.id === affiliateId 
-          ? { 
-              ...a, 
-              email: data.email || a.email,
-              // Store all email results for display
-              emailResults: {
-                emails: data.emails || (data.email ? [data.email] : []),
-                contacts: data.contacts,  // All contacts with full details
-                firstName: data.firstName,
-                lastName: data.lastName,
-                title: data.title,
-                linkedinUrl: data.linkedinUrl,
-                phoneNumbers: data.phoneNumbers,
-                provider: data.provider,
-              },
-              emailStatus: data.status as 'found' | 'not_found' | 'error',
-              emailSearchedAt: new Date().toISOString(),
-              emailProvider: data.provider || 'apollo',
-            } 
-          : a
-      ));
+      // Update cache with result (January 3rd, 2026: uses SWR mutate for global update)
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).map((a: any) =>
+            a.id === affiliateId
+              ? {
+                  ...a,
+                  email: data.email || a.email,
+                  email_results: {
+                    emails: data.emails || (data.email ? [data.email] : []),
+                    contacts: data.contacts,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    title: data.title,
+                    linkedinUrl: data.linkedinUrl,
+                    phoneNumbers: data.phoneNumbers,
+                    provider: data.provider,
+                  },
+                  email_status: data.status,
+                  email_searched_at: new Date().toISOString(),
+                  email_provider: data.provider || 'apollo',
+                }
+              : a
+          )
+        }),
+        { revalidate: true }
+      );
+
+      // ==========================================================================
+      // CREDITS REFRESH - January 4th, 2026
+      // 
+      // After email lookup completes, backend has consumed email credits (if found).
+      // Dispatch event to trigger useCredits hook to refetch from database.
+      // 
+      // SAFE: Does NOT modify credits - only triggers a refetch of existing DB value.
+      // ==========================================================================
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('credits-updated'));
+      }
 
       return data;
     } catch (err) {
       console.error('Error finding email:', err);
       
-      // Update status to error
-      setSavedAffiliates(prev => prev.map(a => 
-        a.id === affiliateId ? { ...a, emailStatus: 'error' as const } : a
-      ));
+      // Update status to error (January 3rd, 2026: uses SWR mutate)
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).map((a: any) =>
+            a.id === affiliateId ? { ...a, email_status: 'error' } : a
+          )
+        }),
+        { revalidate: false }
+      );
       
       return null;
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
   // ============================================================================
-  // BULK SAVE AFFILIATES (Added Dec 2025)
+  // BULK SAVE AFFILIATES (Added Dec 2025, Updated January 3rd, 2026 for SWR)
   // Saves multiple affiliates to the pipeline in a single API call.
   // Used by Find New and Discovered pages for "Save Selected" bulk action.
   // 
@@ -543,6 +635,7 @@ export function useSavedAffiliates() {
   // - error: Error object if request failed
   // 
   // The API checks for duplicates and only saves new affiliates.
+  // January 3rd, 2026: Now uses SWR mutate() to update all components instantly.
   // ============================================================================
   const saveAffiliatesBulk = useCallback(async (affiliates: ResultItem[]): Promise<{
     savedCount: number;
@@ -565,18 +658,10 @@ export function useSavedAffiliates() {
       const savedCount = data.count || 0;
       const duplicateCount = data.duplicateCount || 0;
 
-      // Only add actually saved affiliates to local state (not duplicates)
-      // Filter out affiliates that were already saved (duplicates)
+      // Revalidate cache to get fresh data from server
+      // This updates ALL components using this cache key (including Sidebar)
       if (savedCount > 0) {
-        const now = new Date().toISOString();
-        // Get the links that were actually saved (not duplicates)
-        const existingLinks = new Set(savedAffiliates.map(a => a.link));
-        const newAffiliates = affiliates.filter(a => !existingLinks.has(a.link));
-        
-        setSavedAffiliates(prev => [
-          ...newAffiliates.map(a => ({ ...a, savedAt: now })),
-          ...prev
-        ]);
+        mutate();
       }
 
       return { savedCount, duplicateCount };
@@ -584,10 +669,10 @@ export function useSavedAffiliates() {
       console.error('Error bulk saving affiliates:', err);
       return { savedCount: 0, duplicateCount: 0, error: err };
     }
-  }, [userId, savedAffiliates]);
+  }, [userId, mutate]);
 
   // ============================================================================
-  // BULK FIND EMAILS (Added Dec 2025)
+  // BULK FIND EMAILS (Added Dec 2025, Updated January 3rd, 2026 for SWR)
   // Finds emails for multiple affiliates sequentially to respect rate limits.
   // Used by Saved page for "Find Emails" bulk action.
   // 
@@ -598,6 +683,7 @@ export function useSavedAffiliates() {
   // - skippedCount: Number of affiliates skipped (already had email/searching)
   // 
   // Progress callback allows UI to show real-time progress.
+  // January 3rd, 2026: Now uses SWR mutate() to update all components.
   // ============================================================================
   const findEmailsBulk = useCallback(async (
     affiliates: ResultItem[],
@@ -630,14 +716,17 @@ export function useSavedAffiliates() {
     let notFoundCount = 0;
     let errorCount = 0;
 
-    // Set all to searching status optimistically
-    setSavedAffiliates(prev => prev.map(a => {
-      const shouldSearch = affiliatesToSearch.some(toSearch => toSearch.id === a.id);
-      if (shouldSearch) {
-        return { ...a, emailStatus: 'searching' as const };
-      }
-      return a;
-    }));
+    // Set all to searching status optimistically (uses SWR mutate)
+    const idsToSearch = new Set(affiliatesToSearch.map(a => a.id));
+    mutate(
+      (currentData: any) => ({
+        ...currentData,
+        affiliates: (currentData?.affiliates || []).map((a: any) =>
+          idsToSearch.has(a.id) ? { ...a, email_status: 'searching' } : a
+        )
+      }),
+      { revalidate: false }
+    );
 
     // Process affiliates sequentially to respect rate limits
     for (let i = 0; i < affiliatesToSearch.length; i++) {
@@ -707,28 +796,34 @@ export function useSavedAffiliates() {
           notFoundCount++;
         }
 
-        // Update local state with result
-        setSavedAffiliates(prev => prev.map(a => 
-          a.id === affiliate.id 
-            ? { 
-                ...a, 
-                email: data.email || a.email,
-                emailResults: {
-                  emails: data.emails || (data.email ? [data.email] : []),
-                  contacts: data.contacts,
-                  firstName: data.firstName,
-                  lastName: data.lastName,
-                  title: data.title,
-                  linkedinUrl: data.linkedinUrl,
-                  phoneNumbers: data.phoneNumbers,
-                  provider: data.provider,
-                },
-                emailStatus: resultStatus,
-                emailSearchedAt: new Date().toISOString(),
-                emailProvider: data.provider || 'apollo',
-              } 
-            : a
-        ));
+        // Update cache with result (uses SWR mutate for global update)
+        mutate(
+          (currentData: any) => ({
+            ...currentData,
+            affiliates: (currentData?.affiliates || []).map((a: any) =>
+              a.id === affiliate.id
+                ? {
+                    ...a,
+                    email: data.email || a.email,
+                    email_results: {
+                      emails: data.emails || (data.email ? [data.email] : []),
+                      contacts: data.contacts,
+                      firstName: data.firstName,
+                      lastName: data.lastName,
+                      title: data.title,
+                      linkedinUrl: data.linkedinUrl,
+                      phoneNumbers: data.phoneNumbers,
+                      provider: data.provider,
+                    },
+                    email_status: resultStatus,
+                    email_searched_at: new Date().toISOString(),
+                    email_provider: data.provider || 'apollo',
+                  }
+                : a
+            )
+          }),
+          { revalidate: false }
+        );
 
         // Report progress (with result)
         onProgress?.({
@@ -747,10 +842,16 @@ export function useSavedAffiliates() {
         console.error(`Error finding email for affiliate ${affiliate.id}:`, err);
         errorCount++;
         
-        // Update status to error
-        setSavedAffiliates(prev => prev.map(a => 
-          a.id === affiliate.id ? { ...a, emailStatus: 'error' as const } : a
-        ));
+        // Update status to error (uses SWR mutate)
+        mutate(
+          (currentData: any) => ({
+            ...currentData,
+            affiliates: (currentData?.affiliates || []).map((a: any) =>
+              a.id === affiliate.id ? { ...a, email_status: 'error' } : a
+            )
+          }),
+          { revalidate: false }
+        );
 
         // Report progress (error)
         onProgress?.({
@@ -762,8 +863,23 @@ export function useSavedAffiliates() {
       }
     }
 
+    // Revalidate at the end to ensure data consistency
+    mutate();
+
+    // ==========================================================================
+    // CREDITS REFRESH - January 4th, 2026
+    // 
+    // After bulk email lookup completes, backend has consumed email credits.
+    // Dispatch event to trigger useCredits hook to refetch from database.
+    // 
+    // SAFE: Does NOT modify credits - only triggers a refetch of existing DB value.
+    // ==========================================================================
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('credits-updated'));
+    }
+
     return { foundCount, notFoundCount, errorCount, skippedCount };
-  }, [userId]);
+  }, [userId, mutate]);
 
   // Helper function to extract the best search domain from an affiliate
   function extractSearchDomain(affiliate: ResultItem): string {
@@ -793,9 +909,10 @@ export function useSavedAffiliates() {
   }
 
   // ============================================================================
-  // BULK REMOVE AFFILIATES (Added Dec 2025)
+  // BULK REMOVE AFFILIATES (Added Dec 2025, Updated January 3rd, 2026 for SWR)
   // Removes multiple saved affiliates in a single API call.
   // Used by Saved page for "Delete Selected" bulk action.
+  // January 3rd, 2026: Now uses SWR mutate() to update all components instantly.
   // ============================================================================
   const removeAffiliatesBulk = useCallback(async (links: string[]) => {
     if (!userId || links.length === 0) return { removedCount: 0 };
@@ -815,16 +932,30 @@ export function useSavedAffiliates() {
         return { removedCount: 0, error: data.error };
       }
 
-      // Only update local state after confirmed server success
-      setSavedAffiliates(prev => prev.filter(a => !links.includes(a.link)));
+      // Update cache after confirmed server success (updates ALL components)
+      const linksSet = new Set(links);
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).filter((a: any) => !linksSet.has(a.link))
+        }),
+        { revalidate: true }
+      );
 
       return { removedCount: data.count || 0 };
     } catch (err) {
       console.error('Error bulk removing affiliates:', err);
       return { removedCount: 0, error: err };
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
+  // ===========================================================================
+  // RETURN VALUES - January 3rd, 2026
+  // 
+  // The refetch function now uses SWR's mutate() which:
+  // 1. Revalidates the cache by fetching fresh data from the server
+  // 2. Updates ALL components using this cache key (including Sidebar)
+  // ===========================================================================
   return {
     savedAffiliates,
     saveAffiliate,
@@ -835,48 +966,56 @@ export function useSavedAffiliates() {
     saveAffiliatesBulk,
     removeAffiliatesBulk,
     findEmailsBulk,  // Added Dec 2025: Bulk email finding
-    isLoading: userLoading || isLoading,
+    isLoading,
     count: savedAffiliates.length,
-    refetch: fetchSavedAffiliates,
+    refetch: mutate,  // January 3rd, 2026: Now uses SWR mutate for global cache update
   };
 }
 
-/**
- * Hook for managing discovered affiliates
- */
+// =============================================================================
+// DISCOVERED AFFILIATES HOOK - January 3rd, 2026
+// 
+// Refactored to use SWR for global cache sharing between components.
+// All components using useDiscoveredAffiliates() now share the same cached data.
+// When any component calls mutate(), all other components update instantly.
+// 
+// KEY BENEFIT: Sidebar count updates immediately when affiliates are discovered
+// =============================================================================
 export function useDiscoveredAffiliates() {
   const { userId, isLoading: userLoading } = useNeonUser();
-  const [discoveredAffiliates, setDiscoveredAffiliates] = useState<ResultItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // ===========================================================================
+  // SWR DATA FETCHING - January 3rd, 2026
+  // 
+  // The cache key `/api/affiliates/discovered?userId=${userId}` is shared globally.
+  // Any component using this key gets the same data from SWR's cache.
+  // When we call mutate() after save/remove, ALL components update.
+  // 
+  // Pass null as key when userId is not available to skip fetching.
+  // ===========================================================================
+  const swrKey = userId ? `/api/affiliates/discovered?userId=${userId}` : null;
+  const { data, error, isLoading: swrLoading, mutate } = useSWR(swrKey, fetcher);
+  
+  // ===========================================================================
+  // MEMOIZED TRANSFORM - January 3rd, 2026
+  // 
+  // CRITICAL: Use useMemo to prevent creating a new array on every render.
+  // Without this, components that depend on discoveredAffiliates in useEffect
+  // would trigger infinite loops because the array reference changes every render.
+  // ===========================================================================
+  const discoveredAffiliates: ResultItem[] = useMemo(() => {
+    return data?.affiliates?.map(transformAffiliate) || [];
+  }, [data]);
+  
+  // Combined loading state (user loading OR SWR loading)
+  const isLoading = userLoading || swrLoading;
 
-  // Fetch discovered affiliates
-  const fetchDiscoveredAffiliates = useCallback(async () => {
-    if (!userId) {
-      setDiscoveredAffiliates([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/affiliates/discovered?userId=${userId}`);
-      const data = await res.json();
-      if (data.affiliates) {
-        setDiscoveredAffiliates(data.affiliates.map(transformAffiliate));
-      }
-    } catch (err) {
-      console.error('Error fetching discovered affiliates:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
-
-  // Fetch on mount and when userId changes
-  useEffect(() => {
-    fetchDiscoveredAffiliates();
-  }, [fetchDiscoveredAffiliates]);
-
-  // Save a single discovered affiliate
+  // ===========================================================================
+  // SAVE SINGLE DISCOVERED AFFILIATE - January 3rd, 2026
+  // 
+  // After saving, we call mutate() with optimistic data. This updates ALL
+  // components using this cache key (including Sidebar count).
+  // ===========================================================================
   const saveDiscoveredAffiliate = useCallback(async (affiliate: ResultItem, searchKeyword: string) => {
     if (!userId) return;
 
@@ -890,17 +1029,27 @@ export function useDiscoveredAffiliates() {
         }),
       });
 
-      // Optimistic update
-      setDiscoveredAffiliates(prev => [
-        { ...affiliate, discoveredAt: new Date().toISOString(), searchKeyword },
-        ...prev
-      ]);
+      // Optimistic update + revalidate: Updates ALL components instantly
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: [
+            { ...affiliate, discovered_at: new Date().toISOString(), search_keyword: searchKeyword },
+            ...(currentData?.affiliates || [])
+          ]
+        }),
+        { revalidate: true }
+      );
     } catch (err) {
       console.error('Error saving discovered affiliate:', err);
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
-  // Batch save discovered affiliates
+  // ===========================================================================
+  // BATCH SAVE DISCOVERED AFFILIATES - January 3rd, 2026
+  // 
+  // After batch save, mutate() revalidates to get fresh data from server.
+  // ===========================================================================
   const saveDiscoveredAffiliates = useCallback(async (affiliates: ResultItem[], searchKeyword: string) => {
     if (!userId || affiliates.length === 0) return;
 
@@ -915,14 +1064,18 @@ export function useDiscoveredAffiliates() {
         }),
       });
 
-      // Refetch to get accurate data
-      fetchDiscoveredAffiliates();
+      // Revalidate cache to get fresh data (updates ALL components)
+      mutate();
     } catch (err) {
       console.error('Error batch saving discovered affiliates:', err);
     }
-  }, [userId, fetchDiscoveredAffiliates]);
+  }, [userId, mutate]);
 
-  // Remove a discovered affiliate
+  // ===========================================================================
+  // REMOVE DISCOVERED AFFILIATE - January 3rd, 2026
+  // 
+  // After removing, mutate() updates all components using this cache key.
+  // ===========================================================================
   const removeDiscoveredAffiliate = useCallback(async (link: string) => {
     if (!userId) return;
 
@@ -931,14 +1084,24 @@ export function useDiscoveredAffiliates() {
         method: 'DELETE',
       });
 
-      // Optimistic update
-      setDiscoveredAffiliates(prev => prev.filter(a => a.link !== link));
+      // Optimistic update + revalidate: Updates ALL components instantly
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).filter((a: any) => a.link !== link)
+        }),
+        { revalidate: true }
+      );
     } catch (err) {
       console.error('Error removing discovered affiliate:', err);
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
-  // Clear all discovered affiliates
+  // ===========================================================================
+  // CLEAR ALL DISCOVERED - January 3rd, 2026
+  // 
+  // After clearing, mutate() updates all components using this cache key.
+  // ===========================================================================
   const clearAllDiscovered = useCallback(async () => {
     if (!userId) return;
 
@@ -947,17 +1110,18 @@ export function useDiscoveredAffiliates() {
         method: 'DELETE',
       });
 
-      // Optimistic update
-      setDiscoveredAffiliates([]);
+      // Optimistic update: Set to empty array, then revalidate
+      mutate({ affiliates: [] }, { revalidate: true });
     } catch (err) {
       console.error('Error clearing discovered affiliates:', err);
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
   // ============================================================================
-  // BULK REMOVE DISCOVERED AFFILIATES (Added Dec 2025)
+  // BULK REMOVE DISCOVERED AFFILIATES (Added Dec 2025, Updated January 3rd, 2026)
   // Removes multiple discovered affiliates in a single API call.
   // Used by Discovered and Find New pages for "Delete Selected" bulk action.
+  // January 3rd, 2026: Now uses SWR mutate() to update all components instantly.
   // ============================================================================
   const removeDiscoveredAffiliatesBulk = useCallback(async (links: string[]) => {
     if (!userId || links.length === 0) return { removedCount: 0 };
@@ -977,24 +1141,33 @@ export function useDiscoveredAffiliates() {
         return { removedCount: 0, error: data.error };
       }
 
-      // Only update local state after confirmed server success
-      setDiscoveredAffiliates(prev => prev.filter(a => !links.includes(a.link)));
+      // Update cache after confirmed server success (updates ALL components)
+      const linksSet = new Set(links);
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).filter((a: any) => !linksSet.has(a.link))
+        }),
+        { revalidate: true }
+      );
 
       return { removedCount: data.count || 0 };
     } catch (err) {
       console.error('Error bulk removing discovered affiliates:', err);
       return { removedCount: 0, error: err };
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
   // ============================================================================
-  // UPDATE SIMILARWEB DATA (Added December 16, 2025)
+  // UPDATE SIMILARWEB DATA (Added December 16, 2025, Updated January 3rd, 2026)
   // 
   // CRITICAL BUG FIX: SimilarWeb data was never persisted to the database.
   // 
   // When enrichment_update events arrive from the server, this function
   // updates the SimilarWeb fields for all discovered affiliates matching
   // the domain. This ensures data persists across page refreshes.
+  // 
+  // January 3rd, 2026: Now uses SWR mutate() for global cache update.
   // ============================================================================
   const updateDiscoveredAffiliateSimilarWeb = useCallback(async (
     domain: string, 
@@ -1017,24 +1190,44 @@ export function useDiscoveredAffiliates() {
         throw new Error('Failed to update SimilarWeb data');
       }
 
-      // Optimistic update - update local state with SimilarWeb data
-      setDiscoveredAffiliates(prev => prev.map(affiliate => {
-        if (affiliate.domain === domain && affiliate.source === 'Web') {
-          return {
-            ...affiliate,
-            similarWeb,
-            isEnriching: false,
-          };
-        }
-        return affiliate;
-      }));
-
-      console.log(`✅ Persisted SimilarWeb data for domain: ${domain}`);
+      // Update cache with SimilarWeb data (updates ALL components)
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).map((affiliate: any) => {
+            if (affiliate.domain === domain && affiliate.source === 'Web') {
+              return {
+                ...affiliate,
+                similarweb_monthly_visits: similarWeb.monthlyVisits,
+                similarweb_global_rank: similarWeb.globalRank,
+                similarweb_country_rank: similarWeb.countryRank,
+                similarweb_country_code: similarWeb.countryCode,
+                similarweb_bounce_rate: similarWeb.bounceRate,
+                similarweb_pages_per_visit: similarWeb.pagesPerVisit,
+                similarweb_time_on_site: similarWeb.timeOnSite,
+                similarweb_category: similarWeb.category,
+                similarweb_traffic_sources: similarWeb.trafficSources,
+                similarweb_top_countries: similarWeb.topCountries,
+                is_enriching: false,
+              };
+            }
+            return affiliate;
+          })
+        }),
+        { revalidate: false }
+      );
     } catch (err) {
       console.error('Error updating SimilarWeb data:', err);
     }
-  }, [userId]);
+  }, [userId, mutate]);
 
+  // ===========================================================================
+  // RETURN VALUES - January 3rd, 2026
+  // 
+  // The refetch function now uses SWR's mutate() which:
+  // 1. Revalidates the cache by fetching fresh data from the server
+  // 2. Updates ALL components using this cache key (including Sidebar)
+  // ===========================================================================
   return {
     discoveredAffiliates,
     saveDiscoveredAffiliate,
@@ -1045,8 +1238,8 @@ export function useDiscoveredAffiliates() {
     removeDiscoveredAffiliatesBulk,
     // SimilarWeb update (Added Dec 16, 2025 - Critical bug fix)
     updateDiscoveredAffiliateSimilarWeb,
-    isLoading: userLoading || isLoading,
+    isLoading,
     count: discoveredAffiliates.length,
-    refetch: fetchDiscoveredAffiliates,
+    refetch: mutate,  // January 3rd, 2026: Now uses SWR mutate for global cache update
   };
 }

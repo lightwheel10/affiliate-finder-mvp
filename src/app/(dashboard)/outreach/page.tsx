@@ -586,6 +586,18 @@ export default function OutreachPage() {
           next.set(messageKey, data.message);
           return next;
         });
+
+        // =====================================================================
+        // CREDITS REFRESH - January 4th, 2026
+        // 
+        // After AI generation succeeds, backend has consumed AI credits.
+        // Dispatch event to trigger useCredits hook to refetch from database.
+        // 
+        // SAFE: Does NOT modify credits - only triggers a refetch of existing DB value.
+        // =====================================================================
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('credits-updated'));
+        }
       } else {
         // =====================================================================
         // FAILURE: Mark as failed and show notification
@@ -740,6 +752,18 @@ export default function OutreachPage() {
     
     // Clear progress indicator
     setBulkProgress(null);
+
+    // ==========================================================================
+    // CREDITS REFRESH - January 4th, 2026
+    // 
+    // After bulk AI generation completes, backend has consumed AI credits.
+    // Dispatch event to trigger useCredits hook to refetch from database.
+    // 
+    // SAFE: Does NOT modify credits - only triggers a refetch of existing DB value.
+    // ==========================================================================
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('credits-updated'));
+    }
     
     // Show summary notification if there were any failures
     if (failCount > 0) {
