@@ -87,6 +87,95 @@ function isValidDomainFormat(domain: string): boolean {
 }
 
 // =============================================================================
+// SSRF PROTECTION (January 3rd, 2026)
+// 
+// SECURITY: Prevents Server-Side Request Forgery (SSRF) attacks.
+// 
+// SSRF is when an attacker tricks our server into making requests to:
+// - Internal services (localhost, 127.0.0.1)
+// - Private networks (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
+// - Cloud metadata endpoints (169.254.169.254 - AWS/GCP/Azure)
+// 
+// Example attack: User enters "169.254.169.254" as their brand domain
+// → Our server fetches AWS metadata → Attacker steals credentials!
+// 
+// This function blocks all internal/private IPs and suspicious hostnames.
+// =============================================================================
+function isInternalOrPrivate(domain: string): boolean {
+  const lowerDomain = domain.toLowerCase();
+  
+  // Block localhost variations
+  const localhostPatterns = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '::1',
+    '[::1]',
+    'localhost.localdomain',
+  ];
+  
+  if (localhostPatterns.some(pattern => lowerDomain === pattern || lowerDomain.startsWith(pattern + '.'))) {
+    return true;
+  }
+  
+  // Block private IP ranges (IPv4)
+  // 10.0.0.0 - 10.255.255.255 (Class A private)
+  // 172.16.0.0 - 172.31.255.255 (Class B private)
+  // 192.168.0.0 - 192.168.255.255 (Class C private)
+  const privateIpPatterns = [
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/,
+    /^192\.168\.\d{1,3}\.\d{1,3}$/,
+  ];
+  
+  if (privateIpPatterns.some(pattern => pattern.test(lowerDomain))) {
+    return true;
+  }
+  
+  // Block link-local addresses (169.254.x.x)
+  // CRITICAL: This is the AWS/GCP/Azure metadata endpoint!
+  if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(lowerDomain)) {
+    return true;
+  }
+  
+  // Block other special IPs
+  const specialPatterns = [
+    /^0\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,     // 0.0.0.0/8
+    /^100\.(6[4-9]|[7-9][0-9]|1[0-2][0-7])\.\d{1,3}\.\d{1,3}$/, // Carrier-grade NAT
+    /^192\.0\.0\.\d{1,3}$/,                // IETF Protocol Assignments
+    /^192\.0\.2\.\d{1,3}$/,                // TEST-NET-1
+    /^198\.51\.100\.\d{1,3}$/,             // TEST-NET-2
+    /^203\.0\.113\.\d{1,3}$/,              // TEST-NET-3
+    /^224\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,    // Multicast
+    /^240\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,    // Reserved
+    /^255\.255\.255\.255$/,                 // Broadcast
+  ];
+  
+  if (specialPatterns.some(pattern => pattern.test(lowerDomain))) {
+    return true;
+  }
+  
+  // Block internal/corporate hostname patterns
+  // These are common internal hostnames that should never be user brands
+  const internalHostPatterns = [
+    /^.*\.internal$/,
+    /^.*\.local$/,
+    /^.*\.corp$/,
+    /^.*\.lan$/,
+    /^.*\.intranet$/,
+    /^.*\.private$/,
+    /^metadata\./,
+    /^instance-data\./,
+  ];
+  
+  if (internalHostPatterns.some(pattern => pattern.test(lowerDomain))) {
+    return true;
+  }
+  
+  return false;
+}
+
+// =============================================================================
 // DOMAIN REACHABILITY CHECK (January 3rd, 2026)
 // 
 // Performs a HEAD request to verify the domain has an active website.
@@ -101,7 +190,28 @@ function isValidDomainFormat(domain: string): boolean {
 async function isDomainReachable(domain: string): Promise<{ reachable: boolean; protocol: 'https' | 'http' | null }> {
   const timeout = 10000; // 10 seconds
   
-  // Try HTTPS first (preferred)
+  // ==========================================================================
+  // VERCEL DEPLOYMENT FIX (January 3rd, 2026)
+  // 
+  // Issues discovered during testing:
+  // 1. Some sites have SSL certificate issues (e.g., spectrumailabs.com)
+  // 2. HEAD requests are sometimes blocked by servers
+  // 3. Vercel's serverless environment is strict about SSL
+  // 
+  // Solution:
+  // 1. Try HTTPS HEAD first
+  // 2. Try HTTPS GET as fallback (some servers reject HEAD)
+  // 3. Try HTTP HEAD
+  // 4. Try HTTP GET as final fallback
+  // 
+  // Added User-Agent header to avoid bot detection blocks.
+  // ==========================================================================
+  
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (compatible; DomainValidator/1.0)',
+  };
+  
+  // Strategy 1: HTTPS with HEAD
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -109,21 +219,43 @@ async function isDomainReachable(domain: string): Promise<{ reachable: boolean; 
     const response = await fetch(`https://${domain}`, {
       method: 'HEAD',
       signal: controller.signal,
-      redirect: 'follow', // Follow redirects (common for www → non-www, etc.)
+      redirect: 'follow',
+      headers,
     });
     
     clearTimeout(timeoutId);
     
-    // Consider any response (even 4xx/5xx) as "reachable" - the server responded
-    // We only care that the domain has a website, not that it returns 200
     if (response.status < 600) {
+      console.log(`[validate-domain] ${domain} reachable via HTTPS HEAD`);
       return { reachable: true, protocol: 'https' };
     }
-  } catch {
-    // HTTPS failed, try HTTP
+  } catch (error) {
+    console.log(`[validate-domain] HTTPS HEAD failed for ${domain}:`, error instanceof Error ? error.message : 'Unknown error');
   }
   
-  // Try HTTP fallback
+  // Strategy 2: HTTPS with GET (some servers reject HEAD)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    const response = await fetch(`https://${domain}`, {
+      method: 'GET',
+      signal: controller.signal,
+      redirect: 'follow',
+      headers,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.status < 600) {
+      console.log(`[validate-domain] ${domain} reachable via HTTPS GET`);
+      return { reachable: true, protocol: 'https' };
+    }
+  } catch (error) {
+    console.log(`[validate-domain] HTTPS GET failed for ${domain}:`, error instanceof Error ? error.message : 'Unknown error');
+  }
+  
+  // Strategy 3: HTTP with HEAD (for sites with SSL issues)
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -132,17 +264,42 @@ async function isDomainReachable(domain: string): Promise<{ reachable: boolean; 
       method: 'HEAD',
       signal: controller.signal,
       redirect: 'follow',
+      headers,
     });
     
     clearTimeout(timeoutId);
     
     if (response.status < 600) {
+      console.log(`[validate-domain] ${domain} reachable via HTTP HEAD`);
       return { reachable: true, protocol: 'http' };
     }
-  } catch {
-    // HTTP also failed
+  } catch (error) {
+    console.log(`[validate-domain] HTTP HEAD failed for ${domain}:`, error instanceof Error ? error.message : 'Unknown error');
   }
   
+  // Strategy 4: HTTP with GET (final fallback)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    const response = await fetch(`http://${domain}`, {
+      method: 'GET',
+      signal: controller.signal,
+      redirect: 'follow',
+      headers,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.status < 600) {
+      console.log(`[validate-domain] ${domain} reachable via HTTP GET`);
+      return { reachable: true, protocol: 'http' };
+    }
+  } catch (error) {
+    console.log(`[validate-domain] HTTP GET failed for ${domain}:`, error instanceof Error ? error.message : 'Unknown error');
+  }
+  
+  console.log(`[validate-domain] ${domain} is NOT reachable via any method`);
   return { reachable: false, protocol: null };
 }
 
@@ -178,6 +335,24 @@ export async function POST(request: NextRequest) {
         valid: false,
         normalizedDomain,
         error: 'Invalid domain format. Please enter a valid domain (e.g., example.com)',
+      });
+    }
+    
+    // ==========================================================================
+    // SSRF PROTECTION CHECK (January 3rd, 2026)
+    // 
+    // SECURITY: Block internal/private IPs and suspicious hostnames.
+    // This prevents attackers from using our server to probe internal networks
+    // or steal cloud metadata credentials.
+    // 
+    // We check BEFORE making any network requests to avoid any data leakage.
+    // ==========================================================================
+    if (isInternalOrPrivate(normalizedDomain)) {
+      console.log(`[validate-domain] SSRF BLOCKED: ${normalizedDomain}`);
+      return NextResponse.json({
+        valid: false,
+        normalizedDomain,
+        error: 'This domain cannot be validated. Please enter a public website domain.',
       });
     }
     
