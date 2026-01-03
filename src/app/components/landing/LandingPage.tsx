@@ -206,8 +206,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
               <div className="mt-8 flex items-center gap-3 text-xs text-slate-500 font-medium">
                 <div className="flex -space-x-2">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-200" />
+                  {[
+                    'https://randomuser.me/api/portraits/women/44.jpg',
+                    'https://randomuser.me/api/portraits/men/32.jpg',
+                    'https://randomuser.me/api/portraits/women/68.jpg',
+                    'https://randomuser.me/api/portraits/men/75.jpg',
+                    'https://randomuser.me/api/portraits/women/17.jpg',
+                  ].map((src, i) => (
+                    <img 
+                      key={i} 
+                      src={src} 
+                      alt={`Customer ${i + 1}`}
+                      className="w-7 h-7 rounded-full border-2 border-white object-cover shadow-sm" 
+                    />
                   ))}
                 </div>
                 <div className="flex items-center gap-1">

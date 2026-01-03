@@ -11,6 +11,10 @@ const publicRoutes = [
   "/api/stripe/webhook", // Stripe webhook - secured by signature verification
   "/admin", // Admin dashboard - has its own JWT auth
   "/api/admin", // Admin API routes - have their own auth check
+  "/privacy", // Legal pages
+  "/terms",
+  "/cookies",
+  "/security",
 ];
 
 export function middleware(request: NextRequest) {
