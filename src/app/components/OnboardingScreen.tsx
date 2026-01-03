@@ -1,11 +1,27 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader2, Check, ChevronDown, Sparkles, Globe, Plus, X, MessageSquare, MousePointerClick, Star, Search } from 'lucide-react';
+import { Loader2, Check, ChevronDown, Sparkles, Globe, Plus, X, MessageSquare, MousePointerClick, Star, Search, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StripeProvider } from './StripeProvider';
 import { Step7CardForm } from './Step7CardForm';
+import { AnalyzingScreen } from './AnalyzingScreen';
 import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
+
+// =============================================================================
+// AI SUGGESTIONS TYPES (January 3rd, 2026)
+// 
+// These types match the response from /api/suggestions/generate endpoint.
+// Used to store AI-generated competitor and topic suggestions.
+// =============================================================================
+interface SuggestedCompetitor {
+  name: string;
+  domain: string;
+}
+
+interface SuggestedTopic {
+  keyword: string;
+}
 
 // Pricing plans data - matching PricingModal exactly
 const PRICING_PLANS = [
@@ -59,41 +75,54 @@ const PRICING_PLANS = [
   },
 ];
 
-// Mock data for suggestions
-const SUGGESTED_COMPETITORS = [
-  { name: 'Partnerstack', domain: 'partnerstack.com', logo: 'https://logo.clearbit.com/partnerstack.com' },
-  { name: 'Tapfiliate', domain: 'tapfiliate.com', logo: 'https://logo.clearbit.com/tapfiliate.com' },
-  { name: 'Scaleo', domain: 'scaleo.com', logo: 'https://logo.clearbit.com/scaleo.com' },
-  { name: 'Shareasale', domain: 'shareasale.com', logo: 'https://logo.clearbit.com/shareasale.com' },
-  { name: 'Cj', domain: 'cj.com', logo: 'https://logo.clearbit.com/cj.com' },
-  { name: 'Clickbank', domain: 'clickbank.com', logo: 'https://logo.clearbit.com/clickbank.com' },
-  { name: 'Flexoffers', domain: 'flexoffers.com', logo: 'https://logo.clearbit.com/flexoffers.com' },
-  { name: 'Maxbounty', domain: 'maxbounty.com', logo: 'https://logo.clearbit.com/maxbounty.com' },
-  { name: 'Pepperjam', domain: 'pepperjam.com', logo: 'https://logo.clearbit.com/pepperjam.com' },
-  { name: 'Holo', domain: 'holo.com', logo: 'https://logo.clearbit.com/holo.com' },
-  { name: 'Shopmy', domain: 'shopmy.com', logo: 'https://logo.clearbit.com/shopmy.com' },
-  { name: 'Structuredweb', domain: 'structuredweb.com', logo: 'https://logo.clearbit.com/structuredweb.com' },
-  { name: 'Stay22', domain: 'stay22.com', logo: 'https://logo.clearbit.com/stay22.com' },
-  { name: 'Voluum', domain: 'voluum.com', logo: 'https://logo.clearbit.com/voluum.com' },
-  { name: 'Zebracat', domain: 'zebracat.com', logo: 'https://logo.clearbit.com/zebracat.com' },
-  { name: 'Brandwatch', domain: 'brandwatch.com', logo: 'https://logo.clearbit.com/brandwatch.com' },
-  { name: 'Copy', domain: 'copy.ai', logo: 'https://logo.clearbit.com/copy.ai' },
-  { name: 'Moredeal', domain: 'moredeal.ai', logo: 'https://logo.clearbit.com/moredeal.ai' },
-  { name: 'Systeme', domain: 'systeme.io', logo: 'https://logo.clearbit.com/systeme.io' },
-];
+// =============================================================================
+// DOMAIN VALIDATION HELPER (January 3rd, 2026)
+// 
+// Client-side regex validation for instant feedback on domain format.
+// This runs on every keystroke to show immediate visual feedback.
+// Server-side validation (HEAD request) is done when user clicks "Continue".
+// 
+// Why both client + server validation?
+// - Client: Instant UX feedback, catches obvious typos
+// - Server: Verifies domain actually exists and is reachable
+// =============================================================================
+function isValidDomainFormat(domain: string): boolean {
+  if (!domain) return false;
+  
+  // Normalize: strip protocols, www, paths
+  let normalized = domain.trim().toLowerCase();
+  normalized = normalized.replace(/^https?:\/\//, '');
+  normalized = normalized.replace(/^www\./, '');
+  normalized = normalized.split('/')[0];
+  normalized = normalized.split('?')[0];
+  normalized = normalized.split('#')[0];
+  normalized = normalized.split(':')[0];
+  
+  if (!normalized) return false;
+  
+  // Check domain format with regex
+  const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+  return domainRegex.test(normalized);
+}
 
-const SUGGESTED_TOPICS = [
-  "best Affiliate-Marketing-Platform",
-  "AI-Fraud-Detection for Affiliate Programs",
-  "Affiliate Program without monthly fees",
-  "Benefits of Prepayment Affiliate Networks",
-  "Quick Affiliate Onboarding",
-  "Tool to prevent Affiliate Coupon Fraud",
-  "Affiliate Tracking Platform for Influencers",
-  "Commission Calculator for Affiliate Programs",
-  "Affiliate Marketing as a Service Platform",
-  "Transparent Affiliate Billing Model"
-];
+// =============================================================================
+// STATIC SUGGESTIONS - DEPRECATED (January 3rd, 2026)
+// 
+// These static arrays are no longer used for suggestions.
+// AI-generated suggestions are now fetched dynamically via:
+// - /api/suggestions/generate endpoint
+// - Firecrawl for website scraping
+// - OpenAI gpt-4o-mini for analysis
+// 
+// The dynamic suggestions are stored in component state:
+// - suggestedCompetitors: SuggestedCompetitor[]
+// - suggestedTopics: SuggestedTopic[]
+// 
+// These empty arrays are kept for backwards compatibility but not used.
+// See: fetchAISuggestions() function and AnalyzingScreen component.
+// =============================================================================
+const SUGGESTED_COMPETITORS: { name: string; domain: string; logo: string }[] = [];
+const SUGGESTED_TOPICS: string[] = [];
 
 const AFFILIATE_TYPES = [
   "Publishers/Bloggers",
@@ -132,6 +161,51 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const [name, setName] = useState(userData?.name || userName || '');
   const [role, setRole] = useState(userData?.role || '');
   const [brand, setBrand] = useState(userData?.brand || '');
+  
+  // ==========================================================================
+  // DOMAIN VALIDATION STATE (January 3rd, 2026)
+  // 
+  // We validate the brand domain in two phases:
+  // 1. Client-side: Instant format validation (regex) on every keystroke
+  // 2. Server-side: HEAD request to verify domain is reachable (on Continue click)
+  // 
+  // States:
+  // - brandFormatValid: true if domain format is valid (instant feedback)
+  // - isBrandValidating: true while server-side validation is in progress
+  // - brandValidated: true if server confirmed domain is reachable
+  // - brandError: error message to display (format error or reachability error)
+  // ==========================================================================
+  const [brandFormatValid, setBrandFormatValid] = useState<boolean | null>(null);
+  const [isBrandValidating, setIsBrandValidating] = useState(false);
+  const [brandValidated, setBrandValidated] = useState(false);
+  const [brandError, setBrandError] = useState('');
+
+  // ==========================================================================
+  // AI SUGGESTIONS STATE (January 3rd, 2026)
+  // 
+  // After domain validation succeeds, we show an "Analyzing" screen while
+  // fetching AI-generated suggestions from /api/suggestions/generate.
+  // 
+  // Flow:
+  // 1. User enters brand domain in Step 1
+  // 2. Domain is validated (HEAD request)
+  // 3. isAnalyzing = true, show AnalyzingScreen component
+  // 4. API call to Firecrawl + OpenAI generates suggestions
+  // 5. Suggestions stored in state, user proceeds to Step 2
+  // 6. In Steps 3 & 4, suggestions are displayed for user to select
+  // 
+  // States:
+  // - isAnalyzing: true while AnalyzingScreen is visible
+  // - analyzingStep: 1=scraping, 2=AI processing, 3=validating domains
+  // - suggestedCompetitors: AI-generated competitor list (up to 12)
+  // - suggestedTopics: AI-generated topic list (up to 10)
+  // - suggestionError: Error message if API fails
+  // ==========================================================================
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzingStep, setAnalyzingStep] = useState(1);
+  const [suggestedCompetitors, setSuggestedCompetitors] = useState<SuggestedCompetitor[]>([]);
+  const [suggestedTopics, setSuggestedTopics] = useState<SuggestedTopic[]>([]);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
   
   // Step 2 Data - pre-fill from userData if resuming
   const [targetCountry, setTargetCountry] = useState(userData?.targetCountry || '');
@@ -210,6 +284,163 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const countries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France'];
   const languages = ['English', 'Spanish', 'German', 'French', 'Portuguese', 'Italian'];
 
+  // ==========================================================================
+  // BRAND INPUT HANDLER (January 3rd, 2026)
+  // 
+  // Handles brand domain input with instant format validation.
+  // Provides immediate visual feedback if the domain format is invalid.
+  // Server-side validation happens when user clicks "Continue".
+  // ==========================================================================
+  const handleBrandChange = (value: string) => {
+    setBrand(value);
+    setBrandError(''); // Clear any previous errors
+    setBrandValidated(false); // Reset server validation status
+    
+    // Only validate format if user has entered something
+    if (value.trim()) {
+      const isValid = isValidDomainFormat(value);
+      setBrandFormatValid(isValid);
+    } else {
+      setBrandFormatValid(null); // Reset to neutral state when empty
+    }
+  };
+
+  // ==========================================================================
+  // DOMAIN VALIDATION API CALL (January 3rd, 2026)
+  // 
+  // Called when user clicks "Continue" in Step 1.
+  // Makes a server-side HEAD request to verify the domain is reachable.
+  // This is critical because:
+  // 1. We need a valid domain to scrape with Firecrawl later
+  // 2. We generate AI suggestions based on website content
+  // 3. Invalid domains would waste API credits
+  // ==========================================================================
+  const validateBrandDomain = async (): Promise<boolean> => {
+    if (!brand.trim()) {
+      setBrandError('Please enter your brand domain');
+      return false;
+    }
+    
+    // Quick format check before making API call
+    if (!isValidDomainFormat(brand)) {
+      setBrandError('Please enter a valid domain (e.g., example.com)');
+      return false;
+    }
+    
+    setIsBrandValidating(true);
+    setBrandError('');
+    
+    try {
+      const response = await fetch('/api/validate-domain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: brand }),
+      });
+      
+      const data = await response.json();
+      
+      if (!data.valid) {
+        setBrandError(data.error || 'Domain is not reachable');
+        setBrandValidated(false);
+        return false;
+      }
+      
+      // Update brand with normalized version (strips http, www, etc.)
+      if (data.normalizedDomain && data.normalizedDomain !== brand) {
+        setBrand(data.normalizedDomain);
+      }
+      
+      setBrandValidated(true);
+      return true;
+      
+    } catch (error) {
+      console.error('Domain validation failed:', error);
+      setBrandError('Failed to validate domain. Please try again.');
+      return false;
+    } finally {
+      setIsBrandValidating(false);
+    }
+  };
+
+  // ==========================================================================
+  // AI SUGGESTIONS FETCHER (January 3rd, 2026)
+  // 
+  // Calls /api/suggestions/generate to get AI-powered suggestions.
+  // This endpoint:
+  // 1. Scrapes the brand website using Firecrawl
+  // 2. Analyzes content with OpenAI gpt-4o-mini
+  // 3. Returns 12 competitors + 10 topics
+  // 4. Validates all competitor domains
+  // 
+  // The AnalyzingScreen component shows progress during this process.
+  // If the API fails, user can still proceed with manual entry.
+  // ==========================================================================
+  const fetchAISuggestions = async (brandUrl: string): Promise<boolean> => {
+    setIsAnalyzing(true);
+    setAnalyzingStep(1); // Start at step 1: Analyzing website
+    setSuggestionError(null);
+    
+    try {
+      // Simulate step progression for better UX
+      // Step 1: Analyzing website (Firecrawl scraping)
+      // The actual API call handles all steps, but we show progress
+      
+      // Move to step 2 after a short delay (simulates scraping completion)
+      const step2Timer = setTimeout(() => setAnalyzingStep(2), 2500);
+      
+      // Move to step 3 after more time (simulates AI processing)
+      const step3Timer = setTimeout(() => setAnalyzingStep(3), 5500);
+      
+      // Make the actual API call
+      const response = await fetch('/api/suggestions/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandUrl }),
+      });
+      
+      // Clear timers if API responds faster
+      clearTimeout(step2Timer);
+      clearTimeout(step3Timer);
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        // API returned an error - show user-friendly message
+        setSuggestionError(data.userMessage || 'Failed to analyze website');
+        return false;
+      }
+      
+      // Success! Store the suggestions
+      setSuggestedCompetitors(data.competitors || []);
+      setSuggestedTopics(data.topics || []);
+      
+      console.log('[AI Suggestions] Generated:', {
+        competitors: data.competitors?.length || 0,
+        topics: data.topics?.length || 0,
+        industry: data.industry,
+      });
+      
+      return true;
+      
+    } catch (error) {
+      console.error('[AI Suggestions] Error:', error);
+      setSuggestionError('Something went wrong. Please enter your details manually.');
+      return false;
+    }
+  };
+
+  // ==========================================================================
+  // SKIP AI SUGGESTIONS (January 3rd, 2026)
+  // 
+  // Called when user clicks "Continue & Enter Manually" on error screen.
+  // Allows user to proceed to Step 2 without AI suggestions.
+  // ==========================================================================
+  const handleSkipSuggestions = () => {
+    setIsAnalyzing(false);
+    setSuggestionError(null);
+    setStep(2);
+  };
+
   // Helper to save progress to database
   const saveProgress = async (nextStep: number, additionalData?: Record<string, unknown>) => {
     try {
@@ -230,9 +461,39 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const handleContinue = async () => {
     if (step === 1) {
       if (!name || !role || !brand) return;
-      // Save step 1 data and move to step 2
+      
+      // =======================================================================
+      // DOMAIN VALIDATION + AI SUGGESTIONS (January 3rd, 2026)
+      // 
+      // Flow after Step 1:
+      // 1. Validate domain format (regex) - already done on input change
+      // 2. Validate domain reachability (HEAD request)
+      // 3. Show AnalyzingScreen with animated progress
+      // 4. Fetch AI suggestions (Firecrawl + OpenAI)
+      // 5. Store suggestions in state for Steps 3 & 4
+      // 6. Proceed to Step 2
+      // 
+      // If AI suggestions fail, user can still proceed with manual entry.
+      // =======================================================================
+      const isValid = await validateBrandDomain();
+      if (!isValid) {
+        return; // Don't proceed if domain validation failed
+      }
+      
+      // Save step 1 data
       await saveProgress(2, { name, role, brand });
-      setStep(2);
+      
+      // Start AI analysis (shows AnalyzingScreen)
+      const suggestionsSuccess = await fetchAISuggestions(brand);
+      
+      if (suggestionsSuccess) {
+        // AI suggestions fetched successfully - proceed to Step 2
+        setIsAnalyzing(false);
+        setStep(2);
+      }
+      // If failed, AnalyzingScreen shows error with "Continue Manually" button
+      // User clicks that button -> handleSkipSuggestions() is called
+      
     } else if (step === 2) {
       if (!targetCountry || !targetLanguage) return;
       // Save step 2 data and move to step 3
@@ -285,6 +546,29 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     }
     // Note: Step 7 (card submission) is handled by handleStripeSubmit below
   };
+
+  // ==========================================================================
+  // BACK BUTTON HANDLER (January 3rd, 2026)
+  // 
+  // Allows user to go back to previous steps with these constraints:
+  // - Available on Steps 3, 4, 5 only
+  // - Minimum step user can go back to is Step 2 (country/language)
+  // - NOT available on Step 1 (first step), Step 2 (minimum), Step 6+ (pricing/payment)
+  // 
+  // This gives users flexibility to change their competitors/topics selections
+  // without losing their progress, while preventing them from going back to
+  // change their brand (which would require re-analyzing the website).
+  // ==========================================================================
+  const handleGoBack = () => {
+    // Only allow going back on steps 3, 4, 5
+    // Minimum step is 2 (can't go back to step 1 to change brand)
+    if (step >= 3 && step <= 5) {
+      setStep(step - 1);
+    }
+  };
+
+  // Check if back button should be shown
+  const showBackButton = step >= 3 && step <= 5 && !isAnalyzing && !isLoading;
 
   // ==========================================================================
   // STRIPE PAYMENT FLOW (Step 7)
@@ -446,6 +730,26 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     }
   };
 
+  // ==========================================================================
+  // ANALYZING SCREEN RENDERER (January 3rd, 2026)
+  // 
+  // Shows the AnalyzingScreen component while fetching AI suggestions.
+  // Displays animated progress through 3 steps:
+  // 1. Analyzing your website (Firecrawl scraping)
+  // 2. Understanding your products (OpenAI processing)
+  // 3. Finding your competitors (Domain validation)
+  // 
+  // On error, shows "Continue & Enter Manually" button.
+  // ==========================================================================
+  const renderAnalyzingScreen = () => (
+    <AnalyzingScreen
+      currentStep={analyzingStep}
+      brandName={brand}
+      error={suggestionError}
+      onSkip={handleSkipSuggestions}
+    />
+  );
+
   const renderStep1 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
       {/* Header */}
@@ -531,16 +835,64 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           )}
         </div>
 
-        {/* Brand Input */}
+        {/* Brand Input with Domain Validation (January 3rd, 2026) */}
+        {/* 
+          Domain validation provides two levels of feedback:
+          1. Instant format validation (regex) - shows red/green border
+          2. Server reachability validation (on Continue) - shows loading/error
+        */}
         <div className="space-y-1">
           <label className="text-slate-900 font-medium ml-1 text-sm">Which brand do you want to find affiliates for?</label>
-          <input
-            type="text"
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm"
-            placeholder="e.g. spectrumailabs.com"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={brand}
+              onChange={(e) => handleBrandChange(e.target.value)}
+              disabled={isBrandValidating}
+              className={cn(
+                "w-full px-3.5 py-2.5 bg-white border rounded-xl text-slate-800 focus:outline-none transition-all text-sm pr-10",
+                // Dynamic border color based on validation state
+                brandError 
+                  ? "border-red-400 focus:border-red-400 focus:ring-1 focus:ring-red-400/20"
+                  : brandFormatValid === false
+                    ? "border-amber-400 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/20"
+                    : brandValidated
+                      ? "border-green-400 focus:border-green-400 focus:ring-1 focus:ring-green-400/20"
+                      : brandFormatValid === true
+                        ? "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                        : "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20",
+                isBrandValidating && "opacity-70 cursor-not-allowed"
+              )}
+              placeholder="e.g. guffles.com"
+            />
+            {/* Validation status indicator */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {isBrandValidating ? (
+                <Loader2 size={16} className="animate-spin text-slate-400" />
+              ) : brandValidated ? (
+                <Check size={16} className="text-green-500" />
+              ) : brandFormatValid === false && brand.trim() ? (
+                <X size={16} className="text-amber-500" />
+              ) : null}
+            </div>
+          </div>
+          
+          {/* Error message */}
+          {brandError && (
+            <p className="text-red-500 text-xs font-medium px-1 pt-0.5 flex items-center gap-1">
+              <X size={12} />
+              {brandError}
+            </p>
+          )}
+          
+          {/* Format hint (shown only when format is invalid) */}
+          {brandFormatValid === false && brand.trim() && !brandError && (
+            <p className="text-amber-600 text-xs px-1 pt-0.5">
+              Enter a valid domain format (e.g., example.com)
+            </p>
+          )}
+          
+          {/* Helper text */}
           <p className="text-slate-500 text-xs leading-relaxed px-1 pt-0.5">
             For agencies, this should be your client&apos;s website, not your own.
           </p>
@@ -770,63 +1122,127 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </p>
         </div>
 
-        {/* Selected & Suggested Grid */}
-        <div className="space-y-2">
-          <p className="text-slate-600 text-xs font-medium">Quick add suggestions:</p>
+        {/* =================================================================
+          AI SUGGESTIONS DISPLAY (January 3rd, 2026)
           
-          <div className="grid grid-cols-3 gap-1.5 max-h-[180px] overflow-y-auto scrollbar-hide">
-            {/* Render Selected First */}
-            {competitors.map(comp => {
-              const suggestion = SUGGESTED_COMPETITORS.find(s => s.domain === comp);
-              return (
-                <button
-                  key={comp}
-                  type="button"
-                  onClick={() => toggleCompetitor(comp)}
-                  className="group relative flex items-center gap-2 p-2 rounded-lg bg-[#D4E815]/10 border-2 border-[#D4E815] text-left transition-all"
-                >
-                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
-                    {suggestion ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={suggestion.logo} alt="" className="w-4 h-4 object-contain" />
-                    ) : (
-                       <div className="w-full h-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
-                         {comp[0].toUpperCase()}
-                       </div>
+          Shows AI-generated competitor suggestions if available.
+          User can click to add/remove suggestions.
+          Suggestions come from /api/suggestions/generate endpoint.
+          ================================================================= */}
+        
+        {/* AI Suggested Competitors (January 3rd, 2026)
+            Updated label and added favicon display using Google's Favicon API.
+            Favicon = the small icon shown in browser tabs for websites.
+        */}
+        {suggestedCompetitors.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-slate-600 text-xs font-medium flex items-center gap-1">
+              <Sparkles size={10} className="text-[#D4E815]" />
+              Here&apos;s some we found for you:
+            </p>
+            
+            <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
+              {suggestedCompetitors
+                .filter(comp => !competitors.includes(comp.domain)) // Hide already selected
+                .slice(0, 12) // Max 12 suggestions
+                .map(comp => (
+                  <button
+                    key={comp.domain}
+                    type="button"
+                    onClick={() => toggleCompetitor(comp.domain)}
+                    disabled={competitors.length >= 5}
+                    className={cn(
+                      "group relative flex items-center gap-2 p-2 rounded-lg border text-left transition-all",
+                      competitors.length >= 5
+                        ? "border-slate-100 opacity-50 cursor-not-allowed"
+                        : "border-slate-200 hover:border-[#D4E815] hover:bg-[#D4E815]/5"
                     )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-slate-900 truncate">{suggestion?.name || comp}</p>
-                    <p className="text-[9px] text-slate-500 truncate">{comp}</p>
-                  </div>
-                   <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                     <X size={10} />
-                   </div>
-                </button>
-              );
-            })}
-
-            {/* Render Suggestions */}
-            {SUGGESTED_COMPETITORS.filter(s => !competitors.includes(s.domain)).map((comp) => (
-               <button
-                  key={comp.domain}
-                  type="button"
-                  disabled={competitors.length >= 5}
-                  onClick={() => toggleCompetitor(comp.domain)}
-                  className="group flex items-center gap-2 p-2 rounded-lg bg-white border-2 border-slate-200 text-left hover:border-slate-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={comp.logo} alt="" className="w-4 h-4 object-contain opacity-80 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-slate-900 truncate">{comp.name}</p>
-                    <p className="text-[9px] text-slate-400 truncate group-hover:text-slate-500 transition-colors">{comp.domain}</p>
-                  </div>
-                </button>
-            ))}
+                  >
+                    {/* Favicon from Google's Favicon API (January 3rd, 2026)
+                        URL format: https://www.google.com/s2/favicons?domain=DOMAIN&sz=SIZE
+                        sz=32 gives us a 32x32 pixel icon, perfect for this UI */}
+                    <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
+                      <img 
+                        src={`https://www.google.com/s2/favicons?domain=${comp.domain}&sz=32`}
+                        alt={comp.name}
+                        className="w-4 h-4 object-contain"
+                        onError={(e) => {
+                          // Fallback to first letter if favicon fails to load
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <span className="hidden text-[10px] font-bold text-slate-400">
+                        {comp.name[0].toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-medium text-slate-700 truncate">{comp.name}</p>
+                      <p className="text-[9px] text-slate-400 truncate">{comp.domain}</p>
+                    </div>
+                    <Plus size={12} className="text-slate-300 group-hover:text-[#D4E815] transition-colors shrink-0" />
+                  </button>
+                ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Selected Competitors Display (Updated January 3rd, 2026 - Added favicon) */}
+        {competitors.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-slate-600 text-xs font-medium">Your competitors:</p>
+            
+            <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
+              {/* Render Selected Competitors */}
+              {competitors.map(comp => {
+                // Find the suggestion to get the name, or use domain as fallback
+                const suggestion = suggestedCompetitors.find(s => s.domain === comp);
+                const displayName = suggestion?.name || comp;
+                
+                return (
+                  <button
+                    key={comp}
+                    type="button"
+                    onClick={() => toggleCompetitor(comp)}
+                    className="group relative flex items-center gap-2 p-2 rounded-lg bg-[#D4E815]/10 border-2 border-[#D4E815] text-left transition-all"
+                  >
+                    {/* Favicon for selected competitors (January 3rd, 2026) */}
+                    <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0 overflow-hidden border border-[#D4E815]/30">
+                      <img 
+                        src={`https://www.google.com/s2/favicons?domain=${comp}&sz=32`}
+                        alt={displayName}
+                        className="w-4 h-4 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <span className="hidden text-[10px] font-bold text-slate-400">
+                        {displayName[0].toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-medium text-slate-900 truncate">{displayName}</p>
+                      <p className="text-[9px] text-slate-500 truncate">{comp}</p>
+                    </div>
+                    <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X size={10} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        
+        {/* Empty state hint - only show if no suggestions and no competitors */}
+        {competitors.length === 0 && suggestedCompetitors.length === 0 && (
+          <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-center">
+            <p className="text-xs text-slate-500">
+              Enter competitor domains above (e.g., competitor.com)
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -894,40 +1310,79 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </p>
         </div>
 
-        {/* Selected & Suggested List */}
-        <div className="space-y-2">
-          <p className="text-slate-600 text-xs font-medium">Quick add suggestions:</p>
+        {/* =================================================================
+          AI SUGGESTIONS DISPLAY (January 3rd, 2026)
           
-          <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto scrollbar-hide">
-            {/* Render Selected First */}
-            {topics.map(topic => (
-               <button
+          Shows AI-generated topic suggestions if available.
+          User can click to add/remove suggestions.
+          Suggestions come from /api/suggestions/generate endpoint.
+          ================================================================= */}
+        
+        {/* AI Suggested Topics (Updated January 3rd, 2026 - Changed label) */}
+        {suggestedTopics.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-slate-600 text-xs font-medium flex items-center gap-1">
+              <Sparkles size={10} className="text-[#D4E815]" />
+              Here&apos;s some we found for you:
+            </p>
+            
+            <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
+              {suggestedTopics
+                .filter(t => !topics.includes(t.keyword)) // Hide already selected
+                .slice(0, 10) // Max 10 suggestions
+                .map(t => (
+                  <button
+                    key={t.keyword}
+                    type="button"
+                    onClick={() => toggleTopic(t.keyword)}
+                    disabled={topics.length >= 10}
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] transition-all",
+                      topics.length >= 10
+                        ? "border-slate-100 text-slate-300 cursor-not-allowed"
+                        : "border-slate-200 text-slate-600 hover:border-[#D4E815] hover:bg-[#D4E815]/5 hover:text-slate-900"
+                    )}
+                  >
+                    {t.keyword}
+                    <Plus size={10} className="text-slate-300" />
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Selected Topics Display */}
+        {topics.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-slate-600 text-xs font-medium">Your topics:</p>
+            
+            <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
+              {/* Render Selected Topics */}
+              {topics.map(topic => (
+                <button
                   key={topic}
                   type="button"
                   onClick={() => toggleTopic(topic)}
                   className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#D4E815]/10 border-2 border-[#D4E815] text-[11px] font-medium text-[#1A1D21] transition-all text-left"
                 >
                   {topic}
-                   <div className="w-3.5 h-3.5 rounded-full bg-[#D4E815]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
-                     <X size={8} />
-                   </div>
+                  <div className="w-3.5 h-3.5 rounded-full bg-[#D4E815]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
+                    <X size={8} />
+                  </div>
                 </button>
-            ))}
-
-            {/* Render Suggestions */}
-            {SUGGESTED_TOPICS.filter(t => !topics.includes(t)).map((topic) => (
-               <button
-                  key={topic}
-                  type="button"
-                  disabled={topics.length >= 10}
-                  onClick={() => toggleTopic(topic)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border-2 border-slate-200 text-[11px] font-medium text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {topic}
-                </button>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+        
+        {/* Empty state hint - only show if no suggestions and no topics */}
+        {topics.length === 0 && suggestedTopics.length === 0 && (
+          <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-center">
+            <p className="text-xs text-slate-500">
+              Enter topics you cover above (e.g., "best CRMs", "skincare routines")
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1154,7 +1609,19 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     ? selectedPlanInfo?.monthlyPrice || 0 
     : selectedPlanInfo?.annualPrice || 0;
 
-  // Memoized callbacks to prevent unnecessary re-renders
+  // ==========================================================================
+  // DISCOUNT CODE VALIDATION (January 3rd, 2026)
+  // 
+  // TODO: Implement real discount code validation via Stripe Promotion Codes API
+  // 
+  // Implementation steps:
+  // 1. Create API endpoint: POST /api/stripe/validate-promo-code
+  // 2. Use Stripe's promotion_codes.list() or coupons.retrieve() to validate
+  // 3. Return discount percentage/amount and apply to subscription creation
+  // 4. Pass coupon ID to create-subscription endpoint
+  //
+  // For now, discount codes are disabled (always returns "Invalid discount code")
+  // ==========================================================================
   const handleApplyDiscount = useCallback(async () => {
     if (!discountCode.trim()) return;
     
@@ -1162,20 +1629,16 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     setDiscountError('');
     
     try {
-      // Simulated API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // TODO: Replace with real API call to validate promo code
+      // Example: const res = await fetch('/api/stripe/validate-promo-code', {
+      //   method: 'POST',
+      //   body: JSON.stringify({ code: discountCode })
+      // });
       
-      // Mock validation - REMOVE THIS and implement real API call
-      const mockValidCodes = ['SAVE20', 'WELCOME10', 'PROMO50'];
-      if (mockValidCodes.includes(discountCode)) {
-        setDiscountApplied(true);
-        setDiscountAmount(20); // Mock 20% discount
-        setDiscountError('');
-      } else {
-        setDiscountError('Invalid discount code');
-        setDiscountApplied(false);
-        setDiscountAmount(0);
-      }
+      // For now, all codes are invalid until real validation is implemented
+      setDiscountError('Discount codes coming soon');
+      setDiscountApplied(false);
+      setDiscountAmount(0);
     } catch {
       setDiscountError('Failed to validate code');
     } finally {
@@ -1226,56 +1689,100 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         
         <form onSubmit={(e) => { e.preventDefault(); handleContinue(); }} className="flex-1 flex flex-col">
            {/* Content area - only scroll on steps that need it (3, 4, 5 have lots of content, 6 needs full width) */}
+           {/* 
+             January 3rd, 2026: Added isAnalyzing state to show AnalyzingScreen
+             between Step 1 and Step 2 while fetching AI suggestions.
+           */}
            <div className={cn(
              "flex-1 pr-1",
              (step >= 3 && step <= 5) ? "overflow-y-auto scrollbar-hide" : "overflow-visible"
            )}>
-             {step === 1 && renderStep1()}
-             {step === 2 && renderStep2()}
-             {step === 3 && renderStep3()}
-             {step === 4 && renderStep4()}
-             {step === 5 && renderStep5()}
-             {step === 6 && renderStep6()}
-             {step === 7 && renderStep7()}
+             {/* Show AnalyzingScreen when fetching AI suggestions */}
+             {isAnalyzing && renderAnalyzingScreen()}
+             
+             {/* Regular step content (hidden during analysis) */}
+             {!isAnalyzing && step === 1 && renderStep1()}
+             {!isAnalyzing && step === 2 && renderStep2()}
+             {!isAnalyzing && step === 3 && renderStep3()}
+             {!isAnalyzing && step === 4 && renderStep4()}
+             {!isAnalyzing && step === 5 && renderStep5()}
+             {!isAnalyzing && step === 6 && renderStep6()}
+             {!isAnalyzing && step === 7 && renderStep7()}
            </div>
 
-           {/* Submit Button - Hidden on Step 7 (Stripe handles its own button) */}
-          {step !== 7 && (
+           {/* Submit Button - Hidden on Step 7 (Stripe) and during AI analysis */}
+          {/* January 3rd, 2026: Also hide button during isAnalyzing state */}
+          {step !== 7 && !isAnalyzing && (
             <div className="pt-5 mt-auto shrink-0">
               {(() => {
+                // =============================================================
+                // BUTTON DISABLED STATE (Updated January 3rd, 2026)
+                // 
+                // Step 1 now includes domain format validation check.
+                // Button is disabled if:
+                // - Required fields are empty
+                // - Brand domain format is invalid (instant feedback)
+                // - Domain validation is in progress (server check)
+                // =============================================================
                 const isDisabled = 
-                  (step === 1 && (!name || !role || !brand)) ||
+                  (step === 1 && (!name || !role || !brand || brandFormatValid === false || isBrandValidating)) ||
                   (step === 2 && (!targetCountry || !targetLanguage)) || 
                   (step === 6 && !selectedPlan) ||
                   isLoading;
 
                 return (
-                  <button
-                    type="submit"
-                    disabled={isDisabled}
-                    className={cn(
-                      "w-full py-3 rounded-full font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2",
-                      isDisabled
-                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                        : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]"
+                  <div className="flex gap-2">
+                    {/* =============================================================
+                        BACK BUTTON (January 3rd, 2026)
+                        
+                        Shows on Steps 3, 4, 5 only.
+                        Allows user to go back to previous step (minimum Step 2).
+                        Not available on Steps 1, 2, 6, 7 because:
+                        - Step 1: First step, nothing to go back to
+                        - Step 2: Minimum step (going back would require re-analysis)
+                        - Step 6+: Pricing/payment, commitment point
+                        ============================================================= */}
+                    {showBackButton && (
+                      <button
+                        type="button"
+                        onClick={handleGoBack}
+                        className="w-12 py-3 rounded-full font-semibold text-sm transition-all duration-200 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center text-slate-600"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
                     )}
-                  >
-                    {isLoading ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : step === 6 ? (
-                      selectedPlan === 'enterprise' ? (
-                        "Contact Sales"
+                    
+                    {/* Continue/Next Button */}
+                    <button
+                      type="submit"
+                      disabled={isDisabled}
+                      className={cn(
+                        "flex-1 py-3 rounded-full font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2",
+                        isDisabled
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]"
+                      )}
+                    >
+                      {isLoading || isBrandValidating ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          {isBrandValidating && <span>Validating domain...</span>}
+                        </>
+                      ) : step === 6 ? (
+                        selectedPlan === 'enterprise' ? (
+                          "Contact Sales"
+                        ) : (
+                          "Continue to Payment"
+                        )
+                      ) : step === 5 ? (
+                        "Choose Plan"
+                      ) : step === 1 ? (
+                        "Continue"
                       ) : (
-                        "Continue to Payment"
-                      )
-                    ) : step === 5 ? (
-                      "Choose Plan"
-                    ) : step === 1 ? (
-                      "Continue"
-                    ) : (
-                      "Next"
-                    )}
-                  </button>
+                        "Next"
+                      )}
+                    </button>
+                  </div>
                 );
               })()}
             </div>

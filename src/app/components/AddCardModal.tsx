@@ -173,6 +173,21 @@ const CardForm: React.FC<{
               </div>
             )}
           </div>
+          {/* 
+            ==========================================================================
+            DISCOUNT CODE VALIDATION (January 3rd, 2026)
+            
+            TODO: Implement real discount code validation via Stripe Promotion Codes API
+            
+            Implementation steps:
+            1. Create API endpoint: POST /api/stripe/validate-promo-code
+            2. Use Stripe's promotion_codes.list() or coupons.retrieve() to validate
+            3. Return discount percentage/amount and apply to payment
+            4. Pass coupon ID to update-payment-method or subscription update
+            
+            For now, discount codes are disabled (always returns "Discount codes coming soon")
+            ==========================================================================
+          */}
           <button
             type="button"
             onClick={async () => {
@@ -182,20 +197,16 @@ const CardForm: React.FC<{
               setDiscountError('');
               
               try {
-                // Simulated API call - replace with actual implementation
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // TODO: Replace with real API call to validate promo code
+                // Example: const res = await fetch('/api/stripe/validate-promo-code', {
+                //   method: 'POST',
+                //   body: JSON.stringify({ code: discountCode })
+                // });
                 
-                // Mock validation - REMOVE THIS and implement real API call
-                const mockValidCodes = ['SAVE20', 'WELCOME10', 'PROMO50'];
-                if (mockValidCodes.includes(discountCode)) {
-                  setDiscountApplied(true);
-                  setDiscountAmount(20); // Mock 20% discount
-                  setDiscountError('');
-                } else {
-                  setDiscountError('Invalid discount code');
-                  setDiscountApplied(false);
-                  setDiscountAmount(0);
-                }
+                // For now, all codes are invalid until real validation is implemented
+                setDiscountError('Discount codes coming soon');
+                setDiscountApplied(false);
+                setDiscountAmount(0);
               } catch {
                 setDiscountError('Failed to validate code');
               } finally {
