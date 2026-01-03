@@ -101,6 +101,10 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   :root {
     /* Design Spec Color Palette */
     --background: 0 0% 100%; /* Pure white #FFFFFF */

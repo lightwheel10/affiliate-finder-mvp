@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { 
   ArrowRight, 
   Search, 
@@ -36,6 +36,10 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignupClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Parallax scroll tracking
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 1000], [0, -150]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -233,7 +237,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
           {/* Hero Visual */}
           <div className="relative lg:h-[480px] flex items-center justify-center scale-90 origin-center">
-             <div className="absolute inset-0 bg-gradient-to-tr from-[#D4E815]/20 to-[#D4E815]/10 rounded-full blur-3xl animate-blob mix-blend-multiply"></div>
+             <motion.div 
+               style={{ y: y1 }}
+               className="absolute inset-0 bg-gradient-to-tr from-[#D4E815]/20 to-[#D4E815]/10 rounded-full blur-3xl animate-blob mix-blend-multiply"
+             />
              <InteractiveSearchDemo />
           </div>
 
@@ -435,7 +442,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                 Find the Perfect Plan for Your Growth
               </h2>
               <p className="text-slate-500 text-lg max-w-xl mx-auto">
-                All plans include weekly affiliate discovery to keep your pipeline full. 7-day free trial, no credit card required.
+                All plans include weekly affiliate discovery to keep your pipeline full. Start with a 7-day free trial.
               </p>
             </motion.div>
           </div>
@@ -595,7 +602,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-center text-sm text-slate-500 mt-8"
           >
-            💳 No credit card required • Cancel anytime • 30-day money-back guarantee
+            ✨ 7-day free trial • Cancel anytime • 30-day money-back guarantee
           </motion.p>
         </div>
       </section>
@@ -625,7 +632,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   Get a Demo
                 </button>
               </div>
-              <p className="text-xs text-slate-400 pt-2">No credit card required • Cancel anytime</p>
+              <p className="text-xs text-slate-400 pt-2">7-day free trial • Cancel anytime</p>
             </div>
          </div>
       </section>
