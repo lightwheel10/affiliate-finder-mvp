@@ -61,8 +61,15 @@ import { FilterPanel } from '../../components/FilterPanel';
 const MAX_KEYWORDS = 5;
 
 export default function FindNewPage() {
-  // Get user ID for API tracking
-  const { userId } = useNeonUser();
+  // ==========================================================================
+  // USER DATA - January 4th, 2026
+  // 
+  // Get user object from useNeonUser to access onboarding data:
+  // - user.brand: The user's website URL entered during onboarding
+  // - user.competitors: Array of competitor URLs entered during onboarding
+  // These are displayed in the "Find Affiliates" modal instead of placeholders.
+  // ==========================================================================
+  const { userId, user } = useNeonUser();
   
   // Hooks for data management
   const { 
@@ -1283,17 +1290,29 @@ export default function FindNewPage() {
               </div>
             </div>
 
-            {/* Right Column - Coming Soon Features */}
+            {/* ================================================================
+                RIGHT COLUMN - User's Website & Competitors
+                January 4th, 2026
+                
+                Previously showed "COMING SOON" placeholders. Now displays
+                actual data from user's onboarding:
+                - user.brand: Their website URL
+                - user.competitors: Array of competitor URLs
+                
+                This helps users understand what data they provided and
+                gives context for the affiliate search.
+                ================================================================ */}
             <div className="flex flex-col">
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7">
                 <Globe size={14} className="text-slate-400" />
                 Your Website
-                <span className="ml-auto px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded">
-                  COMING SOON
-                </span>
               </label>
-              <div className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-400 cursor-not-allowed mt-2">
-                https://yourwebsite.com
+              <div className={`px-3 py-2.5 border rounded-lg text-sm mt-2 ${
+                user?.brand 
+                  ? 'bg-white border-slate-200 text-slate-700' 
+                  : 'bg-slate-50 border-slate-200 text-slate-400 italic'
+              }`}>
+                {user?.brand || 'Not set during onboarding'}
               </div>
 
               <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7 mt-4">
@@ -1301,16 +1320,33 @@ export default function FindNewPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
                 Competitors
-                <span className="ml-auto px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded">
-                  COMING SOON
-                </span>
+                {user?.competitors && user.competitors.length > 0 && (
+                  <span className="ml-auto text-[10px] text-slate-500 font-normal">
+                    {user.competitors.length} added
+                  </span>
+                )}
               </label>
-              <div className="flex-1 min-h-[88px] flex items-center justify-center p-3 bg-slate-50 border border-dashed border-slate-200 rounded-lg mt-2">
-                <div className="text-center text-slate-400">
-                  <p className="text-xs font-medium">Find affiliates promoting competitors</p>
-                  <p className="text-[10px] mt-0.5">Add competitor URLs to discover their affiliates</p>
+              {user?.competitors && user.competitors.length > 0 ? (
+                <div className="flex-1 min-h-[88px] p-2 bg-white border border-slate-200 rounded-lg mt-2 overflow-y-auto max-h-[120px]">
+                  <div className="flex flex-wrap gap-1.5">
+                    {user.competitors.map((competitor, idx) => (
+                      <span 
+                        key={idx}
+                        className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-full"
+                      >
+                        {competitor}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex-1 min-h-[88px] flex items-center justify-center p-3 bg-slate-50 border border-dashed border-slate-200 rounded-lg mt-2">
+                  <div className="text-center text-slate-400">
+                    <p className="text-xs font-medium">No competitors added</p>
+                    <p className="text-[10px] mt-0.5">Add competitors in settings to see them here</p>
+                  </div>
+                </div>
+              )}
 
               <div className="h-5 mt-1.5"></div>
             </div>
