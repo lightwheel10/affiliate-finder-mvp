@@ -128,6 +128,21 @@ export default function FindNewPage() {
   } | null>(null);
 
   // ============================================================================
+  // CREDIT ERROR STATE - January 4th, 2026
+  // 
+  // Tracks when a search fails due to insufficient topic_search credits.
+  // When the API returns 402 (Payment Required), we display an error banner
+  // instead of silently showing "No results found".
+  // 
+  // This provides clear feedback to users about WHY the search failed,
+  // rather than making them think there were simply no matching affiliates.
+  // ============================================================================
+  const [creditError, setCreditError] = useState<{
+    message: string;
+    remaining: number;
+  } | null>(null);
+
+  // ============================================================================
   // ADVANCED FILTER STATE (Added Dec 2025)
   // ============================================================================
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
@@ -174,6 +189,11 @@ export default function FindNewPage() {
     setIsFindModalOpen(false);
     setCurrentPage(1);
     setAnimationKey(prev => prev + 1);
+    // ==========================================================================
+    // CREDIT ERROR RESET - January 4th, 2026
+    // Clear any previous credit error when starting a new search
+    // ==========================================================================
+    setCreditError(null);
     
     if (hadPreviousResults) {
       setShowWarning(true);
@@ -191,6 +211,27 @@ export default function FindNewPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ keyword: kw, sources: ['Web', 'YouTube', 'Instagram', 'TikTok'], userId }),
         });
+
+        // ======================================================================
+        // CREDIT ERROR HANDLING - January 4th, 2026
+        // 
+        // When user has 0 topic_search credits, API returns 402 (Payment Required)
+        // with creditError: true. Previously this was silently ignored and user
+        // just saw "No results found" which was confusing.
+        // 
+        // Now we detect the 402 and show a clear error message explaining they
+        // need to upgrade their plan or wait for credits to refresh.
+        // ======================================================================
+        if (res.status === 402) {
+          const errorData = await res.json();
+          if (errorData.creditError) {
+            setCreditError({
+              message: errorData.error || 'Insufficient topic search credits',
+              remaining: errorData.remaining ?? 0,
+            });
+            return; // Stop processing this keyword
+          }
+        }
 
         const contentType = res.headers.get('content-type');
         
@@ -1023,6 +1064,31 @@ export default function FindNewPage() {
                   </div>
                 ))
               )}
+            </div>
+          ) : hasSearched && !loading && creditError ? (
+            // =================================================================
+            // CREDIT ERROR BANNER - January 4th, 2026
+            // 
+            // Shows when user has 0 topic_search credits and search fails.
+            // Provides clear feedback instead of confusing "No results" message.
+            // =================================================================
+            <div className="py-12 text-center">
+              <div className="max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl p-6">
+                <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-amber-800 mb-2">
+                  Out of Topic Search Credits
+                </h3>
+                <p className="text-amber-700 text-sm mb-4">
+                  {creditError.message}
+                </p>
+                <p className="text-amber-600 text-xs">
+                  Upgrade your plan to get more searches, or wait for your credits to refresh.
+                </p>
+              </div>
             </div>
           ) : hasSearched && !loading && groupedResults.length === 0 ? (
             <div className="py-20 text-center text-slate-400 text-sm">

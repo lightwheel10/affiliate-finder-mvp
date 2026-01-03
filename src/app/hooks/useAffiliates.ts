@@ -564,6 +564,22 @@ export function useSavedAffiliates() {
 
       const data = await res.json();
 
+      // ==========================================================================
+      // CREDIT ERROR HANDLING - January 4th, 2026
+      // 
+      // When user has 0 email credits, API returns 402 (Payment Required).
+      // We return the error data so the calling component can display a message.
+      // The creditError flag allows the UI to distinguish between a regular
+      // "not found" result and an actual credit shortage.
+      // ==========================================================================
+      if (res.status === 402 && data.creditError) {
+        return {
+          ...data,
+          status: 'credit_error' as const,
+          creditError: true,
+        };
+      }
+
       // Update cache with result (January 3rd, 2026: uses SWR mutate for global update)
       mutate(
         (currentData: any) => ({
@@ -685,6 +701,10 @@ export function useSavedAffiliates() {
   // Progress callback allows UI to show real-time progress.
   // January 3rd, 2026: Now uses SWR mutate() to update all components.
   // ============================================================================
+  // ==========================================================================
+  // RETURN TYPE - January 4th, 2026
+  // Added creditError and creditErrorMessage to handle insufficient credits
+  // ==========================================================================
   const findEmailsBulk = useCallback(async (
     affiliates: ResultItem[],
     onProgress?: (progress: {
@@ -698,6 +718,8 @@ export function useSavedAffiliates() {
     notFoundCount: number;
     errorCount: number;
     skippedCount: number;
+    creditError?: boolean;
+    creditErrorMessage?: string;
   }> => {
     if (!userId || affiliates.length === 0) {
       return { foundCount: 0, notFoundCount: 0, errorCount: 0, skippedCount: 0 };
@@ -784,6 +806,29 @@ export function useSavedAffiliates() {
         });
 
         const data = await res.json();
+
+        // ======================================================================
+        // CREDIT ERROR HANDLING - January 4th, 2026
+        // 
+        // When user runs out of email credits during bulk operation, API returns
+        // 402. We stop processing remaining affiliates and return early with
+        // the credit error flag so the UI can display an appropriate message.
+        // ======================================================================
+        if (res.status === 402 && data.creditError) {
+          // Revalidate to ensure data consistency before returning
+          mutate();
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('credits-updated'));
+          }
+          return { 
+            foundCount, 
+            notFoundCount, 
+            errorCount, 
+            skippedCount: affiliatesToSearch.length - i,
+            creditError: true,
+            creditErrorMessage: data.error || 'Insufficient email credits',
+          };
+        }
         
         // Determine result status
         const resultStatus = data.status as 'found' | 'not_found' | 'error';
