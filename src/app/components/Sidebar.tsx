@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Search, 
@@ -102,6 +102,37 @@ export const Sidebar: React.FC = () => {
   const { count: pipelineCount } = useSavedAffiliates();
   const { count: discoveredCount } = useDiscoveredAffiliates();
 
+  // ==========================================================================
+  // CLIENT-SIDE BADGE COUNTS - January 3rd, 2026
+  // 
+  // ISSUE: Badge counts work locally but don't show on Vercel production.
+  // 
+  // ROOT CAUSE (SSR Hydration Mismatch):
+  // - During SSR on Vercel, userId is null (no auth cookies on server)
+  // - Hooks return count: 0, so badges don't render in server HTML
+  // - On client hydration, hooks should refetch and update counts
+  // - But React may not re-render the badges due to hydration optimization
+  // 
+  // SOLUTION (Next.js Recommended Pattern):
+  // Use useState(null) + useEffect to ensure badges only render on client.
+  // - Server renders with displayCount = null (no badge in HTML)
+  // - Client useEffect runs AFTER hydration, sets actual count
+  // - Badge renders correctly on client without hydration mismatch
+  // 
+  // Reference: Next.js docs on preventing hydration mismatches
+  // ==========================================================================
+  const [displayPipelineCount, setDisplayPipelineCount] = useState<number | null>(null);
+  const [displayDiscoveredCount, setDisplayDiscoveredCount] = useState<number | null>(null);
+
+  // Update display counts on client after hydration
+  useEffect(() => {
+    setDisplayPipelineCount(pipelineCount);
+  }, [pipelineCount]);
+
+  useEffect(() => {
+    setDisplayDiscoveredCount(discoveredCount);
+  }, [discoveredCount]);
+
   const handleLogout = async () => {
     await user?.signOut();
     setIsLogoutModalOpen(false);
@@ -164,7 +195,8 @@ export const Sidebar: React.FC = () => {
                 href="/discovered"
                 icon={<LayoutDashboard size={14} />} 
                 label="All Discovered" 
-                badge={discoveredCount > 0 ? discoveredCount.toString() : undefined}
+                // January 3rd, 2026: Use displayDiscoveredCount for SSR hydration fix
+                badge={displayDiscoveredCount && displayDiscoveredCount > 0 ? displayDiscoveredCount.toString() : undefined}
                 active={pathname === '/discovered'}
               />
             </div>
@@ -177,7 +209,8 @@ export const Sidebar: React.FC = () => {
                 href="/saved"
                 icon={<Briefcase size={14} />} 
                 label="Saved Affiliates" 
-                badge={pipelineCount > 0 ? pipelineCount.toString() : undefined}
+                // January 3rd, 2026: Use displayPipelineCount for SSR hydration fix
+                badge={displayPipelineCount && displayPipelineCount > 0 ? displayPipelineCount.toString() : undefined}
                 active={pathname === '/saved'}
               />
               <NavItem 
