@@ -261,11 +261,25 @@ export default function FindNewPage() {
         setHasSearched(true);
         keywordsInitRef.current = 'restored';
         return;
+      } else {
+        // ======================================================================
+        // DEFENSIVE FIX - January 4th, 2026
+        // 
+        // Edge case: discoveredAffiliates has items but searchKeyword is null.
+        // This shouldn't happen in normal operation (searchKeyword is always
+        // set when saving), but if it does, we should NOT block future 
+        // initialization by setting ref to 'none'.
+        // 
+        // Stay in 'pending' state so effect can retry when data updates.
+        // ======================================================================
+        console.warn('[FindNewPage] discoveredAffiliates exists but searchKeyword is null');
+        return;
       }
     }
 
     // No topics and no previous search - mark as initialized with nothing
-    if (discoveredDataReady) {
+    // Only reach here when discoveredAffiliates is truly empty (user never searched)
+    if (discoveredDataReady && discoveredAffiliates.length === 0) {
       keywordsInitRef.current = 'none';
     }
   // Including all relevant dependencies for proper re-runs
@@ -1549,5 +1563,4 @@ export default function FindNewPage() {
     </>
   );
 }
-
 
