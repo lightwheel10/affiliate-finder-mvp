@@ -4,9 +4,12 @@ import { useUser } from '@stackframe/stack';
 import { useRouter } from 'next/navigation';
 import { useNeonUser } from '../hooks/useNeonUser';
 import { OnboardingScreen } from './OnboardingScreen';
-import { LoadingOnboardingScreen } from './LoadingOnboardingScreen';
+// LoadingOnboardingScreen removed - January 3rd, 2026
+// Previously showed "Setting up your workspace!" for 2 seconds after onboarding.
+// This was confusing (double loading screen). Now we skip it and go directly
+// to the dashboard after refetching user data.
 import { AuthLoadingScreen } from './AuthLoadingScreen';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -123,7 +126,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
   // ==========================================================================
   const { userId, isOnboarded, isLoading: neonLoading, userName, refetch } = useNeonUser();
   const router = useRouter();
-  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  // showLoadingScreen state removed - January 3rd, 2026
+  // We no longer show LoadingOnboardingScreen after onboarding completion.
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
@@ -148,11 +152,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <AuthLoadingScreen />;
   }
 
-  // Show loading screen after onboarding completion
-  if (showLoadingScreen) {
-    return <LoadingOnboardingScreen />;
-  }
-
   // Show onboarding for users who haven't completed it
   if (!isOnboarded && userId) {
     // Get user email from Stack Auth for Stripe integration
@@ -163,32 +162,26 @@ export function AuthGuard({ children }: AuthGuardProps) {
         userId={userId}
         userName={userName}
         userEmail={userEmail}
-        onComplete={() => {
+        onComplete={async () => {
           // ==========================================================================
           // ONBOARDING COMPLETION CALLBACK - January 3rd, 2026
           // 
-          // CRITICAL BUG FIX: After onboarding completes, the backend sets
-          // `is_onboarded = true` in the database. However, useNeonUser() caches
-          // user data at the module level to prevent duplicate API calls.
+          // After card verification completes, we refetch user data immediately
+          // to update the cache with is_onboarded: true, then show the dashboard.
           // 
-          // THE OLD BUG:
-          // - onComplete() showed a loading screen for 2 seconds
-          // - After 2 seconds, it just hid the loading screen
-          // - useNeonUser() returned CACHED data (is_onboarded: false)
-          // - AuthGuard saw isOnboarded=false → showed OnboardingScreen again
-          // - User was stuck in an infinite loop!
+          // BUG FIXES:
           // 
-          // THE FIX:
-          // - Call `refetch()` to fetch fresh user data from the API
-          // - This updates the cache with `is_onboarded: true`
-          // - AuthGuard then correctly shows the dashboard (children)
+          // 1. INFINITE LOOP FIX: Previously, after onboarding completed, the
+          //    backend set is_onboarded=true but useNeonUser() returned cached
+          //    data with is_onboarded=false. AuthGuard would show OnboardingScreen
+          //    again, creating an infinite loop. Fixed by calling refetch().
+          // 
+          // 2. DOUBLE LOADING SCREEN FIX: Previously we showed LoadingOnboardingScreen
+          //    ("Setting up your workspace!") for 2 seconds. This was the OLD loading
+          //    screen that users didn't want. Now we skip it entirely and just
+          //    refetch → show dashboard directly.
           // ==========================================================================
-          setShowLoadingScreen(true);
-          // Show loading screen for 2 seconds, then refetch and show dashboard
-          setTimeout(async () => {
-            await refetch();
-            setShowLoadingScreen(false);
-          }, 2000);
+          await refetch();
         }}
       />
     );

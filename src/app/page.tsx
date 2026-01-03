@@ -44,7 +44,9 @@ import { useUser } from '@stackframe/stack';
 import { useRouter } from 'next/navigation';
 import { LandingPage } from './components/landing/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
-import { LoadingOnboardingScreen } from './components/LoadingOnboardingScreen';
+// LoadingOnboardingScreen removed - January 3rd, 2026
+// Previously showed "Setting up your workspace!" for 2 seconds after onboarding.
+// This caused a double loading screen issue. Now we go directly to dashboard.
 import { AuthLoadingScreen } from './components/AuthLoadingScreen';
 import { useNeonUser } from './hooks/useNeonUser';
 
@@ -60,7 +62,8 @@ export default function Home() {
     refetch 
   } = useNeonUser();
   const router = useRouter();
-  const [showLoadingScreen, setShowLoadingScreen] = useState(false);
+  // showLoadingScreen state removed - January 3rd, 2026
+  // We no longer show LoadingOnboardingScreen after onboarding completion.
   const [hasRedirected, setHasRedirected] = useState(false);
 
   // ============================================================================
@@ -108,15 +111,12 @@ export default function Home() {
   }
 
   // ============================================
-  // CASE 4: Show loading screen after onboarding
-  // ============================================
-  if (showLoadingScreen) {
-    return <LoadingOnboardingScreen />;
-  }
-
-  // ============================================
-  // CASE 5: Not onboarded → Show Onboarding
+  // CASE 4: Not onboarded → Show Onboarding
   // Resume from saved step with pre-filled data
+  // 
+  // January 3rd, 2026: Removed the old LoadingOnboardingScreen ("Setting up
+  // your workspace!") that used to show for 2 seconds after onboarding.
+  // Now we go directly to the dashboard after refetch.
   // ============================================
   if (!isOnboarded && userId) {
     const userEmail = stackUser?.primaryEmail || '';
@@ -137,22 +137,33 @@ export default function Home() {
           topics: user.topics || undefined,
           affiliateTypes: user.affiliate_types || undefined,
         } : undefined}
-        onComplete={() => {
-          setShowLoadingScreen(true);
-          // Show loading screen for 2 seconds, then redirect to dashboard
-          setTimeout(async () => {
-            await refetch();
-            setShowLoadingScreen(false);
-            // After onboarding completes, redirect to /find
-            router.replace('/find');
-          }, 2000);
+        onComplete={async () => {
+          // ==========================================================================
+          // ONBOARDING COMPLETION CALLBACK - January 3rd, 2026
+          // 
+          // After card verification completes successfully, we:
+          // 1. Refetch user data to update cache with is_onboarded: true
+          // 2. Navigate directly to /find (dashboard)
+          // 
+          // BUG FIX: Previously we showed LoadingOnboardingScreen ("Setting up 
+          // your workspace!") for 2 seconds before navigating. This was the
+          // OLD loading screen that caused a confusing double-loading UX:
+          //   LoadingOnboardingScreen → AuthLoadingScreen → Dashboard
+          // 
+          // THE FIX: Skip LoadingOnboardingScreen entirely. Just refetch and
+          // navigate. The AuthLoadingScreen will show briefly during navigation
+          // (via loading.tsx), giving users a single, clean loading experience:
+          //   AuthLoadingScreen → Dashboard
+          // ==========================================================================
+          await refetch();
+          router.replace('/find');
         }}
       />
     );
   }
 
   // ============================================
-  // CASE 6: Guard against race condition
+  // CASE 5: Guard against race condition
   // 
   // If userId is null (API error, race condition, or state update delay),
   // show loading instead of falling through.
@@ -162,7 +173,7 @@ export default function Home() {
   }
 
   // ============================================
-  // CASE 7: Authenticated + Onboarded → Redirect to /find
+  // CASE 6: Authenticated + Onboarded → Redirect to /find
   // 
   // January 3rd, 2026: Instead of showing Dashboard here, we redirect
   // to /find which is part of the (dashboard) route group and shares
