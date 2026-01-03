@@ -380,16 +380,29 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     setAnalyzingStep(1); // Start at step 1: Analyzing website
     setSuggestionError(null);
     
+    // ==========================================================================
+    // TIMER CLEANUP FIX (January 3rd, 2026)
+    // 
+    // BUG FIXED: Previously, timers were only cleared on the success path.
+    // If fetch() or response.json() threw an exception, timers would continue
+    // to fire, causing state updates after errors or component unmount.
+    // 
+    // FIX: Declare timer IDs outside try block, clear in finally block.
+    // This ensures timers are ALWAYS cleaned up regardless of success/failure.
+    // ==========================================================================
+    let step2Timer: ReturnType<typeof setTimeout> | null = null;
+    let step3Timer: ReturnType<typeof setTimeout> | null = null;
+    
     try {
       // Simulate step progression for better UX
       // Step 1: Analyzing website (Firecrawl scraping)
       // The actual API call handles all steps, but we show progress
       
       // Move to step 2 after a short delay (simulates scraping completion)
-      const step2Timer = setTimeout(() => setAnalyzingStep(2), 2500);
+      step2Timer = setTimeout(() => setAnalyzingStep(2), 2500);
       
       // Move to step 3 after more time (simulates AI processing)
-      const step3Timer = setTimeout(() => setAnalyzingStep(3), 5500);
+      step3Timer = setTimeout(() => setAnalyzingStep(3), 5500);
       
       // Make the actual API call
       const response = await fetch('/api/suggestions/generate', {
@@ -397,10 +410,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brandUrl }),
       });
-      
-      // Clear timers if API responds faster
-      clearTimeout(step2Timer);
-      clearTimeout(step3Timer);
       
       const data = await response.json();
       
@@ -426,6 +435,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       console.error('[AI Suggestions] Error:', error);
       setSuggestionError('Something went wrong. Please enter your details manually.');
       return false;
+    } finally {
+      // Always clear timers to prevent state updates after error/unmount
+      if (step2Timer) clearTimeout(step2Timer);
+      if (step3Timer) clearTimeout(step3Timer);
     }
   };
 
