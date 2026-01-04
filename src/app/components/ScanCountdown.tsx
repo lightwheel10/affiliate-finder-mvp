@@ -12,7 +12,7 @@ export function ScanCountdown() {
   
   // Get user and subscription data for PricingModal
   const { userId } = useNeonUser();
-  const { subscription, refetch } = useSubscription();
+  const { subscription, refetch } = useSubscription(userId);
 
   return (
     <>
@@ -81,7 +81,7 @@ export function ScanCountdown() {
       onClose={() => setIsPricingOpen(false)}
       userId={userId}
       currentPlan={subscription?.plan || null}
-      currentBillingInterval={subscription?.billingInterval || null}
+      currentBillingInterval={subscription?.billing_interval || null}
       isTrialing={subscription?.isTrialing || false}
       onSuccess={refetch}
     />
