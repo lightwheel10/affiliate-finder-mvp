@@ -51,6 +51,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
+import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications via Sonner
 import { ScanCountdown } from '../../components/ScanCountdown';
 import { CreditsDisplay } from '../../components/CreditsDisplay';
 import { useSavedAffiliates } from '../../hooks/useAffiliates';
@@ -109,17 +110,12 @@ interface ContactPickerState {
 }
 
 // =============================================================================
-// ERROR NOTIFICATION TYPES
-// =============================================================================
-
-interface ErrorNotification {
-  id: string;
-  message: string;
-  type: 'error' | 'warning' | 'info';
-}
-
-// =============================================================================
 // OUTREACH PAGE - January 3rd, 2026
+// 
+// NOTIFICATION SYSTEM UPDATE (January 5th, 2026):
+// Removed custom ErrorNotification interface and local notification state.
+// Now uses global Sonner toast system - just call toast.error(), toast.success(), etc.
+// See src/app/layout.tsx for Toaster configuration.
 // 
 // Layout now handles: AuthGuard, ErrorBoundary, and Sidebar.
 // This component only renders the header and main content area.
@@ -177,11 +173,10 @@ export default function OutreachPage() {
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
   
   // =========================================================================
-  // ERROR NOTIFICATIONS (December 17, 2025)
-  // Instead of using ugly alert() popups, we show inline toast notifications
-  // that auto-dismiss after 5 seconds
+  // NOTE (January 5th, 2026): Removed local notification state.
+  // Now using global Sonner toast system. Just import { toast } from 'sonner'
+  // and call toast.error(), toast.warning(), toast.info(), toast.success()
   // =========================================================================
-  const [notifications, setNotifications] = useState<ErrorNotification[]>([]);
   
   const [copiedId, setCopiedId] = useState<string | null>(null); // Now stores "affiliateId:email" or "affiliateId"
   const [viewingMessageId, setViewingMessageId] = useState<string | null>(null); // Now stores "affiliateId:email" or "affiliateId"
@@ -244,28 +239,19 @@ export default function OutreachPage() {
   }, [savedAffiliates]);
   
   // =========================================================================
-  // NOTIFICATION HELPERS
+  // NOTIFICATION HELPERS (January 5th, 2026)
+  // 
+  // REMOVED: addNotification() and removeNotification() functions.
+  // NOW USING: Global Sonner toast system.
+  // 
+  // To show notifications anywhere in this component:
+  //   toast.error('Error message');     // Red error toast
+  //   toast.warning('Warning message'); // Yellow warning toast
+  //   toast.info('Info message');       // Blue info toast
+  //   toast.success('Success message'); // Green success toast
+  // 
+  // Sonner handles auto-dismiss (4s), positioning, and close button automatically.
   // =========================================================================
-  
-  /**
-   * Add an error notification that auto-dismisses after 5 seconds
-   */
-  const addNotification = (message: string, type: 'error' | 'warning' | 'info' = 'error') => {
-    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setNotifications(prev => [...prev, { id, message, type }]);
-    
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-      removeNotification(id);
-    }, 5000);
-  };
-  
-  /**
-   * Remove a notification by ID
-   */
-  const removeNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
 
   // Filter and Search Logic
   const filteredResults = useMemo(() => {
@@ -580,12 +566,16 @@ export default function OutreachPage() {
       if (response.ok && data.success) {
         // =====================================================================
         // SUCCESS: Store the generated message
+        // January 5th, 2026: Added success toast notification
         // =====================================================================
         setGeneratedMessages(prev => {
           const next = new Map(prev);
           next.set(messageKey, data.message);
           return next;
         });
+        
+        // Show success notification
+        toast.success('Email generated successfully!');
 
         // =====================================================================
         // CREDITS REFRESH - January 4th, 2026
@@ -606,21 +596,23 @@ export default function OutreachPage() {
         setFailedIds(prev => new Set(prev).add(messageKey));
         
         // Show user-friendly error message based on error type
+        // January 5th, 2026: Using global Sonner toast instead of local notification
         if (response.status === 402) {
-          addNotification('Insufficient AI credits. Please upgrade your plan.', 'warning');
+          toast.warning('Insufficient AI credits. Please upgrade your plan.');
         } else if (data.error?.includes('webhook not configured')) {
-          addNotification('AI service not configured. Please contact support.', 'error');
+          toast.error('AI service not configured. Please contact support.');
         } else {
-          addNotification(data.error || 'Failed to generate message', 'error');
+          toast.error(data.error || 'Failed to generate message');
         }
       }
     } catch (error) {
       // =====================================================================
       // NETWORK ERROR: Mark as failed
+      // January 5th, 2026: Using global Sonner toast
       // =====================================================================
       console.error('Error generating message:', error);
       setFailedIds(prev => new Set(prev).add(messageKey));
-      addNotification('Failed to connect to AI service. Please try again.', 'error');
+      toast.error('Failed to connect to AI service. Please try again.');
     } finally {
       // Remove from generating set (hides spinner)
       setGeneratingIds(prev => {
@@ -765,18 +757,26 @@ export default function OutreachPage() {
       window.dispatchEvent(new CustomEvent('credits-updated'));
     }
     
-    // Show summary notification if there were any failures
-    if (failCount > 0) {
-      addNotification(
-        `Generated ${successCount} of ${total} messages. ${failCount} failed - click "Retry" to try again.`,
-        failCount === total ? 'error' : 'warning'
-      );
+    // Show summary notification based on results
+    // January 5th, 2026: Using global Sonner toast with success/warning/error states
+    if (failCount === 0 && successCount > 0) {
+      // All succeeded
+      toast.success(`Successfully generated ${successCount} email${successCount !== 1 ? 's' : ''}!`);
+    } else if (failCount > 0) {
+      // Some or all failed
+      const message = `Generated ${successCount} of ${total} messages. ${failCount} failed - click "Retry" to try again.`;
+      if (failCount === total) {
+        toast.error(message);
+      } else {
+        toast.warning(message);
+      }
     }
   };
 
   // =========================================================================
-  // COPY MESSAGE TO CLIPBOARD (Updated December 25, 2025)
+  // COPY MESSAGE TO CLIPBOARD (Updated January 5th, 2026)
   // Now uses messageKey format "affiliateId:email"
+  // Added success toast notification
   // =========================================================================
   const handleCopyMessage = (messageKey: string) => {
     const message = generatedMessages.get(messageKey);
@@ -784,6 +784,9 @@ export default function OutreachPage() {
       navigator.clipboard.writeText(message);
       setCopiedId(messageKey);
       setTimeout(() => setCopiedId(null), 2000);
+      
+      // January 5th, 2026: Show success toast
+      toast.success('Message copied to clipboard!');
     }
   };
 
@@ -1107,23 +1110,49 @@ export default function OutreachPage() {
                   </div>
 
                   {/* ============================================================
-                      MESSAGE ACTION BUTTON (Updated December 25, 2025)
+                      MESSAGE ACTION BUTTON (Updated January 5th, 2026)
                       
                       Shows different states based on generation status:
-                      1. hasMessage → "View Message(s)" (success state)
-                      2. isGenerating → Spinner + "Generating..."
+                      1. isGenerating → Spinner + "Generating..." (HIGHEST PRIORITY)
+                      2. hasMessage → "View Message(s)" (success state)
                       3. hasFailed → Red "Failed - Retry" button
                       4. hasMultipleContacts → Yellow "Select Contacts" button
                       5. default → Yellow "Generate" button
+                      
+                      IMPORTANT (January 5th, 2026):
+                      isGenerating MUST be checked BEFORE hasMessage. When generating
+                      emails for multiple contacts, each contact's message is stored
+                      as it completes. If we checked hasMessage first, the button would
+                      update incrementally ("View 1 Message" → "View 2 Messages" → etc.)
+                      which looks janky. By checking isGenerating first, we keep showing
+                      the spinner until ALL selected contacts have completed, then show
+                      the final "View X Messages" button.
                       ============================================================ */}
                   <div className="text-right">
-                    {hasMessage ? (
+                    {isGenerating ? (
+                      // =====================================================================
+                      // GENERATING STATE: Show spinner (January 5th, 2026 - MOVED TO FIRST)
+                      //
+                      // This MUST be the first condition checked. When generating emails for
+                      // multiple contacts, we want to show the spinner the entire time until
+                      // ALL contacts have completed. If hasMessage was checked first, the
+                      // button would update after each individual message completes, causing
+                      // a visual "jumping" effect (View 1 → View 2 → View 3 Messages).
+                      // =====================================================================
+                      <button
+                        disabled
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-400 cursor-not-allowed"
+                      >
+                        <Loader2 size={12} className="animate-spin" />
+                        Generating...
+                      </button>
+                    ) : hasMessage ? (
                       // =====================================================================
                       // SUCCESS STATE: Show "View Message" button (Updated December 26, 2025)
                       //
-                      // BUG FIX: When messageCount > 1, we pass just the affiliateId (e.g., "123")
-                      // so the modal knows to show ALL messages in a list view. Previously, we
-                      // always passed messageKey which only showed the primary contact's message.
+                      // Only shown when isGenerating is false (all messages complete).
+                      // When messageCount > 1, we pass just the affiliateId (e.g., "123")
+                      // so the modal knows to show ALL messages in a list view.
                       // =====================================================================
                       <button
                         onClick={() => setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey)}
@@ -1131,15 +1160,6 @@ export default function OutreachPage() {
                       >
                         <MessageSquare size={12} />
                         {messageCount > 1 ? `View ${messageCount} Messages` : 'View Message'}
-                      </button>
-                    ) : isGenerating ? (
-                      // GENERATING STATE: Show spinner
-                      <button
-                        disabled
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-400 cursor-not-allowed"
-                      >
-                        <Loader2 size={12} className="animate-spin" />
-                        Generating...
                       </button>
                     ) : hasFailed ? (
                       // FAILED STATE: Show red "Failed - Retry" button
@@ -1681,38 +1701,24 @@ export default function OutreachPage() {
         )}
 
         {/* ================================================================
-            ERROR NOTIFICATIONS TOAST (December 17, 2025)
+            NOTIFICATIONS (January 5th, 2026)
             
-            Shows inline toast notifications instead of ugly alert() popups.
-            Notifications auto-dismiss after 5 seconds.
-            Positioned at bottom-right of screen.
+            REMOVED: Custom toast notification UI.
+            NOW USING: Global Sonner Toaster (configured in src/app/layout.tsx).
+            
+            Sonner automatically renders toasts at bottom-right with:
+            - richColors (green=success, red=error, yellow=warning, blue=info)
+            - Close button on each toast
+            - 4 second auto-dismiss
+            - Smooth animations
+            
+            To trigger toasts, just call:
+              import { toast } from 'sonner';
+              toast.success('Success!');
+              toast.error('Error!');
+              toast.warning('Warning!');
+              toast.info('Info');
             ================================================================ */}
-        {notifications.length > 0 && (
-          <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={cn(
-                  "flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg border animate-in slide-in-from-right-5 duration-300",
-                  notification.type === 'error' && "bg-red-50 border-red-200 text-red-800",
-                  notification.type === 'warning' && "bg-amber-50 border-amber-200 text-amber-800",
-                  notification.type === 'info' && "bg-blue-50 border-blue-200 text-blue-800"
-                )}
-              >
-                {notification.type === 'error' && <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />}
-                {notification.type === 'warning' && <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />}
-                {notification.type === 'info' && <MessageSquare size={16} className="text-blue-500 shrink-0 mt-0.5" />}
-                <p className="flex-1 text-sm font-medium">{notification.message}</p>
-                <button
-                  onClick={() => removeNotification(notification.id)}
-                  className="shrink-0 p-1 hover:bg-black/10 rounded transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
     </>
   );
 }

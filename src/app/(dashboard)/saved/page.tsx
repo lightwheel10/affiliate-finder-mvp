@@ -29,6 +29,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { AffiliateRow } from '../../components/AffiliateRow';
 import { ScanCountdown } from '../../components/ScanCountdown';
 import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
@@ -164,11 +165,15 @@ export default function SavedPage() {
       setIsDeleteModalOpen(false);
       
       setDeleteResult({ count: deleteCount, show: true });
+      // January 5th, 2026: Added success toast for bulk delete
+      toast.success(`Deleted ${deleteCount} affiliate${deleteCount !== 1 ? 's' : ''} from pipeline`);
       setTimeout(() => {
         setDeleteResult(prev => prev ? { ...prev, show: false } : null);
       }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
+      // January 5th, 2026: Added error toast for bulk delete failure
+      toast.error('Failed to delete affiliates. Please try again.');
     } finally {
       setIsBulkDeleting(false);
     }
@@ -196,6 +201,8 @@ export default function SavedPage() {
           skippedCount: selectedAffiliates.length,
         },
       });
+      // January 5th, 2026: Added info toast when all already have emails
+      toast.info('All selected affiliates already have emails');
       setTimeout(() => setBulkEmailProgress({ current: 0, total: 0, status: 'idle' }), 3000);
       return;
     }
@@ -223,12 +230,35 @@ export default function SavedPage() {
         results,
       });
       
+      // =========================================================================
+      // NOTIFICATION BASED ON RESULTS (January 5th, 2026)
+      // Show appropriate toast based on email lookup results
+      // =========================================================================
+      if (results.creditError) {
+        // Credit error - ran out of credits during lookup
+        toast.warning(results.creditErrorMessage || 'Ran out of email credits');
+      } else if (results.foundCount > 0 && results.notFoundCount === 0 && results.errorCount === 0) {
+        // All found successfully
+        toast.success(`Found ${results.foundCount} email${results.foundCount !== 1 ? 's' : ''}!`);
+      } else if (results.foundCount > 0) {
+        // Mixed results
+        toast.info(`Found ${results.foundCount}, not found ${results.notFoundCount}, errors ${results.errorCount}`);
+      } else if (results.notFoundCount > 0) {
+        // None found
+        toast.warning(`No emails found for ${results.notFoundCount} affiliate${results.notFoundCount !== 1 ? 's' : ''}`);
+      } else if (results.errorCount > 0) {
+        // All errors
+        toast.error(`Email lookup failed for ${results.errorCount} affiliate${results.errorCount !== 1 ? 's' : ''}`);
+      }
+      
       setTimeout(() => {
         setBulkEmailProgress({ current: 0, total: 0, status: 'idle' });
       }, 5000);
       
     } catch (err) {
       console.error('Bulk email finding failed:', err);
+      // January 5th, 2026: Show error toast for unexpected failures
+      toast.error('Failed to find emails. Please try again.');
     } finally {
       setIsBulkFindingEmails(false);
     }

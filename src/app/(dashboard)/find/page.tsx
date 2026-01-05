@@ -31,6 +31,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { AffiliateRow } from '../../components/AffiliateRow';
 import { AffiliateRowSkeleton } from '../../components/AffiliateRowSkeleton';
 import { Modal } from '../../components/Modal';
@@ -337,6 +338,8 @@ export default function FindNewPage() {
               message: errorData.error || 'Insufficient topic search credits',
               remaining: errorData.remaining ?? 0,
             });
+            // January 5th, 2026: Added warning toast for insufficient credits
+            toast.warning('Insufficient search credits. Please upgrade your plan.');
             return; // Stop processing this keyword
           }
         }
@@ -489,9 +492,11 @@ export default function FindNewPage() {
     } catch (e: unknown) {
       const error = e as Error;
       if (error.name === 'AbortError') {
-        // Search cancelled by user
+        // Search cancelled by user - no notification needed
       } else {
         console.error('Search error:', e);
+        // January 5th, 2026: Added error toast for search failures
+        toast.error('Search failed. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -768,6 +773,18 @@ export default function FindNewPage() {
         show: true
       });
       
+      // =========================================================================
+      // TOAST NOTIFICATIONS (January 5th, 2026)
+      // Show success/info toast based on save results
+      // =========================================================================
+      if (result.savedCount > 0 && result.duplicateCount === 0) {
+        toast.success(`Saved ${result.savedCount} affiliate${result.savedCount !== 1 ? 's' : ''} to pipeline!`);
+      } else if (result.savedCount > 0 && result.duplicateCount > 0) {
+        toast.success(`Saved ${result.savedCount} affiliate${result.savedCount !== 1 ? 's' : ''}! (${result.duplicateCount} already in pipeline)`);
+      } else if (result.duplicateCount > 0) {
+        toast.info(`All ${result.duplicateCount} affiliates are already in your pipeline`);
+      }
+      
       setTimeout(() => {
         setBulkSaveResult(prev => prev ? { ...prev, show: false } : null);
       }, 4000);
@@ -779,6 +796,8 @@ export default function FindNewPage() {
       });
     } catch (err) {
       console.error('Bulk save failed:', err);
+      // January 5th, 2026: Added error toast
+      toast.error('Failed to save affiliates. Please try again.');
     } finally {
       setIsBulkSaving(false);
       setSavingLinks(new Set());
@@ -809,11 +828,15 @@ export default function FindNewPage() {
       setIsDeleteModalOpen(false);
       
       setDeleteResult({ count: deleteCount, show: true });
+      // January 5th, 2026: Added success toast for bulk delete
+      toast.success(`Deleted ${deleteCount} affiliate${deleteCount !== 1 ? 's' : ''}`);
       setTimeout(() => {
         setDeleteResult(prev => prev ? { ...prev, show: false } : null);
       }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
+      // January 5th, 2026: Added error toast for bulk delete failure
+      toast.error('Failed to delete affiliates. Please try again.');
     } finally {
       setIsBulkDeleting(false);
     }

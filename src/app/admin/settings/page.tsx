@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { 
   Bell,
   DollarSign,
@@ -90,7 +91,8 @@ export default function AdminSettingsPage() {
   const handleSave = async (alertType: string) => {
     const threshold = parseFloat(thresholds[alertType]);
     if (isNaN(threshold) || threshold < 0) {
-      alert('Please enter a valid threshold amount');
+      // January 5th, 2026: Replaced alert() with Sonner toast
+      toast.warning('Please enter a valid threshold amount');
       return;
     }
 

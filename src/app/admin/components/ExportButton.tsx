@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { Download, Loader2 } from 'lucide-react';
 
 interface ExportButtonProps {
@@ -37,9 +38,13 @@ export function ExportButton({ endpoint, filename, params = {} }: ExportButtonPr
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
+      
+      // January 5th, 2026: Show success toast after download
+      toast.success('CSV exported successfully!');
     } catch (error) {
       console.error('Export error:', error);
-      alert('Failed to export data');
+      // January 5th, 2026: Replaced alert() with Sonner toast
+      toast.error('Failed to export data');
     } finally {
       setIsExporting(false);
     }

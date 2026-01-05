@@ -30,6 +30,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { AffiliateRow } from '../../components/AffiliateRow';
 import { ScanCountdown } from '../../components/ScanCountdown';
 import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
@@ -164,6 +165,19 @@ export default function DiscoveredPage() {
         duplicateCount: result.duplicateCount,
         show: true
       });
+      
+      // =========================================================================
+      // TOAST NOTIFICATIONS (January 5th, 2026)
+      // Show success/info toast based on save results
+      // =========================================================================
+      if (result.savedCount > 0 && result.duplicateCount === 0) {
+        toast.success(`Saved ${result.savedCount} affiliate${result.savedCount !== 1 ? 's' : ''} to pipeline!`);
+      } else if (result.savedCount > 0 && result.duplicateCount > 0) {
+        toast.success(`Saved ${result.savedCount} affiliate${result.savedCount !== 1 ? 's' : ''}! (${result.duplicateCount} already in pipeline)`);
+      } else if (result.duplicateCount > 0) {
+        toast.info(`All ${result.duplicateCount} affiliates are already in your pipeline`);
+      }
+      
       setTimeout(() => {
         setBulkSaveResult(prev => prev ? { ...prev, show: false } : null);
       }, 4000);
@@ -175,6 +189,8 @@ export default function DiscoveredPage() {
       });
     } catch (err) {
       console.error('Bulk save failed:', err);
+      // January 5th, 2026: Added error toast
+      toast.error('Failed to save affiliates. Please try again.');
     } finally {
       setIsBulkSaving(false);
       setSavingLinks(new Set());
@@ -200,11 +216,15 @@ export default function DiscoveredPage() {
       setIsDeleteModalOpen(false);
       
       setDeleteResult({ count: deleteCount, show: true });
+      // January 5th, 2026: Added success toast for bulk delete
+      toast.success(`Deleted ${deleteCount} affiliate${deleteCount !== 1 ? 's' : ''}`);
       setTimeout(() => {
         setDeleteResult(prev => prev ? { ...prev, show: false } : null);
       }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
+      // January 5th, 2026: Added error toast for bulk delete failure
+      toast.error('Failed to delete affiliates. Please try again.');
     } finally {
       setIsBulkDeleting(false);
     }
