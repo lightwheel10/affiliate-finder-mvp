@@ -1,5 +1,14 @@
 'use client';
 
+/**
+ * DiscoveryGraphic Component
+ * 
+ * Displays an animated affiliate discovery visualization for the BentoGrid feature section.
+ * Shows real affiliate data with hover states that reveal match scores.
+ * 
+ * Updated: January 5th, 2026 - Replaced skeleton placeholders with actual affiliate data
+ */
+
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, User, Loader2, RotateCw } from 'lucide-react';
@@ -9,10 +18,14 @@ interface DiscoveryGraphicProps {
   isHovered?: boolean;
 }
 
+/**
+ * Sample affiliate candidates data
+ * Represents discovered affiliates from competitor analysis
+ */
 const candidates = [
-  { id: 1, name: "Sarah Connor", niche: "Tech", score: 98, platform: "YouTube" },
-  { id: 2, name: "John Smith", niche: "Finance", score: 95, platform: "TikTok" },
-  { id: 3, name: "Jessica Doe", niche: "Lifestyle", score: 92, platform: "Instagram" },
+  { id: 1, name: "Sarah Mitchell", niche: "Beauty & Skincare", score: 98, platform: "YouTube", followers: "245K" },
+  { id: 2, name: "Marcus Chen", niche: "Tech Reviews", score: 95, platform: "TikTok", followers: "1.2M" },
+  { id: 3, name: "Emily Rodriguez", niche: "Lifestyle", score: 92, platform: "Instagram", followers: "89K" },
 ];
 
 export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) => {
@@ -92,7 +105,15 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
   );
 };
 
-const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered: boolean; candidate: any }) => {
+/**
+ * ProfileRow Component
+ * 
+ * Renders an individual affiliate row with avatar, name, niche, platform, and match score.
+ * Displays real data in both hover and non-hover states.
+ * 
+ * Updated: January 5th, 2026 - Shows actual affiliate names and metrics instead of skeleton placeholders
+ */
+const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered: boolean; candidate: typeof candidates[0] }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -103,42 +124,63 @@ const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered:
         isHovered ? "border-[#D4E815]/50 shadow-md translate-x-1" : "border-[#E5E7EB]"
       )}
     >
-      {/* Avatar Placeholder */}
+      {/* Avatar with initials */}
       <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 shrink-0",
-        isHovered ? "bg-[#D4E815]/20 text-[#1A1D21]" : "bg-slate-50 text-slate-400"
+        "w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300 shrink-0 text-[10px] font-bold",
+        isHovered ? "bg-[#D4E815]/20 text-[#1A1D21]" : "bg-slate-100 text-slate-500"
       )}>
-        <User size={14} strokeWidth={2.5} />
+        {/* Extract initials from name */}
+        {candidate.name.split(' ').map(n => n[0]).join('')}
       </div>
 
-      {/* Info Lines */}
-      <div className="flex-1 space-y-1.5 min-w-0">
-        <div className="flex items-center justify-between">
-             <div className="h-2 w-20 bg-slate-100 rounded-full" />
-             <span className="text-[8px] font-medium text-slate-400 uppercase tracking-wider">{candidate.platform}</span>
+      {/* Affiliate Info - Real Data */}
+      <div className="flex-1 space-y-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          {/* Affiliate Name */}
+          <span className={cn(
+            "text-[11px] font-semibold truncate transition-colors duration-300",
+            isHovered ? "text-[#111827]" : "text-slate-600"
+          )}>
+            {candidate.name}
+          </span>
+          {/* Platform Badge */}
+          <span className={cn(
+            "text-[8px] font-medium uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded",
+            isHovered ? "bg-[#D4E815]/10 text-[#1A1D21]" : "text-slate-400 bg-slate-50"
+          )}>
+            {candidate.platform}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-            <div className="h-1.5 w-12 bg-slate-50 rounded-full" />
-            <div className="h-1.5 w-8 bg-slate-50 rounded-full" />
+        {/* Niche & Followers */}
+        <div className="flex items-center gap-2 text-[9px] text-slate-400">
+          <span>{candidate.niche}</span>
+          <span>•</span>
+          <span className={cn(
+            "transition-colors duration-300",
+            isHovered ? "text-[#1A1D21] font-medium" : ""
+          )}>
+            {candidate.followers} followers
+          </span>
         </div>
       </div>
 
       {/* Match Score Badge */}
       <div className="flex items-center gap-1 shrink-0 pl-2">
-         <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.8 + (index * 0.1) }}
-         >
-            <div className={cn(
-                "px-2 py-0.5 rounded text-[10px] font-bold border transition-all duration-300",
-                isHovered 
-                    ? "bg-[#D4E815]/20 text-[#1A1D21] border-[#D4E815]/40" 
-                    : "bg-slate-50 text-slate-400 border-slate-100"
-            )}>
-                {isHovered ? `${candidate.score}%` : '--'}
-            </div>
-         </motion.div>
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.8 + (index * 0.1) }}
+        >
+          <div className={cn(
+            "px-2 py-0.5 rounded text-[10px] font-bold border transition-all duration-300",
+            isHovered 
+              ? "bg-[#D4E815]/20 text-[#1A1D21] border-[#D4E815]/40" 
+              : "bg-slate-50 text-slate-500 border-slate-100"
+          )}>
+            {/* Always show score, highlight on hover */}
+            {candidate.score}%
+          </div>
+        </motion.div>
       </div>
     </motion.div>
   );

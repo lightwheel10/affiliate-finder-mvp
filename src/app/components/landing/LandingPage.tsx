@@ -258,9 +258,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
       </section>
 
       {/* Feature Grid - The Real Linear Bento */}
+      {/* Updated: January 5th, 2026 - Centered title and subtext for better visual hierarchy */}
       <section id="features" className="py-20 bg-white border-b border-[#E5E7EB]">
         <div className="max-w-7xl mx-auto px-6">
-           <div className="mb-16 max-w-2xl">
+           {/* Section Header - Centered alignment */}
+           <div className="mb-16 max-w-2xl mx-auto text-center">
              <h2 className="text-2xl md:text-3xl font-bold text-[#111827] mb-4 tracking-tight">How Smart Brands 3X Their Affiliate Growth</h2>
              <p className="text-base text-slate-500 leading-relaxed">
                Stop wasting 20+ hours a week manually searching for affiliates. Find every creator and publisher in your niche in minutes.

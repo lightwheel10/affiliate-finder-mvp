@@ -181,22 +181,25 @@ export const InteractiveSearchDemo = () => {
                 )}
               </AnimatePresence>
             </div>
-            <input
-              disabled
-              value={text}
-              className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border-[#E5E7EB] rounded-xl text-[#111827] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#D4E815]/30 transition-all font-medium text-sm shadow-sm"
-              placeholder="Enter a niche or keyword..."
-            />
-            {step === 'TYPING' && (
-              <motion.div 
-                layoutId="cursor"
-                className="absolute top-1/2 -translate-y-1/2 w-[2px] h-5 bg-[#D4E815]"
-                style={{ left: `${44 + (text.length * 8)}px` }}
-                initial={{ opacity: 1 }}
-                animate={{ opacity: [1, 0] }}
-                transition={{ repeat: Infinity, duration: 0.8 }}
-              />
-            )}
+            {/* Input container with inline cursor */}
+            <div className="relative w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-[#E5E7EB] rounded-xl shadow-sm min-h-[48px] flex items-center">
+              {/* Text with inline cursor */}
+              <span className="font-medium text-sm text-[#111827] whitespace-pre">
+                {text}
+                {step === 'TYPING' && (
+                  <motion.span 
+                    className="inline-block w-[2px] h-5 bg-[#D4E815] ml-[1px] align-middle"
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: [1, 0] }}
+                    transition={{ repeat: Infinity, duration: 0.8 }}
+                  />
+                )}
+              </span>
+              {/* Placeholder when empty */}
+              {!text && step !== 'TYPING' && (
+                <span className="text-slate-400 font-medium text-sm">Enter a niche or keyword...</span>
+              )}
+            </div>
             <div className="absolute right-2 top-1/2 -translate-y-1/2">
                <button className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 ${text.length > 5 ? 'bg-[#D4E815] text-[#1A1D21] shadow-md shadow-[#D4E815]/30' : 'bg-slate-200 text-slate-400'}`}>
                  Scout

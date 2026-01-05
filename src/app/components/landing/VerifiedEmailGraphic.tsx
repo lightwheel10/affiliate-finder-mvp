@@ -1,5 +1,14 @@
 'use client';
 
+/**
+ * VerifiedEmailGraphic Component
+ * 
+ * Displays an animated email verification visualization for the BentoGrid feature section.
+ * Shows a sample affiliate contact being verified with real email data.
+ * 
+ * Updated: January 5th, 2026 - Replaced skeleton placeholders with actual affiliate email data
+ */
+
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Mail, ShieldCheck, MousePointer2 } from 'lucide-react';
@@ -9,6 +18,19 @@ interface VerifiedEmailGraphicProps {
   isHovered?: boolean;
 }
 
+/**
+ * Sample affiliate contact for email verification demo
+ */
+const sampleAffiliate = {
+  name: "Jessica Parker",
+  email: "jessica@beautyinfluence.co",
+  platform: "Instagram",
+  followers: "156K"
+};
+
+/**
+ * Email verification steps that animate on hover
+ */
 const verificationSteps = [
   { id: 1, label: "Syntax", status: "verified", delay: 100 },
   { id: 2, label: "Domain", status: "verified", delay: 300 },
@@ -47,13 +69,29 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
           className="relative w-full max-w-[240px] bg-white rounded-xl border border-[#E5E7EB] shadow-sm overflow-hidden"
           animate={isHovered ? { y: -4, boxShadow: "0 10px 30px -10px rgba(212, 232, 21, 0.25)" } : { y: 0 }}
         >
+            {/* Affiliate Contact Header - Shows real email data */}
+            {/* Updated: January 5th, 2026 - Display actual affiliate name and email */}
             <div className="flex items-center p-3 gap-3 border-b border-slate-50">
-                <div className="w-8 h-8 rounded-full bg-[#D4E815]/20 flex items-center justify-center text-[#1A1D21] shrink-0">
-                    <Mail size={14} />
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors duration-300",
+                  isHovered ? "bg-[#D4E815]/20 text-[#1A1D21]" : "bg-slate-100 text-slate-500"
+                )}>
+                    {/* Avatar with initials */}
+                    {sampleAffiliate.name.split(' ').map(n => n[0]).join('')}
                 </div>
-                <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="h-2 w-20 bg-slate-100 rounded-full" />
-                    <div className="h-1.5 w-12 bg-slate-50 rounded-full" />
+                <div className="flex-1 min-w-0 space-y-0.5">
+                    {/* Affiliate Name */}
+                    <div className={cn(
+                      "text-[11px] font-semibold truncate transition-colors duration-300",
+                      isHovered ? "text-[#111827]" : "text-slate-600"
+                    )}>
+                      {sampleAffiliate.name}
+                    </div>
+                    {/* Email Address */}
+                    <div className="text-[9px] text-slate-400 truncate flex items-center gap-1">
+                      <Mail size={8} />
+                      {sampleAffiliate.email}
+                    </div>
                 </div>
             </div>
             
