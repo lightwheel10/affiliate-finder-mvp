@@ -1,3 +1,20 @@
+/**
+ * =============================================================================
+ * Input Components - NEO-BRUTALIST
+ * =============================================================================
+ * 
+ * Updated: January 8th, 2026
+ *
+ * NEO-BRUTALIST DESIGN UPDATE:
+ * - Sharp edges (no rounded corners)
+ * - Bold borders (border-2 with black)
+ * - Yellow accent color (#ffbf23)
+ * - Bold typography (font-black uppercase)
+ * - Dark mode support
+ *
+ * =============================================================================
+ */
+
 import React from 'react';
 import { Search, Loader2, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,14 +40,17 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 }) => {
   return (
     <div className={cn("relative w-full group", className)}>
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
+      {/* Search Icon */}
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-black dark:group-focus-within:text-white transition-colors">
         <Search className="h-4 w-4" />
       </div>
+      
+      {/* Input - NEO-BRUTALIST */}
       <input
         className={cn(
-          "w-full pl-10 pr-24 py-2.5 bg-white border-0 ring-1 ring-slate-200 rounded-xl text-sm font-medium text-slate-900 shadow-[0_1px_2px_rgb(0,0,0,0.05)] transition-all duration-200",
-          "placeholder:text-slate-400 placeholder:font-normal",
-          "focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:shadow-[0_4px_12px_rgb(212,232,21,0.05)]",
+          "w-full pl-10 pr-24 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-white transition-all duration-200",
+          "placeholder:text-gray-400 placeholder:font-normal",
+          "focus:outline-none focus:border-black dark:focus:border-white",
           "disabled:opacity-50 disabled:cursor-not-allowed"
         )}
         type="text"
@@ -40,15 +60,21 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         onKeyDown={(e) => e.key === 'Enter' && onSearch()}
         disabled={isLoading}
       />
+      
+      {/* Right side elements */}
       <div className="absolute inset-y-0 right-1.5 flex items-center gap-1.5">
-        <div className="hidden sm:flex items-center px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-widest mr-1">
+        {/* Keyboard shortcut badge - NEO-BRUTALIST */}
+        <div className="hidden sm:flex items-center px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[9px] font-black text-gray-500 uppercase tracking-widest mr-1">
           <Command size={8} className="mr-1" /> K
         </div>
+        
+        {/* Search Button - NEO-BRUTALIST */}
         <button 
           className={cn(
-            "h-7 px-3 rounded-lg font-semibold text-xs transition-all duration-200",
-            "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] hover:shadow-md hover:shadow-[#D4E815]/20",
-            "disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:bg-[#D4E815] flex items-center gap-1.5"
+            "h-7 px-3 font-black text-xs transition-all duration-200 uppercase",
+            "bg-[#ffbf23] text-black border-2 border-black",
+            "hover:shadow-[2px_2px_0px_0px_#000000]",
+            "disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5"
           )}
           onClick={onSearch}
           disabled={isLoading}
@@ -76,17 +102,17 @@ interface SourceToggleProps {
 export const SourceToggle: React.FC<SourceToggleProps> = ({ sources, selected, onToggle }) => {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] font-bold text-slate-400 mr-1.5 uppercase tracking-wider">Sources:</span>
+      <span className="text-[10px] font-black text-gray-400 mr-1.5 uppercase tracking-wider">Sources:</span>
       {sources.map(source => {
         const isSelected = selected.includes(source);
         return (
           <button 
             key={source}
             className={cn(
-              "px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all duration-200 border select-none",
+              "px-2.5 py-1 text-[10px] font-bold transition-all duration-200 border-2 select-none uppercase",
               isSelected 
-                ? "bg-[#1A1D21] text-white border-[#1A1D21] shadow-sm" 
-                : "bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                ? "bg-black text-white border-black shadow-[2px_2px_0px_0px_#ffbf23]" 
+                : "bg-white dark:bg-gray-900 text-gray-500 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white"
             )}
             onClick={() => onToggle(source)}
           >

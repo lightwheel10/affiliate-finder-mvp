@@ -3,7 +3,19 @@
 import { Loader2 } from 'lucide-react';
 
 /**
- * AuthLoadingScreen (January 3rd, 2026)
+ * =============================================================================
+ * AuthLoadingScreen - NEO-BRUTALIST
+ * =============================================================================
+ * 
+ * Updated: January 8th, 2026
+ * 
+ * NEO-BRUTALIST DESIGN UPDATE:
+ * - Sharp edges (no rounded corners)
+ * - Bold borders (border-2 to border-4 with black)
+ * - Offset shadows
+ * - Yellow accent color (#ffbf23)
+ * - Square elements throughout
+ * - Dark mode support
  * 
  * A polished loading screen shown during authentication and page transitions.
  * This replaces the DashboardSkeleton for initial auth loading to avoid
@@ -15,69 +27,54 @@ import { Loader2 } from 'lucide-react';
  * - Neon user is being fetched/created (neonLoading === true)
  * - Race condition guards (userId is null)
  * 
- * Uses Lucide's Loader2 icon with Tailwind's animate-spin for a smooth,
- * battle-tested spinning animation that works reliably across all browsers.
- * 
- * =============================================================================
- * BRANDING FIX (January 3rd, 2026)
- * 
- * Previously showed "affiliatefinder" branding which was incorrect.
- * Updated to match the official app branding used throughout the app:
- * - "CrewCast Studio" as the main brand name
- * - "backed by selecdoo AI" as the tagline
- * - Logo image from /logo.jpg
- * 
- * This ensures brand consistency during loading states, matching:
- * - Sidebar.tsx logo area
- * - DashboardSkeleton in page.tsx
- * - All other branded components
  * =============================================================================
  */
 
 export const AuthLoadingScreen = () => {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#F8F9FA] via-[#F0F2F5] to-[#E8EAED]">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gray-100 dark:bg-black">
       <div className="flex flex-col items-center gap-8">
         
         {/* =================================================================
-            LOGO AREA (January 3rd, 2026)
+            LOGO AREA - NEO-BRUTALIST (January 8th, 2026)
             
-            Matches the branding used in Sidebar.tsx and DashboardSkeleton.
+            Matches the branding used in Sidebar.tsx with neo-brutalist styling.
             Uses the official logo.jpg and "CrewCast Studio" brand name.
             ================================================================= */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <img 
             src="/logo.jpg" 
             alt="CrewCast Studio" 
-            className="w-9 h-9 rounded-lg shadow-md shadow-[#1A1D21]/10 object-cover"
+            className="w-10 h-10 border-2 border-black dark:border-gray-600 object-cover"
           />
           <div className="flex flex-col">
-            <span className="font-bold text-lg tracking-tight leading-none text-slate-900">
-              CrewCast <span className="text-[#1A1D21]">Studio</span>
+            <span className="font-black text-lg tracking-tight leading-none text-gray-900 dark:text-white uppercase">
+              CrewCast <span className="text-black dark:text-white">Studio</span>
             </span>
-            <span className="text-[10px] font-medium text-slate-400 tracking-wide mt-0.5">
+            <span className="text-[10px] font-bold text-gray-400 tracking-widest mt-0.5 uppercase">
               backed by selecdoo AI
             </span>
           </div>
         </div>
         
-        {/* Spinner using Lucide's Loader2 - proven smooth animation */}
+        {/* Spinner - NEO-BRUTALIST square loader */}
         <div className="relative">
-          {/* Subtle glow effect */}
-          <div className="absolute inset-0 bg-[#D4E815]/20 rounded-full blur-xl scale-150" />
+          {/* Outer square glow effect */}
+          <div className="absolute inset-0 bg-[#ffbf23]/20 scale-150" />
           
-          {/* Lucide Loader2 - designed for smooth rotation */}
-          <Loader2 
-            className="w-10 h-10 text-[#D4E815] animate-spin relative" 
-            strokeWidth={2.5}
-          />
+          {/* Square container with spinner */}
+          <div className="relative w-14 h-14 bg-[#ffbf23] border-2 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_#000000]">
+            <Loader2 
+              className="w-7 h-7 text-black animate-spin" 
+              strokeWidth={2.5}
+            />
+          </div>
         </div>
         
-        {/* Loading text */}
-        <p className="text-sm text-slate-500">Loading...</p>
+        {/* Loading text - NEO-BRUTALIST */}
+        <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">Loading...</p>
         
       </div>
     </div>
   );
 };
-

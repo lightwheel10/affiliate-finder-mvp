@@ -48,7 +48,8 @@ import {
   Trash2,
   Save,
   Loader2,
-  X
+  X,
+  Clock  // Added January 6th, 2026 for neo-brutalist header
 } from 'lucide-react';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { FilterPanel } from '../../components/FilterPanel';
@@ -348,89 +349,98 @@ export default function DiscoveredPage() {
   // ==========================================================================
   return (
     <>
-      {/* Header */}
-      <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold text-slate-900">All Discovered Affiliates</h1>
-        </div>
+      {/* =============================================================================
+          TOP BAR - NEW DESIGN (January 6th, 2026)
+          Neo-brutalist header - MATCHES DashboardDemo.tsx EXACTLY
+          ============================================================================= */}
+      <header className="h-16 border-b-4 border-black dark:border-white flex items-center justify-between px-6 bg-white dark:bg-[#0a0a0a]">
+        {/* Page Title - font-black uppercase tracking-tight */}
+        <h1 className="font-black text-xl uppercase tracking-tight">All Discovered</h1>
 
-        <ScanCountdown />
-        
-        <div className="flex items-center gap-3 text-xs">
-          <CreditsDisplay />
+        <div className="flex items-center gap-4">
+          {/* Timer Pill - DashboardDemo exact styling */}
+          <div className="hidden md:flex items-center gap-2 bg-[#1a1a1a] text-[#ffbf23] px-3 py-1.5 rounded-full text-xs font-mono border border-black">
+            <Clock size={12} />
+            <span>NEXT SCAN</span>
+            <ScanCountdown />
+            <span className="text-white font-bold">PRO</span>
+          </div>
+
+          {/* Stats Pills - DashboardDemo exact styling */}
+          <div className="hidden lg:flex items-center gap-3">
+            <CreditsDisplay variant="neo" />
+          </div>
+
+          {/* Find Button - DashboardDemo exact styling */}
           <button 
-            className="bg-[#D4E815] text-[#1A1D21] px-3.5 py-1.5 rounded-lg hover:bg-[#c5d913] hover:shadow-md hover:shadow-[#D4E815]/20 transition-all font-semibold flex items-center gap-1.5"
+            className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
           >
-            <Plus size={14} /> Find Affiliates
+            <Plus size={14} strokeWidth={3} /> Find Affiliates
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full">
-        
-        {/* Header Section */}
-        <div className="mb-6 space-y-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            
-            {/* Left: Search & Filters */}
-            <div className="flex items-center gap-4 flex-1">
-              <div className="w-full max-w-[160px]">
-                <div className="relative w-full group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
-                    <Search size={14} />
-                  </div>
-                  <input
-                    className="w-full pl-9 pr-3 py-1.5 bg-white border ring-1 ring-slate-200 rounded-lg text-xs font-semibold text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815]"
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search..."
-                  />
-                </div>
-              </div>
+      {/* =============================================================================
+          CONTENT AREA - NEW DESIGN (January 6th, 2026)
+          ============================================================================= */}
+      <div className="flex-1 p-8 overflow-y-auto">
 
-              <div className="h-8 w-px bg-slate-200 mx-1 hidden lg:block"></div>
-
-              {/* Filter Pills */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
-                {filterTabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveFilter(tab.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap",
-                      activeFilter === tab.id
-                        ? "bg-[#D4E815] text-[#1A1D21] border-[#D4E815] shadow-sm shadow-[#D4E815]/20"
-                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                    )}
-                  >
-                    {tab.icon}
-                    {tab.id === 'All' && <span>All</span>}
-                    {tab.count > 0 && (
-                      <span className={cn(
-                        "ml-0.5 px-1.5 py-0.5 rounded text-[9px]",
-                        activeFilter === tab.id ? "bg-[#1A1D21]/20 text-[#1A1D21]" : "bg-slate-100 text-slate-500"
-                      )}>
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Right: Advanced Filter Button */}
-            <div className="flex items-center">
-              <FilterPanel
-                affiliates={discoveredAffiliates}
-                activeFilters={advancedFilters}
-                onFilterChange={setAdvancedFilters}
-                isOpen={isFilterPanelOpen}
-                onClose={() => setIsFilterPanelOpen(false)}
-                onOpen={() => setIsFilterPanelOpen(true)}
+        {/* =============================================================================
+            FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            ============================================================================= */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            {/* Search Input - DashboardDemo exact styling */}
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search affiliates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
               />
             </div>
+            
+            {/* Platform Filter Pills - DashboardDemo exact styling with counts */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800">
+              {filterTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveFilter(tab.id)}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-bold",
+                    activeFilter === tab.id
+                      ? "bg-[#ffbf23] text-black shadow-sm"
+                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  )}
+                  title={tab.id}
+                >
+                  {tab.icon || <Globe size={16} />}
+                  {tab.id === 'All' && <span>All</span>}
+                  {tab.count > 0 && (
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                      activeFilter === tab.id ? "bg-black/20 text-black" : "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                    )}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Advanced Filter */}
+          <div className="flex items-center gap-3">
+            <FilterPanel
+              affiliates={discoveredAffiliates}
+              activeFilters={advancedFilters}
+              onFilterChange={setAdvancedFilters}
+              isOpen={isFilterPanelOpen}
+              onClose={() => setIsFilterPanelOpen(false)}
+              onOpen={() => setIsFilterPanelOpen(true)}
+            />
           </div>
         </div>
 
@@ -494,33 +504,37 @@ export default function DiscoveredPage() {
           );
         })()}
 
-        {/* Table Header */}
-        <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_220px_1fr_140px_100px_120px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
-          <div className="pl-1 flex items-center">
-            <input
-              type="checkbox"
-              checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
-              onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
-              className="w-3.5 h-3.5 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer"
-              title={visibleSelectedLinks.size === filteredResults.length ? 'Deselect all' : 'Select all'}
-            />
+        {/* =============================================================================
+            TABLE AREA - DashboardDemo.tsx EXACT STYLING
+            ============================================================================= */}
+        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
+          {/* Table Header - DashboardDemo exact */}
+          <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            <div className="col-span-1 flex justify-center">
+              <input 
+                type="checkbox" 
+                checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
+                onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
+                className="accent-[#ffbf23] w-4 h-4" 
+              />
+            </div>
+            <div className="col-span-3">Affiliate</div>
+            <div className="col-span-3">Relevant Content</div>
+            <div className="col-span-2">Discovery Method</div>
+            <div className="col-span-1">Date</div>
+            <div className="col-span-2 text-right">Action</div>
           </div>
-          <div>Affiliate</div>
-          <div>Relevant Content</div>
-          <div>Discovery Method</div>
-          <div>Date</div>
-          <div className="text-right pr-2">Action</div>
-        </div>
 
-        {/* Results Area */}
-        <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm min-h-[400px]">
+          {/* Results Content */}
+          <div className="flex-1">
           {loading ? (
-            <div className="py-24 text-center">
-              <div className="relative w-10 h-10 mx-auto">
-                <div className="absolute inset-0 border-[3px] border-slate-100 rounded-full"></div>
-                <div className="absolute inset-0 border-[3px] border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
+            /* Loading State - Neo-brutalist style */
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="relative w-12 h-12 mx-auto">
+                <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <p className="text-slate-400 text-xs mt-4">Loading discovered affiliates...</p>
+              <p className="text-gray-500 text-sm mt-4 font-medium">Loading discovered affiliates...</p>
             </div>
           ) : filteredResults.length > 0 ? (
             filteredResults.map((item) => (
@@ -552,14 +566,20 @@ export default function DiscoveredPage() {
               />
             ))
           ) : (
-            <div className="py-32 text-center">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
-                <Search className="w-8 h-8 text-slate-300" />
+            /* Empty State - Neo-brutalist style */
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
+                <Search size={24} className="text-gray-300" />
               </div>
-              <h3 className="text-base font-bold text-slate-900 mb-1">No affiliates discovered yet</h3>
-              <p className="text-slate-400 text-sm">Go to "Find New" to start discovering potential affiliates</p>
+              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+                No affiliates discovered yet
+              </h3>
+              <p className="text-gray-500 text-sm max-w-xs">
+                Go to "Find New" to start discovering potential affiliates
+              </p>
             </div>
           )}
+          </div>
         </div>
 
       </div>

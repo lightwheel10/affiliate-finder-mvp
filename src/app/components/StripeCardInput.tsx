@@ -16,23 +16,35 @@ import {
 import { Lock, AlertCircle, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// =============================================================================
-// STRIPE CARD INPUT COMPONENT (Split Elements)
-// 
-// A secure card input component using separate Stripe Elements for:
-// - Card Number
-// - Expiry Date  
-// - CVC
-//
-// Card data is collected directly by Stripe's secure iframes - 
-// sensitive data NEVER touches our servers.
-//
-// SECURITY:
-// - PCI DSS compliant - card data handled entirely by Stripe
-// - 3D Secure authentication handled automatically
-// - Real-time card validation via Stripe.js
-// - No raw card data stored anywhere
-// =============================================================================
+/**
+ * =============================================================================
+ * STRIPE CARD INPUT COMPONENT (Split Elements) - NEO-BRUTALIST
+ * =============================================================================
+ * 
+ * Updated: January 8th, 2026
+ *
+ * NEO-BRUTALIST DESIGN UPDATE:
+ * - Sharp edges (no rounded corners)
+ * - Bold borders (border-2 with black)
+ * - Yellow accent color (#ffbf23)
+ * - Bold typography (font-black uppercase labels)
+ * - Dark mode support
+ *
+ * A secure card input component using separate Stripe Elements for:
+ * - Card Number
+ * - Expiry Date  
+ * - CVC
+ *
+ * Card data is collected directly by Stripe's secure iframes - 
+ * sensitive data NEVER touches our servers.
+ *
+ * SECURITY:
+ * - PCI DSS compliant - card data handled entirely by Stripe
+ * - 3D Secure authentication handled automatically
+ * - Real-time card validation via Stripe.js
+ * - No raw card data stored anywhere
+ * =============================================================================
+ */
 
 interface StripeCardInputProps {
   // Cardholder name (managed externally)
@@ -75,7 +87,7 @@ const ELEMENT_STYLES = {
   },
 };
 
-// Card brand display component
+// Card brand display component - NEO-BRUTALIST (Updated January 8th, 2026)
 const CardBrandBadge: React.FC<{ brand: string | null }> = ({ brand }) => {
   if (!brand || brand === 'unknown') return null;
   
@@ -86,11 +98,11 @@ const CardBrandBadge: React.FC<{ brand: string | null }> = ({ brand }) => {
     discover: 'bg-orange-500',
   };
   
-  const bgClass = brandColors[brand] || 'bg-slate-500';
+  const bgClass = brandColors[brand] || 'bg-gray-500';
   
   return (
     <span className={cn(
-      "text-[10px] px-1.5 py-0.5 rounded text-white uppercase font-bold",
+      "text-[10px] px-1.5 py-0.5 text-white uppercase font-black border border-black",
       bgClass
     )}>
       {brand}
@@ -162,35 +174,35 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
     setCardCvcError(event.error?.message || null);
   }, []);
 
-  // Shared input container styles
+  // Shared input container styles - NEO-BRUTALIST (Updated January 8th, 2026)
   const getInputContainerClass = (focused: boolean, error: string | null, complete: boolean) => cn(
-    "px-3 py-3 bg-white border rounded-lg transition-all",
+    "px-3 py-3 bg-white dark:bg-gray-900 border-2 transition-all",
     focused 
-      ? "border-[#D4E815] ring-1 ring-[#D4E815]/20" 
+      ? "border-black dark:border-white" 
       : error 
-        ? "border-red-300" 
+        ? "border-red-500" 
         : complete
-          ? "border-green-300"
-          : "border-slate-200",
-    disabled && "bg-slate-50 cursor-not-allowed opacity-60"
+          ? "border-green-500"
+          : "border-gray-300 dark:border-gray-600",
+    disabled && "bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60"
   );
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Security Badge */}
+      {/* Security Badge - NEO-BRUTALIST (Updated January 8th, 2026) */}
       {showSecurityBadge && (
-        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+        <div className="flex items-center gap-2 p-3 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500">
           <Lock size={14} className="text-blue-600 shrink-0" />
-          <div className="text-xs text-blue-800">
-            <span className="font-semibold">Secure payment</span>
-            <span className="text-blue-600 ml-1">• Powered by Stripe</span>
+          <div className="text-xs text-blue-800 dark:text-blue-300">
+            <span className="font-black uppercase">Secure payment</span>
+            <span className="text-blue-600 dark:text-blue-400 ml-1 font-medium">• Powered by Stripe</span>
           </div>
         </div>
       )}
 
-      {/* Cardholder Name */}
+      {/* Cardholder Name - NEO-BRUTALIST */}
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-slate-700">
+        <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
           Cardholder Name
         </label>
         <input
@@ -201,17 +213,17 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
           disabled={disabled}
           autoComplete="cc-name"
           className={cn(
-            "w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900",
-            "focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20",
-            "transition-all placeholder:text-slate-400",
-            disabled && "bg-slate-50 cursor-not-allowed opacity-60"
+            "w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white",
+            "focus:outline-none focus:border-black dark:focus:border-white",
+            "transition-all placeholder:text-gray-400",
+            disabled && "bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60"
           )}
         />
       </div>
 
-      {/* Card Number */}
+      {/* Card Number - NEO-BRUTALIST */}
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-slate-700 flex items-center gap-2">
+        <label className="text-xs font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 uppercase tracking-wide">
           Card Number
           <CardBrandBadge brand={cardBrand} />
         </label>
@@ -243,11 +255,11 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
         )}
       </div>
 
-      {/* Expiry and CVC in a row */}
+      {/* Expiry and CVC in a row - NEO-BRUTALIST */}
       <div className="grid grid-cols-2 gap-4">
         {/* Expiry Date */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700">
+          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
             Expiry Date
           </label>
           <div className={getInputContainerClass(cardExpiryFocused, cardExpiryError, cardExpiryComplete)}>
@@ -269,9 +281,9 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
           )}
         </div>
 
-        {/* CVC */}
+        {/* CVC - NEO-BRUTALIST */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700">
+          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
             CVC
           </label>
           <div className={getInputContainerClass(cardCvcFocused, cardCvcError, cardCvcComplete)}>

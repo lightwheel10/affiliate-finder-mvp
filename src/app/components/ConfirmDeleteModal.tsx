@@ -66,46 +66,46 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
       width="max-w-md"
     >
       <div className="space-y-5">
-        {/* Warning Icon */}
+        {/* Warning Icon - NEO-BRUTALIST */}
         <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-full bg-red-50 border-4 border-red-100 flex items-center justify-center">
-            <AlertTriangle size={32} className="text-red-500" />
+          <div className="w-16 h-16 bg-red-500 border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_#000000]">
+            <AlertTriangle size={32} className="text-white" />
           </div>
         </div>
 
-        {/* Title & Message */}
+        {/* Title & Message - NEO-BRUTALIST */}
         <div className="text-center space-y-2">
-          <h3 className="text-xl font-bold text-slate-900">
+          <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wide">
             {displayTitle}
           </h3>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-sm mx-auto">
+          <p className="text-sm text-gray-500 leading-relaxed max-w-sm mx-auto">
             {displayMessage}
           </p>
         </div>
 
-        {/* Item Count Badge */}
+        {/* Item Count Badge - NEO-BRUTALIST */}
         <div className="flex justify-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 rounded-lg">
-            <Trash2 size={14} className="text-red-500" />
-            <span className="text-sm font-semibold text-red-700">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
+            <Trash2 size={14} className="text-red-600 dark:text-red-400" />
+            <span className="text-sm font-bold text-red-700 dark:text-red-300">
               {itemCount} {pluralizedType} will be permanently deleted
             </span>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - NEO-BRUTALIST */}
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={isDeleting}
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 border border-transparent rounded-xl shadow-sm hover:shadow-md shadow-red-500/20 transition-all duration-200 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="px-5 py-2.5 text-sm font-black text-white bg-red-500 hover:bg-red-600 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-200 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-wide"
           >
             {isDeleting ? (
               <>

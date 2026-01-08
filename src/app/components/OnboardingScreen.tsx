@@ -1,5 +1,22 @@
 'use client';
 
+/**
+ * =============================================================================
+ * OnboardingScreen - NEO-BRUTALIST
+ * =============================================================================
+ * 
+ * Updated: January 8th, 2026
+ *
+ * NEO-BRUTALIST DESIGN UPDATE:
+ * - Sharp edges (no rounded corners) 
+ * - Bold borders (border-2 with black)
+ * - Yellow accent color (#ffbf23)
+ * - Bold typography (font-black uppercase)
+ * - Dark mode support
+ *
+ * =============================================================================
+ */
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, Check, ChevronDown, Sparkles, Globe, Plus, X, MessageSquare, MousePointerClick, Star, Search, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -856,7 +873,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm"
+            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all text-sm"
             placeholder="Enter your full name"
           />
         </div>
@@ -872,7 +889,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => roleSearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
+              "w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all text-sm",
               !role ? "text-slate-400" : "text-slate-800"
             )}
           >
@@ -892,7 +909,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     value={roleSearch}
                     onChange={(e) => setRoleSearch(e.target.value)}
                     placeholder="Search roles..."
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20"
                   />
                 </div>
               </div>
@@ -910,7 +927,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     className="w-full text-left px-3.5 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
                   >
                     {r}
-                    {role === r && <Check size={14} className="text-[#D4E815]" />}
+                    {role === r && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
                 {roles.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase())).length === 0 && (
@@ -945,8 +962,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     : brandValidated
                       ? "border-green-400 focus:border-green-400 focus:ring-1 focus:ring-green-400/20"
                       : brandFormatValid === true
-                        ? "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
-                        : "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20",
+                        ? "border-slate-200 focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20"
+                        : "border-slate-200 focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20",
                 isBrandValidating && "opacity-70 cursor-not-allowed"
               )}
               placeholder="e.g. guffles.com"
@@ -992,7 +1009,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       {/* Header - Compact */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
+            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#ffbf23] shadow-md shadow-[#1A1D21]/10">
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
             <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast<span className="text-[#1A1D21]">Studio</span></span>
@@ -1007,7 +1024,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             key={i} 
             className={cn(
               "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 1 ? "bg-[#D4E815]" : "bg-slate-100"
+              i <= 1 ? "bg-[#ffbf23]" : "bg-slate-100"
             )} 
            />
         ))}
@@ -1016,7 +1033,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       {/* Question Block - Compact */}
       <div className="space-y-3">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
+          <div className="w-6 h-6 rounded-full bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
              <Globe size={12} />
       </div>
           <p className="text-slate-900 font-medium text-sm">
@@ -1035,7 +1052,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => countrySearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
+              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all text-sm",
               !targetCountry ? "text-slate-400" : "text-slate-900"
             )}
           >
@@ -1063,7 +1080,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     value={countrySearch}
                     onChange={(e) => setCountrySearch(e.target.value)}
                     placeholder="Search countries..."
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20"
                   />
                 </div>
               </div>
@@ -1084,7 +1101,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto rounded-sm" />
                       <span>{c.name}</span>
                     </span>
-                    {targetCountry === c.name && <Check size={14} className="text-[#D4E815]" />}
+                    {targetCountry === c.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
                 {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
@@ -1106,7 +1123,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => langSearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all text-sm",
+              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all text-sm",
               !targetLanguage ? "text-slate-400" : "text-slate-900"
             )}
           >
@@ -1141,7 +1158,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       </span>
                       <span>{l.name}</span>
                     </span>
-                    {targetLanguage === l.name && <Check size={14} className="text-[#D4E815]" />}
+                    {targetLanguage === l.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
                 {languages.filter(l => l.name.toLowerCase().includes(langSearch.toLowerCase())).length === 0 && (
@@ -1158,7 +1175,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     value={langSearch}
                     onChange={(e) => setLangSearch(e.target.value)}
                     placeholder="Search languages..."
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20"
                   />
                 </div>
               </div>
@@ -1174,7 +1191,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       {/* Header - Compact */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
+            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#ffbf23] shadow-md shadow-[#1A1D21]/10">
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
             <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast<span className="text-[#1A1D21]">Studio</span></span>
@@ -1189,7 +1206,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             key={i} 
             className={cn(
               "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 2 ? "bg-[#D4E815]" : "bg-slate-100"
+              i <= 2 ? "bg-[#ffbf23]" : "bg-slate-100"
             )} 
            />
         ))}
@@ -1198,7 +1215,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       {/* Question Block - More Compact */}
       <div className="space-y-3">
         <div className="flex gap-2 items-center">
-           <div className="w-6 h-6 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
+           <div className="w-6 h-6 rounded-full bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
              <Sparkles size={12} />
       </div>
           <p className="text-slate-900 font-medium text-sm">
@@ -1215,13 +1232,13 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               onChange={(e) => setCompetitorInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomCompetitor())}
               placeholder="e.g. competitor.com"
-              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all placeholder:text-slate-400"
+              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all placeholder:text-slate-400"
             />
              <button 
               type="button"
               onClick={addCustomCompetitor}
               disabled={!competitorInput.trim() || competitors.length >= 5}
-              className="w-9 h-9 rounded-full bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-9 h-9 rounded-full bg-[#ffbf23] text-[#1A1D21] hover:bg-[#c5d913] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Plus size={16} />
             </button>
@@ -1247,7 +1264,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         {suggestedCompetitors.length > 0 && (
           <div className="space-y-2">
             <p className="text-slate-600 text-xs font-medium flex items-center gap-1">
-              <Sparkles size={10} className="text-[#D4E815]" />
+              <Sparkles size={10} className="text-[#ffbf23]" />
               Here&apos;s some we found for you:
             </p>
             
@@ -1265,7 +1282,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       "group relative flex items-center gap-2 p-2 rounded-lg border text-left transition-all",
                       competitors.length >= 5
                         ? "border-slate-100 opacity-50 cursor-not-allowed"
-                        : "border-slate-200 hover:border-[#D4E815] hover:bg-[#D4E815]/5"
+                        : "border-slate-200 hover:border-[#ffbf23] hover:bg-[#ffbf23]/5"
                     )}
                   >
                     {/* Favicon from Google's Favicon API (January 3rd, 2026)
@@ -1290,7 +1307,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       <p className="text-[10px] font-medium text-slate-700 truncate">{comp.name}</p>
                       <p className="text-[9px] text-slate-400 truncate">{comp.domain}</p>
                     </div>
-                    <Plus size={12} className="text-slate-300 group-hover:text-[#D4E815] transition-colors shrink-0" />
+                    <Plus size={12} className="text-slate-300 group-hover:text-[#ffbf23] transition-colors shrink-0" />
                   </button>
                 ))}
             </div>
@@ -1314,10 +1331,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     key={comp}
                     type="button"
                     onClick={() => toggleCompetitor(comp)}
-                    className="group relative flex items-center gap-2 p-2 rounded-lg bg-[#D4E815]/10 border-2 border-[#D4E815] text-left transition-all"
+                    className="group relative flex items-center gap-2 p-2 rounded-lg bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-left transition-all"
                   >
                     {/* Favicon for selected competitors (January 3rd, 2026) */}
-                    <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0 overflow-hidden border border-[#D4E815]/30">
+                    <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0 overflow-hidden border border-[#ffbf23]/30">
                       <img 
                         src={`https://www.google.com/s2/favicons?domain=${comp}&sz=32`}
                         alt={displayName}
@@ -1362,7 +1379,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       {/* Header - Compact */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
+            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#ffbf23] shadow-md shadow-[#1A1D21]/10">
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
             <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast<span className="text-[#1A1D21]">Studio</span></span>
@@ -1377,7 +1394,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             key={i} 
             className={cn(
               "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 3 ? "bg-[#D4E815]" : "bg-slate-100"
+              i <= 3 ? "bg-[#ffbf23]" : "bg-slate-100"
             )} 
            />
         ))}
@@ -1386,7 +1403,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       {/* Question Block - Compact */}
       <div className="space-y-3">
         <div className="flex gap-2 items-center">
-           <div className="w-6 h-6 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
+           <div className="w-6 h-6 rounded-full bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
              <MessageSquare size={12} />
       </div>
           <p className="text-slate-900 font-medium text-sm">
@@ -1403,13 +1420,13 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTopic())}
               placeholder="e.g. best CRMs, skincare..."
-              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20 transition-all placeholder:text-slate-400"
+              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all placeholder:text-slate-400"
             />
              <button 
               type="button"
               onClick={addCustomTopic}
               disabled={!topicInput.trim() || topics.length >= 10}
-              className="w-9 h-9 rounded-full bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-9 h-9 rounded-full bg-[#ffbf23] text-[#1A1D21] hover:bg-[#c5d913] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Plus size={16} />
             </button>
@@ -1432,7 +1449,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         {suggestedTopics.length > 0 && (
           <div className="space-y-2">
             <p className="text-slate-600 text-xs font-medium flex items-center gap-1">
-              <Sparkles size={10} className="text-[#D4E815]" />
+              <Sparkles size={10} className="text-[#ffbf23]" />
               Here&apos;s some we found for you:
             </p>
             
@@ -1450,7 +1467,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       "flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] transition-all",
                       topics.length >= 10
                         ? "border-slate-100 text-slate-300 cursor-not-allowed"
-                        : "border-slate-200 text-slate-600 hover:border-[#D4E815] hover:bg-[#D4E815]/5 hover:text-slate-900"
+                        : "border-slate-200 text-slate-600 hover:border-[#ffbf23] hover:bg-[#ffbf23]/5 hover:text-slate-900"
                     )}
                   >
                     {t.keyword}
@@ -1473,10 +1490,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   key={topic}
                   type="button"
                   onClick={() => toggleTopic(topic)}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#D4E815]/10 border-2 border-[#D4E815] text-[11px] font-medium text-[#1A1D21] transition-all text-left"
+                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-[11px] font-medium text-[#1A1D21] transition-all text-left"
                 >
                   {topic}
-                  <div className="w-3.5 h-3.5 rounded-full bg-[#D4E815]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
+                  <div className="w-3.5 h-3.5 rounded-full bg-[#ffbf23]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
                     <X size={8} />
                   </div>
                 </button>
@@ -1502,7 +1519,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       {/* Header - Compact */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
+            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#ffbf23] shadow-md shadow-[#1A1D21]/10">
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
             <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast<span className="text-[#1A1D21]">Studio</span></span>
@@ -1517,7 +1534,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             key={i} 
             className={cn(
               "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 4 ? "bg-[#D4E815]" : "bg-slate-100"
+              i <= 4 ? "bg-[#ffbf23]" : "bg-slate-100"
             )} 
            />
         ))}
@@ -1526,7 +1543,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       {/* Question Block - Compact */}
       <div className="space-y-3">
         <div className="flex gap-2 items-center">
-           <div className="w-6 h-6 rounded-full bg-[#D4E815]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
+           <div className="w-6 h-6 rounded-full bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
              <MousePointerClick size={12} />
       </div>
           <p className="text-slate-900 font-medium text-sm">
@@ -1546,15 +1563,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all text-left group",
                   isSelected 
-                    ? "bg-[#D4E815]/10 border-[#D4E815] text-slate-900" 
+                    ? "bg-[#ffbf23]/10 border-[#ffbf23] text-slate-900" 
                     : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
                 )}
               >
                 <div className={cn(
                   "w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors",
                   isSelected 
-                    ? "bg-[#D4E815] border-[#D4E815] text-[#1A1D21]" 
-                    : "border-slate-300 group-hover:border-[#D4E815]"
+                    ? "bg-[#ffbf23] border-[#ffbf23] text-[#1A1D21]" 
+                    : "border-slate-300 group-hover:border-[#ffbf23]"
                 )}>
                   {isSelected && <Check size={8} strokeWidth={3} />}
                 </div>
@@ -1599,7 +1616,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             )}
           >
             Annual
-            <span className="bg-[#D4E815]/20 text-[#1A1D21] text-[9px] font-extrabold px-1 py-0.5 rounded uppercase">-20%</span>
+            <span className="bg-[#ffbf23]/20 text-[#1A1D21] text-[9px] font-extrabold px-1 py-0.5 rounded uppercase">-20%</span>
           </button>
         </div>
       </div>
@@ -1621,7 +1638,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               className={cn(
                 "relative rounded-lg bg-white flex flex-col text-left transition-all",
                 isPopular 
-                  ? "border-2 border-[#D4E815] shadow-md shadow-[#D4E815]/10" 
+                  ? "border-2 border-[#ffbf23] shadow-md shadow-[#ffbf23]/10" 
                   : "border border-slate-200 shadow-sm",
                 isSelected && !isEnterprise && "ring-2 ring-[#1A1D21] ring-offset-1",
                 isEnterprise && "opacity-70 cursor-not-allowed"
@@ -1629,7 +1646,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             >
               {isPopular && (
                 <div className="absolute -top-2.5 left-0 right-0 flex justify-center">
-                  <div className="bg-[#1A1D21] text-[#D4E815] text-[9px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                  <div className="bg-[#1A1D21] text-[#ffbf23] text-[9px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
                     <Star size={8} fill="currentColor" />
                     Best Value
                   </div>
@@ -1664,7 +1681,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 <div className={cn(
                   "w-full py-1.5 rounded-md text-[10px] font-bold mb-2 transition-all flex items-center justify-center gap-1",
                   isSelected && !isEnterprise
-                    ? "bg-[#D4E815] text-[#1A1D21]"
+                    ? "bg-[#ffbf23] text-[#1A1D21]"
                     : isPopular 
                       ? "bg-[#1A1D21]/10 text-[#1A1D21]"
                       : "bg-slate-100 text-slate-600"
@@ -1687,7 +1704,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     <div key={idx} className="flex items-start gap-1.5">
                       <div className={cn(
                         "mt-0.5 w-3 h-3 rounded-full flex items-center justify-center shrink-0",
-                        isPopular ? "bg-[#1A1D21] text-[#D4E815]" : "bg-slate-100 text-slate-600"
+                        isPopular ? "bg-[#1A1D21] text-[#ffbf23]" : "bg-slate-100 text-slate-600"
                       )}>
                         <Check size={6} strokeWidth={4} />
                       </div>
@@ -1789,9 +1806,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   );
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#F0F2F5] font-sans py-4 px-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gray-100 dark:bg-black font-sans py-4 px-4">
+      {/* Main Card Container - NEO-BRUTALIST (Updated January 8th, 2026) */}
       <div className={cn(
-        "bg-white rounded-2xl shadow-sm relative flex flex-col",
+        "bg-white dark:bg-[#0f0f0f] border-4 border-black dark:border-gray-600 shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#333333] relative flex flex-col",
         "p-5",
         step === 6 ? "w-full max-w-3xl" : "w-full max-w-[420px]",
         step === 7 ? "origin-center scale-[0.9]" : "max-h-[90vh]"
@@ -1856,21 +1874,21 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       <button
                         type="button"
                         onClick={handleGoBack}
-                        className="w-12 py-3 rounded-full font-semibold text-sm transition-all duration-200 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center text-slate-600"
+                        className="w-12 py-3 font-bold text-sm transition-all duration-200 border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400"
                       >
                         <ChevronLeft size={18} />
                       </button>
                     )}
                     
-                    {/* Continue/Next Button */}
+                    {/* Continue/Next Button - NEO-BRUTALIST */}
                     <button
                       type="submit"
                       disabled={isDisabled}
                       className={cn(
-                        "flex-1 py-3 rounded-full font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2",
+                        "flex-1 py-3 font-black text-sm transition-all duration-200 flex items-center justify-center gap-2 uppercase border-2",
                         isDisabled
-                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                          : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]"
+                          ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
+                          : "bg-[#ffbf23] text-black border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]"
                       )}
                     >
                       {isLoading || isBrandValidating ? (

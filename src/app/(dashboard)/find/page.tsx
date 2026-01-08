@@ -52,7 +52,8 @@ import {
   Trash2,
   Save,
   Loader2,
-  X
+  X,
+  Clock,  // Added January 6th, 2026 for neo-brutalist header
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
@@ -865,7 +866,13 @@ export default function FindNewPage() {
   };
 
   // ==========================================================================
-  // RENDER - January 3rd, 2026
+  // RENDER - January 3rd, 2026 (Updated January 6th, 2026)
+  // 
+  // DESIGN UPDATE: Neo-brutalist style from DashboardDemo.tsx
+  // - Bold borders (border-4)
+  // - Industrial typography (uppercase, tracking)
+  // - Neo-brutalist buttons with offset shadows
+  // - Timer and credit pills in header
   // 
   // NOTE: The outer div with flex and Sidebar is NOT here.
   // It's in the parent layout.tsx file (src/app/(dashboard)/layout.tsx).
@@ -873,123 +880,148 @@ export default function FindNewPage() {
   // ==========================================================================
   return (
     <>
-      {/* Dashboard Header */}
-      <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
-        {/* Page Title */}
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold text-slate-900">Find New Affiliates</h1>
-        </div>
+      {/* =============================================================================
+          TOP BAR - NEW DESIGN (January 6th, 2026)
+          Neo-brutalist header - MATCHES DashboardDemo.tsx EXACTLY
+          ============================================================================= */}
+      <header className="h-16 border-b-4 border-black dark:border-white flex items-center justify-between px-6 bg-white dark:bg-[#0a0a0a]">
+        {/* Page Title - font-black uppercase tracking-tight */}
+        <h1 className="font-black text-xl uppercase tracking-tight">Find New</h1>
 
-        {/* Countdown Timer */}
-        <ScanCountdown />
-        
-        <div className="flex items-center gap-3 text-xs">
-          {/* Credits Display - December 2025 */}
-          <CreditsDisplay />
-          
-          {/* Action Buttons */}
+        <div className="flex items-center gap-4">
+          {/* Timer Pill - DashboardDemo exact styling:
+              bg-[#1a1a1a] text-brandYellow px-3 py-1.5 rounded-full text-xs font-mono border border-brandBlack */}
+          <div className="hidden md:flex items-center gap-2 bg-[#1a1a1a] text-[#ffbf23] px-3 py-1.5 rounded-full text-xs font-mono border border-black">
+            <Clock size={12} />
+            <span>NEXT SCAN</span>
+            <ScanCountdown />
+            <span className="text-white font-bold">PRO</span>
+          </div>
+
+          {/* Stats Pills - DashboardDemo exact styling:
+              px-3 py-1.5 border-2 border-brandBlack rounded-md bg-white 
+              Format: "Search | 10/10 Topic" */}
+          <div className="hidden lg:flex items-center gap-3">
+            <CreditsDisplay variant="neo" />
+          </div>
+
+          {/* Find Button - DashboardDemo exact styling:
+              bg-brandYellow text-brandBlack font-black text-xs uppercase 
+              border-2 border-brandBlack shadow-neo-sm hover effects */}
           <button 
             onClick={() => setIsFindModalOpen(true)}
-            className="bg-[#D4E815] text-[#1A1D21] px-3.5 py-1.5 rounded-lg hover:bg-[#c5d913] hover:shadow-md hover:shadow-[#D4E815]/20 transition-all font-semibold flex items-center gap-1.5"
+            className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
           >
-            <Plus size={14} /> Find Affiliates
+            <Plus size={14} strokeWidth={3} /> Find Affiliates
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full">
+      {/* 
+        OLD_DESIGN - Header (pre-January 6th, 2026)
+        The previous header used:
+        - h-12 height, bg-white/80 backdrop-blur, border-b border-slate-100
+        - D4E815 lime green accents
+        - ScanCountdown component inline
+        - CreditsDisplay without variant prop
+        To restore: See git history for this file
+      */}
+
+      {/* =============================================================================
+          CONTENT AREA - NEW DESIGN (January 6th, 2026)
+          ============================================================================= */}
+      <div className="flex-1 p-8 overflow-y-auto">
         
-        {/* Header Section */}
-        <div className="mb-6 space-y-6">
-
-          {/* Previous Results Warning - Above Search Bar */}
-          {showWarning && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center justify-center w-8 h-8 bg-[#D4E815]/20 rounded-full shrink-0">
-                <Search size={16} className="text-[#1A1D21]" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-[#1A1D21]">New search started</p>
-                <p className="text-xs text-slate-600 mt-0.5">
-                  Previous results have been moved to <span className="font-semibold">"All Discovered"</span> page. Showing new results below...
-                </p>
-              </div>
-              <button
-                onClick={() => setShowWarning(false)}
-                className="text-[#1A1D21] hover:text-slate-600 transition-colors p-1"
-                aria-label="Dismiss"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        {/* Previous Results Warning - Neo-brutalist style */}
+        {showWarning && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/20 border-2 border-[#ffbf23] rounded-lg mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center justify-center w-8 h-8 bg-[#ffbf23] rounded shrink-0">
+              <Search size={16} className="text-black" />
             </div>
-          )}
-
-          {/* Controls Bar */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            
-            {/* Left: Search & Filters */}
-            <div className="flex items-center gap-4 flex-1">
-              <div className="w-full max-w-[160px]">
-                <div className="relative w-full group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
-                    <Search className="h-3.5 w-3.5" />
-                  </div>
-                  <input
-                    className="w-full pl-9 pr-3 py-1.5 bg-white border ring-1 ring-slate-200 rounded-lg text-xs font-semibold text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815]"
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search..."
-                  />
-                </div>
-              </div>
-
-              <div className="h-8 w-px bg-slate-200 mx-1 hidden lg:block"></div>
-
-              {/* Filter Pills */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
-                {filterTabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveFilter(tab.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap",
-                      activeFilter === tab.id
-                        ? "bg-[#D4E815] text-[#1A1D21] border-[#D4E815] shadow-sm shadow-[#D4E815]/20"
-                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                    )}
-                  >
-                    {tab.icon}
-                    {tab.id === 'All' && <span>All</span>}
-                    {hasSearched && tab.count > 0 && (
-                      <span className={cn(
-                        "ml-0.5 px-1.5 py-0.5 rounded text-[9px]",
-                        activeFilter === tab.id ? "bg-[#1A1D21]/20 text-[#1A1D21]" : "bg-slate-100 text-slate-500"
-                      )}>
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-black">New search started</p>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Previous results have been moved to <span className="font-bold">"All Discovered"</span> page.
+              </p>
             </div>
+            <button
+              onClick={() => setShowWarning(false)}
+              className="text-black hover:text-gray-600 transition-colors p-1"
+              aria-label="Dismiss"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
-            {/* Right: Advanced Filter Button */}
-            <div className="flex items-center">
-              <FilterPanel
-                affiliates={results}
-                activeFilters={advancedFilters}
-                onFilterChange={setAdvancedFilters}
-                isOpen={isFilterPanelOpen}
-                onClose={() => setIsFilterPanelOpen(false)}
-                onOpen={() => setIsFilterPanelOpen(true)}
+        {/* =============================================================================
+            FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            ============================================================================= */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            {/* Search Input - DashboardDemo exact:
+                border-2 border-brandBlack dark:border-gray-700 rounded bg-white dark:bg-gray-900 
+                focus:border-brandYellow */}
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search affiliates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
               />
             </div>
+            
+            {/* Platform Filter Pills - DashboardDemo exact:
+                bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800
+                Active: bg-brandYellow text-brandBlack rounded shadow-sm */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800">
+              {filterTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveFilter(tab.id)}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-bold",
+                    activeFilter === tab.id
+                      ? "bg-[#ffbf23] text-black shadow-sm"
+                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  )}
+                  title={tab.id}
+                >
+                  {tab.icon || <Globe size={16} />}
+                  {tab.id === 'All' && <span>All</span>}
+                  {hasSearched && tab.count > 0 && (
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                      activeFilter === tab.id ? "bg-black/20 text-black" : "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                    )}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Advanced Filter */}
+          <div className="flex items-center gap-3">
+            <FilterPanel
+              affiliates={results}
+              activeFilters={advancedFilters}
+              onFilterChange={setAdvancedFilters}
+              isOpen={isFilterPanelOpen}
+              onClose={() => setIsFilterPanelOpen(false)}
+              onOpen={() => setIsFilterPanelOpen(true)}
+            />
           </div>
         </div>
+
+        {/* 
+          OLD_DESIGN - Filters Section (pre-January 6th, 2026)
+          Previously used: D4E815 lime accents, rounded-lg pills, max-w-160px search
+          To restore: See git history for this file
+        */}
 
         {/* ============================================================================
             BULK ACTIONS BAR (Added Dec 2025)
@@ -1067,26 +1099,39 @@ export default function FindNewPage() {
           );
         })()}
 
-        {/* Table Header */}
-        <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_220px_1fr_140px_100px_120px] text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
-          <div className="pl-1 flex items-center">
-            <input
-              type="checkbox"
-              checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
-              onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
-              className="w-3.5 h-3.5 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer"
-              title={visibleSelectedLinks.size === filteredResults.length ? 'Deselect all' : 'Select all'}
-            />
+        {/* =============================================================================
+            TABLE AREA - DashboardDemo.tsx EXACT STYLING
+            bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 
+            rounded-lg min-h-[500px] flex flex-col
+            ============================================================================= */}
+        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
+          {/* Table Header - DashboardDemo exact:
+              grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 
+              text-[10px] font-black text-gray-400 uppercase tracking-widest */}
+          <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            <div className="col-span-1 flex justify-center">
+              <input 
+                type="checkbox" 
+                checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
+                onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
+                className="accent-[#ffbf23]" 
+              />
+            </div>
+            <div className="col-span-3">Affiliate</div>
+            <div className="col-span-3">Relevant Content</div>
+            <div className="col-span-2">Discovery Method</div>
+            <div className="col-span-1">Date</div>
+            <div className="col-span-2 text-right">Action</div>
           </div>
-          <div>Affiliate</div>
-          <div>Relevant Content</div>
-          <div>Discovery Method</div>
-          <div>Date</div>
-          <div className="text-right pr-2">Action</div>
-        </div>
 
-        {/* Results Area */}
-        <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm min-h-[400px]">
+          {/* Results Content */}
+          <div className="flex-1 divide-y divide-gray-100 dark:divide-gray-800">
+
+        {/* 
+          OLD_DESIGN - Table Header (pre-January 6th, 2026)
+          Previously used: fixed grid columns, rounded-xl corners, slate colors
+          To restore: See git history for this file
+        */}
           {hasSearched && (loading || groupedResults.length > 0) ? (
             <div>
               {loading ? (
@@ -1222,18 +1267,24 @@ export default function FindNewPage() {
               </div>
             </div>
           ) : hasSearched && !loading && groupedResults.length === 0 ? (
-            <div className="py-20 text-center text-slate-400 text-sm">
+            <div className="py-20 text-center text-gray-400 text-sm">
               No results found for this filter.
             </div>
           ) : (
-            <div className="py-32 text-center">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
-                <Search className="w-8 h-8 text-slate-300" />
+            /* Empty State - Neo-brutalist style */
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
+                <Search size={24} className="text-gray-300" />
               </div>
-              <h3 className="text-base font-bold text-slate-900 mb-1">No affiliates found yet</h3>
-              <p className="text-slate-400 text-sm">Start a search to see results here</p>
+              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+                No affiliates found yet
+              </h3>
+              <p className="text-gray-500 text-sm max-w-xs">
+                Start a search to see results here
+              </p>
             </div>
           )}
+          </div>
         </div>
 
         {/* Pagination Controls */}
@@ -1321,7 +1372,7 @@ export default function FindNewPage() {
 
       </div>
 
-      {/* Find Affiliates Modal */}
+      {/* Find Affiliates Modal - NEO-BRUTALIST (Updated January 8th, 2026) */}
       <Modal 
         isOpen={isFindModalOpen} 
         onClose={() => setIsFindModalOpen(false)}
@@ -1329,25 +1380,25 @@ export default function FindNewPage() {
         width="max-w-2xl"
       >
         <div className="space-y-5">
-          {/* Header */}
+          {/* Header - NEO-BRUTALIST */}
           <div className="text-center pb-2">
-            <div className="w-12 h-12 bg-[#1A1D21] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-[#1A1D21]/25">
-              <Search size={24} className="text-[#D4E815]" />
+            <div className="w-14 h-14 bg-black border-4 border-black flex items-center justify-center mx-auto mb-3 shadow-[4px_4px_0px_0px_#ffbf23]">
+              <Search size={24} className="text-[#ffbf23]" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">Find Affiliates</h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wide">Find Affiliates</h2>
+            <p className="text-sm text-gray-500 mt-1">
               Add up to {MAX_KEYWORDS} keywords to discover relevant creators
             </p>
           </div>
 
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Left Column - Keywords */}
+            {/* Left Column - Keywords - NEO-BRUTALIST */}
             <div className="flex flex-col">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7">
-                <Search size={14} className="text-[#1A1D21]" />
+              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 uppercase tracking-wide">
+                <Search size={14} className="text-black dark:text-white" />
                 Keywords
-                <span className="ml-auto text-xs font-normal text-slate-400">
+                <span className="ml-auto text-xs font-bold text-gray-400">
                   {keywords.length}/{MAX_KEYWORDS}
                 </span>
               </label>
@@ -1365,38 +1416,38 @@ export default function FindNewPage() {
                   }}
                   placeholder="Type keyword + Enter..."
                   disabled={keywords.length >= MAX_KEYWORDS}
-                  className="w-full px-3 py-2.5 pr-16 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#D4E815] focus:ring-2 focus:ring-[#D4E815]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2.5 pr-16 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-black dark:focus:border-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   onClick={addKeyword}
                   disabled={!keywordInput.trim() || keywords.length >= MAX_KEYWORDS}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-[#D4E815] text-[#1A1D21] text-xs font-semibold rounded hover:bg-[#c5d913] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black hover:bg-yellow-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300 disabled:cursor-not-allowed transition-all"
                 >
                   Add
                 </button>
               </div>
 
-              <div className="flex-1 min-h-[140px] max-h-[140px] overflow-y-auto no-scrollbar space-y-1.5 p-2 bg-slate-50 rounded-lg border border-slate-200 mt-2">
+              <div className="flex-1 min-h-[140px] max-h-[140px] overflow-y-auto no-scrollbar space-y-1.5 p-2 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 mt-2">
                 {keywords.length > 0 ? (
                   keywords.map((kw, idx) => (
                     <div
                       key={kw}
-                      className="flex items-center gap-2 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-sm group hover:border-red-200 transition-all"
+                      className="flex items-center gap-2 px-2.5 py-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-sm group hover:border-red-400 transition-all"
                     >
-                      <span className="w-4 h-4 flex items-center justify-center bg-[#D4E815]/20 text-[#1A1D21] text-[10px] font-bold rounded shrink-0">
+                      <span className="w-5 h-5 flex items-center justify-center bg-[#ffbf23] text-black text-[10px] font-black border border-black shrink-0">
                         {idx + 1}
                       </span>
-                      <span className="text-slate-700 truncate flex-1">{kw}</span>
+                      <span className="text-gray-700 dark:text-gray-300 truncate flex-1 font-medium">{kw}</span>
                       <button
                         onClick={() => removeKeyword(kw)}
-                        className="w-5 h-5 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-all shrink-0"
+                        className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shrink-0 font-bold"
                       >
                         ×
                       </button>
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center justify-center h-full text-slate-400 text-xs">
+                  <div className="flex items-center justify-center h-full text-gray-400 text-xs font-medium">
                     No keywords added yet
                   </div>
                 )}
@@ -1406,7 +1457,7 @@ export default function FindNewPage() {
                 {keywords.length > 0 && (
                   <button
                     onClick={() => setKeywords([])}
-                    className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+                    className="text-xs text-gray-400 hover:text-red-500 transition-colors font-bold"
                   >
                     Clear all keywords
                   </button>
@@ -1414,26 +1465,16 @@ export default function FindNewPage() {
               </div>
             </div>
 
-            {/* ================================================================
-                RIGHT COLUMN - Website & Competitors
-                January 4th, 2026
-                
-                Displays actual data from user's onboarding:
-                - user.brand: Their website URL (with favicon)
-                - user.competitors: Array of competitor URLs (with favicons)
-                
-                Note: Topics/keywords are shown in the LEFT column as quick-add
-                buttons below the keywords input field.
-                ================================================================ */}
+            {/* RIGHT COLUMN - Website & Competitors - NEO-BRUTALIST */}
             <div className="flex flex-col">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7">
-                <Globe size={14} className="text-slate-400" />
+              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 uppercase tracking-wide">
+                <Globe size={14} className="text-gray-500" />
                 Website
               </label>
-              <div className={`px-3 py-2.5 border rounded-lg text-sm mt-2 flex items-center gap-2 ${
+              <div className={`px-3 py-2.5 border-2 text-sm mt-2 flex items-center gap-2 ${
                 user?.brand 
-                  ? 'bg-white border-slate-200 text-slate-700' 
-                  : 'bg-slate-50 border-slate-200 text-slate-400 italic'
+                  ? 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300' 
+                  : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-400 italic'
               }`}>
                 {user?.brand && (
                   <img 
@@ -1443,27 +1484,27 @@ export default function FindNewPage() {
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 )}
-                {user?.brand || 'Not set during onboarding'}
+                <span className="font-medium">{user?.brand || 'Not set during onboarding'}</span>
               </div>
 
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2 h-7 mt-3">
-                <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 mt-3 uppercase tracking-wide">
+                <svg className="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
                 Competitors
                 {user?.competitors && user.competitors.length > 0 && (
-                  <span className="ml-auto text-[10px] text-slate-500 font-normal">
+                  <span className="ml-auto text-[10px] text-gray-500 font-bold">
                     {user.competitors.length} added
                   </span>
                 )}
               </label>
               {user?.competitors && user.competitors.length > 0 ? (
-                <div className="p-2 bg-white border border-slate-200 rounded-lg mt-2 overflow-y-auto max-h-[80px]">
+                <div className="p-2 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 mt-2 overflow-y-auto max-h-[80px]">
                   <div className="flex flex-wrap gap-1.5">
                     {user.competitors.map((competitor, idx) => (
                       <span 
                         key={idx}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded-full"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium border border-gray-200 dark:border-gray-600"
                       >
                         <img 
                           src={`https://www.google.com/s2/favicons?domain=${competitor}&sz=16`}
@@ -1477,22 +1518,22 @@ export default function FindNewPage() {
                   </div>
                 </div>
               ) : (
-                <div className="p-3 bg-slate-50 border border-dashed border-slate-200 rounded-lg mt-2">
-                  <p className="text-center text-slate-400 text-xs">No competitors added</p>
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 mt-2">
+                  <p className="text-center text-gray-400 text-xs font-medium">No competitors added</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Action Button */}
+          {/* Action Button - NEO-BRUTALIST */}
           <button
             onClick={handleFindAffiliates}
             disabled={keywords.length === 0 || loading}
-            className="w-full py-3 bg-[#D4E815] text-[#1A1D21] font-semibold rounded-xl hover:bg-[#c5d913] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed shadow-lg shadow-[#D4E815]/25 hover:shadow-xl hover:shadow-[#D4E815]/30 transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-4 border-black hover:bg-yellow-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300 disabled:cursor-not-allowed shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 border-[#1A1D21] border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-3 border-black border-t-transparent animate-spin"></div>
                 Searching...
               </>
             ) : (
@@ -1503,7 +1544,7 @@ export default function FindNewPage() {
             )}
           </button>
 
-          <p className="text-center text-[11px] text-slate-400">
+          <p className="text-center text-[11px] text-gray-400 font-medium">
             💡 Tip: Use specific keywords like "best CRM software" instead of just "CRM"
           </p>
         </div>

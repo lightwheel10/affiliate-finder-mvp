@@ -1,35 +1,34 @@
 'use client';
 
-// =============================================================================
-// PRICING MODAL COMPONENT
-// 
-// Created: December 2025
-// Author: Development Team
-//
-// PURPOSE:
-// Displays available subscription plans and allows users to:
-// - View plan features and pricing
-// - Upgrade to a higher plan (immediate, prorated charge)
-// - Downgrade to a lower plan (takes effect next billing cycle)
-// - Change billing interval (monthly ↔ annual)
-// - End trial early and start billing (for trial users)
-//
-// USAGE:
-// <PricingModal 
-//   isOpen={true}
-//   onClose={() => {}}
-//   userId={123}                    // Required for API calls
-//   currentPlan="pro"               // User's current plan (null if none)
-//   currentBillingInterval="monthly" // Current interval
-//   isTrialing={true}               // Is user on trial?
-//   onSuccess={() => refetch()}     // Called after successful change
-// />
-//
-// SECURITY:
-// - All plan changes go through authenticated API routes
-// - Server validates all inputs
-// - This component only handles UI
-// =============================================================================
+/**
+ * =============================================================================
+ * PRICING MODAL COMPONENT - NEO-BRUTALIST
+ * =============================================================================
+ * 
+ * Created: December 2025
+ * Updated: January 8th, 2026
+ *
+ * NEO-BRUTALIST DESIGN UPDATE:
+ * - Sharp edges (no rounded corners)
+ * - Bold borders (border-2 to border-4 with black)
+ * - Yellow accent color (#ffbf23)
+ * - Bold typography (font-black uppercase)
+ * - Dark mode support
+ *
+ * PURPOSE:
+ * Displays available subscription plans and allows users to:
+ * - View plan features and pricing
+ * - Upgrade to a higher plan (immediate, prorated charge)
+ * - Downgrade to a lower plan (takes effect next billing cycle)
+ * - Change billing interval (monthly ↔ annual)
+ * - End trial early and start billing (for trial users)
+ *
+ * SECURITY:
+ * - All plan changes go through authenticated API routes
+ * - Server validates all inputs
+ * - This component only handles UI
+ * =============================================================================
+ */
 
 import React, { useState } from 'react';
 import { Check, Zap, Loader2, Star, ShieldCheck, TrendingUp, AlertCircle, Clock } from 'lucide-react';
@@ -293,26 +292,26 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="" width="max-w-5xl">
       <div className="py-6 px-2">
         {/* ================================================================= */}
-        {/* HEADER */}
+        {/* HEADER - NEO-BRUTALIST (Updated January 8th, 2026) */}
         {/* ================================================================= */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl text-slate-900 font-bold tracking-tight mb-4">
-            {currentPlan ? 'Manage your plan' : 'Supercharge your'} <span className="text-[#1A1D21]">{currentPlan ? '' : 'affiliate growth'}</span>
+          <h1 className="text-3xl md:text-4xl text-gray-900 dark:text-white font-black tracking-tight mb-4 uppercase">
+            {currentPlan ? 'Manage your plan' : 'Supercharge your'} <span className="text-black dark:text-white">{currentPlan ? '' : 'affiliate growth'}</span>
           </h1>
-          <p className="text-slate-500 text-lg max-w-2xl mx-auto mb-8">
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-8">
             {currentPlan 
               ? 'Upgrade to unlock more features or adjust your billing preferences.'
               : 'Stop wasting hours searching manually. Get instant access to thousands of high-converting affiliates tailored to your niche.'
             }
           </p>
 
-          {/* Current Plan Badge */}
+          {/* Current Plan Badge - NEO-BRUTALIST */}
           {currentPlan && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full mb-6">
-              <span className="text-sm text-slate-600">Current plan:</span>
-              <span className="text-sm font-bold text-slate-900 capitalize">{currentPlan}</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 mb-6">
+              <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Current plan:</span>
+              <span className="text-sm font-black text-gray-900 dark:text-white uppercase">{currentPlan}</span>
               {isTrialing && (
-                <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 border border-blue-500 font-bold">
                   <Clock size={10} />
                   Trial
                 </span>
@@ -320,13 +319,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             </div>
           )}
 
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-slate-100 p-1.5 rounded-xl relative">
+          {/* Billing Toggle - NEO-BRUTALIST */}
+          <div className="inline-flex items-center bg-gray-100 dark:bg-gray-800 p-1 border-2 border-black dark:border-gray-600 relative">
             <button
               onClick={() => setBillingInterval('monthly')}
               className={cn(
-                "px-6 py-2 rounded-lg text-sm font-bold transition-all duration-200",
-                billingInterval === 'monthly' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                "px-6 py-2 text-sm font-black transition-all duration-200 uppercase",
+                billingInterval === 'monthly' ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-2 border-black dark:border-gray-600" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               )}
             >
               Monthly
@@ -334,26 +333,26 @@ export const PricingModal: React.FC<PricingModalProps> = ({
             <button
               onClick={() => setBillingInterval('annual')}
               className={cn(
-                "px-6 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2",
-                billingInterval === 'annual' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                "px-6 py-2 text-sm font-black transition-all duration-200 flex items-center gap-2 uppercase",
+                billingInterval === 'annual' ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-2 border-black dark:border-gray-600" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               )}
             >
               Annual
-              <span className="bg-[#D4E815]/20 text-[#1A1D21] text-[10px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide">Save 20%</span>
+              <span className="bg-[#ffbf23] text-black text-[10px] font-black px-1.5 py-0.5 border border-black uppercase tracking-wide">Save 20%</span>
             </button>
           </div>
         </div>
 
         {/* ================================================================= */}
-        {/* ERROR MESSAGE */}
+        {/* ERROR MESSAGE - NEO-BRUTALIST (Updated January 8th, 2026) */}
         {/* ================================================================= */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+          <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 flex items-center gap-3">
             <AlertCircle size={18} className="text-red-500 shrink-0" />
-            <p className="text-sm text-red-700">{error}</p>
+            <p className="text-sm text-red-700 dark:text-red-400 font-medium">{error}</p>
             <button 
               onClick={() => setError(null)}
-              className="ml-auto text-red-500 hover:text-red-700"
+              className="ml-auto text-red-500 hover:text-red-700 font-bold text-lg"
             >
               ×
             </button>
@@ -361,29 +360,29 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         )}
 
         {/* ================================================================= */}
-        {/* TRIAL END OPTION MODAL */}
+        {/* TRIAL END OPTION - NEO-BRUTALIST (Updated January 8th, 2026) */}
         {/* ================================================================= */}
         {showTrialEndOption && pendingPlanChange && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="mb-6 p-4 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500">
             <div className="flex items-start gap-3">
               <Clock size={20} className="text-blue-500 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="text-sm font-bold text-blue-900 mb-1">You&apos;re currently on a trial</h4>
-                <p className="text-xs text-blue-700 mb-4">
+                <h4 className="text-sm font-black text-blue-900 dark:text-blue-300 mb-1 uppercase">You&apos;re currently on a trial</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-400 mb-4">
                   Would you like to end your trial now and start billing immediately, or keep your trial and just change the plan?
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleTrialEndDecision(false)}
                     disabled={isLoading !== null}
-                    className="px-4 py-2 bg-white text-blue-700 text-xs font-bold rounded-lg border border-blue-300 hover:bg-blue-50 transition-all"
+                    className="px-4 py-2 bg-white dark:bg-gray-900 text-blue-700 dark:text-blue-400 text-xs font-black border-2 border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-all uppercase"
                   >
                     Keep Trial, Change Plan
                   </button>
                   <button
                     onClick={() => handleTrialEndDecision(true)}
                     disabled={isLoading !== null}
-                    className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all"
+                    className="px-4 py-2 bg-blue-600 text-white text-xs font-black border-2 border-black hover:bg-blue-700 transition-all uppercase"
                   >
                     End Trial &amp; Start Billing
                   </button>
@@ -392,7 +391,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       setShowTrialEndOption(false);
                       setPendingPlanChange(null);
                     }}
-                    className="px-4 py-2 text-slate-500 text-xs font-medium hover:text-slate-700"
+                    className="px-4 py-2 text-gray-500 text-xs font-bold hover:text-gray-700 dark:hover:text-gray-300 uppercase"
                   >
                     Cancel
                   </button>
@@ -403,7 +402,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         )}
 
         {/* ================================================================= */}
-        {/* PRICING GRID */}
+        {/* PRICING GRID - NEO-BRUTALIST (Updated January 8th, 2026) */}
         {/* ================================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {PLANS.map((plan) => {
@@ -418,26 +417,26 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               <div 
                 key={plan.id}
                 className={cn(
-                  "relative rounded-2xl bg-white flex flex-col transition-all duration-200",
+                  "relative bg-white dark:bg-[#0f0f0f] flex flex-col transition-all duration-200",
                   isPopular 
-                    ? "border-2 border-[#D4E815] shadow-xl shadow-[#D4E815]/20 z-10" 
-                    : "border border-slate-200 shadow-lg",
-                  isCurrentPlan && "ring-2 ring-blue-400 ring-offset-2"
+                    ? "border-4 border-[#ffbf23] shadow-[6px_6px_0px_0px_#ffbf23] z-10" 
+                    : "border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333]",
+                  isCurrentPlan && "ring-4 ring-blue-500"
                 )}
               >
-                {/* Current Plan Badge */}
+                {/* Current Plan Badge - NEO-BRUTALIST */}
                 {isCurrentPlan && (
                   <div className="absolute -top-3 left-4">
-                    <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+                    <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-1 border-2 border-black uppercase tracking-wide">
                       Current Plan
                     </span>
                   </div>
                 )}
 
-                {/* Popular Badge */}
+                {/* Popular Badge - NEO-BRUTALIST */}
                 {isPopular && !isCurrentPlan && (
                   <div className="absolute -top-4 left-0 right-0 flex justify-center">
-                    <div className="bg-[#1A1D21] text-[#D4E815] text-xs font-bold tracking-wide uppercase px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
+                    <div className="bg-black text-[#ffbf23] text-xs font-black tracking-wide uppercase px-3 py-1 border-2 border-[#ffbf23] flex items-center gap-1.5">
                       <Star size={12} fill="currentColor" />
                       Best Value
                     </div>
@@ -447,40 +446,40 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <div className="p-6 lg:p-8 flex-1 flex flex-col">
                   {/* Plan Name & Description */}
                   <div className="mb-6">
-                    <h3 className={cn("text-xl font-bold mb-2", isPopular ? "text-[#1A1D21]" : "text-slate-900")}>
+                    <h3 className={cn("text-xl font-black mb-2 uppercase", isPopular ? "text-black dark:text-white" : "text-gray-900 dark:text-white")}>
                       {plan.name}
                     </h3>
-                    <p className="text-xs text-slate-500 leading-relaxed min-h-[40px]">{plan.description}</p>
+                    <p className="text-xs text-gray-500 leading-relaxed min-h-[40px]">{plan.description}</p>
                   </div>
 
                   {/* Price */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-1">
                       {price === null ? (
-                        <span className="text-4xl font-bold text-slate-900">Custom</span>
+                        <span className="text-4xl font-black text-gray-900 dark:text-white">Custom</span>
                       ) : (
                         <>
-                          <span className="text-4xl font-bold text-slate-900">{CURRENCY_SYMBOL}{price}</span>
-                          <span className="text-slate-400 font-medium">/mo</span>
+                          <span className="text-4xl font-black text-gray-900 dark:text-white">{CURRENCY_SYMBOL}{price}</span>
+                          <span className="text-gray-400 font-bold">/mo</span>
                         </>
                       )}
                     </div>
                     {price !== null && billingInterval === 'annual' && (
-                      <p className="text-xs text-[#1A1D21] font-medium mt-1">Billed {CURRENCY_SYMBOL}{price * 12} yearly</p>
+                      <p className="text-xs text-black dark:text-white font-bold mt-1">Billed {CURRENCY_SYMBOL}{price * 12} yearly</p>
                     )}
                   </div>
 
-                  {/* CTA Button */}
+                  {/* CTA Button - NEO-BRUTALIST */}
                   <button
                     onClick={() => handlePlanSelect(plan)}
                     disabled={buttonDisabled}
                     className={cn(
-                      "w-full py-3 rounded-xl text-sm font-bold mb-8 transition-all duration-200 shadow-sm flex items-center justify-center gap-2",
+                      "w-full py-3 text-sm font-black mb-8 transition-all duration-200 flex items-center justify-center gap-2 uppercase border-2",
                       isCurrentPlan
-                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
                         : isPopular 
-                          ? "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] hover:shadow-[#D4E815]/25" 
-                          : "bg-[#1A1D21] text-white hover:bg-[#2a2f35]",
+                          ? "bg-[#ffbf23] text-black border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]" 
+                          : "bg-black text-white border-black hover:bg-gray-800",
                       buttonDisabled && !isCurrentPlan && "opacity-50 cursor-not-allowed"
                     )}
                   >
@@ -490,19 +489,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                       <>
                         {buttonText}
                         {isPopular && !isCurrentPlan && changeType !== 'same' && (
-                          <Zap size={14} fill="currentColor" className="text-[#1A1D21]" />
+                          <Zap size={14} fill="currentColor" className="text-black" />
                         )}
                       </>
                     )}
                   </button>
 
-                  {/* Change Type Indicator */}
+                  {/* Change Type Indicator - NEO-BRUTALIST */}
                   {currentPlan && changeType !== 'same' && changeType !== 'new' && plan.id !== 'enterprise' && (
                     <div className={cn(
-                      "mb-4 px-3 py-2 rounded-lg text-xs text-center",
-                      changeType === 'upgrade' && "bg-green-50 text-green-700",
-                      changeType === 'downgrade' && "bg-orange-50 text-orange-700",
-                      changeType === 'interval_change' && "bg-blue-50 text-blue-700"
+                      "mb-4 px-3 py-2 text-xs text-center border-2 font-bold",
+                      changeType === 'upgrade' && "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-500",
+                      changeType === 'downgrade' && "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-500",
+                      changeType === 'interval_change' && "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-500"
                     )}>
                       {changeType === 'upgrade' && '⬆️ Immediate upgrade with proration'}
                       {changeType === 'downgrade' && '⬇️ Takes effect next billing cycle'}
@@ -510,18 +509,18 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                     </div>
                   )}
 
-                  {/* Features List */}
+                  {/* Features List - NEO-BRUTALIST */}
                   <div className="space-y-3 flex-1">
-                    <p className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">What&apos;s included:</p>
+                    <p className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider mb-3">What&apos;s included:</p>
                     {plan.features.map((feature, idx) => (
                       <div key={idx} className="flex items-start gap-3">
                         <div className={cn(
-                          "mt-0.5 w-4 h-4 rounded-full flex items-center justify-center shrink-0",
-                          isPopular ? "bg-[#1A1D21] text-[#D4E815]" : "bg-slate-100 text-slate-600"
+                          "mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 border",
+                          isPopular ? "bg-black text-[#ffbf23] border-black" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600"
                         )}>
                           <Check size={10} strokeWidth={4} />
                         </div>
-                        <span className="text-sm text-slate-600 leading-tight">
+                        <span className="text-sm text-gray-600 dark:text-gray-400 leading-tight">
                           {feature}
                         </span>
                       </div>
@@ -534,23 +533,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         </div>
 
         {/* ================================================================= */}
-        {/* FOOTER */}
+        {/* FOOTER - NEO-BRUTALIST (Updated January 8th, 2026) */}
         {/* ================================================================= */}
-        <div className="mt-12 text-center border-t border-slate-100 pt-8">
-          <div className="flex items-center justify-center gap-6 text-sm text-slate-500">
+        <div className="mt-12 text-center border-t-2 border-gray-200 dark:border-gray-700 pt-8">
+          <div className="flex items-center justify-center gap-6 text-sm text-gray-500 font-medium">
             <div className="flex items-center gap-2">
-              <ShieldCheck size={16} className="text-[#D4E815]" />
+              <ShieldCheck size={16} className="text-[#ffbf23]" />
               <span>Secure SSL Payment</span>
             </div>
             <div className="flex items-center gap-2">
-              <TrendingUp size={16} className="text-[#1A1D21]" />
+              <TrendingUp size={16} className="text-black dark:text-white" />
               <span>Cancel Anytime</span>
             </div>
           </div>
           
           {/* Downgrade Info */}
           {currentPlan && (
-            <p className="mt-4 text-xs text-slate-400">
+            <p className="mt-4 text-xs text-gray-400">
               Upgrades take effect immediately. Downgrades take effect at the end of your current billing period.
             </p>
           )}

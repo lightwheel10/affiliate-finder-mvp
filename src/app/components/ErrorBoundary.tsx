@@ -13,10 +13,19 @@ interface ErrorBoundaryState {
 
 /**
  * =============================================================================
- * ErrorBoundary Component
+ * ErrorBoundary Component - NEO-BRUTALIST
  * =============================================================================
  * 
  * Created: 29th December 2025
+ * Updated: January 8th, 2026
+ * 
+ * NEO-BRUTALIST DESIGN UPDATE:
+ * - Sharp edges (no rounded corners)
+ * - Bold borders (border-2 to border-4 with black)
+ * - Yellow accent color (#ffbf23)
+ * - Square elements throughout
+ * - Bold typography (font-black uppercase)
+ * - Dark mode support
  * 
  * PURPOSE:
  * Catches React errors and shows a friendly message instead of crashing.
@@ -27,17 +36,6 @@ interface ErrorBoundaryState {
  * - If any child component throws an error, this catches it
  * - Shows "Something went wrong" message with refresh button
  * - Logs error to console for debugging
- * 
- * USAGE:
- * Wrap any component that might crash:
- *   <ErrorBoundary>
- *     <YourComponent />
- *   </ErrorBoundary>
- * 
- * FUTURE IMPROVEMENTS:
- * - Add Sentry or similar error tracking service
- * - Add error reporting to backend for monitoring
- * - Add more specific error messages based on error type
  * 
  * =============================================================================
  */
@@ -52,7 +50,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log the error for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
@@ -66,29 +63,29 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       return (
         <div className="flex items-center justify-center min-h-[400px] p-8">
           <div className="text-center max-w-md">
-            {/* Icon */}
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-500" />
+            {/* Icon - NEO-BRUTALIST square */}
+            <div className="w-16 h-16 bg-red-500 border-4 border-black flex items-center justify-center mx-auto mb-4 shadow-[4px_4px_0px_0px_#000000]">
+              <AlertTriangle className="w-8 h-8 text-white" />
             </div>
             
-            {/* Message */}
-            <h2 className="text-lg font-semibold text-slate-900 mb-2">
+            {/* Message - NEO-BRUTALIST */}
+            <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2 uppercase tracking-wide">
               Something went wrong
             </h2>
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-gray-500 mb-6">
               Please try again later. If the problem continues, contact us at{' '}
               <a 
                 href="mailto:support@crewcast.studio" 
-                className="text-[#1A1D21] font-medium hover:underline"
+                className="text-black dark:text-white font-bold hover:underline"
               >
                 support@crewcast.studio
               </a>
             </p>
             
-            {/* Refresh Button */}
+            {/* Refresh Button - NEO-BRUTALIST */}
             <button
               onClick={this.handleRefresh}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#D4E815] text-[#1A1D21] font-semibold rounded-lg hover:bg-[#c5d913] transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
               <RefreshCw size={16} />
               Try Again
@@ -103,4 +100,3 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 export default ErrorBoundary;
-

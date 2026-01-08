@@ -79,6 +79,7 @@ import {
   Users,
   Briefcase,
   ChevronRight,
+  Clock,  // Added January 6th, 2026 for neo-brutalist header
 } from 'lucide-react';
 
 // =============================================================================
@@ -807,94 +808,99 @@ export default function OutreachPage() {
   // ==========================================================================
   return (
     <>
-      {/* Header */}
-      <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold text-slate-900">Outreach</h1>
-        </div>
+      {/* =============================================================================
+          TOP BAR - NEW DESIGN (January 6th, 2026)
+          Neo-brutalist header - MATCHES DashboardDemo.tsx EXACTLY
+          ============================================================================= */}
+      <header className="h-16 border-b-4 border-black dark:border-white flex items-center justify-between px-6 bg-white dark:bg-[#0a0a0a]">
+        {/* Page Title - font-black uppercase tracking-tight */}
+        <h1 className="font-black text-xl uppercase tracking-tight">Outreach</h1>
 
-        {/* Countdown Timer */}
-        <ScanCountdown />
-          
-          <div className="flex items-center gap-3 text-xs">
-            {/* Credits Display - December 2025 */}
-            <CreditsDisplay />
-            
-            {/* Action Button */}
-            <button 
-              className="bg-[#D4E815] text-[#1A1D21] px-3.5 py-1.5 rounded-lg hover:bg-[#c5d913] hover:shadow-md hover:shadow-[#D4E815]/20 transition-all font-semibold flex items-center gap-1.5"
-            >
-              <Plus size={14} /> Find Affiliates
-            </button>
+        <div className="flex items-center gap-4">
+          {/* Timer Pill - DashboardDemo exact styling */}
+          <div className="hidden md:flex items-center gap-2 bg-[#1a1a1a] text-[#ffbf23] px-3 py-1.5 rounded-full text-xs font-mono border border-black">
+            <Clock size={12} />
+            <span>NEXT SCAN</span>
+            <ScanCountdown />
+            <span className="text-white font-bold">PRO</span>
           </div>
-        </header>
 
-        {/* Main Content */}
-        <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full">
-          
-          {/* Header Section */}
-          <div className="mb-6 space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              
-              {/* Left: Search & Filters */}
-              <div className="flex items-center gap-4 flex-1">
-                <div className="w-full max-w-[160px]">
-                   <div className="relative w-full group">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#1A1D21] transition-colors">
-                        <Search size={14} />
-                      </div>
-                      <input
-                        className="w-full pl-9 pr-3 py-1.5 bg-white border ring-1 ring-slate-200 rounded-lg text-xs font-semibold text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#D4E815]/20 focus:border-[#D4E815]"
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search..."
-                      />
-                    </div>
-                </div>
+          {/* Stats Pills - DashboardDemo exact styling */}
+          <div className="hidden lg:flex items-center gap-3">
+            <CreditsDisplay variant="neo" />
+          </div>
 
-                <div className="h-8 w-px bg-slate-200 mx-1 hidden lg:block"></div>
+          {/* Find Button - DashboardDemo exact styling */}
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+          >
+            <Plus size={14} strokeWidth={3} /> Find Affiliates
+          </button>
+        </div>
+      </header>
 
-                {/* Filter Pills */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
-                  {filterTabs.map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveFilter(tab.id)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap",
-                        activeFilter === tab.id
-                          ? "bg-[#D4E815] text-[#1A1D21] border-[#D4E815] shadow-sm shadow-[#D4E815]/20"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      )}
-                    >
-                      {tab.icon}
-                      {/* Only show text for "All" filter */}
-                      {tab.id === 'All' && <span>All</span>}
-                      {tab.count > 0 && (
-                        <span className={cn(
-                          "ml-0.5 px-1.5 py-0.5 rounded text-[9px]",
-                          activeFilter === tab.id ? "bg-[#1A1D21]/20 text-[#1A1D21]" : "bg-slate-100 text-slate-500"
-                        )}>
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+      {/* =============================================================================
+          CONTENT AREA - NEW DESIGN (January 6th, 2026)
+          ============================================================================= */}
+      <div className="flex-1 p-8 overflow-y-auto">
 
-              {/* Right: Actions */}
+        {/* =============================================================================
+            FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            ============================================================================= */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            {/* Search Input - DashboardDemo exact styling */}
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search affiliates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
+              />
+            </div>
+            
+            {/* Platform Filter Pills - DashboardDemo exact styling with counts */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800">
+              {filterTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveFilter(tab.id)}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-bold",
+                    activeFilter === tab.id
+                      ? "bg-[#ffbf23] text-black shadow-sm"
+                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  )}
+                  title={tab.id}
+                >
+                  {tab.icon || <Globe size={16} />}
+                  {tab.id === 'All' && <span>All</span>}
+                  {tab.count > 0 && (
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                      activeFilter === tab.id ? "bg-black/20 text-black" : "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                    )}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+              {/* Right: Actions - NEO-BRUTALIST */}
               <div className="flex items-center gap-3">
                 {selectedAffiliates.size > 0 && (
                   <>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-xs font-semibold text-emerald-900">
-                      <Check size={12} className="text-emerald-600" />
-                      {selectedAffiliates.size} selected
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
+                      <Check size={12} />
+                      {selectedAffiliates.size} SELECTED
                     </div>
                     <button
                       onClick={handleSelectAll}
-                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 hover:bg-slate-50 rounded-lg"
+                      className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
                     >
                       Deselect All
                     </button>
@@ -903,46 +909,38 @@ export default function OutreachPage() {
                 {selectedAffiliates.size === 0 && filteredResults.length > 0 && (
                   <button
                     onClick={handleSelectAll}
-                    className="text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 hover:bg-slate-50 rounded-lg"
+                    className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
                   >
                     Select All
                   </button>
                 )}
                 {/* ================================================================
-                    BULK GENERATE BUTTON (Updated December 17, 2025)
-                    
-                    Shows different states:
-                    - Default: "Generate Messages (X)"
-                    - In Progress: "Generating 2/5..." with spinner
-                    - Disabled: Grey when nothing selected or already generating
+                    BULK GENERATE BUTTON - NEO-BRUTALIST (Updated January 6th, 2026)
                     ================================================================ */}
                 <button
                   onClick={handleGenerateMessages}
                   disabled={selectedAffiliates.size === 0 || generatingIds.size > 0}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold text-xs transition-all",
+                    "flex items-center gap-2 px-4 py-2 font-black text-xs uppercase transition-all",
                     selectedAffiliates.size > 0 && generatingIds.size === 0
-                      ? "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
-                      : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      ? "bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-200 dark:border-gray-700 cursor-not-allowed"
                   )}
                 >
                   {bulkProgress ? (
-                    // Bulk generation in progress - show progress
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      Generating {bulkProgress.current}/{bulkProgress.total}...
+                      {bulkProgress.current}/{bulkProgress.total}
                     </>
                   ) : generatingIds.size > 0 ? (
-                    // Single generation in progress
                     <>
                       <Loader2 size={14} className="animate-spin" />
                       Generating...
                     </>
                   ) : (
-                    // Default state
                     <>
                       <Wand2 size={14} />
-                      Generate Messages ({selectedAffiliates.size})
+                      Generate ({selectedAffiliates.size})
                     </>
                   )}
                 </button>
@@ -950,58 +948,66 @@ export default function OutreachPage() {
             </div>
           </div>
 
-          {/* Table Header - Updated December 17, 2025: Removed Date column, widened Email column */}
-          <div className="bg-white border border-slate-200 rounded-t-xl border-b-0 grid grid-cols-[40px_200px_1fr_130px_160px_130px] gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">
-            <div className="pl-1">
-              <input
-                type="checkbox"
-                checked={selectedAffiliates.size === filteredResults.length && filteredResults.length > 0}
-                onChange={handleSelectAll}
-                className="w-3.5 h-3.5 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 focus:ring-offset-0 cursor-pointer"
-              />
+          {/* =============================================================================
+              TABLE AREA - DashboardDemo.tsx EXACT STYLING (Outreach)
+              ============================================================================= */}
+          <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
+            {/* Table Header - Neo-brutalist */}
+            <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              <div className="col-span-1 flex justify-center">
+                <input
+                  type="checkbox"
+                  checked={selectedAffiliates.size === filteredResults.length && filteredResults.length > 0}
+                  onChange={handleSelectAll}
+                  className="accent-[#ffbf23] w-4 h-4"
+                />
+              </div>
+              <div className="col-span-3">Affiliate</div>
+              <div className="col-span-3">Relevant Content</div>
+              <div className="col-span-2">Discovery Method</div>
+              <div className="col-span-1">Email</div>
+              <div className="col-span-2 text-right">Message</div>
             </div>
-            <div>Affiliate</div>
-            <div>Relevant Content</div>
-            <div>Discovery Method</div>
-            <div>Email</div>
-            <div className="text-right pr-2">Message</div>
-          </div>
 
-          {/* Results Area */}
-          <div className="bg-white border border-slate-200 rounded-b-xl shadow-sm min-h-[400px]">
+            {/* Results Content */}
+            <div className="flex-1">
             
-            {/* ================================================================
-                LOADING STATE (December 17, 2025)
-                Shows skeleton loader while fetching affiliates
-                ================================================================ */}
+            {/* Loading State - Neo-brutalist */}
             {loading && (
-              <div className="py-16 flex flex-col items-center justify-center">
-                <Loader2 size={32} className="text-[#D4E815] animate-spin mb-4" />
-                <p className="text-sm font-medium text-slate-600">Loading your affiliates...</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                <div className="relative w-12 h-12 mx-auto">
+                  <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
+                  <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <p className="text-gray-500 text-sm mt-4 font-medium">Loading your affiliates...</p>
               </div>
             )}
             
-            {/* Empty State */}
+            {/* Empty State - Neo-brutalist */}
             {!loading && savedAffiliates.length === 0 && (
-              <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-[#D4E815]/10 flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare size={28} className="text-[#1A1D21]" />
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
+                  <MessageSquare size={24} className="text-gray-300" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Start Building Connections</h3>
-                <p className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+                  Start Building Connections
+                </h3>
+                <p className="text-gray-500 text-sm max-w-xs">
                   Save affiliates to generate AI-powered outreach messages.
                 </p>
               </div>
             )}
             
-            {/* No Results State (when filtering) */}
+            {/* No Results State - Neo-brutalist */}
             {!loading && savedAffiliates.length > 0 && filteredResults.length === 0 && (
-              <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                  <Search size={28} className="text-slate-400" />
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
+                  <Search size={24} className="text-gray-300" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">No Results Found</h3>
-                <p className="text-sm text-slate-600 mb-6 max-w-md mx-auto">
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+                  No Results Found
+                </h3>
+                <p className="text-gray-500 text-sm max-w-xs">
                   Try adjusting your search or filter to find affiliates.
                 </p>
               </div>
@@ -1040,23 +1046,23 @@ export default function OutreachPage() {
                 <div
                   key={item.id}
                   className={cn(
-                    "grid grid-cols-[40px_200px_1fr_130px_160px_130px] items-center gap-4 px-4 py-4 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors",
-                    isSelected && "bg-[#D4E815]/10 hover:bg-[#D4E815]/20"
+                    "grid grid-cols-12 gap-4 items-center px-4 py-4 border-b-2 border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors",
+                    isSelected && "bg-[#ffbf23]/10 hover:bg-[#ffbf23]/20"
                   )}
                 >
-                  {/* Checkbox */}
-                  <div className="flex items-center">
+                  {/* Checkbox - col-span-1 */}
+                  <div className="col-span-1 flex justify-center">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleSelectAffiliate(item.id!)}
-                      className="w-4 h-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 focus:ring-offset-0 cursor-pointer"
+                      className="w-4 h-4 accent-[#ffbf23]"
                     />
                   </div>
 
-                  {/* Affiliate Info - Shows thumbnail/icon + title + domain */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                  {/* Affiliate Info - col-span-3 */}
+                  <div className="col-span-3 flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center shrink-0 overflow-hidden">
                       {item.thumbnail ? (
                         <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -1064,45 +1070,44 @@ export default function OutreachPage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-slate-900 truncate">{item.title}</h3>
-                      <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                      <h3 className="text-sm font-black text-gray-900 dark:text-white truncate">{item.title}</h3>
+                      <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
                         <Globe size={10} className="shrink-0" />
                         <span className="truncate">{item.domain}</span>
                       </p>
                     </div>
                   </div>
 
-                  {/* Relevant Content - Single line with ellipsis for overflow */}
-                  <div className="text-xs text-slate-600 truncate">
+                  {/* Relevant Content - col-span-3 */}
+                  <div className="col-span-3 text-xs text-gray-600 dark:text-gray-400 truncate">
                     {item.snippet}
                   </div>
 
-                  {/* Discovery Method */}
-                  <div className="text-xs">
+                  {/* Discovery Method - col-span-2 */}
+                  <div className="col-span-2 text-xs">
                     {item.keyword && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 rounded-md font-medium truncate max-w-full">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-black border-2 border-black dark:border-gray-600 text-gray-800 dark:text-gray-200 font-bold truncate max-w-full">
                         {item.keyword}
                       </span>
                     )}
                   </div>
 
-                  {/* Email - Shows actual email + count if multiple (Dec 17, 2025) */}
-                  <div className="text-xs min-w-0">
+                  {/* Email - col-span-1 */}
+                  <div className="col-span-1 text-xs min-w-0">
                     {item.email ? (
                       <div className="flex items-center gap-1 min-w-0">
                         <Mail size={10} className="text-emerald-600 shrink-0" />
-                        <span className="truncate text-slate-700 font-medium" title={item.email}>
-                          {item.email}
+                        <span className="truncate text-gray-700 dark:text-gray-300 font-medium" title={item.email}>
+                          {item.email.split('@')[0]}
                         </span>
-                        {/* Show +X if there are additional emails */}
                         {item.emailResults?.emails && item.emailResults.emails.length > 1 && (
-                          <span className="shrink-0 text-[10px] text-emerald-600 font-semibold">
+                          <span className="shrink-0 text-[10px] text-emerald-600 font-bold">
                             +{item.emailResults.emails.length - 1}
                           </span>
                         )}
                       </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-slate-400">
+                      <span className="inline-flex items-center gap-1 text-gray-400">
                         <Mail size={10} />
                         None
                       </span>
@@ -1110,7 +1115,7 @@ export default function OutreachPage() {
                   </div>
 
                   {/* ============================================================
-                      MESSAGE ACTION BUTTON (Updated January 5th, 2026)
+                      MESSAGE ACTION BUTTON - NEO-BRUTALIST (Updated January 6th, 2026)
                       
                       Shows different states based on generation status:
                       1. isGenerating → Spinner + "Generating..." (HIGHEST PRIORITY)
@@ -1118,63 +1123,40 @@ export default function OutreachPage() {
                       3. hasFailed → Red "Failed - Retry" button
                       4. hasMultipleContacts → Yellow "Select Contacts" button
                       5. default → Yellow "Generate" button
-                      
-                      IMPORTANT (January 5th, 2026):
-                      isGenerating MUST be checked BEFORE hasMessage. When generating
-                      emails for multiple contacts, each contact's message is stored
-                      as it completes. If we checked hasMessage first, the button would
-                      update incrementally ("View 1 Message" → "View 2 Messages" → etc.)
-                      which looks janky. By checking isGenerating first, we keep showing
-                      the spinner until ALL selected contacts have completed, then show
-                      the final "View X Messages" button.
                       ============================================================ */}
-                  <div className="text-right">
+                  <div className="col-span-2 flex justify-end">
                     {isGenerating ? (
-                      // =====================================================================
-                      // GENERATING STATE: Show spinner (January 5th, 2026 - MOVED TO FIRST)
-                      //
-                      // This MUST be the first condition checked. When generating emails for
-                      // multiple contacts, we want to show the spinner the entire time until
-                      // ALL contacts have completed. If hasMessage was checked first, the
-                      // button would update after each individual message completes, causing
-                      // a visual "jumping" effect (View 1 → View 2 → View 3 Messages).
-                      // =====================================================================
+                      // GENERATING STATE: Show spinner
                       <button
                         disabled
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-400 cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-300 dark:border-gray-600 cursor-not-allowed"
                       >
                         <Loader2 size={12} className="animate-spin" />
                         Generating...
                       </button>
                     ) : hasMessage ? (
-                      // =====================================================================
-                      // SUCCESS STATE: Show "View Message" button (Updated December 26, 2025)
-                      //
-                      // Only shown when isGenerating is false (all messages complete).
-                      // When messageCount > 1, we pass just the affiliateId (e.g., "123")
-                      // so the modal knows to show ALL messages in a list view.
-                      // =====================================================================
+                      // SUCCESS STATE: Show "View Message" button
                       <button
                         onClick={() => setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40 hover:bg-[#D4E815]/30"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
                         <MessageSquare size={12} />
-                        {messageCount > 1 ? `View ${messageCount} Messages` : 'View Message'}
+                        {messageCount > 1 ? `${messageCount} Msgs` : 'View'}
                       </button>
                     ) : hasFailed ? (
                       // FAILED STATE: Show red "Failed - Retry" button
                       <button
                         onClick={() => handleGenerateForSingle(item.id!)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 hover:border-red-300"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
                         <AlertTriangle size={12} />
                         Retry
                       </button>
                     ) : hasMultipleContacts ? (
-                      // MULTI-CONTACT STATE: Show "Select Contacts" button (December 25, 2025)
+                      // MULTI-CONTACT STATE: Show "Select Contacts" button
                       <button
                         onClick={() => openContactPicker(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
                         <Users size={12} />
                         {multipleContacts!.length} Contacts
@@ -1183,7 +1165,7 @@ export default function OutreachPage() {
                       // DEFAULT STATE: Show yellow "Generate" button
                       <button
                         onClick={() => handleGenerateForSingle(item.id!)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
                         <Wand2 size={12} />
                         Generate
@@ -1230,26 +1212,26 @@ export default function OutreachPage() {
 
           return (
             <div 
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
               onClick={() => setViewingMessageId(null)}
             >
               <div 
-                className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+                className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-2xl w-full max-h-[80vh] overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Modal Header - Updated December 17, 2025 to use brand colors */}
-                <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-[#D4E815]/10 to-white">
+                {/* Modal Header - NEO-BRUTALIST */}
+                <div className="px-6 py-4 border-b-4 border-black dark:border-white flex items-center justify-between bg-[#ffbf23]">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                    <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center">
                       {getSourceIcon(affiliate?.source || 'Web')}
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-slate-900">{affiliate?.title}</h3>
-                      <p className="text-xs text-slate-600 flex items-center gap-1">
+                      <h3 className="text-base font-black text-black uppercase">{affiliate?.title}</h3>
+                      <p className="text-xs text-black/70 flex items-center gap-1 font-medium">
                         <Globe size={10} />
                         {affiliate?.domain}
                         {isMultiMessageView && (
-                          <span className="ml-2 px-2 py-0.5 bg-[#D4E815]/20 text-[#1A1D21] rounded text-[10px] font-semibold">
+                          <span className="ml-2 px-2 py-0.5 bg-black text-white text-[10px] font-black uppercase">
                             {allMessages.length} Messages
                           </span>
                         )}
@@ -1258,19 +1240,16 @@ export default function OutreachPage() {
                   </div>
                   <button
                     onClick={() => setViewingMessageId(null)}
-                    className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                    className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
                   >
-                    <span className="text-slate-600 text-lg">×</span>
+                    ×
                   </button>
                 </div>
 
-                {/* Modal Body */}
-                <div className="p-6 overflow-y-auto max-h-[calc(80vh-130px)]">
+                {/* Modal Body - NEO-BRUTALIST */}
+                <div className="p-6 overflow-y-auto max-h-[calc(80vh-130px)] bg-white dark:bg-[#0a0a0a]">
                   {/* =====================================================================
-                      MULTI-MESSAGE LIST VIEW (December 26, 2025)
-                      
-                      When viewing multiple messages, show each in its own card with
-                      the email recipient, message content, and action buttons.
+                      MULTI-MESSAGE LIST VIEW - NEO-BRUTALIST (Updated January 6th, 2026)
                       ===================================================================== */}
                   {isMultiMessageView ? (
                     <div className="space-y-4">
@@ -1280,29 +1259,27 @@ export default function OutreachPage() {
                         const msgRegenerating = generatingIds.has(msgKey);
                         
                         return (
-                          // Use msgKey as React key for guaranteed uniqueness
-                          <div key={msgKey} className="border border-slate-200 rounded-xl overflow-hidden">
+                          <div key={msgKey} className="border-2 border-black dark:border-gray-600 overflow-hidden">
                             {/* Message Header with Email */}
-                            <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                            <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b-2 border-black dark:border-gray-600 flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <Mail size={12} className="text-emerald-600" />
-                                <span className="text-sm font-medium text-slate-700">{msg.email || 'Primary Contact'}</span>
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{msg.email || 'Primary Contact'}</span>
                               </div>
-                              <span className="text-xs text-slate-400">Message {index + 1}</span>
+                              <span className="text-xs font-black uppercase text-gray-400">#{index + 1}</span>
                             </div>
                             
                             {/* Message Content */}
-                            <div className="p-4">
-                              <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap border border-slate-100 max-h-[200px] overflow-y-auto">
+                            <div className="p-4 bg-white dark:bg-[#0f0f0f]">
+                              <div className="bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 max-h-[200px] overflow-y-auto font-mono">
                                 {msg.message}
                               </div>
                               
-                              {/* Per-Message Actions */}
+                              {/* Per-Message Actions - NEO-BRUTALIST */}
                               <div className="flex items-center justify-end gap-2 mt-3">
                                 <button
                                   onClick={() => {
                                     if (affiliate) {
-                                      // Regenerate for this specific contact
                                       const email = msg.email;
                                       if (email) {
                                         const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
@@ -1331,28 +1308,28 @@ export default function OutreachPage() {
                                   }}
                                   disabled={msgRegenerating}
                                   className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase transition-all border-2",
                                     msgRegenerating
-                                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                                      ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
+                                      : "bg-white text-black border-black hover:bg-gray-100"
                                   )}
                                 >
                                   <RefreshCw size={12} className={msgRegenerating ? "animate-spin" : ""} />
-                                  {msgRegenerating ? 'Regenerating...' : 'Regenerate'}
+                                  {msgRegenerating ? '...' : 'Redo'}
                                 </button>
                                 <button
                                   onClick={() => handleCopyMessage(msgKey)}
                                   className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase transition-all border-2 border-black",
                                     msgCopied
-                                      ? "bg-emerald-600 text-white"
-                                      : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]"
+                                      ? "bg-emerald-500 text-white"
+                                      : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
                                   )}
                                 >
                                   {msgCopied ? (
                                     <>
                                       <Check size={12} />
-                                      Copied!
+                                      Done!
                                     </>
                                   ) : (
                                     <>
@@ -1369,51 +1346,50 @@ export default function OutreachPage() {
                     </div>
                   ) : (
                     /* =====================================================================
-                       SINGLE MESSAGE VIEW (Original behavior)
+                       SINGLE MESSAGE VIEW - NEO-BRUTALIST (Updated January 6th, 2026)
                        ===================================================================== */
                     <>
                       <div className="flex items-center gap-2 mb-3">
-                        <Sparkles size={14} className="text-[#1A1D21]" />
-                        <span className="text-sm font-semibold text-slate-700">AI Generated Message</span>
-                        {/* Show which contact this message is for (December 25, 2025) */}
+                        <Sparkles size={14} className="text-[#ffbf23]" />
+                        <span className="text-sm font-black uppercase text-gray-800 dark:text-gray-200">AI Generated Message</span>
                         {contactEmail && (
-                          <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          <span className="text-xs text-black bg-[#ffbf23] px-2 py-0.5 font-bold border border-black">
                             to {contactEmail}
                           </span>
                         )}
                       </div>
-                      <div className="bg-slate-50 rounded-xl p-5 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap border border-slate-200">
+                      <div className="bg-gray-50 dark:bg-gray-900 p-5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 font-mono">
                         {message}
                       </div>
 
-                      {/* Affiliate Details */}
+                      {/* Affiliate Details - NEO-BRUTALIST */}
                       {affiliate && (
-                        <div className="mt-6 pt-6 border-t border-slate-200">
-                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Affiliate Details</h4>
+                        <div className="mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
+                          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Affiliate Details</h4>
                           <div className="grid grid-cols-2 gap-3">
                             {affiliate.personName && (
-                              <div>
-                                <p className="text-xs text-slate-500 mb-1">Contact Name</p>
-                                <p className="text-sm font-semibold text-slate-900">{affiliate.personName}</p>
+                              <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+                                <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Contact Name</p>
+                                <p className="text-sm font-black text-gray-900 dark:text-white">{affiliate.personName}</p>
                               </div>
                             )}
                             {(contactEmail || affiliate.email) && (
-                              <div>
-                                <p className="text-xs text-slate-500 mb-1">Email</p>
-                                <p className="text-sm font-semibold text-slate-900">{contactEmail || affiliate.email}</p>
+                              <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+                                <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Email</p>
+                                <p className="text-sm font-black text-gray-900 dark:text-white truncate">{contactEmail || affiliate.email}</p>
                               </div>
                             )}
-                            <div>
-                              <p className="text-xs text-slate-500 mb-1">Platform</p>
+                            <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+                              <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Platform</p>
                               <div className="flex items-center gap-1.5">
                                 {getSourceIcon(affiliate.source)}
-                                <p className="text-sm font-semibold text-slate-900">{affiliate.source}</p>
+                                <p className="text-sm font-black text-gray-900 dark:text-white">{affiliate.source}</p>
                               </div>
                             </div>
                             {affiliate.keyword && (
-                              <div>
-                                <p className="text-xs text-slate-500 mb-1">Keyword</p>
-                                <p className="text-sm font-semibold text-slate-900">{affiliate.keyword}</p>
+                              <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+                                <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Keyword</p>
+                                <p className="text-sm font-black text-gray-900 dark:text-white">{affiliate.keyword}</p>
                               </div>
                             )}
                           </div>
@@ -1423,12 +1399,12 @@ export default function OutreachPage() {
                   )}
                 </div>
 
-                {/* Modal Footer - Only show for single message view */}
+                {/* Modal Footer - NEO-BRUTALIST - Only show for single message view */}
                 {!isMultiMessageView && (
-                  <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex items-center justify-between">
                     <button
                       onClick={() => setViewingMessageId(null)}
-                      className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+                      className="px-4 py-2 text-sm font-black uppercase text-gray-600 hover:text-black dark:hover:text-white transition-colors"
                     >
                       Close
                     </button>
@@ -1436,31 +1412,12 @@ export default function OutreachPage() {
                       <button
                         onClick={() => {
                           if (affiliate) {
-                            // ===========================================================
-                            // REGENERATE MESSAGE (Fixed December 25, 2025)
-                            //
-                            // We need to regenerate for the SAME contact email that the
-                            // original message was generated for. There are two paths:
-                            //
-                            // Path 1: Contact details exist in emailResults.contacts[]
-                            //         → Use full contact info for personalization
-                            //
-                            // Path 2: Only emails exist (no contacts array)
-                            //         → Use top-level emailResults firstName/lastName/title
-                            //
-                            // CRITICAL: Always pass the contactEmail, even if we can't
-                            // find detailed contact info. This ensures the message key
-                            // stays consistent.
-                            // ===========================================================
-                            
                             if (contactEmail) {
-                              // Try to find contact details in Path 1 (contacts array)
                               const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
                                 c.emails?.includes(contactEmail)
                               );
                               
                               if (contactFromArray) {
-                                // Path 1: Found in contacts array with full details
                                 handleGenerateForContact(affiliate, {
                                   email: contactEmail,
                                   firstName: contactFromArray.firstName,
@@ -1468,8 +1425,6 @@ export default function OutreachPage() {
                                   title: contactFromArray.title,
                                 });
                               } else {
-                                // Path 2: Contact was from emails array without detailed contacts
-                                // Use top-level emailResults info (same for all emails in this case)
                                 handleGenerateForContact(affiliate, {
                                   email: contactEmail,
                                   firstName: affiliate.emailResults?.firstName,
@@ -1478,21 +1433,20 @@ export default function OutreachPage() {
                                 });
                               }
                             } else {
-                              // No specific contact - regenerate for primary
                               handleGenerateForContact(affiliate);
                             }
                           }
                         }}
                         disabled={isRegenerating}
                         className={cn(
-                          "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                          "flex items-center gap-2 px-4 py-2 text-sm font-black uppercase transition-all border-2",
                           isRegenerating
-                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                            : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                            ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
+                            : "bg-white text-black border-black hover:bg-gray-100"
                         )}
                       >
                         <RefreshCw size={14} className={isRegenerating ? "animate-spin" : ""} />
-                        {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                        {isRegenerating ? '...' : 'Redo'}
                       </button>
                       <button
                         onClick={() => {
@@ -1500,21 +1454,21 @@ export default function OutreachPage() {
                           setTimeout(() => setViewingMessageId(null), 1500);
                         }}
                         className={cn(
-                          "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                          "flex items-center gap-2 px-4 py-2 text-sm font-black uppercase transition-all border-2 border-black",
                           isCopied
-                            ? "bg-emerald-600 text-white"
-                            : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow-md hover:shadow-[#D4E815]/20"
+                            ? "bg-emerald-500 text-white"
+                            : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
                         )}
                       >
                         {isCopied ? (
                           <>
                             <Check size={14} />
-                            Copied!
+                            Done!
                           </>
                         ) : (
                           <>
                             <Copy size={14} />
-                            Copy Message
+                            Copy
                           </>
                         )}
                       </button>
@@ -1522,12 +1476,12 @@ export default function OutreachPage() {
                   </div>
                 )}
                 
-                {/* Simple Close Footer for Multi-Message View */}
+                {/* Simple Close Footer for Multi-Message View - NEO-BRUTALIST */}
                 {isMultiMessageView && (
-                  <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center">
+                  <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
                     <button
                       onClick={() => setViewingMessageId(null)}
-                      className="px-6 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="px-6 py-2 text-sm font-black uppercase text-black bg-white border-2 border-black hover:bg-gray-100 transition-colors"
                     >
                       Close
                     </button>
@@ -1550,41 +1504,44 @@ export default function OutreachPage() {
             - Credit cost indicator (1 credit per email)
             - Generate button with count
             ================================================================ */}
+        {/* ================================================================
+            CONTACT PICKER MODAL - NEO-BRUTALIST (Updated January 6th, 2026)
+            ================================================================ */}
         {contactPicker.isOpen && contactPicker.affiliate && (
           <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
             onClick={() => setContactPicker(prev => ({ ...prev, isOpen: false }))}
           >
             <div 
-              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
+              className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-lg w-full max-h-[80vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-[#D4E815]/10 to-white">
+              {/* Modal Header - NEO-BRUTALIST */}
+              <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#D4E815]/20 flex items-center justify-center">
-                      <Users size={20} className="text-[#1A1D21]" />
+                    <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center">
+                      <Users size={20} className="text-black" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-slate-900">Select Contacts</h3>
-                      <p className="text-xs text-slate-600">
+                      <h3 className="text-base font-black text-black uppercase">Select Contacts</h3>
+                      <p className="text-xs text-black/70 font-medium">
                         {contactPicker.affiliate.domain}
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setContactPicker(prev => ({ ...prev, isOpen: false }))}
-                    className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                    className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
                   >
-                    <X size={16} className="text-slate-600" />
+                    ×
                   </button>
                 </div>
               </div>
 
-              {/* Contact List */}
-              <div className="p-4 overflow-y-auto max-h-[50vh]">
-                <p className="text-xs text-slate-500 mb-3">
+              {/* Contact List - NEO-BRUTALIST */}
+              <div className="p-4 overflow-y-auto max-h-[50vh] bg-white dark:bg-[#0a0a0a]">
+                <p className="text-xs text-gray-500 mb-3 font-medium">
                   Select which contacts you&apos;d like to generate personalized emails for:
                 </p>
                 
@@ -1603,45 +1560,45 @@ export default function OutreachPage() {
                         key={contact.email}
                         onClick={() => toggleContactSelection(contact.email)}
                         className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                          "flex items-center gap-3 p-3 border-2 cursor-pointer transition-all",
                           isSelected 
-                            ? "bg-[#D4E815]/10 border-[#D4E815]/40" 
-                            : "bg-white border-slate-200 hover:bg-slate-50"
+                            ? "bg-[#ffbf23]/20 border-black" 
+                            : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white"
                         )}
                       >
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="w-4 h-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20"
+                          className="w-4 h-4 accent-[#ffbf23]"
                         />
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-slate-900 truncate">
+                            <p className="text-sm font-black text-gray-900 dark:text-white truncate">
                               {displayName}
                             </p>
                             {hasExistingMessage && (
-                              <span className="shrink-0 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-semibold rounded">
-                                Has Message
+                              <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase border border-black">
+                                Done
                               </span>
                             )}
                           </div>
                           {contact.title && (
-                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 font-medium">
                               <Briefcase size={10} />
                               {contact.title}
                             </p>
                           )}
-                          <p className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-0.5 font-mono">
                             <Mail size={10} />
                             {contact.email}
                           </p>
                         </div>
                         
                         <ChevronRight size={14} className={cn(
-                          "text-slate-300 transition-colors",
-                          isSelected && "text-[#D4E815]"
+                          "text-gray-300 transition-colors",
+                          isSelected && "text-black"
                         )} />
                       </div>
                     );
@@ -1649,31 +1606,31 @@ export default function OutreachPage() {
                 </div>
               </div>
 
-              {/* Modal Footer - Shows credit cost and generate button */}
-              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+              {/* Modal Footer - NEO-BRUTALIST */}
+              <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900">
                 <div className="flex items-center justify-between">
                   {/* Credit cost indicator */}
                   <div className="text-xs">
                     {contactPicker.selectedContacts.size > 0 ? (
                       <span className="flex items-center gap-1.5">
-                        <Sparkles size={12} className="text-amber-500" />
-                        <span className="text-slate-600">
-                          This will use{' '}
-                          <span className="font-bold text-slate-900">
-                            {contactPicker.selectedContacts.size} AI credit{contactPicker.selectedContacts.size !== 1 ? 's' : ''}
+                        <Sparkles size={12} className="text-[#ffbf23]" />
+                        <span className="text-gray-600 dark:text-gray-400 font-medium">
+                          Uses{' '}
+                          <span className="font-black text-black dark:text-white">
+                            {contactPicker.selectedContacts.size} credit{contactPicker.selectedContacts.size !== 1 ? 's' : ''}
                           </span>
                         </span>
                       </span>
                     ) : (
-                      <span className="text-slate-400">Select contacts to generate emails</span>
+                      <span className="text-gray-400 font-medium">Select contacts</span>
                     )}
                   </div>
                   
-                  {/* Action buttons */}
+                  {/* Action buttons - NEO-BRUTALIST */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setContactPicker(prev => ({ ...prev, isOpen: false }))}
-                      className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                      className="px-3 py-1.5 text-xs font-black uppercase text-gray-600 hover:text-black transition-colors"
                     >
                       Cancel
                     </button>
@@ -1681,16 +1638,16 @@ export default function OutreachPage() {
                       onClick={handleGenerateForSelectedContacts}
                       disabled={contactPicker.selectedContacts.size === 0}
                       className={cn(
-                        "flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                        "flex items-center gap-2 px-4 py-1.5 text-xs font-black uppercase transition-all border-2",
                         contactPicker.selectedContacts.size > 0
-                          ? "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm"
-                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          ? "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                          : "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
                       )}
                     >
                       <Wand2 size={12} />
                       Generate {contactPicker.selectedContacts.size > 0 
-                        ? `${contactPicker.selectedContacts.size} Email${contactPicker.selectedContacts.size !== 1 ? 's' : ''}`
-                        : 'Emails'
+                        ? `(${contactPicker.selectedContacts.size})`
+                        : ''
                       }
                     </button>
                   </div>

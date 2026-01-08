@@ -1,0 +1,83 @@
+# CrewCast Studio - LLM Context File
+# 
+# This file provides context about CrewCast Studio for Large Language Models.
+# It helps AI assistants understand what this application is and how to help users.
+#
+# Created: January 5th, 2026
+# Author: Spectrum AI Labs (Paras)
+# Last Updated: January 5th, 2026
+#
+# For more information: https://llmstxt.org/
+
+> CrewCast Studio is an AI-powered affiliate discovery platform that helps brands find, qualify, and connect with content creators and affiliate marketers.
+
+## Overview
+
+CrewCast Studio enables SaaS companies and e-commerce brands to discover affiliates who are already promoting their competitors. The platform uses AI and web scraping to find content creators across YouTube, Instagram, TikTok, and blogs, then enriches their data with verified contact information.
+
+## Key Features
+
+- **Competitor Affiliate Discovery**: Find affiliates promoting competitor products across 100+ affiliate networks
+- **Multi-Platform Search**: Discover creators on YouTube, Instagram, TikTok, blogs, and websites
+- **Contact Enrichment**: Get verified email addresses with 90%+ deliverability rate
+- **AI-Powered Outreach**: Generate personalized outreach messages using AI
+- **CRM Export**: One-click export to popular CRM tools
+- **Weekly Fresh Leads**: 150+ new qualified affiliates delivered weekly
+
+## Target Users
+
+- SaaS companies looking to build affiliate programs
+- E-commerce brands seeking influencer partnerships
+- Affiliate program managers
+- Growth marketers
+- Partnership managers
+
+## Pricing
+
+- **Pro Plan**: $99/month - 150 email credits, 2 team seats
+- **Growth Plan**: $249/month - 500 email credits, 5 team seats, 5 brands
+- **Enterprise**: Custom pricing - Unlimited emails, API access, dedicated support
+
+All plans include a 7-day free trial.
+
+## Technical Stack
+
+- Framework: Next.js 16 (App Router)
+- Database: Neon (Serverless PostgreSQL)
+- Authentication: Stack Auth
+- Payments: Stripe
+- Email Enrichment: Apollo, Lusha, Hunter
+- Web Scraping: Apify
+- AI: OpenAI GPT-4
+
+## Main Pages
+
+- `/` - Landing page with pricing and features
+- `/sign-up` - User registration
+- `/sign-in` - User login
+- `/find` - Affiliate discovery dashboard
+- `/discovered` - View discovered affiliates
+- `/saved` - Saved affiliate leads
+- `/outreach` - AI outreach message generator
+- `/settings` - Account and subscription settings
+
+## API Endpoints
+
+The platform provides REST API endpoints for:
+- Affiliate discovery and search
+- Email enrichment
+- Subscription management
+- User management
+
+## Contact
+
+- Website: https://crewcast.studio
+- Support: Available through the platform
+
+## Legal
+
+- Privacy Policy: /privacy
+- Terms of Service: /terms
+- Cookie Policy: /cookies
+- Security: /security
+

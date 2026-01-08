@@ -94,6 +94,11 @@ interface AffiliateRowProps {
   // (Instagram, TikTok, YouTube, SimilarWeb data)
   // ============================================================================
   affiliateData?: ResultItem;     // Full ResultItem for View modal display
+  // ============================================================================
+  // SHOW STATUS INSTEAD OF DATE (Added Jan 2026)
+  // For Saved page - shows "SAVED" status badge instead of date
+  // ============================================================================
+  showStatusInsteadOfDate?: boolean;
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
@@ -129,6 +134,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   isSaving = false,  // Added Dec 2025: Shows loading state during bulk save
   onDelete,          // Added Dec 2025: Single item delete callback
   affiliateData,     // Added Dec 2025: Full data for View modal
+  showStatusInsteadOfDate = false,  // Added Jan 2026: Show "SAVED" status instead of date
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -205,13 +211,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     }
   };
 
-  // Get platform-specific colors
+  // Get platform-specific colors - Updated January 6th, 2026 for neo-brutalist design
   const getPlatformColors = () => {
     switch(source.toLowerCase()) {
-      case 'youtube': return { bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-600' };
-      case 'instagram': return { bg: 'bg-gradient-to-r from-purple-50 to-pink-50', border: 'border-pink-100', text: 'text-pink-600' };
-      case 'tiktok': return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-900' };
-      default: return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700' };
+      case 'youtube': return { bg: 'bg-red-500', border: 'border-black', text: 'text-white' };
+      case 'instagram': return { bg: 'bg-pink-500', border: 'border-black', text: 'text-white' };
+      case 'tiktok': return { bg: 'bg-black', border: 'border-white', text: 'text-white' };
+      default: return { bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-black dark:border-gray-600', text: 'text-gray-700 dark:text-gray-300' };
     }
   };
 
@@ -297,29 +303,18 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     );
   };
 
+  // Updated January 6th, 2026 - Neo-brutalist design for discovery method
   const renderDiscoveryMethod = () => {
     if (!discoveryMethod) return null;
     
-    const label = discoveryMethod.type === 'competitor' ? 'Promoting Competitor:' : 
-                 discoveryMethod.type === 'tagged' ? 'Tagged Competitor:' : 
-                 discoveryMethod.type === 'topic' ? 'Topic:' : 'Keyword:';
-    
-    const textColor = discoveryMethod.type === 'competitor' ? 'text-amber-600' : 
-                     discoveryMethod.type === 'tagged' ? 'text-orange-600' : 
-                     discoveryMethod.type === 'topic' ? 'text-purple-600' : 'text-[#1A1D21]';
-                     
-    const bgColor = discoveryMethod.type === 'competitor' ? 'bg-amber-50' :
-                   discoveryMethod.type === 'tagged' ? 'bg-orange-50' : 
-                   discoveryMethod.type === 'topic' ? 'bg-purple-50' : 'bg-[#D4E815]/10';
-
-    const borderColor = discoveryMethod.type === 'competitor' ? 'border-amber-100' :
-                       discoveryMethod.type === 'tagged' ? 'border-orange-100' : 
-                       discoveryMethod.type === 'topic' ? 'border-purple-100' : 'border-[#D4E815]/30';
+    const label = discoveryMethod.type === 'competitor' ? 'Keyword:' : 
+                 discoveryMethod.type === 'tagged' ? 'Keyword:' : 
+                 discoveryMethod.type === 'topic' ? 'Keyword:' : 'Keyword:';
 
     return (
       <div>
-        <p className={`text-[10px] font-bold mb-1 ${textColor}`}>{label}</p>
-        <span className={`inline-block px-2 py-1 rounded-md text-[11px] font-medium ${bgColor} ${textColor} border ${borderColor}`}>
+        <p className="text-[10px] font-bold mb-1 text-gray-400 dark:text-gray-500 uppercase tracking-wide">{label}</p>
+        <span className="inline-block px-2 py-1 text-[11px] font-bold bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-gray-600">
           {discoveryMethod.value}
         </span>
       </div>
@@ -389,7 +384,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   // Note: YouTube API provides VIDEO description (snippet), not channel bio
   // ============================================================================
 
-  // YouTube View Modal Content
+  // YouTube View Modal Content - NEO-BRUTALIST (Updated January 6th, 2026)
   const renderYouTubeViewContent = () => {
     const videoDescription = snippet || affiliateData?.snippet || '';
     const videoTitle = title;
@@ -402,28 +397,32 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     
     return (
       <div className="space-y-4">
-        {/* Header - Channel Name with YouTube icon */}
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-          <Youtube size={16} className="text-red-600" />
-          <h3 className="text-sm font-bold text-slate-900">{channel?.name || personName || domain}</h3>
+        {/* Header - NEO-BRUTALIST */}
+        <div className="flex items-center gap-2 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
+          <div className="w-8 h-8 bg-red-600 border-2 border-black flex items-center justify-center">
+            <Youtube size={16} className="text-white" />
+          </div>
+          <h3 className="text-sm font-black text-gray-900 dark:text-white">{channel?.name || personName || domain}</h3>
           {channel?.verified && (
             <CheckCircle2 size={12} className="text-blue-500 fill-blue-500" />
           )}
         </div>
 
-        {/* Subscribers */}
-        <p className="text-xs text-slate-600">
-          {channel?.subscribers || '0'} subscribers
-        </p>
+        {/* Subscribers - NEO-BRUTALIST badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600">
+          <Users size={14} className="text-gray-500" />
+          <span className="text-xs font-black text-black dark:text-white">{channel?.subscribers || '0'}</span>
+          <span className="text-xs text-gray-500 font-medium">subscribers</span>
+        </div>
 
-        {/* Relevant Videos Section */}
-        <div className="pt-3 border-t border-slate-100">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+        {/* Relevant Videos Section - NEO-BRUTALIST */}
+        <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
+          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
             Relevant Videos ({1 + (subItems?.length || 0)})
           </h4>
 
-          {/* Main Video Card */}
-          <div className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+          {/* Main Video Card - NEO-BRUTALIST */}
+          <div className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             {/* Video Thumbnail */}
             {videoThumbnail && (
               <a 
@@ -432,7 +431,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 rel="noreferrer"
                 className="shrink-0 relative group"
               >
-                <div className="w-28 h-16 rounded-md overflow-hidden bg-slate-200">
+                <div className="w-28 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-black dark:border-gray-600">
                   <img 
                     src={getProxiedImageUrl(videoThumbnail)} 
                     alt="" 
@@ -441,13 +440,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   />
                 </div>
                 {videoDuration && (
-                  <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-black/80 text-white text-[8px] font-medium rounded">
+                  <span className="absolute bottom-0 right-0 px-1.5 py-0.5 bg-[#ffbf23] text-black text-[8px] font-black border-t border-l border-black">
                     {videoDuration}
                   </span>
                 )}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow">
-                    <Play size={12} className="text-slate-900 ml-0.5" fill="currentColor" />
+                  <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+                    <Play size={14} className="text-black ml-0.5" fill="currentColor" />
                   </div>
                 </div>
               </a>
@@ -459,51 +458,48 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 href={link}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs font-semibold text-slate-900 hover:text-red-600 transition-colors line-clamp-2 block mb-1"
+                className="text-xs font-black text-gray-900 dark:text-white hover:text-red-600 transition-colors line-clamp-2 block mb-1"
               >
                 {videoTitle}
               </a>
               
               {videoDescription && (
-                <p className="text-[10px] text-slate-500 line-clamp-2 mb-2">
+                <p className="text-[10px] text-gray-500 line-clamp-2 mb-2">
                   {videoDescription}
                 </p>
               )}
 
-              <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
-                {videoViews && <span>{videoViews} views</span>}
-                {videoLikes !== undefined && <span>• {formatNumber(videoLikes)} likes</span>}
-                {videoComments !== undefined && <span>• {formatNumber(videoComments)} comments</span>}
-                {videoDate && <span>• {formatDate(videoDate)}</span>}
+              <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                {videoViews && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{videoViews} views</span>}
+                {videoLikes !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoLikes)} likes</span>}
+                {videoDate && <span className="text-gray-400">{formatDate(videoDate)}</span>}
               </div>
             </div>
           </div>
 
-          {/* Additional Videos from subItems */}
+          {/* Additional Videos from subItems - NEO-BRUTALIST */}
           {subItems && subItems.length > 0 && (
             <div className="mt-2 space-y-2">
               {subItems.map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                <div key={idx} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors">
                   {item.thumbnail && (
                     <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0 relative">
-                      <div className="w-28 h-16 rounded-md overflow-hidden bg-slate-200">
+                      <div className="w-28 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600">
                         <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
                       </div>
                       {item.duration && (
-                        <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-black/80 text-white text-[8px] font-medium rounded">
+                        <span className="absolute bottom-0 right-0 px-1 py-0.5 bg-black text-white text-[8px] font-bold">
                           {item.duration}
                         </span>
                       )}
                     </a>
                   )}
                   <div className="flex-1 min-w-0">
-                    <a href={item.link} target="_blank" rel="noreferrer" className="text-xs font-semibold text-slate-900 hover:text-red-600 line-clamp-2 block mb-1">
+                    <a href={item.link} target="_blank" rel="noreferrer" className="text-xs font-black text-gray-900 dark:text-white hover:text-red-600 line-clamp-2 block mb-1">
                       {item.title}
                     </a>
-                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
                       {item.views && <span>{item.views} views</span>}
-                      {item.youtubeVideoLikes !== undefined && <span>• {formatNumber(item.youtubeVideoLikes)} likes</span>}
-                      {item.youtubeVideoComments !== undefined && <span>• {formatNumber(item.youtubeVideoComments)} comments</span>}
                       {item.date && <span>• {formatDate(item.date)}</span>}
                     </div>
                   </div>
@@ -516,24 +512,25 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     );
   };
 
-  // Instagram View Modal Content
+  // Instagram View Modal Content - NEO-BRUTALIST (Updated January 6th, 2026)
   const renderInstagramViewContent = () => {
     const username = affiliateData?.instagramUsername || channel?.name || personName || domain;
     const fullName = affiliateData?.instagramFullName || '';
     const bio = affiliateData?.instagramBio || snippet || '';
     const followers = affiliateData?.instagramFollowers;
     const isVerified = affiliateData?.instagramIsVerified;
-    // Instagram post-level stats (Added Dec 2025)
     const postLikes = affiliateData?.instagramPostLikes;
     const postComments = affiliateData?.instagramPostComments;
     const postViews = affiliateData?.instagramPostViews;
     
     return (
       <div className="space-y-4">
-        {/* Header - Username with Instagram icon */}
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-          <Instagram size={16} className="text-pink-600" />
-          <h3 className="text-sm font-bold text-slate-900">
+        {/* Header - NEO-BRUTALIST */}
+        <div className="flex items-center gap-2 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
+          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 border-2 border-black flex items-center justify-center">
+            <Instagram size={16} className="text-white" />
+          </div>
+          <h3 className="text-sm font-black text-gray-900 dark:text-white">
             {username.startsWith('@') ? username : `@${username}`}
           </h3>
           {isVerified && (
@@ -541,32 +538,40 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           )}
         </div>
 
-        {/* Profile Info - Full Name + Followers */}
-        <p className="text-xs text-slate-600">
-          {fullName && <span className="font-medium text-slate-900">{fullName}</span>}
-          {fullName && followers && ' • '}
-          {followers && <span>{formatNumber(followers)} followers</span>}
-        </p>
+        {/* Profile Info - NEO-BRUTALIST badges */}
+        <div className="flex flex-wrap items-center gap-2">
+          {fullName && (
+            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-800 dark:text-gray-200">
+              {fullName}
+            </span>
+          )}
+          {followers && (
+            <span className="px-2 py-1 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
+              {formatNumber(followers)} followers
+            </span>
+          )}
+        </div>
 
-        {/* Bio */}
+        {/* Bio - NEO-BRUTALIST */}
         {bio && (
-          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap line-clamp-4">
-            {bio}
-          </p>
+          <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+            <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap line-clamp-4">
+              {bio}
+            </p>
+          </div>
         )}
 
-        {/* Relevant Posts Section */}
-        <div className="pt-3 border-t border-slate-100">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+        {/* Relevant Posts Section - NEO-BRUTALIST */}
+        <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
+          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
             Relevant Posts ({1 + (subItems?.length || 0)})
           </h4>
 
-          {/* Main Post Card */}
-          <div className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-            {/* Post Thumbnail */}
+          {/* Main Post Card - NEO-BRUTALIST */}
+          <div className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-black dark:border-gray-600">
             {thumbnail && (
               <a href={link} target="_blank" rel="noreferrer" className="shrink-0">
-                <div className="w-16 h-16 rounded-md overflow-hidden bg-slate-200">
+                <div className="w-16 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-black dark:border-gray-600">
                   <img 
                     src={getProxiedImageUrl(thumbnail)} 
                     alt="" 
@@ -577,37 +582,34 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </a>
             )}
 
-            {/* Post Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-slate-600 line-clamp-3 mb-2">
+              <p className="text-xs text-gray-700 dark:text-gray-300 font-medium line-clamp-3 mb-2">
                 {title || snippet}
               </p>
-              <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
-                {postLikes !== undefined && <span>{formatNumber(postLikes)} likes</span>}
-                {postComments !== undefined && <span>• {formatNumber(postComments)} comments</span>}
-                {postViews !== undefined && <span>• {formatNumber(postViews)} views</span>}
-                {date && <span>• {formatDate(date)}</span>}
+              <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                {postLikes !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postLikes)} likes</span>}
+                {postComments !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postComments)} comments</span>}
+                {date && <span className="text-gray-400">{formatDate(date)}</span>}
               </div>
             </div>
           </div>
 
-          {/* Additional Posts from subItems */}
+          {/* Additional Posts - NEO-BRUTALIST */}
           {subItems && subItems.length > 0 && (
             <div className="mt-2 space-y-2">
               {subItems.map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div key={idx} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors">
                   {item.thumbnail && (
                     <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0">
-                      <div className="w-16 h-16 rounded-md overflow-hidden bg-slate-200">
+                      <div className="w-16 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600">
                         <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
                       </div>
                     </a>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-600 line-clamp-3 mb-2">{item.title || item.snippet}</p>
-                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium line-clamp-3 mb-2">{item.title || item.snippet}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
                       {item.instagramPostLikes !== undefined && <span>{formatNumber(item.instagramPostLikes)} likes</span>}
-                      {item.instagramPostComments !== undefined && <span>• {formatNumber(item.instagramPostComments)} comments</span>}
                       {item.date && <span>• {formatDate(item.date)}</span>}
                     </div>
                   </div>
@@ -620,7 +622,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     );
   };
 
-  // TikTok View Modal Content
+  // TikTok View Modal Content - NEO-BRUTALIST (Updated January 6th, 2026)
   const renderTikTokViewContent = () => {
     const username = affiliateData?.tiktokUsername || channel?.name || personName || domain;
     const displayName = affiliateData?.tiktokDisplayName || '';
@@ -629,34 +631,33 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     const isVerified = affiliateData?.tiktokIsVerified;
     const avatarUrl = channel?.thumbnail || thumbnail;
     
-    // Video stats
     const videoPlays = affiliateData?.tiktokVideoPlays;
     const videoLikes = affiliateData?.tiktokVideoLikes;
     
     return (
       <div className="space-y-4">
-        {/* Header - Username with TikTok icon */}
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-          <TikTokIcon size={16} className="text-slate-900" />
-          <h3 className="text-sm font-bold text-slate-900">
+        {/* Header - NEO-BRUTALIST */}
+        <div className="flex items-center gap-2 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
+          <div className="w-8 h-8 bg-black border-2 border-black flex items-center justify-center">
+            <TikTokIcon size={16} className="text-white" />
+          </div>
+          <h3 className="text-sm font-black text-gray-900 dark:text-white">
             {username.startsWith('@') ? username : `@${username}`}
           </h3>
           {isVerified && (
             <CheckCircle2 size={12} className="text-blue-500 fill-blue-500" />
           )}
-          {/* Country badge - if available */}
           {affiliateData?.similarWeb?.countryCode && (
-            <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded-full border border-blue-200">
+            <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-black uppercase border-2 border-gray-200 dark:border-gray-700">
               {affiliateData.similarWeb.countryCode}
             </span>
           )}
         </div>
 
-        {/* Profile Section with Avatar */}
+        {/* Profile Section - NEO-BRUTALIST */}
         <div className="flex items-start gap-3">
-          {/* Avatar */}
           {avatarUrl && (
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+            <div className="w-12 h-12 overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 shrink-0">
               <img 
                 src={getProxiedImageUrl(avatarUrl)} 
                 alt="" 
@@ -667,36 +668,37 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           )}
           
           <div className="flex-1">
-            {/* Display Name */}
             {displayName && (
-              <p className="text-xs font-semibold text-slate-900">{displayName}</p>
+              <p className="text-xs font-black text-gray-900 dark:text-white">{displayName}</p>
             )}
-            {/* Followers */}
             {followers && (
-              <p className="text-[10px] text-slate-600">{formatNumber(followers)} followers</p>
+              <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
+                {formatNumber(followers)} followers
+              </span>
             )}
           </div>
         </div>
 
-        {/* Bio */}
+        {/* Bio - NEO-BRUTALIST */}
         {bio && (
-          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap line-clamp-4">
-            {bio}
-          </p>
+          <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+            <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap line-clamp-4">
+              {bio}
+            </p>
+          </div>
         )}
 
-        {/* Relevant Posts Section */}
-        <div className="pt-3 border-t border-slate-100">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+        {/* Relevant Posts Section - NEO-BRUTALIST */}
+        <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
+          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
             Relevant Posts ({1 + (subItems?.length || 0)})
           </h4>
 
-          {/* Main Video Card */}
-          <div className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-            {/* Video Thumbnail */}
+          {/* Main Video Card - NEO-BRUTALIST */}
+          <div className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-black dark:border-gray-600">
             {thumbnail && (
               <a href={link} target="_blank" rel="noreferrer" className="shrink-0 relative group">
-                <div className="w-16 h-20 rounded-md overflow-hidden bg-slate-200">
+                <div className="w-16 h-20 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-black dark:border-gray-600">
                   <img 
                     src={getProxiedImageUrl(thumbnail)} 
                     alt="" 
@@ -705,44 +707,40 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow">
-                    <Play size={12} className="text-slate-900 ml-0.5" fill="currentColor" />
+                  <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+                    <Play size={14} className="text-black ml-0.5" fill="currentColor" />
                   </div>
                 </div>
               </a>
             )}
 
-            {/* Video Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-slate-700 line-clamp-3 mb-2">
+              <p className="text-xs text-gray-700 dark:text-gray-300 font-medium line-clamp-3 mb-2">
                 {title || snippet}
               </p>
-              <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
-                {videoPlays && <span>{formatNumber(videoPlays)} views</span>}
-                {videoLikes && <span>• {formatNumber(videoLikes)} likes</span>}
-                {date && <span>• {formatDate(date)}</span>}
-                {videoPlays && videoLikes && (
-                  <span>• {calculateEngagement(videoPlays, videoLikes)} eng.</span>
-                )}
+              <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                {videoPlays && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoPlays)} views</span>}
+                {videoLikes && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoLikes)} likes</span>}
+                {date && <span className="text-gray-400">{formatDate(date)}</span>}
               </div>
             </div>
           </div>
 
-          {/* Additional Videos from subItems */}
+          {/* Additional Videos - NEO-BRUTALIST */}
           {subItems && subItems.length > 0 && (
             <div className="mt-2 space-y-2">
               {subItems.map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div key={idx} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors">
                   {item.thumbnail && (
                     <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0">
-                      <div className="w-16 h-20 rounded-md overflow-hidden bg-slate-200">
+                      <div className="w-16 h-20 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600">
                         <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
                       </div>
                     </a>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-700 line-clamp-3 mb-2">{item.title || item.snippet}</p>
-                    <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium line-clamp-3 mb-2">{item.title || item.snippet}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-500">
                       {item.views && <span>{item.views} views</span>}
                       {item.date && <span>• {formatDate(item.date)}</span>}
                     </div>
@@ -815,38 +813,38 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     
     return (
       <div className="space-y-5">
-        {/* Header - Domain with traffic badge and screenshot */}
-        <div className="flex items-start justify-between pb-4 border-b border-slate-200">
+        {/* Header - NEO-BRUTALIST Domain with traffic badge */}
+        <div className="flex items-start justify-between pb-4 border-b-2 border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             {/* Screenshot or Globe icon */}
             {swData?.screenshot ? (
               <img 
                 src={swData.screenshot} 
                 alt={domain}
-                className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                className="w-12 h-12 object-cover border-2 border-black dark:border-gray-600"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
             ) : (
-              <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center">
-                <Globe size={24} className="text-slate-500" />
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center">
+                <Globe size={24} className="text-gray-500" />
               </div>
             )}
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">{domain}</h3>
+                <h3 className="text-base font-black text-gray-900 dark:text-white">{domain}</h3>
                 <a 
                   href={`https://${domain}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-slate-400 hover:text-[#1A1D21] transition-colors"
+                  className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
                 >
                   <ExternalLink size={14} />
                 </a>
               </div>
               {swData && (
-                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#D4E815]/20 border border-[#D4E815]/40 text-[#1A1D21] text-xs font-semibold rounded-full">
+                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black">
                   <ArrowUpRight size={12} />
                   {swData.monthlyVisitsFormatted} traffic/mo
                 </span>
@@ -855,32 +853,32 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           </div>
         </div>
 
-        {/* About this website (if available) */}
+        {/* About this website - NEO-BRUTALIST */}
         {swData?.siteDescription && (
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-            <h5 className="text-xs font-bold text-slate-500 mb-2">About this website</h5>
-            <p className="text-sm text-slate-700 leading-relaxed">{swData.siteDescription}</p>
+          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+            <h5 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">About</h5>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{swData.siteDescription}</p>
           </div>
         )}
 
-        {/* Traffic Overview */}
+        {/* Traffic Overview - NEO-BRUTALIST */}
         {swData ? (
           <>
             {/* Section Title */}
-            <h4 className="text-sm font-bold text-slate-800">Traffic & Engagement Metrics</h4>
+            <h4 className="text-sm font-black text-gray-800 dark:text-white uppercase tracking-wide">Traffic & Engagement Metrics</h4>
 
             {/* Two-column layout for Ranking and Engagement */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Ranking Card */}
-              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                <h5 className="text-xs font-bold text-slate-600 mb-3">Ranking</h5>
+              {/* Ranking Card - NEO-BRUTALIST */}
+              <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 overflow-hidden">
+                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">Ranking</h5>
                 <div className="space-y-3">
                   {/* Global Rank */}
                   <div className="flex items-center gap-2">
-                    <Globe size={14} className="text-slate-400 flex-shrink-0" />
-                    <span className="text-xs text-slate-500">Global</span>
+                    <Globe size={14} className="text-gray-400 flex-shrink-0" />
+                    <span className="text-xs text-gray-500 font-medium">Global</span>
                   </div>
-                  <p className="text-lg font-bold text-[#1A1D21] -mt-1 ml-6">
+                  <p className="text-xl font-black text-black dark:text-white -mt-1 ml-6">
                     {swData.globalRank ? `#${Number(swData.globalRank).toLocaleString()}` : 'N/A'}
                   </p>
                   
@@ -888,131 +886,98 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   {swData.countryCode && (
                     <>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-700 uppercase">{swData.countryCode}</span>
-                        <span className="text-xs text-slate-500 truncate">{countryNames[swData.countryCode] || swData.countryCode}</span>
+                        <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">{swData.countryCode}</span>
+                        <span className="text-xs text-gray-500 truncate">{countryNames[swData.countryCode] || swData.countryCode}</span>
                       </div>
-                      <p className="text-lg font-bold text-[#1A1D21] -mt-1 ml-6">
+                      <p className="text-xl font-black text-black dark:text-white -mt-1 ml-6">
                         {swData.countryRank ? `#${Number(swData.countryRank).toLocaleString()}` : 'N/A'}
                       </p>
                     </>
                   )}
                   
-                  {/* Category with Category Rank */}
+                  {/* Category */}
                   <div className="flex items-center gap-2 pt-1">
-                    <FileText size={14} className="text-slate-400 flex-shrink-0" />
-                    <span className="text-xs text-slate-500">Category</span>
+                    <FileText size={14} className="text-gray-400 flex-shrink-0" />
+                    <span className="text-xs text-gray-500 font-medium">Category</span>
                   </div>
                   <div className="-mt-1 ml-6 overflow-hidden">
-                    <p className="text-xs font-semibold text-slate-700 break-words leading-relaxed">
+                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 break-words leading-relaxed">
                       {swData.category?.replace(/_/g, ' ') || 'N/A'}
                     </p>
-                    {swData.categoryRank && (
-                      <p className="text-xs text-[#1A1D21] font-medium mt-0.5">
-                        #{swData.categoryRank} in category
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
 
-              {/* User Engagement Metrics Card */}
-              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                <h5 className="text-xs font-bold text-slate-600 mb-3">User Engagement Metrics</h5>
+              {/* User Engagement Metrics Card - NEO-BRUTALIST */}
+              <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 overflow-hidden">
+                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">User Engagement</h5>
                 <div className="grid grid-cols-3 gap-2">
                   {/* Pages/Visit */}
-                  <div className="text-center p-2 bg-slate-50 rounded-lg">
-                    <FileText size={16} className="mx-auto text-slate-400 mb-1" />
-                    <p className="text-base font-bold text-slate-900">
+                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                    <FileText size={16} className="mx-auto text-gray-400 mb-1" />
+                    <p className="text-lg font-black text-black dark:text-white">
                       {Number(swData.pagesPerVisit).toFixed(1)}
                     </p>
-                    <p className="text-[9px] text-slate-500 leading-tight">Pages/Visit</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase">Pages/Visit</p>
                   </div>
                   
                   {/* Time on Site */}
-                  <div className="text-center p-2 bg-slate-50 rounded-lg">
-                    <Clock size={16} className="mx-auto text-slate-400 mb-1" />
-                    <p className="text-base font-bold text-slate-900">
+                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                    <Clock size={16} className="mx-auto text-gray-400 mb-1" />
+                    <p className="text-lg font-black text-black dark:text-white">
                       {formatTime(Number(swData.timeOnSite))}
                     </p>
-                    <p className="text-[9px] text-slate-500 leading-tight">Time on Site</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase">Time on Site</p>
                   </div>
                   
                   {/* Bounce Rate */}
-                  <div className="text-center p-2 bg-slate-50 rounded-lg">
-                    <MousePointer size={16} className="mx-auto text-slate-400 mb-1" />
-                    <p className="text-base font-bold text-slate-900">
+                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                    <MousePointer size={16} className="mx-auto text-gray-400 mb-1" />
+                    <p className="text-lg font-black text-black dark:text-white">
                       {(Number(swData.bounceRate) * 100).toFixed(1)}%
                     </p>
-                    <p className="text-[9px] text-slate-500 leading-tight">Bounce Rate</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase">Bounce Rate</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Monthly Visitors Bar Chart (if history available) */}
-            {monthlyData && (
-              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <h5 className="text-xs font-bold text-slate-600 mb-4">Monthly Visitors</h5>
-                <div className="flex items-end justify-around gap-4 h-32">
-                  {monthlyData.entries.map(([date, visits]) => {
-                    const heightPercent = (visits / monthlyData.maxValue) * 100;
-                    return (
-                      <div key={date} className="flex flex-col items-center flex-1">
-                        <div className="w-full flex flex-col items-center">
-                          <span className="text-xs font-bold text-slate-700 mb-1">
-                            {formatTrafficNumber(visits)}
-                          </span>
-                          <div 
-                            className="w-full max-w-[60px] bg-[#D4E815] rounded-t-md transition-all"
-                            style={{ height: `${Math.max(heightPercent, 10)}px` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-slate-500 mt-2 font-medium">
-                          {formatMonth(date)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Traffic Sources Section */}
+            {/* Traffic Sources Section - NEO-BRUTALIST */}
             {swData.trafficSources && (
-              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <h5 className="text-xs font-bold text-slate-600 mb-4">Traffic Sources</h5>
+              <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600">
+                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">Traffic Sources</h5>
                 
                 {/* Traffic Sources with color dots and percentages */}
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                   {[
-                    { label: 'Search', value: Number(swData.trafficSources.search) || 0, color: 'bg-[#D4E815]' },
-                    { label: 'Direct', value: Number(swData.trafficSources.direct) || 0, color: 'bg-[#1A1D21]' },
-                    { label: 'Referrals', value: Number(swData.trafficSources.referrals) || 0, color: 'bg-slate-400' },
-                    { label: 'Social', value: Number(swData.trafficSources.social) || 0, color: 'bg-slate-600' },
-                    { label: 'Mail', value: Number(swData.trafficSources.mail) || 0, color: 'bg-slate-300' },
-                    { label: 'Paid', value: Number(swData.trafficSources.paid) || 0, color: 'bg-slate-500' },
+                    { label: 'Search', value: Number(swData.trafficSources.search) || 0, color: 'bg-[#ffbf23]' },
+                    { label: 'Direct', value: Number(swData.trafficSources.direct) || 0, color: 'bg-black dark:bg-white' },
+                    { label: 'Referrals', value: Number(swData.trafficSources.referrals) || 0, color: 'bg-gray-400' },
+                    { label: 'Social', value: Number(swData.trafficSources.social) || 0, color: 'bg-gray-600' },
+                    { label: 'Paid', value: Number(swData.trafficSources.paid) || 0, color: 'bg-gray-500' },
+                    { label: 'Mail', value: Number(swData.trafficSources.mail) || 0, color: 'bg-gray-300' },
                   ].sort((a, b) => b.value - a.value).map(source => (
                     <div key={source.label} className="flex items-center justify-between py-1.5">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${source.color}`}></span>
-                        <span className="text-xs text-slate-600">{source.label}</span>
+                        <span className={`w-3 h-3 ${source.color} border border-black`}></span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{source.label}</span>
                       </div>
-                      <span className="text-xs font-bold text-slate-800">
+                      <span className="text-xs font-black text-black dark:text-white">
                         {(source.value * 100).toFixed(1)}%
                       </span>
                     </div>
                   ))}
                 </div>
                 
-                {/* Visual bar representation */}
-                <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-slate-100">
+                {/* Visual bar representation - NEO-BRUTALIST (no rounded corners) */}
+                <div className="mt-4 h-4 overflow-hidden flex bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600">
                   {[
-                    { value: Number(swData.trafficSources.search) || 0, color: 'bg-[#D4E815]' },
-                    { value: Number(swData.trafficSources.direct) || 0, color: 'bg-[#1A1D21]' },
-                    { value: Number(swData.trafficSources.referrals) || 0, color: 'bg-slate-400' },
-                    { value: Number(swData.trafficSources.social) || 0, color: 'bg-slate-600' },
-                    { value: Number(swData.trafficSources.mail) || 0, color: 'bg-slate-300' },
-                    { value: Number(swData.trafficSources.paid) || 0, color: 'bg-slate-500' },
+                    { value: Number(swData.trafficSources.search) || 0, color: 'bg-[#ffbf23]' },
+                    { value: Number(swData.trafficSources.direct) || 0, color: 'bg-black dark:bg-white' },
+                    { value: Number(swData.trafficSources.referrals) || 0, color: 'bg-gray-400' },
+                    { value: Number(swData.trafficSources.social) || 0, color: 'bg-gray-600' },
+                    { value: Number(swData.trafficSources.mail) || 0, color: 'bg-gray-300' },
+                    { value: Number(swData.trafficSources.paid) || 0, color: 'bg-gray-500' },
                   ].filter(s => s.value > 0).map((source, idx) => (
                     <div 
                       key={idx}
@@ -1023,84 +988,32 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 </div>
               </div>
             )}
-
-            {/* Geographic Traffic Section */}
-            {swData.topCountries && swData.topCountries.length > 0 && (
-              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <h5 className="text-xs font-bold text-slate-600 mb-3">Geographic Traffic</h5>
-                <p className="text-[10px] text-slate-400 mb-3">Top {swData.topCountries.length} countries:</p>
-                
-                <div className="space-y-2">
-                  {swData.topCountries.slice(0, 5).map((country, idx) => {
-                    const sharePercent = Number(country.share) * 100;
-                    return (
-                      <div key={country.countryCode || idx} className="flex items-center gap-3">
-                        <span className="w-5 h-5 rounded-full bg-[#D4E815]/20 text-[#1A1D21] text-[10px] font-bold flex items-center justify-center">
-                          {idx + 1}
-                        </span>
-                        <span className="text-xs font-semibold text-slate-600 w-6">{country.countryCode}</span>
-                        <span className="text-xs text-slate-500 flex-1">{countryNames[country.countryCode] || country.countryCode}</span>
-                        <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-[#D4E815] rounded-full"
-                            style={{ width: `${Math.min(sharePercent, 100)}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-bold text-slate-700 w-12 text-right">
-                          {sharePercent.toFixed(1)}%
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Top Keywords Section */}
-            {swData.topKeywords && swData.topKeywords.length > 0 && (
-              <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <h5 className="text-xs font-bold text-slate-600 mb-3">Top Keywords by Traffic</h5>
-                <div className="space-y-2">
-                  {swData.topKeywords.slice(0, 5).map((keyword, idx) => (
-                    <div key={keyword.name} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-400 w-4">{idx + 1}.</span>
-                        <span className="text-xs text-slate-700">{keyword.name}</span>
-                      </div>
-                      <span className="text-xs font-bold text-slate-800">
-                        {formatTrafficNumber(keyword.estimatedValue)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         ) : (
-          /* No SimilarWeb data available */
-          <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
-            <BarChart2 size={32} className="mx-auto mb-3 text-slate-300" />
-            <p className="text-sm font-medium text-slate-500">No traffic data available</p>
-            <p className="text-xs mt-1 text-slate-400">Traffic data will be fetched during search</p>
+          /* No SimilarWeb data available - NEO-BRUTALIST */
+          <div className="text-center py-8 text-gray-400 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+            <BarChart2 size={32} className="mx-auto mb-3 text-gray-300" />
+            <p className="text-sm font-black text-gray-500 uppercase">No traffic data</p>
+            <p className="text-xs mt-1 text-gray-400">Traffic data will be fetched during search</p>
           </div>
         )}
 
-        {/* Relevant Content Section (our discovered article) */}
+        {/* Relevant Content Section - NEO-BRUTALIST */}
         {(snippet || title) && (
-          <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-            <h5 className="text-xs font-bold text-slate-600 mb-3">Relevant Content</h5>
+          <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600">
+            <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">Relevant Content</h5>
             <a 
               href={link} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="block p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-[#D4E815]/50 hover:bg-[#D4E815]/5 transition-all group"
+              className="block p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-all group"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-semibold text-[#1A1D21] group-hover:text-[#1A1D21] line-clamp-2">{title}</p>
-                <ExternalLink size={12} className="text-slate-400 group-hover:text-[#1A1D21] flex-shrink-0 mt-0.5" />
+                <p className="text-xs font-black text-black dark:text-white line-clamp-2">{title}</p>
+                <ExternalLink size={12} className="text-gray-400 group-hover:text-black dark:group-hover:text-white flex-shrink-0 mt-0.5" />
               </div>
               {snippet && (
-                <p className="text-[10px] text-slate-500 mt-2 line-clamp-3">{snippet}</p>
+                <p className="text-[10px] text-gray-500 mt-2 line-clamp-3">{snippet}</p>
               )}
             </a>
           </div>
@@ -1126,33 +1039,48 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     }
   };
 
-  const gridClass = isPipelineView 
+  // =============================================================================
+  // GRID LAYOUT - Updated January 6th, 2026
+  // 
+  // NEW DESIGN: Uses 12-column grid for neo-brutalist layout
+  // Matches DashboardDemo.tsx styling exactly:
+  // - grid grid-cols-12 gap-4
+  // - hover:bg-gray-50 dark:hover:bg-gray-900
+  // - Inter font family (inherited from globals.css)
+  // =============================================================================
+  
+  /* OLD_DESIGN_START - Grid Classes (pre-January 6th, 2026)
+  const gridClassOld = isPipelineView 
     ? "grid grid-cols-[40px_220px_1fr_140px_100px_90px_130px_100px] gap-0"
     : "grid grid-cols-[40px_220px_1fr_140px_100px_120px] gap-0";
+  OLD_DESIGN_END */
+  
+  // NEW DESIGN - 12-column grid matching DashboardDemo
+  // Pipeline view uses different column distribution for Status/Email columns
+  const gridClass = "grid grid-cols-12 gap-4";
 
   const platformColors = getPlatformColors();
 
   return (
-    <div className={`group ${gridClass} items-center p-4 bg-white border-b border-slate-50 hover:bg-slate-50/80 transition-all duration-200`}>
-      {/* Checkbox - Connected to bulk selection system (Dec 2025)
-          When onSelect is provided, clicking toggles selection state in parent component.
-          Parent manages selectedLinks Set and passes isSelected based on whether link is in Set. */}
-      <div className="flex justify-center">
+    // DashboardDemo row styling - clean white/dark with subtle hover
+    <div className={`group ${gridClass} items-center p-4 bg-white dark:bg-[#0f0f0f] hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors`}>
+      {/* Checkbox - col-span-1, accent-brandYellow */}
+      <div className="col-span-1 flex justify-center">
         <input 
           type="checkbox" 
           checked={isSelected}
           onChange={() => onSelect?.(link)}
-          className="w-4 h-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" 
+          className="accent-[#ffbf23] w-4 h-4" 
         />
       </div>
 
-      {/* Affiliate Info - Enhanced for Social Media */}
-      <div className="pr-6">
+      {/* Affiliate Info - col-span-3 for all views */}
+      <div className="col-span-3">
         <div className="flex items-center gap-3">
-          {/* Platform Icon + Avatar */}
+          {/* Platform Icon + Avatar - Neo-brutalist style */}
           <div className="relative shrink-0">
-            {/* Avatar/Thumbnail */}
-            <div className={`w-10 h-10 rounded-lg bg-slate-50 border ${platformColors.border} flex items-center justify-center overflow-hidden`}>
+            {/* Avatar/Thumbnail with bold border */}
+            <div className={`w-10 h-10 rounded bg-gray-50 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center overflow-hidden`}>
               <img 
                 src={getProxiedImageUrl(channel?.thumbnail || thumbnail) || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
                 alt="" 
@@ -1162,9 +1090,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 }}
               />
             </div>
-            {/* Platform badge */}
+            {/* Platform badge - Neo-brutalist */}
             {isSocialMedia && (
-              <div className={`absolute -bottom-1 -left-1 w-5 h-5 rounded-full ${platformColors.bg} border ${platformColors.border} flex items-center justify-center shadow-sm`}>
+              <div className={`absolute -bottom-1 -left-1 w-5 h-5 rounded-full ${platformColors.bg} border-2 border-black dark:border-white flex items-center justify-center`}>
                 {getSourceIcon(10)}
               </div>
             )}
@@ -1180,20 +1108,21 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               {channel?.verified && (
                 <CheckCircle2 size={12} className="text-blue-500 fill-blue-500 shrink-0" />
               )}
+              {/* Neo-brutalist badges */}
               {isNew && !isAlreadyAffiliate && (
-                <span className="px-1.5 py-[1px] bg-emerald-500 text-white text-[9px] font-bold rounded-[3px] shadow-sm shrink-0">NEW</span>
+                <span className="px-1.5 py-[1px] bg-emerald-500 text-white text-[9px] font-black uppercase border border-black shrink-0">NEW</span>
               )}
               {isAlreadyAffiliate && (
-                <span className="px-1.5 py-[1px] bg-slate-200 text-slate-600 text-[9px] font-bold rounded-[3px] shadow-sm shrink-0">ALREADY</span>
+                <span className="px-1.5 py-[1px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black uppercase border border-black dark:border-gray-500 shrink-0">SAVED</span>
               )}
             </div>
             
-            {/* Row 2: Stats - Enhanced for all social platforms */}
+            {/* Row 2: Stats - Updated January 6th, 2026 for neo-brutalist design */}
             {isSocialMedia && (
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {/* Followers/Subscribers */}
+                {/* Followers/Subscribers - Neo-brutalist badge */}
                 {channel?.subscribers && (
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${platformColors.bg} ${platformColors.text} border ${platformColors.border}`}>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#ffbf23] text-black border-2 border-black">
                     <Users size={10} />
                     {channel.subscribers} followers
                   </span>
@@ -1201,19 +1130,18 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </div>
             )}
             
-            {/* Row 2: SimilarWeb Stats for Web sources (Dec 2025)
-                Updated Dec 16, 2025: Show loading skeleton when isEnriching is true */}
+            {/* Row 2: SimilarWeb Stats for Web sources - Updated January 6th, 2026 */}
             {!isSocialMedia && (affiliateData?.similarWeb ? (
-              // Show actual SimilarWeb stats when data is available
+              // Show actual SimilarWeb stats when data is available - Neo-brutalist style
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {/* Monthly Traffic */}
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#ffbf23] text-black border-2 border-black">
                   <BarChart2 size={10} />
                   {affiliateData.similarWeb.monthlyVisitsFormatted} visits/mo
                 </span>
                 {/* Global Rank */}
                 {affiliateData.similarWeb.globalRank && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-50 text-slate-600 border border-slate-200">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-black dark:border-gray-600">
                     <TrendingUp size={10} />
                     #{affiliateData.similarWeb.globalRank.toLocaleString()}
                   </span>
@@ -1222,9 +1150,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             ) : affiliateData?.isEnriching ? (
               // Show loading skeleton while SimilarWeb data is being fetched
               <div className="flex items-center gap-2 mt-1">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50/50 text-blue-400 border border-blue-100/50">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-300 dark:border-gray-600">
                   <Loader2 size={10} className="animate-spin" />
-                  Loading traffic data...
+                  Loading...
                 </span>
               </div>
             ) : null)}
@@ -1232,10 +1160,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Relevant Content - Enhanced with thumbnail for social media */}
-      <div className="pr-4 min-w-0 overflow-hidden">
-        <div className="flex items-start gap-2">
-          {/* Video/Post Thumbnail for social media */}
+      {/* Relevant Content - col-span-2 for pipeline (no date column), col-span-3 for find */}
+      <div className={`${isPipelineView ? "col-span-2" : "col-span-3"} min-w-0 overflow-hidden`}>
+        <div className="flex items-start gap-3">
+          {/* Video/Post Thumbnail for social media - Neo-brutalist with bold borders */}
           {isSocialMedia && thumbnail && (
             <a 
               href={link} 
@@ -1243,7 +1171,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               rel="noreferrer"
               className="shrink-0 relative group/thumb"
             >
-              <div className="w-14 h-10 rounded-md overflow-hidden bg-slate-100 border border-slate-200">
+              <div className="w-16 h-12 overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600">
                 <img 
                   src={getProxiedImageUrl(thumbnail)} 
                   alt="" 
@@ -1251,62 +1179,61 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   onError={(e) => (e.currentTarget.style.display = 'none')}
                 />
               </div>
-              {/* Duration badge */}
+              {/* Duration badge - Neo-brutalist */}
               {duration && (
-                <span className="absolute bottom-0.5 right-0.5 px-1 py-0.5 bg-black/80 text-white text-[8px] font-medium rounded">
+                <span className="absolute bottom-0 right-0 px-1 py-0.5 bg-[#ffbf23] text-black text-[8px] font-black border-t border-l border-black">
                   {duration}
                 </span>
               )}
               {/* Play icon overlay */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
-                <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
-                  <Play size={10} className="text-slate-900 ml-0.5" fill="currentColor" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-black/20">
+                <div className="w-6 h-6 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+                  <Play size={12} className="text-black ml-0.5" fill="currentColor" />
                 </div>
               </div>
             </a>
           )}
           
-          <div className="flex-1 min-w-0 space-y-0.5">
+          <div className="flex-1 min-w-0 space-y-1">
             <a 
               href={link}
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-semibold text-[#1A1D21] hover:underline decoration-[#D4E815] underline-offset-2 cursor-pointer line-clamp-2 block leading-tight"
+              className="text-xs font-black text-gray-900 dark:text-white hover:text-[#ffbf23] cursor-pointer line-clamp-2 block leading-tight"
             >
               {title}
             </a>
             
-            {/* Stats row for social media */}
+            {/* Stats row for social media - Neo-brutalist with bold styling */}
             {isSocialMedia && (views || date) && (
-              <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
                 {views && (
-                  <span className="inline-flex items-center gap-0.5">
-                    <Eye size={10} className="text-slate-400" />
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">
+                    <Eye size={10} />
                     {views} views
                   </span>
                 )}
                 {date && (
-                  <span className="inline-flex items-center gap-0.5">
-                    <span className="text-slate-300">•</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">
                     {formatDate(date)}
                   </span>
                 )}
               </div>
             )}
             
-            {/* Keyword info for web results */}
+            {/* Keyword info for web results - Neo-brutalist */}
             {!isSocialMedia && (
-              <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
-                <span className="font-medium text-slate-700">rank {rank}</span>
+              <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                <span className="font-bold text-gray-700 dark:text-gray-300">rank {rank}</span>
                 <span>for</span>
-                <span className="font-medium text-slate-900 truncate max-w-[100px]">{keyword}</span>
+                <span className="font-bold text-gray-900 dark:text-white truncate max-w-[100px]">{keyword}</span>
               </div>
             )}
 
             {subItems && subItems.length > 0 && (
                <p 
                  onClick={() => setIsModalOpen(true)}
-                 className="text-[9px] text-emerald-600 font-bold cursor-pointer hover:underline inline-block select-none"
+                 className="text-[9px] text-[#ffbf23] font-black cursor-pointer hover:underline inline-block select-none uppercase"
                >
                  +{subItems.length} more
                </p>
@@ -1315,85 +1242,97 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Discovery Method */}
-      <div>
+      {/* Discovery Method - col-span-2 (NEW DESIGN January 6th, 2026) */}
+      <div className="col-span-2">
          {renderDiscoveryMethod()}
       </div>
 
-      {/* Discovery Date */}
-      <div className="text-xs font-medium text-slate-500">
-        {formatDate(date)}
-      </div>
+      {/* Date/Status column - col-span-1 - Only show in non-pipeline view */}
+      {!isPipelineView && (
+        <div className="col-span-1">
+          {showStatusInsteadOfDate ? (
+            /* Status badge for Saved page */
+            <span className="inline-flex items-center px-2 py-1 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
+              Saved
+            </span>
+          ) : (
+            /* Date for Find/Discovered pages */
+            <span className="inline-block px-2 py-1 text-[11px] font-bold text-gray-800 dark:text-gray-200 font-mono bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600">
+              {formatDate(date)}
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* Status (Pipeline Only) */}
+      {/* Status (Pipeline Only) - col-span-1 Neo-brutalist */}
       {isPipelineView && (
-        <div className="shrink-0">
-           <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-50 border border-amber-100 text-amber-600 text-[10px] font-bold">
-             Discovered <ChevronDown size={10} className="ml-1 opacity-50" />
+        <div className="col-span-1">
+           <span className="inline-flex items-center px-2 py-1 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
+             Discovered <ChevronDown size={10} className="ml-1" />
            </span>
         </div>
       )}
 
-      {/* Emails (Pipeline Only) */}
+      {/* Emails (Pipeline Only) - col-span-1 Neo-brutalist */}
       {isPipelineView && (
-         <div className="shrink-0">
+         <div className="col-span-1">
             {/* Email Found - Show email count badge that opens modal */}
             {(emailStatus === 'found' || email) && email ? (
                <button 
                  onClick={() => setIsEmailModalOpen(true)}
-                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition-colors text-[10px] font-bold group"
+                 className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase border-2 border-black hover:bg-emerald-600 transition-colors group"
                  title="View email results"
                >
-                 <Mail size={12} className="text-emerald-500" />
+                 <Mail size={12} />
                  <span>{emailResults?.emails?.length || 1} Found</span>
-                 <Eye size={10} className="text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                 <Eye size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                </button>
             ) : emailStatus === 'searching' ? (
                /* Searching State - Animated spinner */
-               <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                 <Loader2 size={14} className="text-blue-500 animate-spin" />
+               <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+                 <Loader2 size={14} className="text-black animate-spin" />
                </div>
             ) : emailStatus === 'not_found' ? (
                /* Not Found State - Show 0 found + retry */
                <div className="flex items-center gap-1">
                  <button 
                    onClick={() => setIsEmailModalOpen(true)}
-                   className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors text-[10px] font-medium"
+                   className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase border-2 border-black dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                    title="View search results"
                  >
-                   <X size={10} className="text-slate-400" />
+                   <X size={10} />
                    0 Found
                  </button>
                  <button 
                    onClick={onFindEmail}
-                   className="w-7 h-7 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center hover:bg-slate-200 transition-colors group"
+                   className="w-7 h-7 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors group"
                    title="Retry search"
                  >
-                   <RotateCw size={12} className="text-slate-500 group-hover:rotate-180 transition-transform duration-300" />
+                   <RotateCw size={12} className="text-gray-500 group-hover:rotate-180 transition-transform duration-300" />
                  </button>
                </div>
             ) : emailStatus === 'error' ? (
                /* Error State - Warning icon + retry */
                <div className="flex items-center gap-1">
                  <div 
-                   className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center"
+                   className="w-7 h-7 bg-red-400 border-2 border-black flex items-center justify-center"
                    title="Error occurred"
                  >
-                   <AlertCircle size={12} className="text-amber-500" />
+                   <AlertCircle size={12} className="text-white" />
                  </div>
                  <button 
                    onClick={onFindEmail}
-                   className="w-7 h-7 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center hover:bg-amber-200 transition-colors group"
+                   className="w-7 h-7 bg-red-300 border-2 border-black flex items-center justify-center hover:bg-red-400 transition-colors group"
                    title="Retry search"
                  >
-                   <RotateCw size={12} className="text-amber-600 group-hover:rotate-180 transition-transform duration-300" />
+                   <RotateCw size={12} className="text-black group-hover:rotate-180 transition-transform duration-300" />
                  </button>
                </div>
             ) : (
-               /* Default: Find Email Button */
+               /* Default: Find Email Button - Neo-brutalist */
                <button 
                  onClick={onFindEmail}
-                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#D4E815]/20 border border-[#D4E815]/40 hover:bg-[#D4E815]/40 transition-colors text-[10px] font-bold text-[#1A1D21]"
+                 className="flex items-center gap-1.5 px-2 py-1.5 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black hover:shadow-[2px_2px_0px_0px_#000000] transition-all"
                  title="Find email"
                >
                  <Search size={12} />
@@ -1403,15 +1342,12 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
          </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-2 shrink-0">
-        {/* Delete Button with Inline Confirmation (Added Dec 2025)
-            First click: Shows "Confirm?" state
-            Second click: Executes delete
-            Auto-resets after 3 seconds */}
+      {/* Actions - col-span-2 (NEW DESIGN January 6th, 2026) */}
+      <div className="col-span-2 flex items-center justify-end gap-2">
+        {/* Delete Button - Neo-brutalist style */}
         <button 
           onClick={handleDeleteClick}
-          className={`flex items-center justify-center rounded transition-all shadow-sm ${
+          className={`flex items-center justify-center border-2 border-black dark:border-white transition-all ${
             isDeleteConfirming
               ? 'w-[70px] h-7 bg-red-500 text-white hover:bg-red-600 animate-pulse'
               : 'w-7 h-7 bg-red-400 text-white hover:bg-red-500'
@@ -1424,306 +1360,334 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             <Trash2 size={14} />
           )}
         </button>
+        {/* View Button - Neo-brutalist style */}
         <button 
           onClick={() => setIsViewModalOpen(true)}
-          className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-colors shadow-sm" 
+          className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 border-2 border-black dark:border-white text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" 
           title="View details"
         >
           <Eye size={14} />
         </button>
-        {/* Save Button - Updated Dec 2025 to show saving state during bulk operations */}
+        {/* Save Button - Neo-brutalist style */}
         <button 
           onClick={onSave}
           disabled={isSaving}
-          className={`w-7 h-7 flex items-center justify-center rounded transition-all shadow-sm ${
+          className={`w-7 h-7 flex items-center justify-center border-2 border-black dark:border-white transition-all ${
             isSaving
-              ? 'bg-[#D4E815] border border-[#c5d913] cursor-wait'
+              ? 'bg-[#ffbf23] cursor-wait'
               : isSaved 
-                ? 'bg-emerald-500 text-white border border-emerald-600' 
-                : 'bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100'
+                ? 'bg-emerald-500 text-white' 
+                : 'bg-emerald-50 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800'
           }`}
           title={isSaving ? "Saving..." : isSaved ? "Saved" : "Save to Pipeline"}
         >
           {isSaving ? (
-            <Loader2 size={14} className="animate-spin text-[#1A1D21]" />
+            <Loader2 size={14} className="animate-spin text-black" />
           ) : (
             <Save size={14} />
           )}
         </button>
       </div>
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        title={`Relevant Content (${(subItems?.length || 0) + 1} articles)`}
-        width="max-w-4xl"
-      >
-        <div className="space-y-4">
-          {/* Render the current item first */}
-          <div className="p-5 border border-slate-200 rounded-xl hover:bg-slate-50/50 transition-colors group relative bg-white shadow-sm">
-             <a href={`https://${domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-slate-300 hover:text-[#1A1D21] transition-colors">
-               <ExternalLink size={16} />
-             </a>
-             
-             <a href={link} target="_blank" rel="noreferrer" className="text-base font-semibold text-[#1A1D21] hover:underline decoration-[#D4E815] underline-offset-2 mb-3 block pr-10">
-               {title}
-             </a>
-             
-             <div className="flex flex-wrap gap-2.5 mb-4">
-               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-md border border-slate-200">
-                 Ranking: <span className="text-slate-900 font-bold bg-white px-1.5 rounded shadow-sm border border-slate-100">{rank}</span>
-               </span>
-               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#D4E815]/10 text-[#1A1D21] text-xs font-medium rounded-md border border-[#D4E815]/30">
-                 Keyword: <span className="font-bold bg-white px-1.5 rounded shadow-sm border border-[#D4E815]/30">{keyword}</span>
-               </span>
-             </div>
-             
-             <p className="text-xs font-medium text-slate-400 mb-2.5 border-b border-slate-50 pb-2">
-               {date || new Date().toLocaleDateString()} — <span className="text-slate-500 font-normal">Discovered via {discoveryMethod?.type}</span>
-             </p>
-             
-             <div className="text-xs text-slate-600 leading-relaxed pl-3 border-l-2 border-slate-100">
-               {snippet}
-             </div>
-          </div>
+      {/* Relevant Content Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
+      {isModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-4xl w-full max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23] flex items-center justify-between">
+              <h3 className="text-lg font-black text-black uppercase">
+                Relevant Content ({(subItems?.length || 0) + 1} articles)
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
+              >
+                ×
+              </button>
+            </div>
 
-          {/* Render subItems */}
-          {subItems?.map((item, idx) => (
-             <div key={idx} className="p-5 border border-slate-200 rounded-xl hover:bg-slate-50/50 transition-colors group relative bg-white shadow-sm">
-                <a href={`https://${item.domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-slate-300 hover:text-[#1A1D21] transition-colors">
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)] space-y-4">
+              {/* Render the current item first */}
+              <div className="p-5 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group relative bg-white dark:bg-[#0f0f0f]">
+                <a href={`https://${domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white transition-colors">
                   <ExternalLink size={16} />
                 </a>
-
-                <a href={item.link} target="_blank" rel="noreferrer" className="text-base font-semibold text-[#1A1D21] hover:underline decoration-[#D4E815] underline-offset-2 mb-3 block pr-10">
-                  {item.title}
+                
+                <a href={link} target="_blank" rel="noreferrer" className="text-base font-black text-black dark:text-white hover:text-[#ffbf23] mb-3 block pr-10">
+                  {title}
                 </a>
-
+                
                 <div className="flex flex-wrap gap-2.5 mb-4">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-md border border-slate-200">
-                    Ranking: <span className="text-slate-900 font-bold bg-white px-1.5 rounded shadow-sm border border-slate-100">{item.rank || '-'}</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold border-2 border-gray-200 dark:border-gray-600">
+                    Ranking: <span className="text-black dark:text-white font-black bg-white dark:bg-black px-1.5 border border-black dark:border-gray-500">{rank}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#D4E815]/10 text-[#1A1D21] text-xs font-medium rounded-md border border-[#D4E815]/30">
-                    Keyword: <span className="font-bold bg-white px-1.5 rounded shadow-sm border border-[#D4E815]/30">{item.keyword || keyword}</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#ffbf23]/20 text-black dark:text-[#ffbf23] text-xs font-bold border-2 border-[#ffbf23]">
+                    Keyword: <span className="font-black bg-white dark:bg-black px-1.5 border border-black dark:border-[#ffbf23]">{keyword}</span>
                   </span>
                 </div>
-
-                <p className="text-xs font-medium text-slate-400 mb-2.5 border-b border-slate-50 pb-2">
-                  {item.date || date || new Date().toLocaleDateString()} — <span className="text-slate-500 font-normal">Discovered via {item.discoveryMethod?.type || 'search'}</span>
+                
+                <p className="text-xs font-bold text-gray-400 mb-2.5 border-b-2 border-gray-100 dark:border-gray-700 pb-2 uppercase">
+                  {date || new Date().toLocaleDateString()} — Discovered via {discoveryMethod?.type}
                 </p>
                 
-                <div className="text-xs text-slate-600 leading-relaxed pl-3 border-l-2 border-slate-100">
-                   {item.snippet}
+                <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
+                  {snippet}
                 </div>
-             </div>
-          ))}
-        </div>
-
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-           <button className="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-sm font-bold hover:bg-emerald-100 transition-all flex items-center gap-2 shadow-sm">
-              <Save size={16} /> Save
-           </button>
-           <button className="px-4 py-2 bg-red-400 text-white border border-red-500 rounded-lg text-sm font-bold hover:bg-red-500 transition-all flex items-center gap-2 shadow-sm">
-              <Trash2 size={16} /> Delete
-           </button>
-        </div>
-      </Modal>
-
-      {/* Email Results Modal - Updated Dec 2025 to match brand design */}
-      <Modal 
-        isOpen={isEmailModalOpen} 
-        onClose={() => setIsEmailModalOpen(false)}
-        title=""
-        width="max-w-2xl"
-      >
-        <div className="space-y-5">
-          {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#1A1D21] rounded-xl flex items-center justify-center shadow-lg shadow-[#1A1D21]/20">
-                <Mail size={18} className="text-[#D4E815]" />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Email Results
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {personName || channel?.name || domain.replace(/^www\./, '').split('.')[0]}
-                </p>
-              </div>
+
+              {/* Render subItems */}
+              {subItems?.map((item, idx) => (
+                <div key={idx} className="p-5 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group relative bg-white dark:bg-[#0f0f0f]">
+                  <a href={`https://${item.domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                    <ExternalLink size={16} />
+                  </a>
+
+                  <a href={item.link} target="_blank" rel="noreferrer" className="text-base font-black text-black dark:text-white hover:text-[#ffbf23] mb-3 block pr-10">
+                    {item.title}
+                  </a>
+
+                  <div className="flex flex-wrap gap-2.5 mb-4">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold border-2 border-gray-200 dark:border-gray-600">
+                      Ranking: <span className="text-black dark:text-white font-black bg-white dark:bg-black px-1.5 border border-black dark:border-gray-500">{item.rank || '-'}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#ffbf23]/20 text-black dark:text-[#ffbf23] text-xs font-bold border-2 border-[#ffbf23]">
+                      Keyword: <span className="font-black bg-white dark:bg-black px-1.5 border border-black dark:border-[#ffbf23]">{item.keyword || keyword}</span>
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-bold text-gray-400 mb-2.5 border-b-2 border-gray-100 dark:border-gray-700 pb-2 uppercase">
+                    {item.date || date || new Date().toLocaleDateString()} — Discovered via {item.discoveryMethod?.type || 'search'}
+                  </p>
+                  
+                  <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
+                    {item.snippet}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
-                (emailResults?.emails?.length || (email ? 1 : 0)) > 0 
-                  ? 'bg-[#D4E815]/20 text-[#1A1D21] border border-[#D4E815]/40' 
-                  : 'bg-slate-100 text-slate-500 border border-slate-200'
-              }`}>
-                <Mail size={12} />
-                {emailResults?.emails?.length || (email ? 1 : 0)} Found
-              </span>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex justify-end gap-3">
+              <button className="px-4 py-2 bg-emerald-500 text-white text-sm font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2">
+                <Save size={16} /> Save
+              </button>
+              <button className="px-4 py-2 bg-red-500 text-white text-sm font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2">
+                <Trash2 size={16} /> Delete
+              </button>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Show all contacts if available, otherwise show simple email list */}
-          {emailResults?.contacts && emailResults.contacts.length > 0 ? (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {emailResults.contacts.map((contact, contactIdx) => {
-                const contactName = contact.firstName && contact.lastName 
-                  ? `${contact.firstName} ${contact.lastName}`
-                  : contact.fullName || `Contact ${contactIdx + 1}`;
-                
-                return (
-                  <div key={contactIdx} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                    {/* Contact Header */}
-                    <div className="p-4 bg-white border-b border-slate-100">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#1A1D21] flex items-center justify-center flex-shrink-0">
-                          <User size={18} className="text-[#D4E815]" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-slate-900 truncate">{contactName}</h4>
-                          {contact.title && (
-                            <p className="text-sm text-slate-600 flex items-center gap-1.5 mt-0.5 truncate">
-                              <Briefcase size={12} className="text-slate-400 flex-shrink-0" />
-                              {contact.title}
-                            </p>
-                          )}
-                          {contact.linkedinUrl && (
-                            <a 
-                              href={contact.linkedinUrl} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mt-1 hover:underline"
-                            >
-                              <Linkedin size={10} />
-                              LinkedIn
-                              <ExternalLink size={8} />
-                            </a>
-                          )}
-                        </div>
-                        <span className="text-[10px] font-bold text-[#1A1D21] bg-[#D4E815]/20 px-2 py-0.5 rounded-full border border-[#D4E815]/40">
-                          {contact.emails.length} email{contact.emails.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </div>
+      {/* Email Results Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
+      {isEmailModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          onClick={() => setIsEmailModalOpen(false)}
+        >
+          <div 
+            className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header - NEO-BRUTALIST Yellow */}
+            <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-black border-2 border-black flex items-center justify-center">
+                  <Mail size={18} className="text-[#ffbf23]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-black uppercase">Email Results</h3>
+                  <p className="text-xs text-black/70 font-medium">
+                    {personName || channel?.name || domain.replace(/^www\./, '').split('.')[0]}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-white text-xs font-black uppercase border-2 border-black">
+                  <Mail size={12} />
+                  {emailResults?.emails?.length || (email ? 1 : 0)} Found
+                </span>
+                <button
+                  onClick={() => setIsEmailModalOpen(false)}
+                  className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)] bg-white dark:bg-[#0a0a0a]">
+              {/* Show all contacts if available */}
+              {emailResults?.contacts && emailResults.contacts.length > 0 ? (
+                <div className="space-y-4">
+                  {emailResults.contacts.map((contact, contactIdx) => {
+                    const contactName = contact.firstName && contact.lastName 
+                      ? `${contact.firstName} ${contact.lastName}`
+                      : contact.fullName || `Contact ${contactIdx + 1}`;
                     
-                    {/* Contact Emails */}
-                    <div className="p-3 space-y-2">
-                      {contact.emails.map((emailAddr, emailIdx) => (
-                        <div 
-                          key={emailIdx}
-                          className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:border-[#D4E815]/50 hover:bg-[#D4E815]/5 transition-all"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-md bg-[#D4E815]/20 flex items-center justify-center flex-shrink-0">
-                              <Mail size={12} className="text-[#1A1D21]" />
+                    return (
+                      <div key={contactIdx} className="border-2 border-black dark:border-gray-600 overflow-hidden">
+                        {/* Contact Header */}
+                        <div className="p-4 bg-gray-100 dark:bg-gray-800 border-b-2 border-black dark:border-gray-600">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-black flex items-center justify-center flex-shrink-0 border-2 border-black">
+                              <User size={18} className="text-[#ffbf23]" />
                             </div>
-                            <span className="font-medium text-slate-900 text-sm truncate">{emailAddr}</span>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-black text-gray-900 dark:text-white truncate">{contactName}</h4>
+                              {contact.title && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-0.5 truncate font-medium">
+                                  <Briefcase size={12} className="text-gray-400 flex-shrink-0" />
+                                  {contact.title}
+                                </p>
+                              )}
+                              {contact.linkedinUrl && (
+                                <a 
+                                  href={contact.linkedinUrl} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                  className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mt-1 font-bold uppercase"
+                                >
+                                  <Linkedin size={10} />
+                                  LinkedIn
+                                  <ExternalLink size={8} />
+                                </a>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-black text-black bg-[#ffbf23] px-2 py-1 border-2 border-black uppercase">
+                              {contact.emails.length} email{contact.emails.length !== 1 ? 's' : ''}
+                            </span>
                           </div>
-                          <button
-                            onClick={() => copyEmail(emailAddr)}
-                            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all flex-shrink-0 ${
-                              copiedEmail === emailAddr
-                                ? 'bg-[#1A1D21] text-[#D4E815]'
-                                : 'bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] border border-[#D4E815]'
-                            }`}
-                          >
-                            {copiedEmail === emailAddr ? <Check size={10} /> : <Copy size={10} />}
-                            {copiedEmail === emailAddr ? 'Copied!' : 'Copy'}
-                          </button>
                         </div>
-                      ))}
-                      
-                      {/* Phone Numbers for this contact */}
-                      {contact.phoneNumbers && contact.phoneNumbers.length > 0 && (
-                        <div className="pt-2 mt-2 border-t border-slate-100">
-                          {contact.phoneNumbers.map((phone, phoneIdx) => (
+                        
+                        {/* Contact Emails */}
+                        <div className="p-3 space-y-2 bg-white dark:bg-[#0f0f0f]">
+                          {contact.emails.map((emailAddr, emailIdx) => (
                             <div 
-                              key={phoneIdx}
-                              className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:border-slate-300 hover:bg-slate-50 transition-all"
+                              key={emailIdx}
+                              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors"
                             >
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
-                                  <Phone size={12} className="text-slate-600" />
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center flex-shrink-0">
+                                  <Mail size={14} className="text-black" />
                                 </div>
-                                <span className="font-medium text-slate-900 text-sm">{phone}</span>
+                                <span className="font-bold text-gray-900 dark:text-white text-sm truncate font-mono">{emailAddr}</span>
                               </div>
                               <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(phone);
-                                  setCopiedEmail(phone);
-                                  setTimeout(() => setCopiedEmail(null), 2000);
-                                }}
-                                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
-                                  copiedEmail === phone
-                                    ? 'bg-[#1A1D21] text-white'
-                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                                onClick={() => copyEmail(emailAddr)}
+                                className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-black uppercase transition-all border-2 border-black ${
+                                  copiedEmail === emailAddr
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]'
                                 }`}
                               >
-                                {copiedEmail === phone ? <Check size={10} /> : <Copy size={10} />}
-                                {copiedEmail === phone ? 'Copied!' : 'Copy'}
+                                {copiedEmail === emailAddr ? <Check size={10} /> : <Copy size={10} />}
+                                {copiedEmail === emailAddr ? 'Done!' : 'Copy'}
                               </button>
                             </div>
                           ))}
+                          
+                          {/* Phone Numbers */}
+                          {contact.phoneNumbers && contact.phoneNumbers.length > 0 && (
+                            <div className="pt-2 mt-2 border-t-2 border-gray-200 dark:border-gray-700">
+                              {contact.phoneNumbers.map((phone, phoneIdx) => (
+                                <div 
+                                  key={phoneIdx}
+                                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 border-2 border-black dark:border-gray-600 flex items-center justify-center">
+                                      <Phone size={14} className="text-gray-600 dark:text-gray-300" />
+                                    </div>
+                                    <span className="font-bold text-gray-900 dark:text-white text-sm font-mono">{phone}</span>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(phone);
+                                      setCopiedEmail(phone);
+                                      setTimeout(() => setCopiedEmail(null), 2000);
+                                    }}
+                                    className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-black uppercase transition-all border-2 ${
+                                      copiedEmail === phone
+                                        ? 'bg-emerald-500 text-white border-black'
+                                        : 'bg-white text-black border-black hover:bg-gray-100'
+                                    }`}
+                                  >
+                                    {copiedEmail === phone ? <Check size={10} /> : <Copy size={10} />}
+                                    {copiedEmail === phone ? 'Done!' : 'Copy'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (emailResults?.emails?.length || (email ? 1 : 0)) > 0 ? (
-            /* Fallback: Simple email list (no contact details) */
-            <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Email Addresses</h4>
-              <div className="space-y-2">
-                {(emailResults?.emails || (email ? [email] : [])).map((emailAddr, idx) => (
-                  <div 
-                    key={idx}
-                    className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:border-[#D4E815]/50 hover:bg-[#D4E815]/5 transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#D4E815]/20 flex items-center justify-center">
-                        <Mail size={14} className="text-[#1A1D21]" />
                       </div>
-                      <span className="font-medium text-slate-900">{emailAddr}</span>
-                    </div>
-                    <button
-                      onClick={() => copyEmail(emailAddr)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                        copiedEmail === emailAddr
-                          ? 'bg-[#1A1D21] text-[#D4E815]'
-                          : 'bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] border border-[#D4E815]'
-                      }`}
-                    >
-                      {copiedEmail === emailAddr ? <Check size={12} /> : <Copy size={12} />}
-                      {copiedEmail === emailAddr ? 'Copied!' : 'Copy'}
-                    </button>
+                    );
+                  })}
+                </div>
+              ) : (emailResults?.emails?.length || (email ? 1 : 0)) > 0 ? (
+                /* Fallback: Simple email list */
+                <div>
+                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Email Addresses</h4>
+                  <div className="space-y-2">
+                    {(emailResults?.emails || (email ? [email] : [])).map((emailAddr, idx) => (
+                      <div 
+                        key={idx}
+                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+                            <Mail size={16} className="text-black" />
+                          </div>
+                          <span className="font-bold text-gray-900 dark:text-white font-mono">{emailAddr}</span>
+                        </div>
+                        <button
+                          onClick={() => copyEmail(emailAddr)}
+                          className={`flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black ${
+                            copiedEmail === emailAddr
+                              ? 'bg-emerald-500 text-white'
+                              : 'bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]'
+                          }`}
+                        >
+                          {copiedEmail === emailAddr ? <Check size={12} /> : <Copy size={12} />}
+                          {copiedEmail === emailAddr ? 'Done!' : 'Copy'}
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                /* No emails found */
+                <div className="text-center py-8 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+                  <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center mx-auto mb-3">
+                    <X size={20} className="text-gray-400" />
+                  </div>
+                  <p className="text-sm font-black text-gray-600 dark:text-gray-300 uppercase">No emails found</p>
+                  <p className="text-xs text-gray-400 mt-1">Try searching again</p>
+                  <button
+                    onClick={() => {
+                      setIsEmailModalOpen(false);
+                      onFindEmail?.();
+                    }}
+                    className="mt-4 px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all inline-flex items-center gap-2"
+                  >
+                    <RotateCw size={12} />
+                    Retry
+                  </button>
+                </div>
+              )}
             </div>
-          ) : (
-            /* No emails found */
-            <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <X size={20} className="text-slate-400" />
-              </div>
-              <p className="text-sm font-medium text-slate-600">No emails found</p>
-              <p className="text-xs text-slate-400 mt-1">Try searching again or use a different provider</p>
-              <button
-                onClick={() => {
-                  setIsEmailModalOpen(false);
-                  onFindEmail?.();
-                }}
-                className="mt-4 px-4 py-2 bg-[#D4E815] text-[#1A1D21] rounded-lg text-xs font-bold hover:bg-[#c5d913] transition-all inline-flex items-center gap-2 shadow-sm"
-              >
-                <RotateCw size={12} />
-                Search Again
-              </button>
-            </div>
-          )}
+          </div>
         </div>
-      </Modal>
+      )}
 
       {/* ============================================================================
           VIEW MODAL (Added Dec 2025)
@@ -1732,58 +1696,76 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           - Instagram: Profile info, followers, bio, relevant posts
           - TikTok: Profile with avatar, followers, bio, relevant posts
           ============================================================================ */}
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        title=""
-        width="max-w-2xl"
-      >
-        {/* Modal Content - Source-specific */}
-        {renderViewModalContent()}
-
-        {/* Footer Actions - Consistent across all sources */}
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
-          {/* Visit Button - Platform-specific */}
-          <a
-            href={getVisitButtonConfig().link}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1D21] hover:bg-[#2a2f35] text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
+      {/* View Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
+      {isViewModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          onClick={() => setIsViewModalOpen(false)}
+        >
+          <div 
+            className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
-            {getVisitButtonConfig().icon}
-            {getVisitButtonConfig().text}
-          </a>
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23] flex items-center justify-between">
+              <h3 className="text-lg font-black text-black uppercase">View Details</h3>
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
+              >
+                ×
+              </button>
+            </div>
 
-          {/* Save & Delete Buttons */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => {
-                onSave();
-                setIsViewModalOpen(false);
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-sm ${
-                isSaved
-                  ? 'bg-emerald-500 text-white border border-emerald-600'
-                  : 'bg-[#D4E815] text-[#1A1D21] border border-[#D4E815] hover:bg-[#c5d913]'
-              }`}
-            >
-              <Save size={12} />
-              {isSaved ? 'Saved' : 'Save'}
-            </button>
-            <button
-              onClick={() => {
-                setIsViewModalOpen(false);
-                // Trigger delete with slight delay to allow modal to close
-                setTimeout(() => handleDeleteClick(), 100);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-400 hover:bg-red-500 text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
-            >
-              <Trash2 size={12} />
-              Delete
-            </button>
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+              {renderViewModalContent()}
+            </div>
+
+            {/* Footer Actions - NEO-BRUTALIST */}
+            <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex items-center justify-between">
+              {/* Visit Button - Platform-specific */}
+              <a
+                href={getVisitButtonConfig().link}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black text-white text-xs font-black uppercase border-2 border-black hover:bg-white hover:text-black transition-colors"
+              >
+                {getVisitButtonConfig().icon}
+                {getVisitButtonConfig().text}
+              </a>
+
+              {/* Save & Delete Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    onSave();
+                    setIsViewModalOpen(false);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black ${
+                    isSaved
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]'
+                  }`}
+                >
+                  <Save size={12} />
+                  {isSaved ? 'Saved' : 'Save'}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    setTimeout(() => handleDeleteClick(), 100);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                >
+                  <Trash2 size={12} />
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </Modal>
+      )}
     </div>
   );
 };

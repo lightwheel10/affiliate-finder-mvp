@@ -62,32 +62,32 @@ export const Modal: React.FC<ModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop - NEO-BRUTALIST */}
       <div 
         className={cn(
-          "absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300",
+          "absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300",
           isVisible ? "opacity-100" : "opacity-0"
         )}
         onClick={onClose}
       />
 
-      {/* Modal Content */}
+      {/* Modal Content - NEO-BRUTALIST (sharp edges, bold border, offset shadow) */}
       <div 
         className={cn(
-          "relative bg-white rounded-xl shadow-2xl border border-slate-200 w-full transform transition-all duration-300 scale-95 opacity-0 max-h-[90vh] flex flex-col",
+          "relative bg-white dark:bg-[#0f0f0f] border-4 border-black dark:border-gray-600 w-full transform transition-all duration-300 scale-95 opacity-0 max-h-[90vh] flex flex-col shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#333333]",
           width,
           isVisible && "scale-100 opacity-100"
         )}
       >
-        {/* Header (Only render if title is provided) */}
+        {/* Header - NEO-BRUTALIST */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-            <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+          <div className="flex items-center justify-between px-6 py-4 border-b-4 border-black dark:border-gray-600 shrink-0 bg-[#ffbf23]">
+            <h3 className="text-lg font-black text-black uppercase tracking-wide">{title}</h3>
             <button 
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-50"
+              className="w-8 h-8 flex items-center justify-center bg-black text-white hover:bg-gray-800 transition-colors border-2 border-black"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         )}

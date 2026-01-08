@@ -3,47 +3,57 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-// ============================================
-// LoadingOnboardingScreen - Updated Jan 3rd, 2026
-// 
-// This screen displays briefly (2 seconds) after onboarding completion
-// while the user data is being refetched. The messaging has been updated
-// to reflect the actual duration and set proper expectations.
-// 
-// Previous issue: Messages said "90 seconds" and "1-2 hours" but the
-// screen only shows for 2 seconds, which was misleading.
-// ============================================
+/**
+ * =============================================================================
+ * LoadingOnboardingScreen - NEO-BRUTALIST
+ * =============================================================================
+ * 
+ * Updated: January 8th, 2026
+ * 
+ * NEO-BRUTALIST DESIGN UPDATE:
+ * - Sharp edges (no rounded corners)
+ * - Bold borders (border-4 with black)
+ * - Offset shadows
+ * - Yellow accent color (#ffbf23)
+ * - Square loader with bold styling
+ * - Dark mode support
+ * 
+ * This screen displays briefly (2 seconds) after onboarding completion
+ * while the user data is being refetched.
+ * 
+ * =============================================================================
+ */
 
 export const LoadingOnboardingScreen = () => {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#F0F2F5] font-sans p-4">
-      <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-sm p-6 text-center">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gray-100 dark:bg-black font-sans p-4">
+      <div className="w-full max-w-[420px] bg-white dark:bg-[#0f0f0f] border-4 border-black dark:border-gray-600 shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#333333] p-8 text-center">
         
-        {/* Animated Loader Icon */}
+        {/* Animated Loader Icon - NEO-BRUTALIST */}
         <div className="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-          {/* Outer Glow Ring */}
-          <div className="absolute inset-0 bg-[#D4E815]/20 rounded-full blur-xl animate-pulse" />
+          {/* Outer Square Glow */}
+          <div className="absolute inset-0 bg-[#ffbf23]/20 animate-pulse" />
           
-          {/* Middle Ring */}
-          <div className="absolute inset-3 bg-[#D4E815]/30 rounded-full opacity-60" />
+          {/* Middle Square */}
+          <div className="absolute inset-3 bg-[#ffbf23]/30 border-2 border-[#ffbf23]/50" />
           
-          {/* Inner Circle with Spinner */}
-          <div className="relative w-12 h-12 bg-[#D4E815] rounded-full flex items-center justify-center shadow-inner">
-             <Loader2 className="w-6 h-6 text-[#1A1D21] animate-spin" />
+          {/* Inner Square with Spinner - NEO-BRUTALIST */}
+          <div className="relative w-14 h-14 bg-[#ffbf23] border-2 border-black flex items-center justify-center shadow-[3px_3px_0px_0px_#000000]">
+             <Loader2 className="w-7 h-7 text-black animate-spin" />
           </div>
         </div>
 
-        {/* Main Heading */}
-        <h1 className="text-xl text-slate-900 font-medium tracking-tight mb-3">
-          Setting up your <span className="text-[#1A1D21] font-serif italic">workspace!</span>
+        {/* Main Heading - NEO-BRUTALIST */}
+        <h1 className="text-xl text-gray-900 dark:text-white font-black uppercase tracking-wide mb-3">
+          Setting up your workspace!
         </h1>
 
-        {/* Description Text - Updated Jan 3rd, 2026 for accurate messaging */}
+        {/* Description Text */}
         <div className="space-y-2 max-w-sm mx-auto">
-           <p className="text-slate-500 text-sm leading-relaxed">
+          <p className="text-gray-500 text-sm leading-relaxed font-medium">
             Just a moment while we prepare your dashboard...
           </p>
-          <p className="text-slate-400 text-xs leading-relaxed">
+          <p className="text-gray-400 text-xs leading-relaxed">
             Your affiliate discovery tools are being configured.
           </p>
         </div>
@@ -52,4 +62,3 @@ export const LoadingOnboardingScreen = () => {
     </div>
   );
 };
-

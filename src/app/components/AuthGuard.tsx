@@ -1,13 +1,30 @@
 'use client';
 
+/**
+ * =============================================================================
+ * AuthGuard Component - NEO-BRUTALIST
+ * =============================================================================
+ * 
+ * Updated: January 8th, 2026
+ * 
+ * NEO-BRUTALIST DESIGN UPDATE:
+ * - Sharp edges (no rounded corners)
+ * - Bold borders (border-2 to border-4 with black)
+ * - Yellow accent color (#ffbf23)
+ * - Square elements throughout
+ * - Dark mode support
+ * 
+ * AuthGuard wraps authenticated pages and ensures:
+ * 1. User is signed in (redirects to sign-in if not)
+ * 2. User has completed onboarding (shows onboarding if not)
+ * 
+ * =============================================================================
+ */
+
 import { useUser } from '@stackframe/stack';
 import { useRouter } from 'next/navigation';
 import { useNeonUser } from '../hooks/useNeonUser';
 import { OnboardingScreen } from './OnboardingScreen';
-// LoadingOnboardingScreen removed - January 3rd, 2026
-// Previously showed "Setting up your workspace!" for 2 seconds after onboarding.
-// This was confusing (double loading screen). Now we skip it and go directly
-// to the dashboard after refetching user data.
 import { AuthLoadingScreen } from './AuthLoadingScreen';
 import { useEffect } from 'react';
 
@@ -15,89 +32,91 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-// ============================================
-// Page skeleton that matches the general layout with sidebar
-// Updated Jan 3rd, 2026: Fixed width from w-60 to w-52 to match actual Sidebar
-// ============================================
+/**
+ * PageSkeleton - NEO-BRUTALIST (Updated January 8th, 2026)
+ * 
+ * Matches the neo-brutalist layout with sidebar.
+ * Width updated from w-52 to w-64 to match actual Sidebar.
+ */
 const PageSkeleton = () => (
-  <div className="flex min-h-screen bg-[#FDFDFD] font-sans">
-    {/* Sidebar Skeleton - Width must match Sidebar.tsx (w-52 = 208px) */}
-    <aside className="min-h-screen w-52 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
+  <div className="flex min-h-screen bg-gray-100 dark:bg-black font-sans">
+    {/* Sidebar Skeleton - NEO-BRUTALIST (Width w-64 = 256px) */}
+    <aside className="min-h-screen w-64 bg-white dark:bg-[#0a0a0a] border-r-4 border-black dark:border-gray-700 flex flex-col fixed left-0 top-0 bottom-0 z-40">
       {/* Brand / Logo Area */}
-      <div className="h-14 flex items-center mt-1 mb-6 px-4">
-        <div className="flex items-center gap-2.5 text-slate-900">
+      <div className="h-16 flex items-center px-6 border-b-4 border-black dark:border-gray-700">
+        <div className="flex items-center gap-2.5 text-gray-900 dark:text-white">
           <img 
             src="/logo.jpg" 
             alt="CrewCast Studio" 
-            className="w-7 h-7 rounded-lg shadow-md shadow-[#1A1D21]/10 shrink-0 object-cover"
+            className="w-8 h-8 border-2 border-black dark:border-gray-600 shrink-0 object-cover"
           />
           <div className="flex flex-col">
-            <span className="font-bold text-sm tracking-tight leading-none">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
-            <span className="text-[9px] font-medium text-slate-400 tracking-wide mt-0.5">backed by selecdoo AI</span>
+            <span className="font-black text-sm tracking-tight leading-none uppercase">CrewCast <span className="text-black dark:text-white">Studio</span></span>
+            <span className="text-[9px] font-bold text-gray-400 tracking-widest mt-0.5 uppercase">backed by selecdoo AI</span>
           </div>
         </div>
       </div>
 
-      {/* Navigation Skeleton */}
-      <nav className="flex-1 space-y-6 overflow-y-auto py-1 px-3 animate-pulse">
+      {/* Navigation Skeleton - NEO-BRUTALIST */}
+      <nav className="flex-1 space-y-6 overflow-y-auto py-4 px-3 animate-pulse">
         <div>
-          <div className="h-2.5 w-16 bg-slate-200 rounded mb-3 ml-2"></div>
+          <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700 mb-3 ml-2"></div>
           <div className="space-y-1">
-            <div className="h-9 bg-slate-100 rounded-lg"></div>
-            <div className="h-9 bg-slate-100 rounded-lg"></div>
+            <div className="h-10 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700"></div>
+            <div className="h-10 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700"></div>
           </div>
         </div>
         <div>
-          <div className="h-2.5 w-20 bg-slate-200 rounded mb-3 ml-2"></div>
+          <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 mb-3 ml-2"></div>
           <div className="space-y-1">
-            <div className="h-9 bg-slate-100 rounded-lg"></div>
-            <div className="h-9 bg-slate-100 rounded-lg"></div>
+            <div className="h-10 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700"></div>
+            <div className="h-10 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700"></div>
           </div>
         </div>
       </nav>
 
-      {/* Bottom Section Skeleton */}
-      <div className="p-3 space-y-3 bg-white/50 animate-pulse">
-        <div className="bg-slate-100 rounded-xl p-3.5">
+      {/* Bottom Section Skeleton - NEO-BRUTALIST */}
+      <div className="p-3 space-y-3 bg-gray-50 dark:bg-gray-900 animate-pulse border-t-4 border-black dark:border-gray-700">
+        <div className="bg-gray-100 dark:bg-gray-800 p-3.5 border-2 border-gray-200 dark:border-gray-700">
           <div className="space-y-2">
-            <div className="h-3 w-20 bg-slate-200 rounded"></div>
-            <div className="h-4 w-32 bg-slate-200 rounded"></div>
-            <div className="h-3 w-full bg-slate-200 rounded"></div>
-            <div className="h-8 w-full bg-slate-200 rounded-lg mt-2"></div>
+            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700"></div>
+            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700"></div>
+            <div className="h-3 w-full bg-gray-200 dark:bg-gray-700"></div>
+            <div className="h-8 w-full bg-[#ffbf23]/30 border-2 border-gray-200 dark:border-gray-700 mt-2"></div>
           </div>
         </div>
-        <div className="border-t border-slate-100"></div>
+        <div className="border-t-2 border-gray-200 dark:border-gray-700"></div>
         <div className="flex items-center gap-2.5 p-2">
-          <div className="w-7 h-7 bg-slate-200 rounded-full"></div>
+          <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600"></div>
           <div className="flex-1 space-y-1.5">
-            <div className="h-3 w-20 bg-slate-200 rounded"></div>
-            <div className="h-2.5 w-32 bg-slate-200 rounded"></div>
+            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700"></div>
+            <div className="h-2.5 w-32 bg-gray-200 dark:bg-gray-700"></div>
           </div>
-          <div className="w-4 h-4 bg-slate-200 rounded"></div>
+          <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700"></div>
         </div>
       </div>
     </aside>
 
-    {/* Main Content Skeleton */}
-    <main className="flex-1 flex flex-col min-h-screen ml-52">
-      {/* Header Skeleton - Height must match Dashboard header (h-12) - Updated Jan 3rd, 2026 */}
-      <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+    {/* Main Content Skeleton - NEO-BRUTALIST */}
+    <main className="flex-1 flex flex-col min-h-screen ml-64">
+      {/* Header Skeleton - NEO-BRUTALIST (h-16 with border-b-4) */}
+      <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b-4 border-black dark:border-gray-700">
         <div className="animate-pulse">
-          <div className="h-5 w-32 bg-slate-200 rounded"></div>
+          <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700"></div>
         </div>
       </header>
 
-      {/* Content Skeleton */}
+      {/* Content Skeleton - NEO-BRUTALIST */}
       <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full animate-pulse">
         <div className="space-y-6">
           {/* Content blocks */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4">
-            <div className="h-6 w-48 bg-slate-200 rounded"></div>
-            <div className="h-4 w-64 bg-slate-100 rounded"></div>
+          <div className="bg-white dark:bg-[#0f0f0f] border-4 border-black dark:border-gray-600 p-6 space-y-4">
+            <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700"></div>
+            <div className="h-4 w-64 bg-gray-100 dark:bg-gray-800"></div>
             <div className="space-y-3 pt-4">
-              <div className="h-12 bg-slate-50 rounded-lg"></div>
-              <div className="h-12 bg-slate-50 rounded-lg"></div>
-              <div className="h-12 bg-slate-50 rounded-lg"></div>
+              <div className="h-12 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700"></div>
+              <div className="h-12 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700"></div>
+              <div className="h-12 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700"></div>
             </div>
           </div>
         </div>
@@ -107,42 +126,21 @@ const PageSkeleton = () => (
 );
 
 /**
- * AuthGuard wraps authenticated pages and ensures:
- * 1. User is signed in (redirects to sign-in if not)
- * 2. User has completed onboarding (shows onboarding if not)
+ * AuthGuard - Updated January 8th, 2026
  */
 export function AuthGuard({ children }: AuthGuardProps) {
   const stackUser = useUser();
-  // ==========================================================================
-  // January 3rd, 2026 - Added `refetch` to destructuring
-  // 
-  // BUG FIX: Previously, after onboarding completed, we never refetched user
-  // data from the backend. The cache still had `is_onboarded: false` even
-  // though the database was updated to `true`. This caused an infinite loop
-  // where the onboarding screen kept reappearing after completion.
-  // 
-  // By calling `refetch()` after onboarding, we update the cache with fresh
-  // data, and the guard correctly shows the dashboard.
-  // ==========================================================================
   const { userId, isOnboarded, isLoading: neonLoading, userName, refetch } = useNeonUser();
   const router = useRouter();
-  // showLoadingScreen state removed - January 3rd, 2026
-  // We no longer show LoadingOnboardingScreen after onboarding completion.
 
   // Redirect to sign-in if not authenticated
   useEffect(() => {
-    // stackUser is undefined while loading, null if not signed in
     if (stackUser === null) {
       router.push('/sign-in');
     }
   }, [stackUser, router]);
 
-  // ============================================
-  // Show loading state while Stack Auth or Neon is loading (January 3rd, 2026)
-  // 
-  // CHANGED: Now uses AuthLoadingScreen instead of PageSkeleton to avoid
-  // showing a dashboard-like skeleton to new users during sign-up.
-  // ============================================
+  // Show loading state while Stack Auth or Neon is loading
   if (stackUser === undefined || neonLoading) {
     return <AuthLoadingScreen />;
   }
@@ -154,7 +152,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // Show onboarding for users who haven't completed it
   if (!isOnboarded && userId) {
-    // Get user email from Stack Auth for Stripe integration
     const userEmail = stackUser?.primaryEmail || '';
     
     return (
@@ -163,41 +160,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
         userName={userName}
         userEmail={userEmail}
         onComplete={async () => {
-          // ==========================================================================
-          // ONBOARDING COMPLETION CALLBACK - January 3rd, 2026
-          // 
-          // After card verification completes, we refetch user data immediately
-          // to update the cache with is_onboarded: true, then show the dashboard.
-          // 
-          // BUG FIXES:
-          // 
-          // 1. INFINITE LOOP FIX: Previously, after onboarding completed, the
-          //    backend set is_onboarded=true but useNeonUser() returned cached
-          //    data with is_onboarded=false. AuthGuard would show OnboardingScreen
-          //    again, creating an infinite loop. Fixed by calling refetch().
-          // 
-          // 2. DOUBLE LOADING SCREEN FIX: Previously we showed LoadingOnboardingScreen
-          //    ("Setting up your workspace!") for 2 seconds. This was the OLD loading
-          //    screen that users didn't want. Now we skip it entirely and just
-          //    refetch → show dashboard directly.
-          // ==========================================================================
           await refetch();
         }}
       />
     );
   }
 
-  // ============================================
-  // Guard against race condition (January 3rd, 2026)
-  // 
-  // BUG FIX: If neonLoading is false but userId is still null
-  // (API error, race condition, or state update delay), the code
-  // would fall through to show children (Dashboard) briefly.
-  // 
-  // This guard ensures we never show protected content without
-  // a valid userId, preventing the "flash" issue during sign-up.
-  // Uses AuthLoadingScreen for consistency.
-  // ============================================
+  // Guard against race condition
   if (!userId) {
     return <AuthLoadingScreen />;
   }

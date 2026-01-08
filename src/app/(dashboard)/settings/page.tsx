@@ -5,15 +5,25 @@
  * SETTINGS PAGE
  * =============================================================================
  * 
- * Updated: January 3rd, 2026
+ * Updated: January 8th, 2026
  * 
- * ARCHITECTURE CHANGE (January 3rd, 2026):
+ * NEO-BRUTALIST DESIGN UPDATE (January 8th, 2026):
+ * ------------------------------------------------
+ * Updated all components to match the neo-brutalist design system:
+ *   - Sharp edges (no rounded corners)
+ *   - Bold borders (border-2 to border-4 with black)
+ *   - Offset shadows (shadow-[Xpx_Xpx_0px_0px_#000000])
+ *   - Yellow accent color (#ffbf23)
+ *   - Font-black uppercase typography
+ *   - Dark mode support
+ * 
+ * ARCHITECTURE (January 3rd, 2026):
  * -----------------------------------------
  * This page is now part of the (dashboard) route group. The layout handles:
  *   - AuthGuard (authentication + onboarding check)
  *   - ErrorBoundary (error handling)
  *   - Sidebar (navigation - persists across page navigation)
- *   - Main container with ml-52 margin
+ *   - Main container with ml-64 margin
  * 
  * This page only renders the content: header + main content area.
  * 
@@ -73,62 +83,67 @@ export default function SettingsPage() {
   ];
 
   // ==========================================================================
-  // RENDER - January 3rd, 2026
+  // RENDER - January 8th, 2026
+  // 
+  // NEO-BRUTALIST DESIGN:
+  // - Header: h-16 with border-b-4 and uppercase font-black title
+  // - Left navigation: Sharp-edged tabs with yellow active state
+  // - Right panel: Sharp edges with border-2 and offset shadow
   // 
   // Note: The outer container with Sidebar is now handled by the layout.
   // This component only renders the header and main content area.
   // ==========================================================================
   return (
     <>
-      {/* Header */}
-      <header className="h-12 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+      {/* Header - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b-4 border-black dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold text-slate-900">Settings</h1>
+          <h1 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wide">Settings</h1>
         </div>
       </header>
 
-        {/* Main Content */}
+        {/* Main Content - NEO-BRUTALIST (Updated January 8th, 2026) */}
         <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full">
           <div className="flex flex-col md:flex-row gap-8 h-[calc(100vh-8rem)]">
             
-            {/* Left Panel - Navigation */}
+            {/* Left Panel - Navigation - NEO-BRUTALIST */}
             <div className="w-full md:w-64 shrink-0">
               <div className="sticky top-24 space-y-1">
-                <h3 className="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Account</h3>
+                <h3 className="px-3 text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Account</h3>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as SettingsTab)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                      "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold transition-all duration-200",
                       activeTab === tab.id
-                        ? "bg-[#D4E815]/10 text-[#1A1D21] shadow-sm ring-1 ring-[#D4E815]/30"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        ? "bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000000]"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white border-2 border-transparent"
                     )}
                   >
                     <span className={cn(
                       "shrink-0",
-                      activeTab === tab.id ? "text-[#1A1D21]" : "text-slate-400 group-hover:text-slate-600"
+                      activeTab === tab.id ? "text-black" : "text-gray-400 group-hover:text-gray-600"
                     )}>
                       {tab.icon}
                     </span>
                     <span className="flex-1 text-left">{tab.label}</span>
                     {activeTab === tab.id && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4E815]" />
+                      <span className="w-2 h-2 bg-black" />
                     )}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Right Panel - Content */}
-            <div className="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Right Panel - Content - NEO-BRUTALIST */}
+            <div className="flex-1 min-w-0 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] overflow-hidden">
               <div className="h-full overflow-y-auto p-6 lg:p-8">
                 <div className="max-w-2xl">
-                  <h2 className="text-xl font-bold text-slate-900 mb-1">
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1">
                     {tabs.find(t => t.id === activeTab)?.label}
                   </h2>
-                  <p className="text-sm text-slate-500 mb-8">
+                  <p className="text-sm text-gray-500 mb-8">
                     {tabs.find(t => t.id === activeTab)?.description}
                   </p>
 
@@ -182,7 +197,7 @@ export default function SettingsPage() {
         />
       )}
 
-      {/* Cancel Plan Confirmation Modal */}
+      {/* Cancel Plan Confirmation Modal - NEO-BRUTALIST (Updated January 8th, 2026) */}
       <Modal
         isOpen={isCancelModalOpen}
         onClose={() => setIsCancelModalOpen(false)}
@@ -192,13 +207,13 @@ export default function SettingsPage() {
         <div className="space-y-4">
           {subscription?.cancel_at_period_end ? (
             <>
-              <p className="text-sm text-slate-600 leading-relaxed">
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                 Would you like to resume your subscription? Your plan will continue as normal and you'll be billed at the next billing cycle.
               </p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   onClick={() => setIsCancelModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all"
+                  className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase"
                 >
                   Keep Canceled
                 </button>
@@ -211,7 +226,7 @@ export default function SettingsPage() {
                     setIsCancelModalOpen(false);
                   }}
                   disabled={isCanceling}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#1A1D21] hover:bg-[#2a2f35] border border-transparent rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2"
+                  className="px-4 py-2 text-xs font-black text-black bg-[#ffbf23] hover:bg-yellow-400 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 uppercase"
                 >
                   {isCanceling ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -224,24 +239,24 @@ export default function SettingsPage() {
             </>
           ) : (
             <>
-              <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
+              <div className="p-4 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
                 <div className="flex items-start gap-3">
                   <XCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-red-800">Are you sure you want to cancel?</p>
-                    <p className="text-xs text-red-700 mt-1">
+                    <p className="text-sm font-black text-red-800 dark:text-red-300">Are you sure you want to cancel?</p>
+                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
                       You'll lose access to premium features at the end of your current billing period.
                     </p>
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-gray-500">
                 Your subscription will remain active until the end of your current billing period. You can resume anytime before then.
               </p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   onClick={() => setIsCancelModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all"
+                  className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase"
                 >
                   Keep Subscription
                 </button>
@@ -254,7 +269,7 @@ export default function SettingsPage() {
                     setIsCancelModalOpen(false);
                   }}
                   disabled={isCanceling}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 border border-transparent rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2"
+                  className="px-4 py-2 text-xs font-black text-white bg-red-500 hover:bg-red-600 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 uppercase"
                 >
                   {isCanceling ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -272,56 +287,64 @@ export default function SettingsPage() {
   );
 }
 
+// =============================================================================
+// PROFILE SETTINGS - NEO-BRUTALIST (Updated January 8th, 2026)
+// 
+// Design updates:
+// - Square avatar with bold border
+// - Sharp-edged input fields
+// - Neo-brutalist Edit Profile button
+// =============================================================================
 function ProfileSettings({ user }: { user: any }) {
   const userName = user?.displayName || 'User';
   const userEmail = user?.primaryEmail || '';
   
   return (
     <div className="space-y-6">
-      {/* Avatar Section */}
-      <div className="flex items-center gap-6 pb-6 border-b border-slate-100">
+      {/* Avatar Section - NEO-BRUTALIST */}
+      <div className="flex items-center gap-6 pb-6 border-b-2 border-gray-200 dark:border-gray-700">
         <div className="relative">
           <img 
             src={user?.profileImageUrl || `https://ui-avatars.com/api/?name=${userName}&background=0f172a&color=fff&size=128`}
             alt="Profile" 
-            className="w-20 h-20 rounded-full border-4 border-slate-50 shadow-sm object-cover"
+            className="w-20 h-20 border-4 border-black dark:border-gray-600 object-cover"
           />
           <button 
-            className="absolute bottom-0 right-0 p-1.5 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-50 text-slate-600"
+            className="absolute bottom-0 right-0 p-1.5 bg-[#ffbf23] border-2 border-black text-black hover:bg-yellow-400 transition-colors"
           >
             <User size={14} />
           </button>
         </div>
         <div>
-          <h3 className="font-semibold text-slate-900">Profile Photo</h3>
-          <p className="text-xs text-slate-500 mt-1">Update your profile picture in account settings.</p>
+          <h3 className="font-black text-gray-900 dark:text-white">Profile Photo</h3>
+          <p className="text-xs text-gray-500 mt-1">Update your profile picture in account settings.</p>
         </div>
       </div>
 
-      {/* User Info Display */}
+      {/* User Info Display - NEO-BRUTALIST */}
       <div className="grid grid-cols-1 gap-6">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700">Full Name</label>
-          <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700">
+          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Full Name</label>
+          <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium">
             {userName}
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700">Email Address</label>
+          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Email Address</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-2.5 text-slate-400" size={16} />
-            <div className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700">
+            <Mail className="absolute left-3 top-3 text-gray-400" size={16} />
+            <div className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium">
               {userEmail}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="pt-4 border-t border-slate-100 flex justify-end">
+      <div className="pt-4 border-t-2 border-gray-200 dark:border-gray-700 flex justify-end">
         <button 
           onClick={() => user?.update({})}
-          className="px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-sm font-semibold rounded-lg hover:bg-[#c5d913] transition-colors shadow-sm hover:shadow"
+          className="px-5 py-2.5 bg-[#ffbf23] text-black text-sm font-black uppercase tracking-wide border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
         >
           Edit Profile
         </button>
@@ -344,6 +367,7 @@ interface PlanSettingsProps {
 // =============================================================================
 // INVOICE TYPES
 // Added December 2025 to display invoice history from Stripe
+// Updated January 8th, 2026 for neo-brutalist design
 // =============================================================================
 interface Invoice {
   id: string;
@@ -411,21 +435,21 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
     });
   };
 
-  // Get status badge styling for invoices
+  // Get status badge styling for invoices - NEO-BRUTALIST (Updated January 8th, 2026)
   const getInvoiceStatusBadge = (status: string | null) => {
     switch (status) {
       case 'paid':
-        return { label: 'Paid', bg: 'bg-green-100', text: 'text-green-700' };
+        return { label: 'PAID', bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
       case 'open':
-        return { label: 'Open', bg: 'bg-blue-100', text: 'text-blue-700' };
+        return { label: 'OPEN', bg: 'bg-blue-500', text: 'text-white', border: 'border-black' };
       case 'draft':
-        return { label: 'Draft', bg: 'bg-slate-100', text: 'text-slate-600' };
+        return { label: 'DRAFT', bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-400' };
       case 'void':
-        return { label: 'Void', bg: 'bg-red-100', text: 'text-red-700' };
+        return { label: 'VOID', bg: 'bg-red-500', text: 'text-white', border: 'border-black' };
       case 'uncollectible':
-        return { label: 'Uncollectible', bg: 'bg-orange-100', text: 'text-orange-700' };
+        return { label: 'UNCOLLECTIBLE', bg: 'bg-orange-500', text: 'text-white', border: 'border-black' };
       default:
-        return { label: status || 'Unknown', bg: 'bg-slate-100', text: 'text-slate-600' };
+        return { label: status?.toUpperCase() || 'UNKNOWN', bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-400' };
     }
   };
 
@@ -448,38 +472,38 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
     return names[plan] || plan;
   };
 
-  // Get status badge color
+  // Get status badge color - NEO-BRUTALIST (Updated January 8th, 2026)
   const getStatusBadge = () => {
     if (subscription?.cancel_at_period_end) {
-      return { label: 'Cancelled', bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' };
+      return { label: 'CANCELLED', bg: 'bg-orange-500', text: 'text-white', border: 'border-black' };
     }
     if (isTrialing) {
-      return { label: 'Trial', bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' };
+      return { label: 'TRIAL', bg: 'bg-blue-500', text: 'text-white', border: 'border-black' };
     }
     if (subscription?.status === 'active') {
-      return { label: 'Active', bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' };
+      return { label: 'ACTIVE', bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
     }
-    return { label: 'Active', bg: 'bg-[#D4E815]/20', text: 'text-[#1A1D21]', border: 'border-[#D4E815]/40' };
+    return { label: 'ACTIVE', bg: 'bg-[#ffbf23]', text: 'text-black', border: 'border-black' };
   };
 
   const statusBadge = getStatusBadge();
 
   return (
     <div className="space-y-8">
-      {/* Current Plan */}
+      {/* Current Plan - NEO-BRUTALIST (Updated January 8th, 2026) */}
       <div className={cn(
-        "p-4 rounded-xl border space-y-4",
-        isTrialing ? "bg-blue-50/50 border-blue-200" : "bg-[#D4E815]/10 border-[#D4E815]/30"
+        "p-4 border-2 space-y-4",
+        isTrialing ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500" : "bg-[#ffbf23]/10 border-[#ffbf23]"
       )}>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-[#1A1D21]">
+              <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
                 {subscription ? getPlanDisplayName(subscription.plan) : 'No Plan'}
               </span>
               {subscription && (
                 <span className={cn(
-                  "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border",
+                  "px-2 py-0.5 text-[10px] font-black uppercase tracking-wide border-2",
                   statusBadge.bg, statusBadge.text, statusBadge.border
                 )}>
                   {statusBadge.label}
@@ -489,7 +513,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
             
             {/* Trial info */}
             {isTrialing && daysLeftInTrial !== null && (
-              <div className="flex items-center gap-1.5 text-xs text-blue-700">
+              <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-400 font-bold">
                 <Clock size={12} />
                 <span>
                   {daysLeftInTrial === 0 
@@ -502,7 +526,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
 
             {/* Billing info */}
             {subscription && !isTrialing && subscription.nextBillingDate && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-600">
+              <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 font-medium">
                 <Calendar size={12} />
                 <span>Next billing: {subscription.nextBillingDate}</span>
               </div>
@@ -510,19 +534,19 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
 
             {/* Price */}
             {subscription && subscription.formattedPrice && (
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                 {subscription.formattedPrice}
                 {subscription.billing_interval === 'annual' && ' (billed annually)'}
               </p>
             )}
           </div>
           
-          {/* Upgrade/Manage button - only show if not on enterprise */}
-          {/* Updated December 2025 - contextual button text */}
+          {/* Upgrade/Manage button - NEO-BRUTALIST */}
+          {/* Updated January 8th, 2026 - contextual button text with neo-brutalist styling */}
           {(!subscription || subscription.plan !== 'enterprise') && (
             <button 
               onClick={onUpgrade}
-              className="px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-bold rounded-lg hover:shadow-lg hover:shadow-[#D4E815]/20 transition-all flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-1.5"
             >
               <Zap size={14} />
               {!subscription 
@@ -535,33 +559,33 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
           )}
         </div>
 
-        {/* Trial warning */}
+        {/* Trial warning - NEO-BRUTALIST */}
         {isTrialing && daysLeftInTrial !== null && daysLeftInTrial <= 1 && (
-          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-2 p-3 bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500">
             <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-800">
-              <p className="font-semibold">Your trial is ending soon</p>
-              <p className="text-amber-700">Add a payment method to continue using all features.</p>
+            <div className="text-xs text-amber-800 dark:text-amber-300">
+              <p className="font-black">Your trial is ending soon</p>
+              <p className="text-amber-700 dark:text-amber-400">Add a payment method to continue using all features.</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Payment Method */}
+      {/* Payment Method - NEO-BRUTALIST (Updated January 8th, 2026) */}
       <div>
-        <h3 className="text-sm font-bold text-slate-900 mb-4">Payment Method</h3>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Payment Method</h3>
         {subscription?.card_last4 ? (
-          <div className="p-4 border border-slate-200 rounded-lg flex items-center justify-between">
+          <div className="p-4 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-7 bg-slate-100 rounded flex items-center justify-center">
-                <CreditCard size={16} className="text-slate-500" />
+              <div className="w-10 h-7 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                <CreditCard size={16} className="text-gray-500" />
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-bold text-gray-900 dark:text-white">
                   {subscription.card_brand || 'Card'} •••• {subscription.card_last4}
                 </p>
                 {subscription.card_exp_month && subscription.card_exp_year && (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-gray-500">
                     Expires {String(subscription.card_exp_month).padStart(2, '0')}/{String(subscription.card_exp_year).slice(-2)}
                   </p>
                 )}
@@ -569,18 +593,18 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
             </div>
             <button 
               onClick={onAddCard}
-              className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+              className="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white uppercase"
             >
               Update
             </button>
           </div>
         ) : (
-          <div className="p-6 border border-dashed border-slate-200 rounded-lg text-center">
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <CreditCard size={20} className="text-slate-400" />
+          <div className="p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
+            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mx-auto mb-3">
+              <CreditCard size={20} className="text-gray-400" />
             </div>
-            <p className="text-sm text-slate-600 font-medium mb-1">No payment method added</p>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-bold mb-1">No payment method added</p>
+            <p className="text-xs text-gray-500 mb-4">
               {isTrialing 
                 ? 'Add a card to continue using all features after your trial ends.'
                 : 'Add a payment method to upgrade your plan.'
@@ -588,7 +612,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
             </p>
             <button 
               onClick={onAddCard}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-bold rounded-lg hover:bg-[#c5d913] transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
               <Plus size={14} />
               Add Payment Method
@@ -597,26 +621,26 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
         )}
       </div>
 
-      {/* Invoices - Updated December 2025 to fetch from Stripe */}
+      {/* Invoices - NEO-BRUTALIST (Updated January 8th, 2026) */}
       <div>
-        <h3 className="text-sm font-bold text-slate-900 mb-4">Invoice History</h3>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Invoice History</h3>
         
         {/* Loading State */}
         {invoicesLoading && (
-          <div className="p-8 border border-slate-200 rounded-lg flex items-center justify-center">
-            <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
-            <span className="ml-2 text-sm text-slate-500">Loading invoices...</span>
+          <div className="p-8 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            <span className="ml-2 text-sm text-gray-500 font-medium">Loading invoices...</span>
           </div>
         )}
 
         {/* Error State */}
         {!invoicesLoading && invoicesError && (
-          <div className="p-4 border border-red-200 bg-red-50 rounded-lg flex items-center gap-3">
+          <div className="p-4 border-2 border-red-500 bg-red-50 dark:bg-red-900/20 flex items-center gap-3">
             <XCircle size={16} className="text-red-500 shrink-0" />
-            <p className="text-sm text-red-700">{invoicesError}</p>
+            <p className="text-sm text-red-700 dark:text-red-400 font-medium">{invoicesError}</p>
             <button 
               onClick={fetchInvoices}
-              className="ml-auto text-xs font-semibold text-red-600 hover:text-red-800"
+              className="ml-auto text-xs font-bold text-red-600 hover:text-red-800 uppercase"
             >
               Retry
             </button>
@@ -625,22 +649,22 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
 
         {/* Empty State */}
         {!invoicesLoading && !invoicesError && invoices.length === 0 && (
-          <div className="p-8 border border-dashed border-slate-200 rounded-lg text-center">
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <FileText size={20} className="text-slate-400" />
+          <div className="p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
+            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mx-auto mb-3">
+              <FileText size={20} className="text-gray-400" />
             </div>
-            <p className="text-sm text-slate-500">No invoices yet</p>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-sm text-gray-500 font-bold">No invoices yet</p>
+            <p className="text-xs text-gray-400 mt-1">
               Invoices will appear here after your first billing cycle
             </p>
           </div>
         )}
 
-        {/* Invoice List */}
+        {/* Invoice List - NEO-BRUTALIST */}
         {!invoicesLoading && !invoicesError && invoices.length > 0 && (
-          <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <div className="border-2 border-black dark:border-gray-600 overflow-hidden">
             {/* Table Header */}
-            <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 border-b-2 border-black dark:border-gray-600 grid grid-cols-12 gap-4 text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">
               <div className="col-span-3">Invoice</div>
               <div className="col-span-3">Date</div>
               <div className="col-span-2">Amount</div>
@@ -654,15 +678,15 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
               return (
                 <div 
                   key={invoice.id}
-                  className="px-4 py-3 border-b border-slate-100 last:border-b-0 grid grid-cols-12 gap-4 items-center hover:bg-slate-50/50 transition-colors"
+                  className="px-4 py-3 border-b-2 border-gray-200 dark:border-gray-700 last:border-b-0 grid grid-cols-12 gap-4 items-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   {/* Invoice Number & Description */}
                   <div className="col-span-3">
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
                       {invoice.number || 'Draft'}
                     </p>
                     {invoice.description && (
-                      <p className="text-xs text-slate-500 truncate" title={invoice.description}>
+                      <p className="text-xs text-gray-500 truncate" title={invoice.description}>
                         {invoice.description}
                       </p>
                     )}
@@ -670,14 +694,14 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
                   
                   {/* Date */}
                   <div className="col-span-3">
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
                       {formatDate(invoice.created)}
                     </p>
                   </div>
                   
                   {/* Amount */}
                   <div className="col-span-2">
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">
                       {formatAmount(invoice.amount_due, invoice.currency)}
                     </p>
                   </div>
@@ -685,8 +709,8 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
                   {/* Status */}
                   <div className="col-span-2">
                     <span className={cn(
-                      "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide",
-                      statusBadge.bg, statusBadge.text
+                      "inline-flex px-2 py-0.5 text-[10px] font-black uppercase tracking-wide border",
+                      statusBadge.bg, statusBadge.text, statusBadge.border
                     )}>
                       {statusBadge.label}
                     </span>
@@ -699,7 +723,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
                         href={invoice.hosted_invoice_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         title="View invoice"
                       >
                         <ExternalLink size={14} />
@@ -710,7 +734,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
                         href={invoice.invoice_pdf}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         title="Download PDF"
                       >
                         <Download size={14} />
@@ -724,37 +748,37 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
         )}
       </div>
 
-      {/* Cancel Plan Section - only show if user has an active subscription */}
+      {/* Cancel Plan Section - NEO-BRUTALIST (Updated January 8th, 2026) */}
       {subscription && subscription.status !== 'canceled' && !subscription.cancel_at_period_end && (
-        <div className="pt-6 border-t border-slate-100">
-          <h3 className="text-sm font-bold text-slate-900 mb-2">Cancel Subscription</h3>
-          <p className="text-xs text-slate-500 mb-4">
+        <div className="pt-6 border-t-2 border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-black text-gray-900 dark:text-white mb-2 uppercase tracking-wide">Cancel Subscription</h3>
+          <p className="text-xs text-gray-500 mb-4">
             If you cancel, you'll still have access to your plan until the end of your current billing period.
           </p>
           <button 
             onClick={onCancelPlan}
-            className="px-4 py-2 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all"
+            className="px-4 py-2 text-xs font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-500 border-2 border-red-400 hover:border-red-600 transition-all uppercase"
           >
             Cancel Plan
           </button>
         </div>
       )}
 
-      {/* Cancellation pending notice */}
+      {/* Cancellation pending notice - NEO-BRUTALIST */}
       {subscription?.cancel_at_period_end && (
-        <div className="pt-6 border-t border-slate-100">
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+        <div className="pt-6 border-t-2 border-gray-200 dark:border-gray-700">
+          <div className="p-4 bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500">
             <div className="flex items-start gap-3">
               <AlertTriangle size={16} className="text-orange-600 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-semibold text-orange-800">Subscription Canceling</h4>
-                <p className="text-xs text-orange-700 mt-1">
+                <h4 className="text-sm font-black text-orange-800 dark:text-orange-300 uppercase">Subscription Canceling</h4>
+                <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
                   Your plan will be canceled at the end of the current billing period. 
                   You'll continue to have access until then.
                 </p>
                 <button 
                   onClick={onCancelPlan}
-                  className="mt-3 px-3 py-1.5 text-xs font-semibold text-orange-700 hover:text-orange-800 bg-white border border-orange-300 rounded-lg transition-all"
+                  className="mt-3 px-3 py-1.5 text-xs font-bold text-orange-700 hover:text-white bg-white hover:bg-orange-500 border-2 border-orange-400 hover:border-orange-600 transition-all uppercase"
                 >
                   Resume Subscription
                 </button>
@@ -767,52 +791,60 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
   );
 }
 
+// =============================================================================
+// NOTIFICATION SETTINGS - NEO-BRUTALIST (Updated January 8th, 2026)
+// 
+// Design updates:
+// - Sharp-edged notification rows
+// - Bold checkboxes with yellow accent
+// - Bold typography
+// =============================================================================
 function NotificationSettings() {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-900">Email Notifications</h3>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">Email Notifications</h3>
         
         {[
           { id: 'emailMatches', label: 'New affiliate matches found', desc: 'Get notified when we find new high-potential affiliates.' },
           { id: 'emailReports', label: 'Weekly performance report', desc: 'Summary of your campaign performance and outreach stats.' },
           { id: 'emailUpdates', label: 'Product updates', desc: 'News about new features and improvements.' }
         ].map((item) => (
-          <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors -mx-3">
+          <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors -mx-3 border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700">
             <div className="relative flex items-center mt-0.5">
               <input 
                 type="checkbox" 
                 defaultChecked={true}
-                className="peer h-4 w-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" 
+                className="peer h-5 w-5 border-2 border-black dark:border-gray-600 accent-[#ffbf23] cursor-pointer" 
               />
             </div>
             <div className="flex-1">
-              <label className="text-sm font-medium text-slate-900 block cursor-pointer">{item.label}</label>
-              <p className="text-xs text-slate-500">{item.desc}</p>
+              <label className="text-sm font-bold text-gray-900 dark:text-white block cursor-pointer">{item.label}</label>
+              <p className="text-xs text-gray-500">{item.desc}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="h-px bg-slate-100" />
+      <div className="h-0.5 bg-gray-200 dark:bg-gray-700" />
 
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-900">App Notifications</h3>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">App Notifications</h3>
         {[
           { id: 'appReplies', label: 'Successful outreach replies', desc: 'Notify me when an affiliate replies to my email.' },
           { id: 'appReminders', label: 'Task reminders', desc: 'Remind me about follow-ups and scheduled tasks.' }
         ].map((item) => (
-          <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors -mx-3">
+          <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors -mx-3 border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700">
              <div className="relative flex items-center mt-0.5">
               <input 
                 type="checkbox" 
                 defaultChecked={true}
-                className="peer h-4 w-4 rounded border-slate-300 text-[#D4E815] focus:ring-[#D4E815]/20 cursor-pointer" 
+                className="peer h-5 w-5 border-2 border-black dark:border-gray-600 accent-[#ffbf23] cursor-pointer" 
               />
             </div>
             <div className="flex-1">
-              <label className="text-sm font-medium text-slate-900 block cursor-pointer">{item.label}</label>
-              <p className="text-xs text-slate-500">{item.desc}</p>
+              <label className="text-sm font-bold text-gray-900 dark:text-white block cursor-pointer">{item.label}</label>
+              <p className="text-xs text-gray-500">{item.desc}</p>
             </div>
           </div>
         ))}
@@ -821,31 +853,39 @@ function NotificationSettings() {
   );
 }
 
+// =============================================================================
+// SECURITY SETTINGS - NEO-BRUTALIST (Updated January 8th, 2026)
+// 
+// Design updates:
+// - Sharp-edged buttons
+// - Bold typography
+// - Neo-brutalist Danger Zone section
+// =============================================================================
 function SecuritySettings({ user }: { user: any }) {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-900">Password & Security</h3>
-        <p className="text-sm text-slate-500">
+        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">Password & Security</h3>
+        <p className="text-sm text-gray-500">
           Manage your password and security settings through your account portal.
         </p>
         <div className="pt-2">
           <button 
-            className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors uppercase"
           >
             Manage Security Settings
           </button>
         </div>
       </div>
       
-      <div className="h-px bg-slate-100" />
+      <div className="h-0.5 bg-gray-200 dark:bg-gray-700" />
 
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-red-600">Danger Zone</h3>
-        <p className="text-xs text-slate-500">
+        <h3 className="text-sm font-black text-red-600 uppercase tracking-wide">Danger Zone</h3>
+        <p className="text-xs text-gray-500">
           Once you delete your account, there is no going back. Please be certain.
         </p>
-        <button className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 text-sm font-semibold rounded-lg hover:bg-red-100 transition-colors">
+        <button className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-2 border-red-400 text-sm font-bold hover:bg-red-500 hover:text-white hover:border-red-600 transition-all uppercase">
           Delete Account
         </button>
       </div>

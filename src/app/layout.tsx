@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackClientApp } from "../stack/client";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
+
+// =============================================================================
+// FONT CONFIGURATION - Updated January 6th, 2026
+// 
+// Changed from Geist to Inter/Fira Code for neo-brutalist design
+// matching DashboardDemo.tsx styling:
+// - Inter: Primary sans-serif (weights: 400, 700, 900)
+// - Fira Code: Monospace for code/timers (weights: 400, 700)
+// =============================================================================
 
 // =============================================================================
 // GLOBAL TOAST NOTIFICATIONS (January 5th, 2026)
@@ -23,6 +32,20 @@ import "./globals.css";
 // =============================================================================
 import { Toaster } from 'sonner';
 
+// Neo-brutalist design fonts (January 6th, 2026)
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "700", "900"],
+});
+
+const firaCode = Fira_Code({
+  variable: "--font-fira-code",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+});
+
+/* OLD_DESIGN_START - Geist fonts (pre-January 6th, 2026)
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -32,6 +55,7 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+OLD_DESIGN_END */
 
 export const metadata: Metadata = {
   title: "CrewCast Studio | backed by selecdoo AI",
@@ -45,7 +69,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      {/* Updated January 6th, 2026: Inter + Fira Code for neo-brutalist design */}
+      <body className={`${inter.variable} ${firaCode.variable} font-sans antialiased`}>
         <StackProvider app={stackClientApp}>
           <StackTheme>
             {children}

@@ -1,5 +1,18 @@
 'use client';
 
+/**
+ * =============================================================================
+ * FILTER PANEL COMPONENT - Updated January 6th, 2026
+ * =============================================================================
+ * 
+ * DESIGN UPDATE: Neo-brutalist style from DashboardDemo.tsx
+ * - Uses brand yellow (#ffbf23) instead of lime green (#D4E815)
+ * - Bold borders (border-2) instead of subtle borders
+ * - Industrial typography and styling
+ * - Dark mode support
+ * =============================================================================
+ */
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -139,27 +152,28 @@ const FilterPill: React.FC<FilterPillProps> = ({
 
   return (
     <>
+      {/* Neo-brutalist Filter Pill Button - Matches DashboardDemo aesthetic */}
       <button
         ref={buttonRef}
         onClick={onToggleDropdown}
         className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all whitespace-nowrap",
+          "flex items-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap border-2",
           isActive || isDropdownOpen
-            ? "bg-[#D4E815]/20 text-[#1A1D21] border-[#D4E815]"
-            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+            ? "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000000]"
+            : "bg-white dark:bg-[#0a0a0a] text-gray-700 dark:text-gray-300 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900"
         )}
       >
         {icon}
         <span>{label}</span>
         {activeCount !== undefined && activeCount > 0 && (
-          <span className="px-1.5 py-0.5 rounded bg-[#D4E815] text-[#1A1D21] text-[9px] font-semibold">
+          <span className="px-1.5 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[9px] font-black">
             {activeCount}
           </span>
         )}
-        <ChevronDown size={12} />
+        <ChevronDown size={12} className={cn(isDropdownOpen && "rotate-180 transition-transform")} />
       </button>
 
-      {/* Dropdown rendered via Portal */}
+      {/* Dropdown rendered via Portal - Neo-brutalist style */}
       {isDropdownOpen && isMounted && createPortal(
         <div
           ref={dropdownRef}
@@ -170,9 +184,9 @@ const FilterPill: React.FC<FilterPillProps> = ({
             right: dropdownPosition.right !== 'auto' ? dropdownPosition.right : 'auto',
             width: DROPDOWN_WIDTH,
           }}
-          className="bg-white rounded-lg shadow-lg border border-slate-200 z-[9999]"
+          className="bg-white dark:bg-[#0a0a0a] shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffbf23] border-2 border-black dark:border-[#ffbf23] z-[9999]"
         >
-          <div className="p-2">
+          <div className="p-3">
             {children}
           </div>
         </div>,
@@ -203,12 +217,12 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   const visibleOptions = showAll ? options : options.slice(0, maxVisible);
 
   if (options.length === 0) {
-    return <p className="text-xs text-slate-400 italic">{emptyMessage}</p>;
+    return <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono uppercase">{emptyMessage}</p>;
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1">
         {visibleOptions.map(option => (
           <button
             key={option}
@@ -220,10 +234,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               }
             }}
             className={cn(
-              "px-2 py-1 rounded text-xs font-medium transition-all",
+              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
               selected.includes(option)
-                ? "bg-[#D4E815] text-[#1A1D21]"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
             )}
           >
             {option}
@@ -233,17 +247,17 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       {options.length > maxVisible && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+          className="text-[10px] text-black dark:text-[#ffbf23] hover:underline font-black uppercase"
         >
-          {showAll ? 'Show less' : `+${options.length - maxVisible} more`}
+          {showAll ? '− Show less' : `+ ${options.length - maxVisible} more`}
         </button>
       )}
       {selected.length > 0 && (
         <button
           onClick={() => onChange([])}
-          className="text-xs text-slate-500 hover:text-slate-700"
+          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
         >
-          Clear
+          × Clear all
         </button>
       )}
     </div>
@@ -266,7 +280,7 @@ const RangePresets: React.FC<RangePresetsProps> = ({
 }) => {
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1">
         {presets.map(preset => (
           <button
             key={preset.label}
@@ -278,10 +292,10 @@ const RangePresets: React.FC<RangePresetsProps> = ({
               }
             }}
             className={cn(
-              "px-2 py-1 rounded text-xs font-medium transition-all",
+              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
               value?.min === preset.min && value?.max === preset.max
-                ? "bg-[#D4E815] text-[#1A1D21]"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
             )}
           >
             {preset.label}
@@ -291,9 +305,9 @@ const RangePresets: React.FC<RangePresetsProps> = ({
       {value !== null && (
         <button
           onClick={() => onChange(null)}
-          className="text-xs text-slate-500 hover:text-slate-700"
+          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
         >
-          Clear
+          × Clear
         </button>
       )}
     </div>
@@ -345,16 +359,16 @@ const DatePresets: React.FC<DatePresetsProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1">
         {presets.map(preset => (
           <button
             key={preset.label}
             onClick={() => handlePreset(preset.days)}
             className={cn(
-              "px-2 py-1 rounded text-xs font-medium transition-all",
+              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
               isPresetActive(preset.days)
-                ? "bg-[#D4E815] text-[#1A1D21]"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
             )}
           >
             {preset.label}
@@ -364,9 +378,9 @@ const DatePresets: React.FC<DatePresetsProps> = ({
       {value !== null && (
         <button
           onClick={() => onChange(null)}
-          className="text-xs text-slate-500 hover:text-slate-700"
+          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
         >
-          Clear
+          × Clear
         </button>
       )}
     </div>
@@ -518,19 +532,19 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           {activeFilterCount > 0 && (
             <button
               onClick={handleClearAll}
-              className="flex items-center gap-1 px-2 py-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              className="flex items-center gap-1 px-2 py-2 text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-black uppercase tracking-wide"
             >
-              <X size={12} />
-              <span>Clear</span>
+              <X size={10} strokeWidth={3} />
+              <span>Clear All</span>
             </button>
           )}
 
-          {/* Divider */}
-          <div className="h-6 w-px bg-slate-200" />
+          {/* Divider - Industrial style */}
+          <div className="h-8 w-0.5 bg-black dark:bg-gray-600" />
         </div>
       )}
 
-      {/* Main Filter Toggle Button */}
+      {/* Main Filter Toggle Button - Neo-brutalist style */}
       <button
         onClick={() => {
           if (isOpen) {
@@ -541,18 +555,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           }
         }}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap",
+          "flex items-center justify-center w-10 h-10 border-2 transition-all",
           isOpen || activeFilterCount > 0
-            ? "bg-[#D4E815] text-[#1A1D21] border-[#D4E815] shadow-sm shadow-[#D4E815]/20"
-            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+            ? "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000000]"
+            : "bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900"
         )}
       >
-        <SlidersHorizontal size={14} />
-        {activeFilterCount > 0 && (
-          <span className="px-1.5 py-0.5 rounded bg-[#1A1D21]/20 text-[#1A1D21] text-[9px]">
-            {activeFilterCount}
-          </span>
-        )}
+        <SlidersHorizontal size={16} strokeWidth={2.5} />
       </button>
     </div>
   );
