@@ -1,14 +1,23 @@
 'use client';
 
 /**
- * PipelineGraphic Component
+ * =============================================================================
+ * PIPELINE GRAPHIC - NEO-BRUTALIST
+ * =============================================================================
  * 
- * Displays an animated CRM pipeline/kanban visualization for the BentoGrid feature section.
- * Shows affiliates moving through recruitment stages: New → Outreach → Done.
+ * Displays an animated CRM pipeline/kanban visualization for the BentoGrid
+ * feature section. Shows affiliates moving through recruitment stages.
  * 
- * Updated: January 5th, 2026 - Simplified animation with fixed card positions to prevent layout shift
- * - Initial: 2 cards in New, 2 cards in Outreach, 0 in Done
- * - On hover: Top Outreach card → Done, then bottom New card → Outreach, then reset
+ * CHANGELOG:
+ * - January 9th, 2026: Updated to neo-brutalist design
+ *   - Sharp edges on cards (removed rounded-lg, rounded-full)
+ *   - Bold borders (border-2)
+ *   - Updated color from #D4E815 to #ffbf23 (brand yellow)
+ *   - Sharp column labels
+ * 
+ * - January 5th, 2026: Simplified animation with fixed card positions
+ * 
+ * =============================================================================
  */
 
 import React, { useState, useEffect } from 'react';
@@ -61,21 +70,21 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-white">
+      {/* Background Pattern - NEO-BRUTALIST (January 9th, 2026) */}
       <div 
         className="absolute inset-0 opacity-[0.15]" 
         style={{ 
-          backgroundImage: 'radial-gradient(#D4E815 1px, transparent 1px)', 
+          backgroundImage: 'radial-gradient(#ffbf23 1px, transparent 1px)', 
           backgroundSize: '16px 16px' 
         }} 
       />
 
-      {/* Kanban Board Container */}
-      {/* Updated: January 5th, 2026 - Fixed positions to prevent layout shift */}
+      {/* Kanban Board Container - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="absolute inset-x-0 top-0 bottom-0 px-3 pb-2 flex">
          
          {/* Column 1: New - 2 cards initially */}
          <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 pr-1">
-            <span className="text-[7px] font-semibold text-slate-400 uppercase tracking-wider">New</span>
+            <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider">New</span>
             
             {/* Card 1 - always visible */}
             <KanbanCard affiliate={affiliates.newCard1} />
@@ -92,12 +101,11 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
             </motion.div>
          </div>
 
-         {/* Column 2: Outreach - 2 cards initially */}
-         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l border-dashed border-[#E5E7EB] pl-2 pr-1">
-            <span className="text-[7px] font-semibold text-[#D4E815] uppercase tracking-wider">Outreach</span>
+         {/* Column 2: Outreach - NEO-BRUTALIST (January 9th, 2026) */}
+         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 pl-2 pr-1">
+            <span className="text-[7px] font-black text-[#ffbf23] uppercase tracking-wider">Outreach</span>
             
             {/* Slot 1: Fixed container - swaps between Ryan C. and Maria S. */}
-            {/* Updated: January 5th, 2026 - Both cards stacked, one visible at a time */}
             <div className="relative">
               {/* Ryan C. - visible at stage 0, maintains slot height */}
               <motion.div
@@ -122,9 +130,9 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
             <KanbanCard highlight affiliate={affiliates.outreachCard2} />
          </div>
 
-         {/* Column 3: Done - Empty initially */}
-         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l border-dashed border-[#E5E7EB] pl-2">
-            <span className="text-[7px] font-semibold text-[#1A1D21] uppercase tracking-wider">Done</span>
+         {/* Column 3: Done - NEO-BRUTALIST (January 9th, 2026) */}
+         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 pl-2">
+            <span className="text-[7px] font-black text-[#1A1D21] uppercase tracking-wider">Done</span>
             
             {/* Card from Outreach - appears at stage 1+ */}
             <motion.div
@@ -145,12 +153,15 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
 };
 
 /**
- * KanbanCard Component
+ * KanbanCard Component - NEO-BRUTALIST (Updated January 9th, 2026)
  * 
  * Renders a single affiliate card in the pipeline visualization.
  * Shows affiliate avatar, name, and niche with different states.
  * 
- * Updated: January 5th, 2026 - Display actual affiliate names and niche instead of placeholders
+ * Design changes:
+ * - Sharp edges (removed rounded-lg, rounded-full)
+ * - Bold borders (border-2)
+ * - Updated color from #D4E815 to #ffbf23
  */
 interface KanbanCardProps {
   active?: boolean;
@@ -166,31 +177,31 @@ const KanbanCard = ({ active, highlight, complete, affiliate }: KanbanCardProps)
   const initials = displayAffiliate.name.split(' ').map(n => n[0]).join('');
   
   return (
-    // Updated: January 5th, 2026 - Made cards compact with single-row layout to fit in visible area
+    // NEO-BRUTALIST: Sharp edges, bold borders (January 9th, 2026)
     <div className={cn(
-      "bg-white p-2 rounded-lg border shadow-sm w-full transition-all duration-300",
-      active ? "shadow-md" : "border-[#E5E7EB]",
-      highlight ? "border-[#D4E815]/50 ring-2 ring-[#D4E815]/20" : "",
-      complete ? "border-[#D4E815] bg-[#D4E815]/10" : ""
+      "bg-white p-2 border-2 w-full transition-all duration-300",
+      active ? "border-black" : "border-gray-200",
+      highlight ? "border-[#ffbf23]" : "",
+      complete ? "border-[#ffbf23] bg-[#ffbf23]/10" : ""
     )}>
       <div className="flex items-center gap-1.5">
-        {/* Avatar with initials or checkmark when complete */}
+        {/* Avatar - NEO-BRUTALIST (January 9th, 2026) */}
         <div className={cn(
-          "w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold shrink-0", 
-          highlight ? "bg-[#D4E815]/30 text-[#1A1D21]" : 
-          complete ? "bg-[#D4E815] text-[#1A1D21]" : "bg-slate-100 text-slate-500"
+          "w-5 h-5 flex items-center justify-center text-[7px] font-black shrink-0 border", 
+          highlight ? "bg-[#ffbf23]/30 text-[#1A1D21] border-[#ffbf23]" : 
+          complete ? "bg-[#ffbf23] text-[#1A1D21] border-[#ffbf23]" : "bg-slate-100 text-slate-500 border-gray-200"
         )}>
           {complete ? "✓" : initials}
         </div>
-        {/* Affiliate Name & Niche - Single row for compact display */}
+        {/* Affiliate Name & Niche */}
         <div className="flex-1 min-w-0">
           <span className={cn(
-            "text-[8px] font-semibold truncate block",
+            "text-[8px] font-bold truncate block",
             complete ? "text-[#1A1D21]" : highlight ? "text-[#111827]" : "text-slate-600"
           )}>
             {displayAffiliate.name}
           </span>
-          <span className="text-[6px] text-slate-400 truncate block">
+          <span className="text-[6px] text-slate-400 truncate block font-medium">
             {displayAffiliate.niche}
           </span>
         </div>

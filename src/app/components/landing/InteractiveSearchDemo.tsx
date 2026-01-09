@@ -1,5 +1,27 @@
 'use client';
 
+/**
+ * =============================================================================
+ * INTERACTIVE SEARCH DEMO - NEO-BRUTALIST
+ * =============================================================================
+ * 
+ * Last Updated: January 9th, 2026
+ * 
+ * This component displays an animated demo of the search interface in the
+ * landing page hero section. It types a query, shows loading states, and
+ * reveals results one by one.
+ * 
+ * CHANGELOG:
+ * - January 9th, 2026: Updated to neo-brutalist design
+ *   - Sharp edges on all containers (removed rounded-*)
+ *   - Updated color from #D4E815 to #ffbf23 (brand yellow)
+ *   - Bold borders (border-2)
+ *   - Sharp avatars and badges
+ * 
+ * IMPORTANT: Do not modify the animation logic (useEffect, motion components)
+ * =============================================================================
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Search, Mail, Check, Globe, Youtube, Instagram, ArrowRight, Loader2, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -137,16 +159,17 @@ export const InteractiveSearchDemo = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto">
-      <div className="bg-white rounded-2xl shadow-xl border border-[#E5E7EB] overflow-hidden backdrop-blur-sm transform transition-all duration-500 hover:shadow-2xl">
-        {/* Browser Header */}
-        <div className="h-10 bg-slate-50/80 border-b border-[#E5E7EB] flex items-center px-4 gap-3">
+      {/* Main Container - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="bg-white border-2 border-black shadow-[8px_8px_0px_0px_#000000] overflow-hidden backdrop-blur-sm transform transition-all duration-500 hover:shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[4px] hover:translate-y-[4px]">
+        {/* Browser Header - NEO-BRUTALIST (January 9th, 2026) */}
+        <div className="h-10 bg-gray-100 border-b-2 border-black flex items-center px-4 gap-3">
           <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-400/80"></div>
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-400/80"></div>
-            <div className="w-2.5 h-2.5 rounded-full bg-green-400/80"></div>
+            <div className="w-2.5 h-2.5 bg-red-500"></div>
+            <div className="w-2.5 h-2.5 bg-amber-500"></div>
+            <div className="w-2.5 h-2.5 bg-green-500"></div>
           </div>
           <div className="flex-1 flex justify-center">
-            <div className="w-3/5 h-6 bg-white rounded-md border border-[#E5E7EB] flex items-center px-2 gap-2 text-[10px] text-slate-400 font-medium shadow-sm">
+            <div className="w-3/5 h-6 bg-white border-2 border-gray-300 flex items-center px-2 gap-2 text-[10px] text-slate-500 font-bold">
               <Search size={10} />
               <span>crewcast.studio/scout</span>
             </div>
@@ -156,7 +179,7 @@ export const InteractiveSearchDemo = () => {
         {/* Main Content */}
         <div className="p-6 h-[440px] flex flex-col relative">
           
-          {/* Search Input Area */}
+          {/* Search Input Area - NEO-BRUTALIST (January 9th, 2026) */}
           <div className="relative mb-6 z-10">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <AnimatePresence mode="wait">
@@ -167,7 +190,7 @@ export const InteractiveSearchDemo = () => {
                      animate={{ opacity: 1, scale: 1 }}
                      exit={{ opacity: 0, scale: 0.8 }}
                    >
-                     <Loader2 className="h-5 w-5 text-[#D4E815] animate-spin" />
+                     <Loader2 className="h-5 w-5 text-[#ffbf23] animate-spin" />
                    </motion.div>
                 ) : (
                   <motion.div
@@ -181,14 +204,14 @@ export const InteractiveSearchDemo = () => {
                 )}
               </AnimatePresence>
             </div>
-            {/* Input container with inline cursor */}
-            <div className="relative w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-[#E5E7EB] rounded-xl shadow-sm min-h-[48px] flex items-center">
+            {/* Input container - NEO-BRUTALIST (January 9th, 2026) */}
+            <div className="relative w-full pl-11 pr-4 py-3.5 bg-gray-50 border-2 border-gray-300 min-h-[48px] flex items-center">
               {/* Text with inline cursor */}
-              <span className="font-medium text-sm text-[#111827] whitespace-pre">
+              <span className="font-bold text-sm text-[#111827] whitespace-pre">
                 {text}
                 {step === 'TYPING' && (
                   <motion.span 
-                    className="inline-block w-[2px] h-5 bg-[#D4E815] ml-[1px] align-middle"
+                    className="inline-block w-[2px] h-5 bg-[#ffbf23] ml-[1px] align-middle"
                     initial={{ opacity: 1 }}
                     animate={{ opacity: [1, 0] }}
                     transition={{ repeat: Infinity, duration: 0.8 }}
@@ -197,28 +220,29 @@ export const InteractiveSearchDemo = () => {
               </span>
               {/* Placeholder when empty */}
               {!text && step !== 'TYPING' && (
-                <span className="text-slate-400 font-medium text-sm">Enter a niche or keyword...</span>
+                <span className="text-slate-400 font-bold text-sm">Enter a niche or keyword...</span>
               )}
             </div>
+            {/* Scout Button - NEO-BRUTALIST (January 9th, 2026) */}
             <div className="absolute right-2 top-1/2 -translate-y-1/2">
-               <button className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 ${text.length > 5 ? 'bg-[#D4E815] text-[#1A1D21] shadow-md shadow-[#D4E815]/30' : 'bg-slate-200 text-slate-400'}`}>
+               <button className={`px-3 py-1.5 text-xs font-black uppercase transition-all duration-300 ${text.length > 5 ? 'bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000000]' : 'bg-gray-200 text-gray-400 border-2 border-gray-300'}`}>
                  Scout
                </button>
             </div>
           </div>
 
-          {/* Status Bar / Tabs */}
-          <div className="flex items-center gap-4 mb-6 border-b border-[#E5E7EB] pb-2 overflow-hidden">
+          {/* Status Bar / Tabs - NEO-BRUTALIST (January 9th, 2026) */}
+          <div className="flex items-center gap-4 mb-6 border-b-2 border-gray-200 pb-2 overflow-hidden">
              {(['All', 'Web', 'YouTube', 'Instagram', 'TikTok'] as Tab[]).map((tab) => (
                <div 
                  key={tab} 
-                 className={`relative text-xs font-medium pb-2 cursor-default transition-colors ${activeTab === tab ? 'text-[#1A1D21]' : 'text-slate-400'}`}
+                 className={`relative text-xs font-bold pb-2 cursor-default transition-colors uppercase tracking-wide ${activeTab === tab ? 'text-[#1A1D21]' : 'text-slate-400'}`}
                >
                  {tab}
                  {activeTab === tab && (
                    <motion.div 
                      layoutId="activeTab"
-                     className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D4E815] rounded-full"
+                     className="absolute bottom-0 left-0 right-0 h-1 bg-[#ffbf23]"
                    />
                  )}
                </div>
@@ -233,9 +257,9 @@ export const InteractiveSearchDemo = () => {
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="text-xs text-[#1A1D21] font-medium flex items-center gap-1.5"
+                      className="text-xs text-[#1A1D21] font-bold flex items-center gap-1.5"
                     >
-                      <img src="/logo.jpg" alt="" className="w-3 h-3 rounded-sm object-cover" />
+                      <div className="w-3 h-3 bg-[#ffbf23] border border-black"></div>
                       Scanning...
                     </motion.div>
                  )}
@@ -245,9 +269,9 @@ export const InteractiveSearchDemo = () => {
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="text-xs text-[#333333] font-medium flex items-center gap-1.5"
+                      className="text-xs text-[#333333] font-bold flex items-center gap-1.5"
                     >
-                      <Loader2 size={12} className="animate-spin text-[#D4E815]" />
+                      <Loader2 size={12} className="animate-spin text-[#ffbf23]" />
                       Analyzing...
                     </motion.div>
                  )}
@@ -258,7 +282,7 @@ export const InteractiveSearchDemo = () => {
           {/* Results List */}
           <div className="flex-1 space-y-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             <AnimatePresence mode="popLayout">
-              {/* Empty State */}
+              {/* Empty State - NEO-BRUTALIST (January 9th, 2026) */}
               {(step === 'IDLE' || step === 'TYPING') && (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -266,14 +290,14 @@ export const InteractiveSearchDemo = () => {
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 flex flex-col items-center justify-center text-center pt-12"
                 >
-                  <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                  <div className="w-12 h-12 bg-gray-100 border-2 border-gray-200 flex items-center justify-center mb-3">
                     <Search className="text-slate-300" size={20} />
                   </div>
-                  <p className="text-slate-400 text-sm">Enter a niche to find affiliates</p>
+                  <p className="text-slate-400 text-sm font-bold">Enter a niche to find affiliates</p>
                 </motion.div>
               )}
 
-              {/* Loading Skeletons - Only show when searching */}
+              {/* Loading Skeletons - NEO-BRUTALIST (January 9th, 2026) */}
               {step === 'SEARCHING' && (
                  <motion.div
                    initial={{ opacity: 0 }}
@@ -282,18 +306,18 @@ export const InteractiveSearchDemo = () => {
                    className="space-y-3"
                  >
                    {[1, 2, 3].map((i) => (
-                     <div key={i} className="flex items-center gap-4 p-3 rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-                       <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" />
+                     <div key={i} className="flex items-center gap-4 p-3 border-2 border-gray-200 bg-white">
+                       <div className="w-10 h-10 bg-slate-100 animate-pulse" />
                        <div className="flex-1 space-y-2">
-                         <div className="h-4 w-1/3 bg-slate-100 rounded animate-pulse" />
-                         <div className="h-3 w-1/4 bg-slate-50 rounded animate-pulse" />
+                         <div className="h-4 w-1/3 bg-slate-100 animate-pulse" />
+                         <div className="h-3 w-1/4 bg-slate-50 animate-pulse" />
                        </div>
                      </div>
                    ))}
                  </motion.div>
               )}
 
-              {/* Real Results */}
+              {/* Real Results - NEO-BRUTALIST (January 9th, 2026) */}
               {visibleResults.map((result) => (
                   <motion.div
                     layout
@@ -302,14 +326,14 @@ export const InteractiveSearchDemo = () => {
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                     transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                    className="group relative bg-white hover:bg-slate-50/50 border border-[#E5E7EB] rounded-xl p-3 flex items-center gap-4 transition-all shadow-sm hover:shadow-md hover:border-[#D4E815]/50"
+                    className="group relative bg-white hover:bg-[#ffbf23]/5 border-2 border-gray-200 p-3 flex items-center gap-4 transition-all hover:border-[#ffbf23]"
                   >
-                    {/* Avatar */}
+                    {/* Avatar - NEO-BRUTALIST (January 9th, 2026) */}
                     <div className="relative shrink-0">
-                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${result.avatarGradient} flex items-center justify-center text-white text-xs font-bold shadow-sm`}>
+                      <div className={`w-10 h-10 bg-gradient-to-br ${result.avatarGradient} flex items-center justify-center text-white text-xs font-black border border-black`}>
                         {result.initials}
                       </div>
-                      <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm z-10">
+                      <div className="absolute -bottom-1 -right-1 bg-white border border-gray-300 p-0.5 z-10">
                         {result.platform === 'Instagram' && <Instagram size={10} className="text-pink-600" />}
                         {result.platform === 'YouTube' && <Youtube size={10} className="text-red-600" />}
                         {result.platform === 'Web' && <Globe size={10} className="text-blue-600" />}
@@ -320,9 +344,9 @@ export const InteractiveSearchDemo = () => {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="font-semibold text-[#111827] text-sm truncate">{result.title}</h4>
+                        <h4 className="font-bold text-[#111827] text-sm truncate">{result.title}</h4>
                         {result.eng && (
-                          <span className="shrink-0 text-[10px] font-medium text-[#1A1D21] bg-[#D4E815]/20 px-1.5 py-0.5 rounded-full border border-[#D4E815]/30">
+                          <span className="shrink-0 text-[10px] font-bold text-[#1A1D21] bg-[#ffbf23]/20 px-1.5 py-0.5 border border-[#ffbf23]">
                             {result.eng} Eng.
                           </span>
                         )}
@@ -330,7 +354,7 @@ export const InteractiveSearchDemo = () => {
                       <p className="text-xs text-slate-500 truncate">{result.subtitle}</p>
                     </div>
 
-                    {/* Actions */}
+                    {/* Actions - NEO-BRUTALIST (January 9th, 2026) */}
                     <div className="flex items-center gap-2 shrink-0">
                        {/* Email Status */}
                        <motion.div 
@@ -339,19 +363,19 @@ export const InteractiveSearchDemo = () => {
                          className="overflow-hidden"
                        >
                          {result.email ? (
-                           <div className="flex items-center gap-1.5 px-2 py-1 bg-[#D4E815]/20 text-[#1A1D21] rounded-md border border-[#D4E815]/30 whitespace-nowrap">
+                           <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffbf23]/20 text-[#1A1D21] border-2 border-[#ffbf23] whitespace-nowrap">
                              <Mail size={12} />
-                             <span className="text-[10px] font-medium">Found</span>
+                             <span className="text-[10px] font-bold">Found</span>
                            </div>
                          ) : (
-                            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 text-slate-400 rounded-md border border-[#E5E7EB] whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 text-slate-400 border-2 border-gray-200 whitespace-nowrap">
                               <Search size={12} />
-                              <span className="text-[10px] font-medium">No Email</span>
+                              <span className="text-[10px] font-bold">No Email</span>
                             </div>
                          )}
                        </motion.div>
                        
-                       <button className="p-2 text-slate-300 hover:text-[#1A1D21] hover:bg-[#D4E815]/20 rounded-lg transition-colors">
+                       <button className="p-2 text-slate-300 hover:text-[#1A1D21] hover:bg-[#ffbf23]/20 transition-colors">
                          <ArrowRight size={14} />
                        </button>
                     </div>
@@ -360,23 +384,23 @@ export const InteractiveSearchDemo = () => {
             </AnimatePresence>
           </div>
 
-          {/* Footer Stats (Only show when done) */}
+          {/* Footer Stats - NEO-BRUTALIST (January 9th, 2026) */}
           <AnimatePresence>
             {step === 'COMPLETE' && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="mt-auto pt-3 border-t border-[#E5E7EB] flex items-center justify-between text-[10px] text-slate-400"
+                className="mt-auto pt-3 border-t-2 border-gray-200 flex items-center justify-between text-[10px] text-slate-400"
               >
-                 <div className="flex gap-3">
+                 <div className="flex gap-3 font-bold">
                    <span>
                      <strong className="text-[#111827]">{visibleResults.length}</strong> Results Visible
                    </span>
                    <span>0.8s Search Time</span>
                  </div>
-                 <div className="flex items-center gap-1 text-[#1A1D21] font-medium">
-                   <Check size={10} className="text-[#D4E815]" />
+                 <div className="flex items-center gap-1 text-[#1A1D21] font-black uppercase tracking-wide">
+                   <Check size={10} className="text-[#ffbf23]" />
                    Analysis Complete
                  </div>
               </motion.div>
