@@ -35,8 +35,7 @@ import {
   Star,
   Play,
   Target,
-  Radar,
-  Sparkles
+  Radar
 } from 'lucide-react';
 import { LogoMarquee } from './LogoMarquee';
 import { InteractiveSearchDemo } from './InteractiveSearchDemo';
@@ -66,7 +65,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
   }, []);
 
   return (
-    <div className="min-h-screen bg-white font-sans text-[#111827] selection:bg-[#D4E815]/30 selection:text-[#1A1D21] overflow-x-hidden">
+    <div className="min-h-screen bg-white font-sans text-[#111827] selection:bg-[#ffbf23]/30 selection:text-[#1A1D21] overflow-x-hidden">
       
       {/* Background Texture */}
       <div className="fixed inset-0 pointer-events-none bg-grid-pattern opacity-[0.03]" />
@@ -86,11 +85,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          {/* Logo - NEO-BRUTALIST (January 9th, 2026) */}
+          {/* Logo - NEO-BRUTALIST with original image (January 9th, 2026) */}
           <div className="flex items-center gap-2 font-black text-lg tracking-tight z-50">
-            <div className="w-7 h-7 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black">
-              <Sparkles size={14} fill="currentColor" className="opacity-90" />
-            </div>
+            <img 
+              src="/logo.jpg" 
+              alt="CrewCast Studio" 
+              className="w-7 h-7 object-cover border-2 border-black"
+            />
             <span className="text-[#111827]">CrewCast<span className="text-[#ffbf23]">Studio</span></span>
           </div>
 
