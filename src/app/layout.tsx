@@ -62,6 +62,24 @@ export const metadata: Metadata = {
   description: "Find the best affiliates for your campaign - backed by selecdoo AI",
 };
 
+// =============================================================================
+// STACK AUTH THEME CONFIGURATION - NEO-BRUTALIST (January 9th, 2026)
+//
+// Customizes the Stack Auth SignIn/SignUp components to match our design:
+// - Primary color: Brand yellow (#ffbf23)
+// - Radius: 0 for sharp neo-brutalist edges
+// - Works for both light and dark modes
+// =============================================================================
+const stackAuthTheme = {
+  light: {
+    primary: '#ffbf23',
+  },
+  dark: {
+    primary: '#ffbf23',
+  },
+  radius: '0',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -72,7 +90,8 @@ export default function RootLayout({
       {/* Updated January 6th, 2026: Inter + Fira Code for neo-brutalist design */}
       <body className={`${inter.variable} ${firaCode.variable} font-sans antialiased`}>
         <StackProvider app={stackClientApp}>
-          <StackTheme>
+          {/* Updated January 9th, 2026: Added theme prop for neo-brutalist styling */}
+          <StackTheme theme={stackAuthTheme}>
             {children}
           </StackTheme>
         </StackProvider>

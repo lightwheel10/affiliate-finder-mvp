@@ -5,7 +5,7 @@
  * OnboardingScreen - NEO-BRUTALIST
  * =============================================================================
  * 
- * Updated: January 8th, 2026
+ * Last Updated: January 9th, 2026
  *
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners) 
@@ -13,7 +13,40 @@
  * - Yellow accent color (#ffbf23)
  * - Bold typography (font-black uppercase)
  * - Dark mode support
- *
+ * 
+ * =============================================================================
+ * CHANGELOG:
+ * 
+ * January 9th, 2026:
+ * - Updated Step 1 (Name/Role/Brand) to neo-brutalist design
+ *   - Added header with logo and progress bar
+ *   - Sharp edges on all inputs and dropdowns
+ *   - Dark mode support throughout
+ * 
+ * - Updated Step 2 (Country/Language) to neo-brutalist design
+ *   - Sharp edges on country and language dropdowns
+ *   - Neo-brutalist dropdown menus with offset shadow
+ *   - Updated icon containers to sharp edges
+ * 
+ * - Updated Step 3 (Competitors) to neo-brutalist design
+ *   - Sharp edges on input, add button, suggestion cards, selected cards
+ *   - Updated empty state styling
+ * 
+ * - Updated Step 4 (Topics) to neo-brutalist design
+ *   - Sharp edges on input, add button, topic pills
+ *   - Updated suggestion and selected topic styling
+ * 
+ * - Updated Step 5 (Affiliate Types) to neo-brutalist design
+ *   - Sharp edges on type buttons and checkbox indicators
+ *   - Dark mode support for all elements
+ * 
+ * January 8th, 2026:
+ * - Initial neo-brutalist container and button styling
+ * 
+ * January 3rd, 2026:
+ * - Added AI suggestions functionality
+ * - Domain validation with format checking
+ * - Back button navigation for steps 3-5
  * =============================================================================
  */
 
@@ -853,34 +886,69 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     />
   );
 
+  // ==========================================================================
+  // STEP 1: NAME/ROLE/BRAND - NEO-BRUTALIST (Updated January 9th, 2026)
+  // 
+  // Design changes applied:
+  // - Added header with logo and progress bar (matches Steps 2-5)
+  // - Sharp edges on all inputs (removed rounded-xl)
+  // - Bold borders (border-2 border-gray-300 dark:border-gray-600)
+  // - Dark mode support throughout
+  // - Neo-brutalist dropdown with offset shadow
+  // - Updated typography (font-bold labels)
+  // ==========================================================================
   const renderStep1 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header */}
-      <div className="text-center mb-4">
-        <p className="text-slate-600 text-xs font-medium mb-1.5">
+      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5">
+          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+            <Sparkles size={10} fill="currentColor" className="opacity-90" />
+          </div>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
+        </div>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Getting Started</span>
+      </div>
+
+      {/* Progress Bar - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="flex gap-1.5 mb-4">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div 
+            key={i} 
+            className={cn(
+              "h-1.5 flex-1 transition-all duration-500",
+              i <= 0 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
+            )} 
+          />
+        ))}
+      </div>
+
+      {/* Welcome Text - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="text-center mb-5">
+        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wide mb-1">
           Thanks for joining CrewCast Studio
         </p>
-        <h1 className="text-xl md:text-2xl text-slate-900 font-medium tracking-tight">
-          Let&apos;s <span className="text-[#1A1D21] font-serif italic">get to know</span> each other
+        <h1 className="text-xl md:text-2xl text-gray-900 dark:text-white font-black tracking-tight">
+          Let&apos;s get to know each other
         </h1>
       </div>
 
-      <div className="space-y-3">
-        {/* Name Input */}
-        <div className="space-y-1">
-          <label className="text-slate-900 font-medium ml-1 text-sm">Name</label>
+      <div className="space-y-4">
+        {/* Name Input - NEO-BRUTALIST (January 9th, 2026) */}
+        <div className="space-y-1.5">
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">Name</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all text-sm"
+            className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all text-sm placeholder:text-gray-400"
             placeholder="Enter your full name"
           />
         </div>
 
-        {/* Role Dropdown - Searchable */}
-        <div className="space-y-1 relative" ref={roleDropdownRef}>
-          <label className="text-slate-900 font-medium ml-1 text-sm">What&apos;s your role</label>
+        {/* Role Dropdown - NEO-BRUTALIST (January 9th, 2026) */}
+        <div className="space-y-1.5 relative" ref={roleDropdownRef}>
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">What&apos;s your role</label>
           <button
             type="button"
             onClick={() => {
@@ -889,27 +957,28 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => roleSearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all text-sm",
-              !role ? "text-slate-400" : "text-slate-800"
+              "w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
+              !role ? "text-gray-400" : "text-gray-900 dark:text-white"
             )}
           >
             {role || "Select your role"}
-            <ChevronDown className={cn("text-slate-400 transition-transform", isRoleDropdownOpen && "rotate-180")} size={16} />
+            <ChevronDown className={cn("text-gray-400 transition-transform", isRoleDropdownOpen && "rotate-180")} size={16} />
           </button>
 
+          {/* Role Dropdown Menu - NEO-BRUTALIST (January 9th, 2026) */}
           {isRoleDropdownOpen && (
-            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
               {/* Search Input */}
-              <div className="p-2 border-b border-slate-100">
+              <div className="p-2 border-b-2 border-gray-200 dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     ref={roleSearchRef}
                     type="text"
                     value={roleSearch}
                     onChange={(e) => setRoleSearch(e.target.value)}
                     placeholder="Search roles..."
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -924,28 +993,26 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsRoleDropdownOpen(false);
                       setRoleSearch('');
                     }}
-                    className="w-full text-left px-3.5 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-3.5 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     {r}
                     {role === r && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
                 {roles.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase())).length === 0 && (
-                  <p className="px-3.5 py-2 text-sm text-slate-400">No results found</p>
+                  <p className="px-3.5 py-2 text-sm text-gray-400">No results found</p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Brand Input with Domain Validation (January 3rd, 2026) */}
-        {/* 
-          Domain validation provides two levels of feedback:
-          1. Instant format validation (regex) - shows red/green border
-          2. Server reachability validation (on Continue) - shows loading/error
-        */}
-        <div className="space-y-1">
-          <label className="text-slate-900 font-medium ml-1 text-sm">Which brand do you want to find affiliates for?</label>
+        {/* Brand Input - NEO-BRUTALIST (January 9th, 2026)
+            Domain validation provides two levels of feedback:
+            1. Instant format validation (regex) - shows red/green border
+            2. Server reachability validation (on Continue) - shows loading/error */}
+        <div className="space-y-1.5">
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">Which brand do you want to find affiliates for?</label>
           <div className="relative">
             <input
               type="text"
@@ -953,17 +1020,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               onChange={(e) => handleBrandChange(e.target.value)}
               disabled={isBrandValidating}
               className={cn(
-                "w-full px-3.5 py-2.5 bg-white border rounded-xl text-slate-800 focus:outline-none transition-all text-sm pr-10",
-                // Dynamic border color based on validation state
+                "w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 text-gray-900 dark:text-white focus:outline-none transition-all text-sm pr-10",
+                // Dynamic border color based on validation state (January 9th, 2026)
                 brandError 
-                  ? "border-red-400 focus:border-red-400 focus:ring-1 focus:ring-red-400/20"
+                  ? "border-red-500 focus:border-red-500"
                   : brandFormatValid === false
-                    ? "border-amber-400 focus:border-amber-400 focus:ring-1 focus:ring-amber-400/20"
+                    ? "border-amber-500 focus:border-amber-500"
                     : brandValidated
-                      ? "border-green-400 focus:border-green-400 focus:ring-1 focus:ring-green-400/20"
-                      : brandFormatValid === true
-                        ? "border-slate-200 focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20"
-                        : "border-slate-200 focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20",
+                      ? "border-green-500 focus:border-green-500"
+                      : "border-gray-300 dark:border-gray-600 focus:border-[#ffbf23]",
                 isBrandValidating && "opacity-70 cursor-not-allowed"
               )}
               placeholder="e.g. guffles.com"
@@ -971,7 +1036,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             {/* Validation status indicator */}
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {isBrandValidating ? (
-                <Loader2 size={16} className="animate-spin text-slate-400" />
+                <Loader2 size={16} className="animate-spin text-gray-400" />
               ) : brandValidated ? (
                 <Check size={16} className="text-green-500" />
               ) : brandFormatValid === false && brand.trim() ? (
@@ -982,7 +1047,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           
           {/* Error message */}
           {brandError && (
-            <p className="text-red-500 text-xs font-medium px-1 pt-0.5 flex items-center gap-1">
+            <p className="text-red-500 text-xs font-bold px-1 pt-0.5 flex items-center gap-1">
               <X size={12} />
               {brandError}
             </p>
@@ -990,13 +1055,13 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           
           {/* Format hint (shown only when format is invalid) */}
           {brandFormatValid === false && brand.trim() && !brandError && (
-            <p className="text-amber-600 text-xs px-1 pt-0.5">
+            <p className="text-amber-500 text-xs font-medium px-1 pt-0.5">
               Enter a valid domain format (e.g., example.com)
             </p>
           )}
           
           {/* Helper text */}
-          <p className="text-slate-500 text-xs leading-relaxed px-1 pt-0.5">
+          <p className="text-gray-500 dark:text-gray-400 text-xs leading-relaxed px-1 pt-0.5">
             For agencies, this should be your client&apos;s website, not your own.
           </p>
         </div>
@@ -1004,46 +1069,57 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     </div>
   );
 
+  // ==========================================================================
+  // STEP 2: COUNTRY/LANGUAGE - NEO-BRUTALIST (Updated January 9th, 2026)
+  // 
+  // Design changes applied:
+  // - Sharp edges on all dropdowns (removed rounded-full, rounded-xl, rounded-lg)
+  // - Bold borders (border-2 border-gray-300 dark:border-gray-600)
+  // - Neo-brutalist dropdown menus with offset shadow
+  // - Sharp progress bar segments
+  // - Dark mode support throughout
+  // - Updated icon containers to sharp edges
+  // ==========================================================================
   const renderStep2 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - Compact */}
+      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#ffbf23] shadow-md shadow-[#1A1D21]/10">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
-            </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast<span className="text-[#1A1D21]">Studio</span></span>
+          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+            <Sparkles size={10} fill="currentColor" className="opacity-90" />
+          </div>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-slate-400 text-xs">Step 1 of 5</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Step 1 of 5</span>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-           <div 
+          <div 
             key={i} 
             className={cn(
-              "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 1 ? "bg-[#ffbf23]" : "bg-slate-100"
+              "h-1.5 flex-1 transition-all duration-500",
+              i <= 1 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
             )} 
-           />
+          />
         ))}
       </div>
 
-      {/* Question Block - Compact */}
-      <div className="space-y-3">
+      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="space-y-4">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 rounded-full bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
-             <Globe size={12} />
-      </div>
-          <p className="text-slate-900 font-medium text-sm">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+            <Globe size={12} />
+          </div>
+          <p className="text-gray-900 dark:text-white font-bold text-sm">
             Target market
           </p>
         </div>
 
-        {/* Country Dropdown - Searchable */}
-        <div className="space-y-1 relative" ref={countryDropdownRef}>
-          <label className="text-slate-700 text-xs font-medium ml-1">Country</label>
+        {/* Country Dropdown - NEO-BRUTALIST (January 9th, 2026) */}
+        <div className="space-y-1.5 relative" ref={countryDropdownRef}>
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">Country</label>
           <button
             type="button"
             onClick={() => {
@@ -1052,8 +1128,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => countrySearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all text-sm",
-              !targetCountry ? "text-slate-400" : "text-slate-900"
+              "w-full px-4 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
+              !targetCountry ? "text-gray-400" : "text-gray-900 dark:text-white"
             )}
           >
             {targetCountry ? (
@@ -1061,30 +1137,32 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 <img 
                   src={getFlagUrl(countries.find(c => c.name === targetCountry)?.code || '')} 
                   alt="" 
-                  className="w-5 h-auto rounded-sm"
+                  className="w-5 h-auto"
                 />
                 <span>{targetCountry}</span>
               </span>
             ) : "Select your target country..."}
-            <ChevronDown className={cn("text-slate-400 transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
+            <ChevronDown className={cn("text-gray-400 transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
           </button>
+          
+          {/* Country Dropdown Menu - NEO-BRUTALIST (January 9th, 2026) */}
           {isCountryDropdownOpen && (
-            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
               {/* Search Input */}
-              <div className="p-2 border-b border-slate-100">
+              <div className="p-2 border-b-2 border-gray-200 dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     ref={countrySearchRef}
                     type="text"
                     value={countrySearch}
                     onChange={(e) => setCountrySearch(e.target.value)}
                     placeholder="Search countries..."
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
-              {/* Options - Now showing flag images from flagcdn.com (January 3rd, 2026) */}
+              {/* Options - Flag images from flagcdn.com */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
                 {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).map((c) => (
                   <button
@@ -1095,26 +1173,26 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsCountryDropdownOpen(false);
                       setCountrySearch('');
                     }}
-                    className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     <span className="flex items-center gap-2">
-                      <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto rounded-sm" />
+                      <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto" />
                       <span>{c.name}</span>
                     </span>
                     {targetCountry === c.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
                 {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
-                  <p className="px-4 py-2 text-sm text-slate-400">No results found</p>
+                  <p className="px-4 py-2 text-sm text-gray-400">No results found</p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Language Dropdown - Searchable */}
-        <div className="space-y-1 relative" ref={langDropdownRef}>
-          <label className="text-slate-700 text-xs font-semibold ml-1">Target Language</label>
+        {/* Language Dropdown - NEO-BRUTALIST (January 9th, 2026) */}
+        <div className="space-y-1.5 relative" ref={langDropdownRef}>
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">Target Language</label>
           <button
             type="button"
             onClick={() => {
@@ -1123,23 +1201,25 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => langSearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-4 py-2.5 bg-white border border-slate-200 rounded-full text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all text-sm",
-              !targetLanguage ? "text-slate-400" : "text-slate-900"
+              "w-full px-4 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
+              !targetLanguage ? "text-gray-400" : "text-gray-900 dark:text-white"
             )}
           >
             {targetLanguage ? (
               <span className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center text-sm font-medium text-slate-700">
+                <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
                   {languages.find(l => l.name === targetLanguage)?.symbol}
                 </span>
                 <span>{targetLanguage}</span>
               </span>
             ) : "Select your target language..."}
-            <ChevronDown className={cn("text-slate-400 transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
+            <ChevronDown className={cn("text-gray-400 transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
           </button>
+          
+          {/* Language Dropdown Menu - NEO-BRUTALIST (January 9th, 2026) */}
           {isLangDropdownOpen && (
-            <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
-              {/* Options first (since dropdown opens upward) - Native script symbols (January 3rd, 2026) */}
+            <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
+              {/* Options first (dropdown opens upward) - Native script symbols */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
                 {languages.filter(l => l.name.toLowerCase().includes(langSearch.toLowerCase())).map((l) => (
                   <button
@@ -1150,10 +1230,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsLangDropdownOpen(false);
                       setLangSearch('');
                     }}
-                    className="w-full text-left px-4 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     <span className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center text-sm font-medium text-slate-600 transition-colors">
+                      <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 group-hover:bg-[#ffbf23]/30 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400 transition-colors border border-gray-200 dark:border-gray-700">
                         {l.symbol}
                       </span>
                       <span>{l.name}</span>
@@ -1162,20 +1242,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   </button>
                 ))}
                 {languages.filter(l => l.name.toLowerCase().includes(langSearch.toLowerCase())).length === 0 && (
-                  <p className="px-4 py-2 text-sm text-slate-400">No results found</p>
+                  <p className="px-4 py-2 text-sm text-gray-400">No results found</p>
                 )}
               </div>
-              {/* Search Input at bottom (since dropdown opens upward) */}
-              <div className="p-2 border-t border-slate-100">
+              {/* Search Input at bottom (dropdown opens upward) */}
+              <div className="p-2 border-t-2 border-gray-200 dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     ref={langSearchRef}
                     type="text"
                     value={langSearch}
                     onChange={(e) => setLangSearch(e.target.value)}
                     placeholder="Search languages..."
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -1186,44 +1266,55 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     </div>
   );
 
+  // ==========================================================================
+  // STEP 3: COMPETITORS - NEO-BRUTALIST (Updated January 9th, 2026)
+  // 
+  // Design changes applied:
+  // - Sharp edges on input and add button (removed rounded-full)
+  // - Sharp edges on suggestion cards and selected cards (removed rounded-lg)
+  // - Bold borders (border-2 border-gray-300 dark:border-gray-600)
+  // - Dark mode support throughout
+  // - Sharp progress bar segments
+  // - Updated empty state to neo-brutalist style
+  // ==========================================================================
   const renderStep3 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - Compact */}
+      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#ffbf23] shadow-md shadow-[#1A1D21]/10">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
-            </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast<span className="text-[#1A1D21]">Studio</span></span>
+          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+            <Sparkles size={10} fill="currentColor" className="opacity-90" />
+          </div>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-slate-400 text-xs">Step 2 of 5</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Step 2 of 5</span>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-           <div 
+          <div 
             key={i} 
             className={cn(
-              "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 2 ? "bg-[#ffbf23]" : "bg-slate-100"
+              "h-1.5 flex-1 transition-all duration-500",
+              i <= 2 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
             )} 
-           />
+          />
         ))}
       </div>
 
-      {/* Question Block - More Compact */}
-      <div className="space-y-3">
+      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="space-y-4">
         <div className="flex gap-2 items-center">
-           <div className="w-6 h-6 rounded-full bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
-             <Sparkles size={12} />
-      </div>
-          <p className="text-slate-900 font-medium text-sm">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+            <Sparkles size={12} />
+          </div>
+          <p className="text-gray-900 dark:text-white font-bold text-sm">
             Add your top 5 competitors
           </p>
         </div>
 
-        {/* Competitor Input */}
+        {/* Competitor Input - NEO-BRUTALIST (January 9th, 2026) */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
             <input 
@@ -1232,46 +1323,44 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               onChange={(e) => setCompetitorInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomCompetitor())}
               placeholder="e.g. competitor.com"
-              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all placeholder:text-slate-400"
+              className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
             />
-             <button 
+            <button 
               type="button"
               onClick={addCustomCompetitor}
               disabled={!competitorInput.trim() || competitors.length >= 5}
-              className="w-9 h-9 rounded-full bg-[#ffbf23] text-[#1A1D21] hover:bg-[#c5d913] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] border-2 border-black dark:border-gray-600 hover:bg-yellow-400 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
             >
               <Plus size={16} />
             </button>
           </div>
           
-          <p className="text-[11px] text-slate-400 ml-1">
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-1 font-medium">
             {competitors.length}/5 added
           </p>
         </div>
 
         {/* =================================================================
           AI SUGGESTIONS DISPLAY (January 3rd, 2026)
+          Updated to NEO-BRUTALIST (January 9th, 2026)
           
           Shows AI-generated competitor suggestions if available.
           User can click to add/remove suggestions.
           Suggestions come from /api/suggestions/generate endpoint.
           ================================================================= */}
         
-        {/* AI Suggested Competitors (January 3rd, 2026)
-            Updated label and added favicon display using Google's Favicon API.
-            Favicon = the small icon shown in browser tabs for websites.
-        */}
+        {/* AI Suggested Competitors - NEO-BRUTALIST (January 9th, 2026) */}
         {suggestedCompetitors.length > 0 && (
           <div className="space-y-2">
-            <p className="text-slate-600 text-xs font-medium flex items-center gap-1">
+            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
               <Sparkles size={10} className="text-[#ffbf23]" />
-              Here&apos;s some we found for you:
+              Suggestions for you:
             </p>
             
             <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
               {suggestedCompetitors
-                .filter(comp => !competitors.includes(comp.domain)) // Hide already selected
-                .slice(0, 12) // Max 12 suggestions
+                .filter(comp => !competitors.includes(comp.domain))
+                .slice(0, 12)
                 .map(comp => (
                   <button
                     key={comp.domain}
@@ -1279,50 +1368,45 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     onClick={() => toggleCompetitor(comp.domain)}
                     disabled={competitors.length >= 5}
                     className={cn(
-                      "group relative flex items-center gap-2 p-2 rounded-lg border text-left transition-all",
+                      "group relative flex items-center gap-2 p-2 border-2 text-left transition-all",
                       competitors.length >= 5
-                        ? "border-slate-100 opacity-50 cursor-not-allowed"
-                        : "border-slate-200 hover:border-[#ffbf23] hover:bg-[#ffbf23]/5"
+                        ? "border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed"
+                        : "border-gray-200 dark:border-gray-700 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10"
                     )}
                   >
-                    {/* Favicon from Google's Favicon API (January 3rd, 2026)
-                        URL format: https://www.google.com/s2/favicons?domain=DOMAIN&sz=SIZE
-                        sz=32 gives us a 32x32 pixel icon, perfect for this UI */}
-                    <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
+                    {/* Favicon - NEO-BRUTALIST (January 9th, 2026) */}
+                    <div className="w-6 h-6 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-gray-200 dark:border-gray-700">
                       <img 
                         src={`https://www.google.com/s2/favicons?domain=${comp.domain}&sz=32`}
                         alt={comp.name}
                         className="w-4 h-4 object-contain"
                         onError={(e) => {
-                          // Fallback to first letter if favicon fails to load
                           e.currentTarget.style.display = 'none';
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <span className="hidden text-[10px] font-bold text-slate-400">
+                      <span className="hidden text-[10px] font-bold text-gray-400">
                         {comp.name[0].toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-medium text-slate-700 truncate">{comp.name}</p>
-                      <p className="text-[9px] text-slate-400 truncate">{comp.domain}</p>
+                      <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate">{comp.name}</p>
+                      <p className="text-[9px] text-gray-400 truncate">{comp.domain}</p>
                     </div>
-                    <Plus size={12} className="text-slate-300 group-hover:text-[#ffbf23] transition-colors shrink-0" />
+                    <Plus size={12} className="text-gray-300 group-hover:text-[#ffbf23] transition-colors shrink-0" />
                   </button>
                 ))}
             </div>
           </div>
         )}
 
-        {/* Selected Competitors Display (Updated January 3rd, 2026 - Added favicon) */}
+        {/* Selected Competitors - NEO-BRUTALIST (January 9th, 2026) */}
         {competitors.length > 0 && (
           <div className="space-y-2">
-            <p className="text-slate-600 text-xs font-medium">Your competitors:</p>
+            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">Your competitors:</p>
             
             <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
-              {/* Render Selected Competitors */}
               {competitors.map(comp => {
-                // Find the suggestion to get the name, or use domain as fallback
                 const suggestion = suggestedCompetitors.find(s => s.domain === comp);
                 const displayName = suggestion?.name || comp;
                 
@@ -1331,10 +1415,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     key={comp}
                     type="button"
                     onClick={() => toggleCompetitor(comp)}
-                    className="group relative flex items-center gap-2 p-2 rounded-lg bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-left transition-all"
+                    className="group relative flex items-center gap-2 p-2 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-left transition-all hover:bg-[#ffbf23]/20"
                   >
-                    {/* Favicon for selected competitors (January 3rd, 2026) */}
-                    <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0 overflow-hidden border border-[#ffbf23]/30">
+                    {/* Favicon - NEO-BRUTALIST (January 9th, 2026) */}
+                    <div className="w-6 h-6 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-[#ffbf23]/30">
                       <img 
                         src={`https://www.google.com/s2/favicons?domain=${comp}&sz=32`}
                         alt={displayName}
@@ -1344,15 +1428,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <span className="hidden text-[10px] font-bold text-slate-400">
+                      <span className="hidden text-[10px] font-bold text-gray-400">
                         {displayName[0].toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-medium text-slate-900 truncate">{displayName}</p>
-                      <p className="text-[9px] text-slate-500 truncate">{comp}</p>
+                      <p className="text-[10px] font-bold text-gray-900 dark:text-white truncate">{displayName}</p>
+                      <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate">{comp}</p>
                     </div>
-                    <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <X size={10} />
                     </div>
                   </button>
@@ -1362,10 +1446,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
         )}
         
-        {/* Empty state hint - only show if no suggestions and no competitors */}
+        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) */}
         {competitors.length === 0 && suggestedCompetitors.length === 0 && (
-          <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-center">
-            <p className="text-xs text-slate-500">
+          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
               Enter competitor domains above (e.g., competitor.com)
             </p>
           </div>
@@ -1374,44 +1458,55 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     </div>
   );
 
+  // ==========================================================================
+  // STEP 4: TOPICS - NEO-BRUTALIST (Updated January 9th, 2026)
+  // 
+  // Design changes applied:
+  // - Sharp edges on input and add button (removed rounded-full)
+  // - Sharp edges on topic pills (removed rounded-full, rounded-md)
+  // - Bold borders (border-2 border-gray-300 dark:border-gray-600)
+  // - Dark mode support throughout
+  // - Sharp progress bar segments
+  // - Updated empty state to neo-brutalist style
+  // ==========================================================================
   const renderStep4 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - Compact */}
+      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#ffbf23] shadow-md shadow-[#1A1D21]/10">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
-            </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast<span className="text-[#1A1D21]">Studio</span></span>
+          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+            <Sparkles size={10} fill="currentColor" className="opacity-90" />
+          </div>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-slate-400 text-xs">Step 3 of 5</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Step 3 of 5</span>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-           <div 
+          <div 
             key={i} 
             className={cn(
-              "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 3 ? "bg-[#ffbf23]" : "bg-slate-100"
+              "h-1.5 flex-1 transition-all duration-500",
+              i <= 3 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
             )} 
-           />
+          />
         ))}
       </div>
 
-      {/* Question Block - Compact */}
-      <div className="space-y-3">
+      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="space-y-4">
         <div className="flex gap-2 items-center">
-           <div className="w-6 h-6 rounded-full bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
-             <MessageSquare size={12} />
-      </div>
-          <p className="text-slate-900 font-medium text-sm">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+            <MessageSquare size={12} />
+          </div>
+          <p className="text-gray-900 dark:text-white font-bold text-sm">
             What topics do you cover?
           </p>
         </div>
 
-        {/* Topic Input */}
+        {/* Topic Input - NEO-BRUTALIST (January 9th, 2026) */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
             <input 
@@ -1420,43 +1515,44 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTopic())}
               placeholder="e.g. best CRMs, skincare..."
-              className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm text-slate-900 focus:outline-none focus:border-[#ffbf23] focus:ring-1 focus:ring-[#ffbf23]/20 transition-all placeholder:text-slate-400"
+              className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
             />
-             <button 
+            <button 
               type="button"
               onClick={addCustomTopic}
               disabled={!topicInput.trim() || topics.length >= 10}
-              className="w-9 h-9 rounded-full bg-[#ffbf23] text-[#1A1D21] hover:bg-[#c5d913] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] border-2 border-black dark:border-gray-600 hover:bg-yellow-400 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
             >
               <Plus size={16} />
             </button>
           </div>
           
-          <p className="text-[11px] text-slate-400 ml-1">
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-1 font-medium">
             {topics.length}/10 added
           </p>
         </div>
 
         {/* =================================================================
           AI SUGGESTIONS DISPLAY (January 3rd, 2026)
+          Updated to NEO-BRUTALIST (January 9th, 2026)
           
           Shows AI-generated topic suggestions if available.
           User can click to add/remove suggestions.
           Suggestions come from /api/suggestions/generate endpoint.
           ================================================================= */}
         
-        {/* AI Suggested Topics (Updated January 3rd, 2026 - Changed label) */}
+        {/* AI Suggested Topics - NEO-BRUTALIST (January 9th, 2026) */}
         {suggestedTopics.length > 0 && (
           <div className="space-y-2">
-            <p className="text-slate-600 text-xs font-medium flex items-center gap-1">
+            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
               <Sparkles size={10} className="text-[#ffbf23]" />
-              Here&apos;s some we found for you:
+              Suggestions for you:
             </p>
             
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
               {suggestedTopics
-                .filter(t => !topics.includes(t.keyword)) // Hide already selected
-                .slice(0, 10) // Max 10 suggestions
+                .filter(t => !topics.includes(t.keyword))
+                .slice(0, 10)
                 .map(t => (
                   <button
                     key={t.keyword}
@@ -1464,36 +1560,35 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     onClick={() => toggleTopic(t.keyword)}
                     disabled={topics.length >= 10}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] transition-all",
+                      "flex items-center gap-1 px-2.5 py-1 border-2 text-[11px] transition-all",
                       topics.length >= 10
-                        ? "border-slate-100 text-slate-300 cursor-not-allowed"
-                        : "border-slate-200 text-slate-600 hover:border-[#ffbf23] hover:bg-[#ffbf23]/5 hover:text-slate-900"
+                        ? "border-gray-200 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                        : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10 hover:text-gray-900 dark:hover:text-white"
                     )}
                   >
                     {t.keyword}
-                    <Plus size={10} className="text-slate-300" />
+                    <Plus size={10} className="text-gray-300" />
                   </button>
                 ))}
             </div>
           </div>
         )}
 
-        {/* Selected Topics Display */}
+        {/* Selected Topics - NEO-BRUTALIST (January 9th, 2026) */}
         {topics.length > 0 && (
           <div className="space-y-2">
-            <p className="text-slate-600 text-xs font-medium">Your topics:</p>
+            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">Your topics:</p>
             
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
-              {/* Render Selected Topics */}
               {topics.map(topic => (
                 <button
                   key={topic}
                   type="button"
                   onClick={() => toggleTopic(topic)}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-[11px] font-medium text-[#1A1D21] transition-all text-left"
+                  className="group relative flex items-center gap-1.5 px-3 py-1.5 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-[11px] font-bold text-[#1A1D21] dark:text-[#ffbf23] transition-all text-left hover:bg-[#ffbf23]/20"
                 >
                   {topic}
-                  <div className="w-3.5 h-3.5 rounded-full bg-[#ffbf23]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
+                  <div className="w-3.5 h-3.5 bg-[#ffbf23]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
                     <X size={8} />
                   </div>
                 </button>
@@ -1502,11 +1597,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
         )}
         
-        {/* Empty state hint - only show if no suggestions and no topics */}
+        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) */}
         {topics.length === 0 && suggestedTopics.length === 0 && (
-          <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-lg text-center">
-            <p className="text-xs text-slate-500">
-              Enter topics you cover above (e.g., "best CRMs", "skincare routines")
+          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+              Enter topics you cover above (e.g., &quot;best CRMs&quot;, &quot;skincare routines&quot;)
             </p>
           </div>
         )}
@@ -1514,44 +1609,54 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     </div>
   );
 
+  // ==========================================================================
+  // STEP 5: AFFILIATE TYPES - NEO-BRUTALIST (Updated January 9th, 2026)
+  // 
+  // Design changes applied:
+  // - Sharp edges on all type buttons (removed rounded-lg, rounded)
+  // - Bold borders (border-2 border-gray-300 dark:border-gray-600)
+  // - Dark mode support throughout
+  // - Sharp progress bar segments
+  // - Sharp checkbox indicators
+  // ==========================================================================
   const renderStep5 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - Compact */}
+      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#ffbf23] shadow-md shadow-[#1A1D21]/10">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
-            </div>
-            <span className="font-bold text-sm tracking-tight text-slate-900">CrewCast<span className="text-[#1A1D21]">Studio</span></span>
+          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+            <Sparkles size={10} fill="currentColor" className="opacity-90" />
+          </div>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-slate-400 text-xs">Step 4 of 5</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Step 4 of 5</span>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-           <div 
+          <div 
             key={i} 
             className={cn(
-              "h-1 rounded-full flex-1 transition-all duration-500",
-              i <= 4 ? "bg-[#ffbf23]" : "bg-slate-100"
+              "h-1.5 flex-1 transition-all duration-500",
+              i <= 4 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
             )} 
-           />
+          />
         ))}
       </div>
 
-      {/* Question Block - Compact */}
-      <div className="space-y-3">
+      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="space-y-4">
         <div className="flex gap-2 items-center">
-           <div className="w-6 h-6 rounded-full bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21]">
-             <MousePointerClick size={12} />
-      </div>
-          <p className="text-slate-900 font-medium text-sm">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+            <MousePointerClick size={12} />
+          </div>
+          <p className="text-gray-900 dark:text-white font-bold text-sm">
             What types of affiliates do you want?
           </p>
         </div>
 
-        {/* Affiliate Types Grid */}
+        {/* Affiliate Types Grid - NEO-BRUTALIST (January 9th, 2026) */}
         <div className="grid grid-cols-2 gap-1.5">
           {AFFILIATE_TYPES.map((type) => {
             const isSelected = affiliateTypes.includes(type);
@@ -1561,17 +1666,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 type="button"
                 onClick={() => toggleAffiliateType(type)}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all text-left group",
+                  "flex items-center gap-2.5 px-3 py-2.5 border-2 text-sm font-bold transition-all text-left group",
                   isSelected 
-                    ? "bg-[#ffbf23]/10 border-[#ffbf23] text-slate-900" 
-                    : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                    ? "bg-[#ffbf23]/10 border-[#ffbf23] text-gray-900 dark:text-white" 
+                    : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white"
                 )}
               >
+                {/* Checkbox indicator - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
                 <div className={cn(
-                  "w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors",
+                  "w-3.5 h-3.5 border-2 flex items-center justify-center transition-colors",
                   isSelected 
                     ? "bg-[#ffbf23] border-[#ffbf23] text-[#1A1D21]" 
-                    : "border-slate-300 group-hover:border-[#ffbf23]"
+                    : "border-gray-300 dark:border-gray-600 group-hover:border-[#ffbf23]"
                 )}>
                   {isSelected && <Check size={8} strokeWidth={3} />}
                 </div>

@@ -7,7 +7,16 @@ import { StripeCardInput, useStripeCardSetup } from './StripeCardInput';
 import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
 
 // =============================================================================
-// STEP 7 CARD FORM COMPONENT
+// STEP 7 CARD FORM COMPONENT - NEO-BRUTALIST
+//
+// Last Updated: January 9th, 2026
+//
+// NEO-BRUTALIST DESIGN UPDATE (January 9th, 2026):
+// - Sharp edges on all containers (removed rounded-xl, rounded-lg)
+// - Sharp edges on discount input and Apply button
+// - Sharp submit button with offset shadow
+// - Bold typography (font-black uppercase)
+// - Dark mode support throughout
 //
 // This component is extracted from OnboardingScreen to fix a React re-rendering
 // issue. When defined inside the parent component, the function was recreated 
@@ -76,44 +85,44 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
 
   return (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header */}
+      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-1.5 mb-3">
-          <div className="w-5 h-5 bg-[#1A1D21] rounded-md flex items-center justify-center text-[#D4E815] shadow-md shadow-[#1A1D21]/10">
+          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
             <Lock size={10} />
           </div>
-          <span className="font-bold text-sm tracking-tight text-slate-900">Secure Checkout</span>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white uppercase">Secure Checkout</span>
         </div>
         
-        <h1 className="text-lg md:text-xl text-slate-900 font-bold tracking-tight mb-1">
+        <h1 className="text-lg md:text-xl text-gray-900 dark:text-white font-black tracking-tight mb-1">
           Start your 3-day free trial
         </h1>
-        <p className="text-slate-500 text-sm">
+        <p className="text-gray-500 dark:text-gray-400 text-sm">
           Enter your card details • You won&apos;t be charged today
         </p>
       </div>
 
-      {/* Selected Plan Summary */}
-      <div className="mb-6 p-4 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-xl">
+      {/* Selected Plan Summary - NEO-BRUTALIST (January 9th, 2026) */}
+      <div className="mb-6 p-4 bg-[#ffbf23]/10 border-2 border-[#ffbf23]">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500 font-medium">Selected Plan</p>
-            <p className="text-base font-bold text-[#1A1D21]">{selectedPlanName}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide">Selected Plan</p>
+            <p className="text-base font-black text-gray-900 dark:text-white">{selectedPlanName}</p>
           </div>
           <div className="text-right">
-            <p className="text-lg font-bold text-[#1A1D21]">
+            <p className="text-lg font-black text-gray-900 dark:text-white">
               {CURRENCY_SYMBOL}{selectedPlanPrice}
-              <span className="text-sm font-normal text-slate-500">/mo</span>
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">/mo</span>
             </p>
             {billingInterval === 'annual' && (
-              <p className="text-[10px] text-slate-500">Billed annually</p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Billed annually</p>
             )}
           </div>
         </div>
-        <div className="mt-3 pt-3 border-t border-[#D4E815]/30 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-500"></div>
-          <span className="text-xs text-slate-600">
-            First charge: <span className="font-semibold">3 days from now</span>
+        <div className="mt-3 pt-3 border-t-2 border-[#ffbf23]/30 flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500"></div>
+          <span className="text-xs text-gray-600 dark:text-gray-400">
+            First charge: <span className="font-bold">3 days from now</span>
           </span>
         </div>
       </div>
@@ -128,17 +137,17 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
         showSecurityBadge={true}
       />
 
-      {/* Error Display */}
+      {/* Error Display - NEO-BRUTALIST (January 9th, 2026) */}
       {displayError && (
-        <div className="mt-4 flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-600">
+        <div className="mt-4 flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/30 border-2 border-red-500 text-xs text-red-600 dark:text-red-400">
           <AlertCircle size={14} className="shrink-0" />
-          <span>{displayError}</span>
+          <span className="font-medium">{displayError}</span>
         </div>
       )}
 
-      {/* Discount Code Section */}
+      {/* Discount Code Section - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="mt-4 space-y-1.5">
-        <label className="text-xs font-semibold text-slate-700">Discount Code (Optional)</label>
+        <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Discount Code (Optional)</label>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -151,12 +160,12 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
               placeholder="SAVE20"
               disabled={discountApplied || isLoading}
               className={cn(
-                "w-full px-3 py-2.5 bg-white border rounded-lg text-sm text-slate-900 focus:outline-none transition-all placeholder:text-slate-400 uppercase font-mono",
+                "w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 text-sm text-gray-900 dark:text-white focus:outline-none transition-all placeholder:text-gray-400 uppercase font-mono",
                 discountApplied 
-                  ? "border-green-300 bg-green-50 text-green-700"
+                  ? "border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                   : discountError
-                  ? "border-red-300 focus:border-red-400 focus:ring-1 focus:ring-red-200"
-                  : "border-slate-200 focus:border-[#D4E815] focus:ring-1 focus:ring-[#D4E815]/20"
+                  ? "border-red-500 focus:border-red-500"
+                  : "border-gray-300 dark:border-gray-600 focus:border-[#ffbf23]"
               )}
             />
             {discountApplied && (
@@ -165,17 +174,18 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
               </div>
             )}
           </div>
+          {/* Apply Button - NEO-BRUTALIST (January 9th, 2026) */}
           <button
             type="button"
             onClick={onApplyDiscount}
             disabled={!discountCode.trim() || discountApplied || isApplyingDiscount || isLoading}
             className={cn(
-              "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap",
+              "px-4 py-2.5 border-2 text-sm font-black transition-all whitespace-nowrap uppercase",
               discountApplied
-                ? "bg-green-100 text-green-700 border border-green-300 cursor-default"
+                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-500 cursor-default"
                 : !discountCode.trim() || isApplyingDiscount
-                ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913] shadow-sm hover:shadow"
+                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
+                : "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
             )}
           >
             {isApplyingDiscount ? (
@@ -188,32 +198,33 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
           </button>
         </div>
         {discountError && (
-          <p className="text-[10px] text-red-500 flex items-center gap-1">
+          <p className="text-[10px] text-red-500 font-bold flex items-center gap-1">
             <X size={10} />
             {discountError}
           </p>
         )}
+        {/* Discount Applied Message - NEO-BRUTALIST (January 9th, 2026) */}
         {discountApplied && discountAmount > 0 && (
-          <div className="flex items-center gap-1.5 p-2 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-1.5 p-2 bg-green-50 dark:bg-green-900/30 border-2 border-green-500">
             <Sparkles size={12} className="text-green-600" />
-            <p className="text-[10px] text-green-700 font-semibold">
+            <p className="text-[10px] text-green-700 dark:text-green-400 font-bold">
               {discountAmount}% discount applied! You&apos;ll save {CURRENCY_SYMBOL}{((selectedPlanPrice || 0) * discountAmount / 100).toFixed(2)}/mo
             </p>
           </div>
         )}
       </div>
 
-      {/* Submit Button for Step 7 */}
+      {/* Submit Button - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="pt-5 mt-auto">
         <button
           type="button"
           onClick={() => onSubmit(confirmSetup)}
           disabled={!isCardReady || !cardholderName.trim() || isLoading || isProcessing}
           className={cn(
-            "w-full py-3 rounded-full font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2",
+            "w-full py-3 font-black text-sm transition-all duration-200 flex items-center justify-center gap-2 uppercase border-2",
             (!isCardReady || !cardholderName.trim() || isLoading || isProcessing)
-              ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-              : "bg-[#D4E815] text-[#1A1D21] hover:bg-[#c5d913]"
+              ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
+              : "bg-[#ffbf23] text-black border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]"
           )}
         >
           {(isLoading || isProcessing) ? (
