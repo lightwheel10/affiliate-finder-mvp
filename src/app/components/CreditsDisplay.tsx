@@ -27,6 +27,7 @@
 
 import { Search, Mail, Sparkles } from 'lucide-react';
 import { useCredits, formatCreditDisplay } from '../hooks/useCredits';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // =============================================================================
 // FALLBACK VALUES
@@ -78,11 +79,14 @@ interface CreditBadgeProps {
   shortLabel?: string;
   isPrimary?: boolean;
   variant?: 'default' | 'neo';
+  /** Optional suffix for neo variant (e.g., "Topic") - Added January 9th, 2026 for i18n */
+  neoSuffix?: string;
 }
 
-function CreditBadge({ icon, value, label, shortLabel, isPrimary = false, variant = 'default' }: CreditBadgeProps) {
+function CreditBadge({ icon, value, label, shortLabel, isPrimary = false, variant = 'default', neoSuffix }: CreditBadgeProps) {
   // ==========================================================================
   // NEW DESIGN - Neo-brutalist variant (January 6th, 2026)
+  // Updated for i18n (January 9th, 2026) - neoSuffix replaces hardcoded 'Topic'
   // Matches DashboardDemo.tsx EXACTLY:
   // <div className="px-3 py-1.5 border-2 border-brandBlack dark:border-gray-600 rounded-md bg-white dark:bg-black">
   //     Search <span className="text-gray-400">|</span> 10/10 Topic
@@ -91,7 +95,7 @@ function CreditBadge({ icon, value, label, shortLabel, isPrimary = false, varian
   if (variant === 'neo') {
     return (
       <div className="px-3 py-1.5 border-2 border-black dark:border-gray-600 rounded-md bg-white dark:bg-black text-xs font-bold">
-        {shortLabel || label.split(' ')[0]} <span className="text-gray-400">|</span> {value} <span className="hidden xl:inline text-gray-500 font-normal">{label.includes('Search') ? 'Topic' : ''}</span>
+        {shortLabel || label.split(' ')[0]} <span className="text-gray-400">|</span> {value} {neoSuffix && <span className="hidden xl:inline text-gray-500 font-normal">{neoSuffix}</span>}
       </div>
     );
   }
@@ -134,6 +138,8 @@ interface CreditsDisplayProps {
 }
 
 export function CreditsDisplay({ showTopicSearches = true, variant = 'default' }: CreditsDisplayProps) {
+  // Translation hook (January 9th, 2026)
+  const { t } = useLanguage();
   const { credits, isLoading, error, isEnabled, hasNoCredits } = useCredits();
 
   // Icon styles based on variant
@@ -147,6 +153,7 @@ export function CreditsDisplay({ showTopicSearches = true, variant = 'default' }
   // ==========================================================================
   // CASE 1: Feature flag is OFF
   // Show hardcoded fallback values (original behavior)
+  // Translated (January 9th, 2026)
   // ==========================================================================
   if (!isEnabled) {
     return (
@@ -155,24 +162,25 @@ export function CreditsDisplay({ showTopicSearches = true, variant = 'default' }
           <CreditBadge
             icon={<Search size={12} className={primaryIconClass} />}
             value={FALLBACK_CREDITS.topicSearches}
-            label="Topic Searches"
-            shortLabel="Search"
+            label={t.dashboard.credits.topicSearches}
+            shortLabel={t.dashboard.credits.topicSearchesShort}
             isPrimary
             variant={variant}
+            neoSuffix={t.dashboard.credits.topic}
           />
         )}
         <CreditBadge
           icon={<Mail size={12} className={iconClass} />}
           value={FALLBACK_CREDITS.email}
-          label="Email Credits"
-          shortLabel="Email"
+          label={t.dashboard.credits.emailCredits}
+          shortLabel={t.dashboard.credits.emailCreditsShort}
           variant={variant}
         />
         <CreditBadge
           icon={<Sparkles size={12} className={iconClass} />}
           value={FALLBACK_CREDITS.ai}
-          label="AI Credits"
-          shortLabel="AI"
+          label={t.dashboard.credits.aiCredits}
+          shortLabel={t.dashboard.credits.aiCreditsShort}
           variant={variant}
         />
       </>
@@ -197,6 +205,7 @@ export function CreditsDisplay({ showTopicSearches = true, variant = 'default' }
   // CASE 3: Error or no credits yet
   // Graceful degradation - show fallback values
   // This prevents broken UI if API fails
+  // Translated (January 9th, 2026)
   // ==========================================================================
   if (error || hasNoCredits || !credits) {
     return (
@@ -205,24 +214,25 @@ export function CreditsDisplay({ showTopicSearches = true, variant = 'default' }
           <CreditBadge
             icon={<Search size={12} className={primaryIconClass} />}
             value={FALLBACK_CREDITS.topicSearches}
-            label="Topic Searches"
-            shortLabel="Search"
+            label={t.dashboard.credits.topicSearches}
+            shortLabel={t.dashboard.credits.topicSearchesShort}
             isPrimary
             variant={variant}
+            neoSuffix={t.dashboard.credits.topic}
           />
         )}
         <CreditBadge
           icon={<Mail size={12} className={iconClass} />}
           value={FALLBACK_CREDITS.email}
-          label="Email Credits"
-          shortLabel="Email"
+          label={t.dashboard.credits.emailCredits}
+          shortLabel={t.dashboard.credits.emailCreditsShort}
           variant={variant}
         />
         <CreditBadge
           icon={<Sparkles size={12} className={iconClass} />}
           value={FALLBACK_CREDITS.ai}
-          label="AI Credits"
-          shortLabel="AI"
+          label={t.dashboard.credits.aiCredits}
+          shortLabel={t.dashboard.credits.aiCreditsShort}
           variant={variant}
         />
       </>
@@ -231,6 +241,7 @@ export function CreditsDisplay({ showTopicSearches = true, variant = 'default' }
 
   // ==========================================================================
   // CASE 4: Success - show real credits
+  // Translated (January 9th, 2026)
   // ==========================================================================
   const topicSearchDisplay = formatCreditDisplay(credits.topicSearches);
   const emailDisplay = formatCreditDisplay(credits.email);
@@ -244,24 +255,25 @@ export function CreditsDisplay({ showTopicSearches = true, variant = 'default' }
         <CreditBadge
           icon={<Search size={12} className={primaryIconClass} />}
           value={topicSearchDisplay}
-          label="Topic Searches"
-          shortLabel="Search"
+          label={t.dashboard.credits.topicSearches}
+          shortLabel={t.dashboard.credits.topicSearchesShort}
           isPrimary
           variant={variant}
+          neoSuffix={t.dashboard.credits.topic}
         />
       )}
       <CreditBadge
         icon={<Mail size={12} className={iconClass} />}
         value={emailDisplay}
-        label="Email Credits"
-        shortLabel="Email"
+        label={t.dashboard.credits.emailCredits}
+        shortLabel={t.dashboard.credits.emailCreditsShort}
         variant={variant}
       />
       <CreditBadge
         icon={<Sparkles size={12} className={iconClass} />}
         value={aiDisplay}
-        label="AI Credits"
-        shortLabel="AI"
+        label={t.dashboard.credits.aiCredits}
+        shortLabel={t.dashboard.credits.aiCreditsShort}
         variant={variant}
       />
     </>

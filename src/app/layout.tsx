@@ -5,6 +5,26 @@ import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
 
 // =============================================================================
+// INTERNATIONALIZATION (i18n) - January 9th, 2026
+// 
+// LanguageProvider enables multi-language support across the entire app.
+// Currently supports English (en) and German (de) with formal "Sie" form.
+// 
+// The provider:
+//   - Auto-detects browser language on first visit
+//   - Persists user preference to localStorage
+//   - Provides translations via useLanguage() hook
+// 
+// Usage in components:
+//   import { useLanguage } from '@/contexts/LanguageContext';
+//   const { t } = useLanguage();
+//   <h1>{t.landing.hero.title}</h1>
+// 
+// See LANGUAGE_MIGRATION.md for full documentation.
+// =============================================================================
+import { LanguageProvider } from "@/contexts/LanguageContext";
+
+// =============================================================================
 // FONT CONFIGURATION - Updated January 6th, 2026
 // 
 // Changed from Geist to Inter/Fira Code for neo-brutalist design
@@ -86,15 +106,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // Note: html lang attribute is dynamically updated by LanguageProvider
+    // based on user preference (detected from browser or saved in localStorage)
     <html lang="en">
       {/* Updated January 6th, 2026: Inter + Fira Code for neo-brutalist design */}
       <body className={`${inter.variable} ${firaCode.variable} font-sans antialiased`}>
-        <StackProvider app={stackClientApp}>
-          {/* Updated January 9th, 2026: Added theme prop for neo-brutalist styling */}
-          <StackTheme theme={stackAuthTheme}>
-            {children}
-          </StackTheme>
-        </StackProvider>
+        {/* =================================================================
+            LANGUAGE PROVIDER (January 9th, 2026)
+            
+            Wraps the entire app to provide i18n support.
+            Must be inside <body> for client-side rendering.
+            
+            The LanguageProvider:
+            - Detects browser language on first visit
+            - Saves user preference to localStorage
+            - Updates document.documentElement.lang for accessibility
+            - Provides translations via useLanguage() hook
+            ================================================================= */}
+        <LanguageProvider>
+          <StackProvider app={stackClientApp}>
+            {/* Updated January 9th, 2026: Added theme prop for neo-brutalist styling */}
+            <StackTheme theme={stackAuthTheme}>
+              {children}
+            </StackTheme>
+          </StackProvider>
         
         {/* =====================================================================
             GLOBAL TOAST CONTAINER (January 5th, 2026)
@@ -113,14 +148,15 @@ export default function RootLayout({
               toast.warning('Warning message');
               toast.info('Info message');
             ===================================================================== */}
-        <Toaster 
-          position="bottom-right"
-          richColors
-          duration={4000}
-          toastOptions={{
-            className: 'z-[100]',
-          }}
-        />
+          <Toaster 
+            position="bottom-right"
+            richColors
+            duration={4000}
+            toastOptions={{
+              className: 'z-[100]',
+            }}
+          />
+        </LanguageProvider>
       </body>
     </html>
   );

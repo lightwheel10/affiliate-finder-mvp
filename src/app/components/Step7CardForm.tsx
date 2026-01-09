@@ -5,6 +5,7 @@ import { Loader2, Check, X, Sparkles, Lock, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StripeCardInput, useStripeCardSetup } from './StripeCardInput';
 import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // =============================================================================
 // STEP 7 CARD FORM COMPONENT - NEO-BRUTALIST
@@ -78,6 +79,8 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
   onSubmit,
   isLoading,
 }) => {
+  // Translation hook (January 9th, 2026)
+  const { t } = useLanguage();
   const { confirmSetup, isProcessing, error: setupError } = useStripeCardSetup();
 
   // Combine errors
@@ -85,44 +88,44 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
 
   return (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-1.5 mb-3">
           <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
             <Lock size={10} />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white uppercase">Secure Checkout</span>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white uppercase">{t.onboarding.step7.secureCheckout}</span>
         </div>
         
         <h1 className="text-lg md:text-xl text-gray-900 dark:text-white font-black tracking-tight mb-1">
-          Start your 3-day free trial
+          {t.onboarding.step7.title}
         </h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm">
-          Enter your card details • You won&apos;t be charged today
+          {t.onboarding.step7.subtitle}
         </p>
       </div>
 
-      {/* Selected Plan Summary - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Selected Plan Summary - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
       <div className="mb-6 p-4 bg-[#ffbf23]/10 border-2 border-[#ffbf23]">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide">Selected Plan</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide">{t.onboarding.step7.selectedPlan}</p>
             <p className="text-base font-black text-gray-900 dark:text-white">{selectedPlanName}</p>
           </div>
           <div className="text-right">
             <p className="text-lg font-black text-gray-900 dark:text-white">
               {CURRENCY_SYMBOL}{selectedPlanPrice}
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">/mo</span>
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{t.onboarding.step7.perMonth}</span>
             </p>
             {billingInterval === 'annual' && (
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Billed annually</p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{t.onboarding.step7.billedAnnually}</p>
             )}
           </div>
         </div>
         <div className="mt-3 pt-3 border-t-2 border-[#ffbf23]/30 flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500"></div>
           <span className="text-xs text-gray-600 dark:text-gray-400">
-            First charge: <span className="font-bold">3 days from now</span>
+            {t.onboarding.step7.firstCharge}
           </span>
         </div>
       </div>
@@ -145,9 +148,9 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
         </div>
       )}
 
-      {/* Discount Code Section - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Discount Code Section - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
       <div className="mt-4 space-y-1.5">
-        <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Discount Code (Optional)</label>
+        <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.onboarding.step7.discountLabel}</label>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -157,7 +160,7 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
                 onDiscountCodeChange(e.target.value.toUpperCase());
                 onResetDiscount();
               }}
-              placeholder="SAVE20"
+              placeholder={t.onboarding.step7.discountPlaceholder}
               disabled={discountApplied || isLoading}
               className={cn(
                 "w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 text-sm text-gray-900 dark:text-white focus:outline-none transition-all placeholder:text-gray-400 uppercase font-mono",
@@ -191,9 +194,9 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
             {isApplyingDiscount ? (
               <Loader2 size={14} className="animate-spin" />
             ) : discountApplied ? (
-              'Applied'
+              t.onboarding.step7.applied
             ) : (
-              'Apply'
+              t.onboarding.step7.apply
             )}
           </button>
         </div>
@@ -203,12 +206,12 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
             {discountError}
           </p>
         )}
-        {/* Discount Applied Message - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Discount Applied Message - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         {discountApplied && discountAmount > 0 && (
           <div className="flex items-center gap-1.5 p-2 bg-green-50 dark:bg-green-900/30 border-2 border-green-500">
             <Sparkles size={12} className="text-green-600" />
             <p className="text-[10px] text-green-700 dark:text-green-400 font-bold">
-              {discountAmount}% discount applied! You&apos;ll save {CURRENCY_SYMBOL}{((selectedPlanPrice || 0) * discountAmount / 100).toFixed(2)}/mo
+              {discountAmount}{t.onboarding.step7.discountApplied} {CURRENCY_SYMBOL}{((selectedPlanPrice || 0) * discountAmount / 100).toFixed(2)}/mo
             </p>
           </div>
         )}
@@ -230,12 +233,12 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
           {(isLoading || isProcessing) ? (
             <>
               <Loader2 size={16} className="animate-spin" />
-              Processing...
+              {t.onboarding.step7.processing}
             </>
           ) : (
             <>
               <Lock size={14} />
-              Start 3-Day Free Trial
+              {t.onboarding.step7.startTrial}
             </>
           )}
         </button>

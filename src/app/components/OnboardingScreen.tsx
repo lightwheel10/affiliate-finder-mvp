@@ -57,6 +57,11 @@ import { StripeProvider } from './StripeProvider';
 import { Step7CardForm } from './Step7CardForm';
 import { AnalyzingScreen } from './AnalyzingScreen';
 import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
+// =============================================================================
+// i18n TRANSLATIONS (January 9th, 2026)
+// All UI strings are now translated - see LANGUAGE_MIGRATION.md
+// =============================================================================
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // =============================================================================
 // AI SUGGESTIONS TYPES (January 3rd, 2026)
@@ -174,16 +179,8 @@ function isValidDomainFormat(domain: string): boolean {
 const SUGGESTED_COMPETITORS: { name: string; domain: string; logo: string }[] = [];
 const SUGGESTED_TOPICS: string[] = [];
 
-const AFFILIATE_TYPES = [
-  "Publishers/Bloggers",
-  "Instagram",
-  "TikTok",
-  "X (Twitter)",
-  "LinkedIn",
-  "Reddit",
-  "YouTube",
-  "Other"
-];
+// AFFILIATE_TYPES moved inside component to access translations (January 9th, 2026)
+// Original static array removed - see getAffiliateTypes() function inside component
 
 interface OnboardingScreenProps {
   userId: number;
@@ -204,6 +201,11 @@ interface OnboardingScreenProps {
 }
 
 export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1, userData, onComplete }: OnboardingScreenProps) => {
+  // ==========================================================================
+  // i18n TRANSLATIONS (January 9th, 2026)
+  // ==========================================================================
+  const { t } = useLanguage();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(initialStep);
   
@@ -326,9 +328,26 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Roles array using translations (January 9th, 2026)
   const roles = [
-    'Brand Owner', 'Affiliate Manager', 'Agency Owner', 
-    'Freelancer', 'Content Creator', 'Other'
+    t.onboarding.step1.roles.brandOwner,
+    t.onboarding.step1.roles.affiliateManager,
+    t.onboarding.step1.roles.agencyOwner,
+    t.onboarding.step1.roles.freelancer,
+    t.onboarding.step1.roles.contentCreator,
+    t.onboarding.step1.roles.other,
+  ];
+
+  // Affiliate types array using translations (January 9th, 2026)
+  const AFFILIATE_TYPES = [
+    t.onboarding.step6.types.publishersBloggers,
+    t.onboarding.step6.types.instagram,
+    t.onboarding.step6.types.tiktok,
+    t.onboarding.step6.types.xTwitter,
+    t.onboarding.step6.types.linkedin,
+    t.onboarding.step6.types.reddit,
+    t.onboarding.step6.types.youtube,
+    t.onboarding.step6.types.other,
   ];
 
   // ==========================================================================
@@ -907,7 +926,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
           <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Getting Started</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.gettingStarted}</span>
       </div>
 
       {/* Progress Bar - NEO-BRUTALIST (January 9th, 2026) */}
@@ -923,32 +942,32 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         ))}
       </div>
 
-      {/* Welcome Text - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Welcome Text - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
       <div className="text-center mb-5">
         <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wide mb-1">
-          Thanks for joining CrewCast Studio
+          {t.onboarding.step1.header}
         </p>
         <h1 className="text-xl md:text-2xl text-gray-900 dark:text-white font-black tracking-tight">
-          Let&apos;s get to know each other
+          {t.onboarding.step1.title}
         </h1>
       </div>
 
       <div className="space-y-4">
-        {/* Name Input - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Name Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         <div className="space-y-1.5">
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">Name</label>
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.nameLabel}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all text-sm placeholder:text-gray-400"
-            placeholder="Enter your full name"
+            placeholder={t.onboarding.step1.namePlaceholder}
           />
         </div>
 
-        {/* Role Dropdown - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Role Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         <div className="space-y-1.5 relative" ref={roleDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">What&apos;s your role</label>
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.roleLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -961,7 +980,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               !role ? "text-gray-400" : "text-gray-900 dark:text-white"
             )}
           >
-            {role || "Select your role"}
+            {role || t.onboarding.step1.rolePlaceholder}
             <ChevronDown className={cn("text-gray-400 transition-transform", isRoleDropdownOpen && "rotate-180")} size={16} />
           </button>
 
@@ -977,7 +996,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     type="text"
                     value={roleSearch}
                     onChange={(e) => setRoleSearch(e.target.value)}
-                    placeholder="Search roles..."
+                    placeholder={t.onboarding.common.search}
                     className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
                   />
                 </div>
@@ -1000,19 +1019,19 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   </button>
                 ))}
                 {roles.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase())).length === 0 && (
-                  <p className="px-3.5 py-2 text-sm text-gray-400">No results found</p>
+                  <p className="px-3.5 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Brand Input - NEO-BRUTALIST (January 9th, 2026)
+        {/* Brand Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026)
             Domain validation provides two levels of feedback:
             1. Instant format validation (regex) - shows red/green border
             2. Server reachability validation (on Continue) - shows loading/error */}
         <div className="space-y-1.5">
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">Which brand do you want to find affiliates for?</label>
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.brandLabel}</label>
           <div className="relative">
             <input
               type="text"
@@ -1031,7 +1050,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       : "border-gray-300 dark:border-gray-600 focus:border-[#ffbf23]",
                 isBrandValidating && "opacity-70 cursor-not-allowed"
               )}
-              placeholder="e.g. guffles.com"
+              placeholder={t.onboarding.step1.brandPlaceholder}
             />
             {/* Validation status indicator */}
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1053,16 +1072,16 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             </p>
           )}
           
-          {/* Format hint (shown only when format is invalid) */}
+          {/* Format hint (shown only when format is invalid) - Translated (January 9th, 2026) */}
           {brandFormatValid === false && brand.trim() && !brandError && (
             <p className="text-amber-500 text-xs font-medium px-1 pt-0.5">
-              Enter a valid domain format (e.g., example.com)
+              {t.onboarding.step1.validation.invalidFormat}
             </p>
           )}
           
-          {/* Helper text */}
+          {/* Helper text - Translated (January 9th, 2026) */}
           <p className="text-gray-500 dark:text-gray-400 text-xs leading-relaxed px-1 pt-0.5">
-            For agencies, this should be your client&apos;s website, not your own.
+            {t.onboarding.step1.helpText}
           </p>
         </div>
       </div>
@@ -1090,7 +1109,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
           <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Step 1 of 5</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '1').replace('{total}', '5')}</span>
       </div>
 
       {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
@@ -1106,20 +1125,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
           <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
             <Globe size={12} />
           </div>
           <p className="text-gray-900 dark:text-white font-bold text-sm">
-            Target market
+            {t.onboarding.step2.title}
           </p>
         </div>
 
-        {/* Country Dropdown - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Country Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         <div className="space-y-1.5 relative" ref={countryDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">Country</label>
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step2.countryLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -1141,7 +1160,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 />
                 <span>{targetCountry}</span>
               </span>
-            ) : "Select your target country..."}
+            ) : t.onboarding.step2.countryPlaceholder}
             <ChevronDown className={cn("text-gray-400 transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
           </button>
           
@@ -1157,7 +1176,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     type="text"
                     value={countrySearch}
                     onChange={(e) => setCountrySearch(e.target.value)}
-                    placeholder="Search countries..."
+                    placeholder={t.onboarding.common.search}
                     className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
                   />
                 </div>
@@ -1183,16 +1202,16 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   </button>
                 ))}
                 {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
-                  <p className="px-4 py-2 text-sm text-gray-400">No results found</p>
+                  <p className="px-4 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Language Dropdown - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Language Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         <div className="space-y-1.5 relative" ref={langDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">Target Language</label>
+          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step2.languageLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -1212,7 +1231,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 </span>
                 <span>{targetLanguage}</span>
               </span>
-            ) : "Select your target language..."}
+            ) : t.onboarding.step2.languagePlaceholder}
             <ChevronDown className={cn("text-gray-400 transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
           </button>
           
@@ -1242,7 +1261,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   </button>
                 ))}
                 {languages.filter(l => l.name.toLowerCase().includes(langSearch.toLowerCase())).length === 0 && (
-                  <p className="px-4 py-2 text-sm text-gray-400">No results found</p>
+                  <p className="px-4 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
                 )}
               </div>
               {/* Search Input at bottom (dropdown opens upward) */}
@@ -1254,7 +1273,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     type="text"
                     value={langSearch}
                     onChange={(e) => setLangSearch(e.target.value)}
-                    placeholder="Search languages..."
+                    placeholder={t.onboarding.common.search}
                     className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
                   />
                 </div>
@@ -1287,7 +1306,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
           <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Step 2 of 5</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '2').replace('{total}', '5')}</span>
       </div>
 
       {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
@@ -1303,18 +1322,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
           <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
             <Sparkles size={12} />
           </div>
           <p className="text-gray-900 dark:text-white font-bold text-sm">
-            Add your top 5 competitors
+            {t.onboarding.step3.title}
           </p>
         </div>
 
-        {/* Competitor Input - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Competitor Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
             <input 
@@ -1322,7 +1341,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               value={competitorInput}
               onChange={(e) => setCompetitorInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomCompetitor())}
-              placeholder="e.g. competitor.com"
+              placeholder={t.onboarding.step3.inputPlaceholder}
               className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
             />
             <button 
@@ -1336,7 +1355,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
           
           <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-1 font-medium">
-            {competitors.length}/5 added
+            {t.onboarding.step3.count.replace('{count}', String(competitors.length))}
           </p>
         </div>
 
@@ -1349,12 +1368,12 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           Suggestions come from /api/suggestions/generate endpoint.
           ================================================================= */}
         
-        {/* AI Suggested Competitors - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* AI Suggested Competitors - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         {suggestedCompetitors.length > 0 && (
           <div className="space-y-2">
             <p className="text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
               <Sparkles size={10} className="text-[#ffbf23]" />
-              Suggestions for you:
+              {t.onboarding.step3.suggestionsTitle}
             </p>
             
             <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
@@ -1400,10 +1419,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
         )}
 
-        {/* Selected Competitors - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Selected Competitors - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         {competitors.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">Your competitors:</p>
+            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">{t.onboarding.step3.yourCompetitors}</p>
             
             <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
               {competitors.map(comp => {
@@ -1446,11 +1465,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
         )}
         
-        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         {competitors.length === 0 && suggestedCompetitors.length === 0 && (
           <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              Enter competitor domains above (e.g., competitor.com)
+              {t.onboarding.step3.emptyState}
             </p>
           </div>
         )}
@@ -1479,7 +1498,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
           <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Step 3 of 5</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '3').replace('{total}', '5')}</span>
       </div>
 
       {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
@@ -1495,18 +1514,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
           <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
             <MessageSquare size={12} />
           </div>
           <p className="text-gray-900 dark:text-white font-bold text-sm">
-            What topics do you cover?
+            {t.onboarding.step4.title}
           </p>
         </div>
 
-        {/* Topic Input - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Topic Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
             <input 
@@ -1514,7 +1533,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTopic())}
-              placeholder="e.g. best CRMs, skincare..."
+              placeholder={t.onboarding.step4.inputPlaceholder}
               className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
             />
             <button 
@@ -1528,25 +1547,26 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
           
           <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-1 font-medium">
-            {topics.length}/10 added
+            {t.onboarding.step4.count.replace('{count}', String(topics.length))}
           </p>
         </div>
 
         {/* =================================================================
           AI SUGGESTIONS DISPLAY (January 3rd, 2026)
           Updated to NEO-BRUTALIST (January 9th, 2026)
+          Translated (January 9th, 2026)
           
           Shows AI-generated topic suggestions if available.
           User can click to add/remove suggestions.
           Suggestions come from /api/suggestions/generate endpoint.
           ================================================================= */}
         
-        {/* AI Suggested Topics - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* AI Suggested Topics - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         {suggestedTopics.length > 0 && (
           <div className="space-y-2">
             <p className="text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
               <Sparkles size={10} className="text-[#ffbf23]" />
-              Suggestions for you:
+              {t.onboarding.step4.suggestionsTitle}
             </p>
             
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
@@ -1574,10 +1594,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
         )}
 
-        {/* Selected Topics - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Selected Topics - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         {topics.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">Your topics:</p>
+            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">{t.onboarding.step4.yourTopics}</p>
             
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
               {topics.map(topic => (
@@ -1597,11 +1617,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
         )}
         
-        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         {topics.length === 0 && suggestedTopics.length === 0 && (
           <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              Enter topics you cover above (e.g., &quot;best CRMs&quot;, &quot;skincare routines&quot;)
+              {t.onboarding.step4.emptyState}
             </p>
           </div>
         )}
@@ -1629,7 +1649,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </div>
           <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">Step 4 of 5</span>
+        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '4').replace('{total}', '5')}</span>
       </div>
 
       {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
@@ -1645,18 +1665,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
           <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
             <MousePointerClick size={12} />
           </div>
           <p className="text-gray-900 dark:text-white font-bold text-sm">
-            What types of affiliates do you want?
+            {t.onboarding.step6.title}
           </p>
         </div>
 
-        {/* Affiliate Types Grid - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Affiliate Types Grid - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
         <div className="grid grid-cols-2 gap-1.5">
           {AFFILIATE_TYPES.map((type) => {
             const isSelected = affiliateTypes.includes(type);
@@ -1690,18 +1710,19 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     </div>
   );
 
+  // Translated (January 9th, 2026)
   const renderStep6 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header */}
+      {/* Header - Translated (January 9th, 2026) */}
       <div className="text-center mb-4">
         <h1 className="text-lg text-slate-900 font-bold tracking-tight mb-1">
-          Choose your plan
+          {t.onboarding.step5.title}
         </h1>
         <p className="text-slate-500 text-xs mb-3">
-          Start with a <span className="font-semibold text-[#1A1D21]">3-day free trial</span> • Cancel anytime
+          {t.onboarding.step5.trialInfo}
         </p>
 
-        {/* Billing Toggle */}
+        {/* Billing Toggle - Translated (January 9th, 2026) */}
         <div className="inline-flex items-center bg-slate-100 p-1 rounded-lg">
           <button
             type="button"
@@ -1711,7 +1732,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               billingInterval === 'monthly' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >
-            Monthly
+            {t.onboarding.step5.monthly}
           </button>
           <button
             type="button"
@@ -1721,8 +1742,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               billingInterval === 'annual' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >
-            Annual
-            <span className="bg-[#ffbf23]/20 text-[#1A1D21] text-[9px] font-extrabold px-1 py-0.5 rounded uppercase">-20%</span>
+            {t.onboarding.step5.annual}
+            <span className="bg-[#ffbf23]/20 text-[#1A1D21] text-[9px] font-extrabold px-1 py-0.5 rounded uppercase">{t.onboarding.step5.discountBadge}</span>
           </button>
         </div>
       </div>
@@ -1754,7 +1775,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 <div className="absolute -top-2.5 left-0 right-0 flex justify-center">
                   <div className="bg-[#1A1D21] text-[#ffbf23] text-[9px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
                     <Star size={8} fill="currentColor" />
-                    Best Value
+                    {t.onboarding.step5.bestValue}
                   </div>
                 </div>
               )}
@@ -1774,12 +1795,12 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     ) : (
                       <>
                         <span className="text-xl font-bold text-slate-900">{CURRENCY_SYMBOL}{price}</span>
-                        <span className="text-slate-400 text-xs font-medium">/mo</span>
+                        <span className="text-slate-400 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
                       </>
                     )}
                   </div>
                   {!plan.priceLabel && billingInterval === 'annual' && (
-                    <p className="text-[9px] text-[#1A1D21] font-medium">Billed {CURRENCY_SYMBOL}{price! * 12}/yr</p>
+                    <p className="text-[9px] text-[#1A1D21] font-medium">{t.onboarding.step5.billedAnnually.replace('{amount}', `${CURRENCY_SYMBOL}${price! * 12}`)}</p>
                   )}
                 </div>
 
@@ -1793,19 +1814,19 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       : "bg-slate-100 text-slate-600"
                 )}>
                   {isEnterprise ? (
-                    "Contact Sales"
+                    t.onboarding.step5.contactSales
                   ) : isSelected ? (
                     <>
                       <Check size={10} strokeWidth={3} />
-                      Selected
+                      {t.onboarding.step5.selected}
                     </>
                   ) : (
-                    "Select Plan"
+                    t.onboarding.step5.selectPlan
                   )}
                 </div>
 
                 <div className="space-y-1 flex-1">
-                  <p className="text-[9px] font-bold text-slate-900 uppercase tracking-wider mb-1">Included:</p>
+                  <p className="text-[9px] font-bold text-slate-900 uppercase tracking-wider mb-1">{t.onboarding.step5.included}</p>
                   {plan.features.slice(0, 5).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-1.5">
                       <div className={cn(
@@ -1986,7 +2007,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       </button>
                     )}
                     
-                    {/* Continue/Next Button - NEO-BRUTALIST */}
+                    {/* Continue/Next Button - NEO-BRUTALIST - Translated (January 9th, 2026) */}
                     <button
                       type="submit"
                       disabled={isDisabled}
@@ -2000,20 +2021,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       {isLoading || isBrandValidating ? (
                         <>
                           <Loader2 size={16} className="animate-spin" />
-                          {isBrandValidating && <span>Validating domain...</span>}
+                          {isBrandValidating && <span>{t.onboarding.navigation.validatingDomain}</span>}
                         </>
                       ) : step === 6 ? (
                         selectedPlan === 'enterprise' ? (
-                          "Contact Sales"
+                          t.onboarding.navigation.contactSales
                         ) : (
-                          "Continue to Payment"
+                          t.onboarding.navigation.continueToPayment
                         )
                       ) : step === 5 ? (
-                        "Choose Plan"
+                        t.onboarding.navigation.choosePlan
                       ) : step === 1 ? (
-                        "Continue"
+                        t.onboarding.navigation.continue
                       ) : (
-                        "Next"
+                        t.onboarding.navigation.next
                       )}
                     </button>
                   </div>

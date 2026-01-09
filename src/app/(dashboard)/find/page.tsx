@@ -59,10 +59,18 @@ import { cn } from '@/lib/utils';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../../hooks/useAffiliates';
 import { FilterPanel } from '../../components/FilterPanel';
+// =============================================================================
+// i18n SUPPORT (January 9th, 2026)
+// See LANGUAGE_MIGRATION.md for documentation
+// =============================================================================
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const MAX_KEYWORDS = 5;
 
 export default function FindNewPage() {
+  // Translation hook (January 9th, 2026)
+  const { t } = useLanguage();
+  
   // ==========================================================================
   // USER DATA - January 4th, 2026
   // 
@@ -884,18 +892,19 @@ export default function FindNewPage() {
           TOP BAR - NEW DESIGN (January 6th, 2026)
           Neo-brutalist header - MATCHES DashboardDemo.tsx EXACTLY
           ============================================================================= */}
+      {/* Header - Translated (January 9th, 2026) */}
       <header className="h-16 border-b-4 border-black dark:border-white flex items-center justify-between px-6 bg-white dark:bg-[#0a0a0a]">
         {/* Page Title - font-black uppercase tracking-tight */}
-        <h1 className="font-black text-xl uppercase tracking-tight">Find New</h1>
+        <h1 className="font-black text-xl uppercase tracking-tight">{t.dashboard.find.pageTitle}</h1>
 
         <div className="flex items-center gap-4">
           {/* Timer Pill - DashboardDemo exact styling:
               bg-[#1a1a1a] text-brandYellow px-3 py-1.5 rounded-full text-xs font-mono border border-brandBlack */}
           <div className="hidden md:flex items-center gap-2 bg-[#1a1a1a] text-[#ffbf23] px-3 py-1.5 rounded-full text-xs font-mono border border-black">
             <Clock size={12} />
-            <span>NEXT SCAN</span>
+            <span>{t.dashboard.header.nextScan}</span>
             <ScanCountdown />
-            <span className="text-white font-bold">PRO</span>
+            <span className="text-white font-bold">{t.dashboard.header.pro}</span>
           </div>
 
           {/* Stats Pills - DashboardDemo exact styling:
@@ -912,7 +921,7 @@ export default function FindNewPage() {
             onClick={() => setIsFindModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
           >
-            <Plus size={14} strokeWidth={3} /> Find Affiliates
+            <Plus size={14} strokeWidth={3} /> {t.dashboard.header.findAffiliates}
           </button>
         </div>
       </header>
@@ -932,16 +941,16 @@ export default function FindNewPage() {
           ============================================================================= */}
       <div className="flex-1 p-8 overflow-y-auto">
         
-        {/* Previous Results Warning - Neo-brutalist style */}
+        {/* Previous Results Warning - Neo-brutalist style - Translated (January 9th, 2026) */}
         {showWarning && (
           <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/20 border-2 border-[#ffbf23] rounded-lg mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center justify-center w-8 h-8 bg-[#ffbf23] rounded shrink-0">
               <Search size={16} className="text-black" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-black">New search started</p>
+              <p className="text-sm font-bold text-black">{t.dashboard.find.newSearchWarning.title}</p>
               <p className="text-xs text-gray-600 mt-0.5">
-                Previous results have been moved to <span className="font-bold">"All Discovered"</span> page.
+                {t.dashboard.find.newSearchWarning.subtitle}
               </p>
             </div>
             <button
@@ -962,11 +971,12 @@ export default function FindNewPage() {
             {/* Search Input - DashboardDemo exact:
                 border-2 border-brandBlack dark:border-gray-700 rounded bg-white dark:bg-gray-900 
                 focus:border-brandYellow */}
+            {/* Search Input - Translated (January 9th, 2026) */}
             <div className="relative w-full md:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Search affiliates..."
+                placeholder={t.dashboard.filters.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
@@ -990,7 +1000,7 @@ export default function FindNewPage() {
                   title={tab.id}
                 >
                   {tab.icon || <Globe size={16} />}
-                  {tab.id === 'All' && <span>All</span>}
+                  {tab.id === 'All' && <span>{t.dashboard.filters.all}</span>}
                   {hasSearched && tab.count > 0 && (
                     <span className={cn(
                       "px-1.5 py-0.5 rounded text-[10px] font-bold",
@@ -1033,18 +1043,18 @@ export default function FindNewPage() {
           
           return (
           <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
-            {/* Left: Selection info */}
+            {/* Left: Selection info - Translated (January 9th, 2026) */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-[#D4E815] flex items-center justify-center">
                   <Check size={14} className="text-[#1A1D21]" />
                 </div>
                 <span className="text-sm font-semibold text-slate-900">
-                  {visibleSelectedLinks.size} affiliate{visibleSelectedLinks.size !== 1 ? 's' : ''} selected
+                  {visibleSelectedLinks.size} {t.dashboard.find.bulkActions.selected}
                 </span>
                 {alreadySavedCount > 0 && (
                   <span className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
-                    {alreadySavedCount} already in pipeline
+                    {alreadySavedCount} {t.dashboard.find.bulkActions.alreadyInPipeline}
                   </span>
                 )}
               </div>
@@ -1054,18 +1064,18 @@ export default function FindNewPage() {
                 onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
                 className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
               >
-                {allVisibleSelected ? 'Deselect All' : 'Select All Visible'}
+                {allVisibleSelected ? t.dashboard.find.bulkActions.deselectAll : t.dashboard.find.bulkActions.selectAllVisible}
               </button>
             </div>
 
-            {/* Right: Action buttons */}
+            {/* Right: Action buttons - Translated (January 9th, 2026) */}
             <div className="flex items-center gap-2">
               <button
                 onClick={deselectAllVisible}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all"
               >
                 <X size={14} />
-                Cancel
+                {t.common.cancel}
               </button>
 
               <button
@@ -1078,21 +1088,21 @@ export default function FindNewPage() {
                 ) : (
                   <Trash2 size={14} />
                 )}
-                Delete Selected
+                {t.dashboard.find.bulkActions.deleteSelected}
               </button>
 
               <button
                 onClick={handleBulkSave}
                 disabled={isBulkSaving || newToSaveCount === 0}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold bg-[#D4E815] hover:bg-[#c5d913] text-[#1A1D21] transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                title={newToSaveCount === 0 ? 'All selected affiliates are already in pipeline' : `Save ${newToSaveCount} new affiliate${newToSaveCount !== 1 ? 's' : ''} to pipeline`}
+                title={newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${t.dashboard.find.bulkActions.saveToPipeline} (${newToSaveCount})`}
               >
                 {isBulkSaving ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
                   <Save size={14} />
                 )}
-                {newToSaveCount === 0 ? 'All Already Saved' : `Save ${newToSaveCount} to Pipeline`}
+                {newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${newToSaveCount} ${t.dashboard.find.bulkActions.saveToPipeline}`}
               </button>
             </div>
           </div>
@@ -1105,9 +1115,7 @@ export default function FindNewPage() {
             rounded-lg min-h-[500px] flex flex-col
             ============================================================================= */}
         <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
-          {/* Table Header - DashboardDemo exact:
-              grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 
-              text-[10px] font-black text-gray-400 uppercase tracking-widest */}
+          {/* Table Header - Translated (January 9th, 2026) */}
           <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
             <div className="col-span-1 flex justify-center">
               <input 
@@ -1117,11 +1125,11 @@ export default function FindNewPage() {
                 className="accent-[#ffbf23]" 
               />
             </div>
-            <div className="col-span-3">Affiliate</div>
-            <div className="col-span-3">Relevant Content</div>
-            <div className="col-span-2">Discovery Method</div>
-            <div className="col-span-1">Date</div>
-            <div className="col-span-2 text-right">Action</div>
+            <div className="col-span-3">{t.dashboard.table.affiliate}</div>
+            <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
+            <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
+            <div className="col-span-1">{t.dashboard.table.date}</div>
+            <div className="col-span-2 text-right">{t.dashboard.table.action}</div>
           </div>
 
           {/* Results Content */}
@@ -1244,9 +1252,7 @@ export default function FindNewPage() {
           ) : hasSearched && !loading && creditError ? (
             // =================================================================
             // CREDIT ERROR BANNER - January 4th, 2026
-            // 
-            // Shows when user has 0 topic_search credits and search fails.
-            // Provides clear feedback instead of confusing "No results" message.
+            // Translated (January 9th, 2026)
             // =================================================================
             <div className="py-12 text-center">
               <div className="max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl p-6">
@@ -1256,44 +1262,44 @@ export default function FindNewPage() {
                   </svg>
                 </div>
                 <h3 className="text-base font-bold text-amber-800 mb-2">
-                  Out of Topic Search Credits
+                  {t.dashboard.find.creditError.title}
                 </h3>
                 <p className="text-amber-700 text-sm mb-4">
                   {creditError.message}
                 </p>
                 <p className="text-amber-600 text-xs">
-                  Upgrade your plan to get more searches, or wait for your credits to refresh.
+                  {t.dashboard.find.creditError.upgradeHint}
                 </p>
               </div>
             </div>
           ) : hasSearched && !loading && groupedResults.length === 0 ? (
             <div className="py-20 text-center text-gray-400 text-sm">
-              No results found for this filter.
+              {t.dashboard.find.noResults}
             </div>
           ) : (
-            /* Empty State - Neo-brutalist style */
+            /* Empty State - Neo-brutalist style - Translated (January 9th, 2026) */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
                 <Search size={24} className="text-gray-300" />
               </div>
               <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
-                No affiliates found yet
+                {t.dashboard.find.emptyState.title}
               </h3>
               <p className="text-gray-500 text-sm max-w-xs">
-                Start a search to see results here
+                {t.dashboard.find.emptyState.subtitle}
               </p>
             </div>
           )}
           </div>
         </div>
 
-        {/* Pagination Controls */}
+        {/* Pagination Controls - Translated (January 9th, 2026) */}
         {hasSearched && groupedResults.length > 0 && !loading && (
           <div className="mt-4 flex items-center justify-center gap-6 py-4">
             <div className="text-xs text-slate-500">
-              Showing <span className="font-semibold text-slate-900">{startIndex + 1}</span> to{' '}
-              <span className="font-semibold text-slate-900">{Math.min(endIndex, groupedResults.length)}</span> of{' '}
-              <span className="font-semibold text-slate-900">{groupedResults.length}</span> affiliates
+              {t.dashboard.pagination.showing} <span className="font-semibold text-slate-900">{startIndex + 1}</span> {t.dashboard.pagination.toOf}{' '}
+              <span className="font-semibold text-slate-900">{Math.min(endIndex, groupedResults.length)}</span> {t.common.of}{' '}
+              <span className="font-semibold text-slate-900">{groupedResults.length}</span> {t.dashboard.pagination.affiliates}
             </div>
 
             <div className="flex items-center gap-2">
@@ -1308,7 +1314,7 @@ export default function FindNewPage() {
                 )}
               >
                 <ChevronLeft size={14} />
-                Previous
+                {t.dashboard.pagination.previous}
               </button>
 
               <div className="flex items-center gap-1">
@@ -1359,13 +1365,13 @@ export default function FindNewPage() {
                     : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                 )}
               >
-                Next
+                {t.dashboard.pagination.next}
                 <ChevronRight size={14} />
               </button>
             </div>
 
             <div className="text-xs text-slate-500">
-              {itemsPerPage} per page
+              {itemsPerPage} {t.dashboard.pagination.perPage}
             </div>
           </div>
         )}
@@ -1380,24 +1386,24 @@ export default function FindNewPage() {
         width="max-w-2xl"
       >
         <div className="space-y-5">
-          {/* Header - NEO-BRUTALIST */}
+          {/* Header - NEO-BRUTALIST - Translated (January 9th, 2026) */}
           <div className="text-center pb-2">
             <div className="w-14 h-14 bg-black border-4 border-black flex items-center justify-center mx-auto mb-3 shadow-[4px_4px_0px_0px_#ffbf23]">
               <Search size={24} className="text-[#ffbf23]" />
             </div>
-            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wide">Find Affiliates</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.find.modal.title}</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Add up to {MAX_KEYWORDS} keywords to discover relevant creators
+              {t.dashboard.find.modal.subtitle}
             </p>
           </div>
 
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Left Column - Keywords - NEO-BRUTALIST */}
+            {/* Left Column - Keywords - NEO-BRUTALIST - Translated (January 9th, 2026) */}
             <div className="flex flex-col">
               <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 uppercase tracking-wide">
                 <Search size={14} className="text-black dark:text-white" />
-                Keywords
+                {t.dashboard.find.modal.keywordsLabel}
                 <span className="ml-auto text-xs font-bold text-gray-400">
                   {keywords.length}/{MAX_KEYWORDS}
                 </span>
@@ -1414,7 +1420,7 @@ export default function FindNewPage() {
                       addKeyword();
                     }
                   }}
-                  placeholder="Type keyword + Enter..."
+                  placeholder={t.dashboard.find.modal.keywordsPlaceholder}
                   disabled={keywords.length >= MAX_KEYWORDS}
                   className="w-full px-3 py-2.5 pr-16 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-black dark:focus:border-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
@@ -1423,7 +1429,7 @@ export default function FindNewPage() {
                   disabled={!keywordInput.trim() || keywords.length >= MAX_KEYWORDS}
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black hover:bg-yellow-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300 disabled:cursor-not-allowed transition-all"
                 >
-                  Add
+                  {t.dashboard.find.modal.addButton}
                 </button>
               </div>
 
@@ -1448,7 +1454,7 @@ export default function FindNewPage() {
                   ))
                 ) : (
                   <div className="flex items-center justify-center h-full text-gray-400 text-xs font-medium">
-                    No keywords added yet
+                    {t.dashboard.find.modal.noKeywordsYet}
                   </div>
                 )}
               </div>
@@ -1459,17 +1465,17 @@ export default function FindNewPage() {
                     onClick={() => setKeywords([])}
                     className="text-xs text-gray-400 hover:text-red-500 transition-colors font-bold"
                   >
-                    Clear all keywords
+                    {t.dashboard.find.modal.clearAllKeywords}
                   </button>
                 )}
               </div>
             </div>
 
-            {/* RIGHT COLUMN - Website & Competitors - NEO-BRUTALIST */}
+            {/* RIGHT COLUMN - Website & Competitors - Translated (January 9th, 2026) */}
             <div className="flex flex-col">
               <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 uppercase tracking-wide">
                 <Globe size={14} className="text-gray-500" />
-                Website
+                {t.dashboard.find.modal.websiteLabel}
               </label>
               <div className={`px-3 py-2.5 border-2 text-sm mt-2 flex items-center gap-2 ${
                 user?.brand 
@@ -1484,17 +1490,17 @@ export default function FindNewPage() {
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 )}
-                <span className="font-medium">{user?.brand || 'Not set during onboarding'}</span>
+                <span className="font-medium">{user?.brand || t.dashboard.find.modal.notSetDuringOnboarding}</span>
               </div>
 
               <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 mt-3 uppercase tracking-wide">
                 <svg className="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
-                Competitors
+                {t.dashboard.find.modal.competitorsLabel}
                 {user?.competitors && user.competitors.length > 0 && (
                   <span className="ml-auto text-[10px] text-gray-500 font-bold">
-                    {user.competitors.length} added
+                    {user.competitors.length} {t.dashboard.find.modal.competitorsAdded}
                   </span>
                 )}
               </label>
@@ -1519,13 +1525,13 @@ export default function FindNewPage() {
                 </div>
               ) : (
                 <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 mt-2">
-                  <p className="text-center text-gray-400 text-xs font-medium">No competitors added</p>
+                  <p className="text-center text-gray-400 text-xs font-medium">{t.dashboard.find.modal.noCompetitors}</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Action Button - NEO-BRUTALIST */}
+          {/* Action Button - NEO-BRUTALIST - Translated (January 9th, 2026) */}
           <button
             onClick={handleFindAffiliates}
             disabled={keywords.length === 0 || loading}
@@ -1534,18 +1540,18 @@ export default function FindNewPage() {
             {loading ? (
               <>
                 <div className="w-5 h-5 border-3 border-black border-t-transparent animate-spin"></div>
-                Searching...
+                {t.dashboard.find.modal.searching}
               </>
             ) : (
               <>
                 <Search size={18} />
-                Find Affiliates
+                {t.dashboard.find.modal.ctaButton}
               </>
             )}
           </button>
 
           <p className="text-center text-[11px] text-gray-400 font-medium">
-            💡 Tip: Use specific keywords like "best CRM software" instead of just "CRM"
+            {t.dashboard.find.modal.tip}
           </p>
         </div>
       </Modal>

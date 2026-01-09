@@ -56,6 +56,11 @@ import {
   ExternalLink,
   Download
 } from 'lucide-react';
+// =============================================================================
+// i18n SUPPORT (January 9th, 2026)
+// See LANGUAGE_MIGRATION.md for documentation
+// =============================================================================
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
 
@@ -66,6 +71,9 @@ type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
 // This component only renders the header and main content area.
 // =============================================================================
 export default function SettingsPage() {
+  // Translation hook (January 9th, 2026)
+  const { t } = useLanguage();
+  
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const user = useUser();
   const { userId } = useNeonUser();
@@ -75,11 +83,12 @@ export default function SettingsPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
 
+  // Tabs - Translated (January 9th, 2026)
   const tabs = [
-    { id: 'profile', label: 'My Profile', icon: <User size={16} />, description: 'Manage your personal information' },
-    { id: 'plan', label: 'Plan & Billing', icon: <CreditCard size={16} />, description: 'Manage your subscription and billing' },
-    { id: 'notifications', label: 'Notifications', icon: <Bell size={16} />, description: 'Configure how you want to be notified' },
-    { id: 'security', label: 'Security', icon: <Shield size={16} />, description: 'Protect your account' },
+    { id: 'profile', label: t.dashboard.settings.tabs.profile.label, icon: <User size={16} />, description: t.dashboard.settings.tabs.profile.description },
+    { id: 'plan', label: t.dashboard.settings.tabs.plan.label, icon: <CreditCard size={16} />, description: t.dashboard.settings.tabs.plan.description },
+    { id: 'notifications', label: t.dashboard.settings.tabs.notifications.label, icon: <Bell size={16} />, description: t.dashboard.settings.tabs.notifications.description },
+    { id: 'security', label: t.dashboard.settings.tabs.security.label, icon: <Shield size={16} />, description: t.dashboard.settings.tabs.security.description },
   ];
 
   // ==========================================================================
@@ -95,10 +104,10 @@ export default function SettingsPage() {
   // ==========================================================================
   return (
     <>
-      {/* Header - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* Header - Translated (January 9th, 2026) */}
       <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b-4 border-black dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wide">Settings</h1>
+          <h1 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.settings.pageTitle}</h1>
         </div>
       </header>
 

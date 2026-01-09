@@ -56,8 +56,15 @@ import {
 } from 'lucide-react';
 import { FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { FilterPanel } from '../../components/FilterPanel';
+// =============================================================================
+// i18n SUPPORT (January 9th, 2026)
+// See LANGUAGE_MIGRATION.md for documentation
+// =============================================================================
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function SavedPage() {
+  // Translation hook (January 9th, 2026)
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -396,17 +403,18 @@ export default function SavedPage() {
           TOP BAR - NEW DESIGN (January 6th, 2026)
           Neo-brutalist header - MATCHES DashboardDemo.tsx EXACTLY
           ============================================================================= */}
+      {/* Header - Translated (January 9th, 2026) */}
       <header className="h-16 border-b-4 border-black dark:border-white flex items-center justify-between px-6 bg-white dark:bg-[#0a0a0a]">
         {/* Page Title - font-black uppercase tracking-tight */}
-        <h1 className="font-black text-xl uppercase tracking-tight">Saved Affiliates</h1>
+        <h1 className="font-black text-xl uppercase tracking-tight">{t.dashboard.saved.pageTitle}</h1>
 
         <div className="flex items-center gap-4">
           {/* Timer Pill - DashboardDemo exact styling */}
           <div className="hidden md:flex items-center gap-2 bg-[#1a1a1a] text-[#ffbf23] px-3 py-1.5 rounded-full text-xs font-mono border border-black">
             <Clock size={12} />
-            <span>NEXT SCAN</span>
+            <span>{t.dashboard.header.nextScan}</span>
             <ScanCountdown />
-            <span className="text-white font-bold">PRO</span>
+            <span className="text-white font-bold">{t.dashboard.header.pro}</span>
           </div>
 
           {/* Stats Pills - DashboardDemo exact styling */}
@@ -418,7 +426,7 @@ export default function SavedPage() {
           <button 
             className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
           >
-            <Plus size={14} strokeWidth={3} /> Find Affiliates
+            <Plus size={14} strokeWidth={3} /> {t.dashboard.header.findAffiliates}
           </button>
         </div>
       </header>
@@ -433,12 +441,12 @@ export default function SavedPage() {
             ============================================================================= */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div className="flex items-center gap-4 w-full md:w-auto">
-            {/* Search Input - DashboardDemo exact styling */}
+            {/* Search Input - Translated (January 9th, 2026) */}
             <div className="relative w-full md:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Search affiliates..."
+                placeholder={t.dashboard.filters.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
@@ -460,7 +468,7 @@ export default function SavedPage() {
                   title={tab.id}
                 >
                   {tab.icon || <Globe size={16} />}
-                  {tab.id === 'All' && <span>All</span>}
+                  {tab.id === 'All' && <span>{t.dashboard.filters.all}</span>}
                   {tab.count > 0 && (
                     <span className={cn(
                       "px-1.5 py-0.5 rounded text-[10px] font-bold",
@@ -487,7 +495,7 @@ export default function SavedPage() {
           </div>
         </div>
 
-        {/* Bulk Actions Bar - NEO-BRUTALIST (Updated January 6th, 2026) */}
+        {/* Bulk Actions Bar - Translated (January 9th, 2026) */}
         {visibleSelectedLinks.size > 0 && (() => {
           const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
           
@@ -499,7 +507,7 @@ export default function SavedPage() {
                   <Check size={14} className="text-black" />
                 </div>
                 <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
-                  {visibleSelectedLinks.size} Selected
+                  {visibleSelectedLinks.size} {t.common.selected}
                 </span>
               </div>
               <div className="h-4 w-0.5 bg-black dark:bg-gray-600"></div>
@@ -507,7 +515,7 @@ export default function SavedPage() {
                 onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
                 className="text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
               >
-                {allVisibleSelected ? 'Deselect All' : 'Select All'}
+                {allVisibleSelected ? t.common.deselectAll : t.common.selectAll}
               </button>
             </div>
             <div className="flex items-center gap-2">
@@ -515,7 +523,7 @@ export default function SavedPage() {
                 onClick={deselectAllVisible}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white transition-all"
               >
-                Cancel
+                {t.common.cancel}
               </button>
               
               {/* Find Emails Button & Progress - NEO-BRUTALIST */}
@@ -556,12 +564,12 @@ export default function SavedPage() {
                       : "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
                   title={selectedNeedingEmailLookup === 0 
-                    ? "All selected affiliates already have emails" 
-                    : `Find emails for ${selectedNeedingEmailLookup} affiliate${selectedNeedingEmailLookup !== 1 ? 's' : ''}`
+                    ? t.dashboard.saved.bulkActions.emailProgress 
+                    : `${t.dashboard.saved.bulkActions.findEmails} (${selectedNeedingEmailLookup})`
                   }
                 >
                   <Mail size={14} />
-                  Find Emails
+                  {t.dashboard.saved.bulkActions.findEmails}
                   {selectedNeedingEmailLookup > 0 && (
                     <span className="ml-0.5 px-1.5 py-0.5 bg-black text-white text-[10px]">
                       {selectedNeedingEmailLookup}
@@ -576,7 +584,7 @@ export default function SavedPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                Delete
+                {t.common.delete}
               </button>
             </div>
           </div>
@@ -587,7 +595,7 @@ export default function SavedPage() {
             TABLE AREA - DashboardDemo.tsx EXACT STYLING (Pipeline View)
             ============================================================================= */}
         <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
-          {/* Table Header - Pipeline View with Email Column */}
+          {/* Table Header - Translated (January 9th, 2026) */}
           {/* Column spans match AffiliateRow: 1+3+2+2+1+1+2 = 12 */}
           <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
             <div className="col-span-1 flex justify-center">
@@ -598,12 +606,12 @@ export default function SavedPage() {
                 className="accent-[#ffbf23] w-4 h-4" 
               />
             </div>
-            <div className="col-span-3">Affiliate</div>
-            <div className="col-span-2">Relevant Content</div>
-            <div className="col-span-2">Discovery Method</div>
-            <div className="col-span-1">Status</div>
-            <div className="col-span-1">Email</div>
-            <div className="col-span-2 text-right">Action</div>
+            <div className="col-span-3">{t.dashboard.table.affiliate}</div>
+            <div className="col-span-2">{t.dashboard.table.relevantContent}</div>
+            <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
+            <div className="col-span-1">{t.dashboard.table.status}</div>
+            <div className="col-span-1">{t.dashboard.table.email}</div>
+            <div className="col-span-2 text-right">{t.dashboard.table.action}</div>
           </div>
 
           {/* Results Content */}
@@ -643,16 +651,16 @@ export default function SavedPage() {
               />
             ))
           ) : (
-            /* Empty State - Neo-brutalist style */
+            /* Empty State - Translated (January 9th, 2026) */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
                 <Users size={24} className="text-gray-300" />
               </div>
               <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
-                No saved affiliates
+                {t.dashboard.saved.emptyState.title}
               </h3>
               <p className="text-gray-500 text-sm max-w-xs">
-                Affiliates you save will appear here
+                {t.dashboard.saved.emptyState.subtitle}
               </p>
             </div>
           )}

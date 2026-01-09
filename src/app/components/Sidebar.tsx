@@ -44,6 +44,12 @@ import { usePathname } from 'next/navigation';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffiliates';
 import { useNeonUser } from '../hooks/useNeonUser';
 import { useSubscription } from '../hooks/useSubscription';
+// =============================================================================
+// LANGUAGE SWITCHER (January 9th, 2026)
+// Added i18n support - see LANGUAGE_MIGRATION.md for documentation
+// =============================================================================
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // =============================================================================
 // SKELETON COMPONENT - NEW DESIGN (January 6th, 2026)
@@ -156,6 +162,8 @@ const SidebarSkeletonOld: React.FC = () => (
 OLD_DESIGN_END */
 
 export const Sidebar: React.FC = () => {
+  // Translation hook (January 9th, 2026)
+  const { t } = useLanguage();
   const user = useUser();
   const { userId, isLoading: userLoading } = useNeonUser();
   const { subscription, isTrialing, daysLeftInTrial, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription(userId);
@@ -246,15 +254,15 @@ export const Sidebar: React.FC = () => {
 
         {/* Main Navigation - Neo-brutalist style */}
         <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
-          {/* Discovery Section */}
+          {/* Discovery Section - Translated (January 9th, 2026) */}
           <div>
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-2">Discovery</h4>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-2">{t.nav.discovery}</h4>
             <ul className="space-y-1">
               <li>
                 <NavItemNeo 
                   href="/find" 
                   icon={<Search size={18} />} 
-                  label="Find New" 
+                  label={t.nav.findNew} 
                   active={pathname === '/find'} 
                 />
               </li>
@@ -262,7 +270,7 @@ export const Sidebar: React.FC = () => {
                 <NavItemNeo 
                   href="/discovered"
                   icon={<LayoutDashboard size={18} />} 
-                  label="All Discovered" 
+                  label={t.nav.allDiscovered} 
                   badge={displayDiscoveredCount && displayDiscoveredCount > 0 ? displayDiscoveredCount.toString() : undefined}
                   active={pathname === '/discovered'}
                 />
@@ -270,15 +278,15 @@ export const Sidebar: React.FC = () => {
             </ul>
           </div>
 
-          {/* Management Section */}
+          {/* Management Section - Translated (January 9th, 2026) */}
           <div>
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-2">Management</h4>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-2">{t.nav.management}</h4>
             <ul className="space-y-1">
               <li>
                 <NavItemNeo 
                   href="/saved"
                   icon={<Briefcase size={18} />} 
-                  label="Saved Affiliates" 
+                  label={t.nav.savedAffiliates} 
                   badge={displayPipelineCount && displayPipelineCount > 0 ? displayPipelineCount.toString() : undefined}
                   active={pathname === '/saved'}
                 />
@@ -287,7 +295,7 @@ export const Sidebar: React.FC = () => {
                 <NavItemNeo 
                   href="/outreach"
                   icon={<Users size={18} />} 
-                  label="Outreach"
+                  label={t.nav.outreach}
                   active={pathname === '/outreach'}
                 />
               </li>
@@ -297,7 +305,17 @@ export const Sidebar: React.FC = () => {
 
         {/* Bottom Actions - Neo-brutalist style */}
         <div className="p-4 border-t-4 border-black dark:border-white bg-gray-50 dark:bg-[#111]">
-          {/* Plan Card - Neo-brutalist style */}
+          {/* =================================================================
+              LANGUAGE SWITCHER (January 9th, 2026)
+              
+              Allows users to switch between English and German.
+              See LANGUAGE_MIGRATION.md for i18n documentation.
+              ================================================================= */}
+          <div className="mb-4">
+            <LanguageSwitcher variant="sidebar" />
+          </div>
+
+          {/* Plan Card - Neo-brutalist style - Translated (January 9th, 2026) */}
           <div 
             className="bg-[#1a1a1a] p-4 rounded-lg mb-4 text-white border-2 border-black dark:border-gray-700 shadow-[2px_2px_0px_0px_#000000] cursor-pointer hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
             onClick={() => setIsPricingModalOpen(true)}
@@ -309,25 +327,25 @@ export const Sidebar: React.FC = () => {
               <div>
                 <h5 className="font-black text-xs uppercase text-[#ffbf23]">
                   {isTrialing 
-                    ? `${subscription?.plan || 'Trial'} Plan`
+                    ? `${subscription?.plan || 'Trial'} ${t.sidebar.planCard.planSuffix}`
                     : subscription?.status === 'active'
-                      ? `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} Plan`
+                      ? `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} ${t.sidebar.planCard.planSuffix}`
                       : 'Free Plan'
                   }
                 </h5>
                 <p className="text-[10px] text-gray-300 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                   {isTrialing 
-                    ? `${daysLeftInTrial} days left`
+                    ? `${daysLeftInTrial} ${t.sidebar.planCard.daysLeft}`
                     : subscription?.status === 'active'
-                      ? 'Active Subscription'
-                      : 'Upgrade Available'
+                      ? t.sidebar.planCard.activeSubscription
+                      : t.sidebar.planCard.upgradeAvailable
                   }
                 </p>
               </div>
             </div>
             <button className="w-full py-1.5 bg-[#ffbf23] text-black text-xs font-bold uppercase rounded hover:bg-white transition-colors flex items-center justify-center gap-1">
-              {subscription?.status === 'active' ? 'Manage Plan' : 'Upgrade Plan'} <ChevronRight size={10} />
+              {subscription?.status === 'active' ? t.sidebar.planCard.managePlan : t.sidebar.planCard.upgradePlan} <ChevronRight size={10} />
             </button>
           </div>
 
@@ -358,6 +376,7 @@ export const Sidebar: React.FC = () => {
                   className="fixed inset-0 z-40" 
                   onClick={() => setIsProfileMenuOpen(false)} 
                 />
+                {/* Profile Dropdown - Translated (January 9th, 2026) */}
                 <div className="absolute bottom-full mb-2 left-0 w-full bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0px_0px_#000000] py-1 z-50 overflow-hidden">
                   <Link 
                     href="/settings"
@@ -365,7 +384,7 @@ export const Sidebar: React.FC = () => {
                     className="w-full px-4 py-2 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
                   >
                     <Settings size={14} />
-                    Settings
+                    {t.sidebar.profile.settings}
                   </Link>
                   <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
                   <button 
@@ -376,7 +395,7 @@ export const Sidebar: React.FC = () => {
                     className="w-full px-4 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                   >
                     <LogOut size={14} />
-                    Log out
+                    {t.sidebar.profile.logout}
                   </button>
                 </div>
               </>
@@ -411,30 +430,30 @@ export const Sidebar: React.FC = () => {
         }}
       />
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout Confirmation Modal - Translated (January 9th, 2026) */}
       <Modal 
         isOpen={isLogoutModalOpen} 
         onClose={() => setIsLogoutModalOpen(false)}
-        title="Log out"
+        title={t.sidebar.logoutModal.title}
         width="max-w-sm"
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-500 leading-relaxed">
-            Are you sure you want to log out? You'll need to sign in again to access your workspace.
+            {t.sidebar.logoutModal.message}
           </p>
           <div className="flex items-center justify-end gap-3 pt-2">
             <button 
               onClick={() => setIsLogoutModalOpen(false)}
               className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all duration-200"
             >
-              Cancel
+              {t.sidebar.logoutModal.cancel}
             </button>
             <button 
               onClick={handleLogout}
               className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 border border-transparent rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
             >
               <LogOut size={14} />
-              Log out
+              {t.sidebar.logoutModal.confirm}
             </button>
           </div>
         </div>

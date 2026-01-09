@@ -44,6 +44,12 @@ import { DiscoveryGraphic } from './DiscoveryGraphic';
 import { VerifiedEmailGraphic } from './VerifiedEmailGraphic';
 import { PipelineGraphic } from './PipelineGraphic';
 import { Footer } from '../Footer';
+// =============================================================================
+// LANGUAGE SWITCHER (January 9th, 2026)
+// Added i18n support for landing page - see LANGUAGE_MIGRATION.md
+// =============================================================================
+import { LanguageSwitcher } from '../LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LandingPageProps {
   onLoginClick: () => void;
@@ -53,6 +59,12 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignupClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // =============================================================================
+  // i18n TRANSLATIONS (January 9th, 2026)
+  // All UI strings are now translated - see LANGUAGE_MIGRATION.md
+  // =============================================================================
+  const { t } = useLanguage();
 
   // Parallax scroll tracking
   const { scrollY } = useScroll();
@@ -98,9 +110,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           {/* Desktop Links - NEO-BRUTALIST (January 9th, 2026) */}
           <div className="hidden md:flex items-center gap-1 bg-white/80 backdrop-blur-md px-1.5 py-1 border-2 border-gray-200">
             {[
-              { label: 'Features', href: '#features' },
-              { label: 'How It Works', href: '#how-it-works' },
-              { label: 'Pricing', href: '#pricing' },
+              { label: t.nav.features, href: '#features' },
+              { label: t.nav.howItWorks, href: '#how-it-works' },
+              { label: t.nav.pricing, href: '#pricing' },
             ].map((item) => (
               <a 
                 key={item.label} 
@@ -121,17 +133,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
           {/* Auth Buttons - NEO-BRUTALIST (January 9th, 2026) */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Language Switcher (January 9th, 2026) - i18n support */}
+            <LanguageSwitcher variant="navbar" />
             <button 
               onClick={onLoginClick}
               className="text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-2 transition-colors cursor-pointer border-2 border-transparent hover:border-gray-300"
             >
-              Log in
+              {t.nav.login}
             </button>
             <button 
               onClick={onSignupClick}
               className="px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer"
             >
-              Start Free Trial
+              {t.nav.startFreeTrial}
             </button>
           </div>
 
@@ -146,9 +160,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           <div className="md:hidden absolute top-full left-0 w-full bg-white border-b-2 border-black shadow-lg">
             <div className="px-6 py-4 space-y-1">
               {[
-                { label: 'Features', href: '#features' },
-                { label: 'How It Works', href: '#how-it-works' },
-                { label: 'Pricing', href: '#pricing' },
+                { label: t.nav.features, href: '#features' },
+                { label: t.nav.howItWorks, href: '#how-it-works' },
+                { label: t.nav.pricing, href: '#pricing' },
               ].map((item) => (
                 <a 
                   key={item.label} 
@@ -174,7 +188,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   }}
                   className="w-full px-4 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-900 hover:bg-gray-50 transition-all text-left cursor-pointer"
                 >
-                  Log in
+                  {t.nav.login}
                 </button>
                 <button 
                   onClick={() => {
@@ -183,7 +197,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   }}
                   className="w-full px-4 py-2.5 bg-[#ffbf23] text-black text-sm font-black uppercase border-2 border-black transition-all text-center cursor-pointer"
                 >
-                  Start Free Trial
+                  {t.nav.startFreeTrial}
                 </button>
               </div>
             </div>
@@ -216,17 +230,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   <span className="animate-ping absolute inline-flex h-full w-full bg-[#ffbf23] opacity-75"></span>
                   <span className="relative inline-flex h-2 w-2 bg-[#ffbf23]"></span>
                 </span>
-                Trusted by 1,300+ brands
+                {t.landing.hero.badge}
               </div>
               
               {/* Headline - NEO-BRUTALIST (January 9th, 2026) */}
               <h1 className="text-5xl md:text-6xl font-black text-[#111827] tracking-tight mb-6 leading-[1]">
-                Discover Affiliates <br />
-                <span className="text-[#ffbf23]">Promoting Competitors</span>
+                {t.landing.hero.title} <br />
+                <span className="text-[#ffbf23]">{t.landing.hero.titleHighlight}</span>
               </h1>
 
               <p className="text-lg text-slate-500 mb-8 leading-relaxed max-w-md">
-                Find 500+ active affiliates with verified contacts instantly. Skip weeks of manual research.
+                {t.landing.hero.subtitle}
               </p>
 
               {/* CTA Buttons - NEO-BRUTALIST (January 9th, 2026) */}
@@ -235,14 +249,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   onClick={onSignupClick}
                   className="w-full sm:w-auto px-6 py-3 bg-[#ffbf23] text-black text-sm font-black uppercase border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 group cursor-pointer"
                 >
-                  Try for Free
+                  {t.landing.hero.ctaPrimary}
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </button>
                 <button 
                   className="w-full sm:w-auto px-6 py-3 bg-[#1A1D21] text-white text-sm font-black uppercase border-2 border-black hover:bg-[#333333] transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Play size={14} fill="currentColor" className="opacity-50" />
-                  Get a Demo
+                  {t.landing.hero.ctaSecondary}
                 </button>
               </div>
 
@@ -268,7 +282,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                    <div className="flex text-[#ffbf23]">
                      {[1,2,3,4,5].map(i => <Star key={i} size={12} fill="currentColor" />)}
                    </div>
-                   <span className="text-slate-700 ml-1">Loved by 1,300+ SaaS & e-commerce brands</span>
+                   <span className="text-slate-700 ml-1">{t.landing.hero.socialProof}</span>
                 </div>
               </div>
             </motion.div>
@@ -295,7 +309,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           ========================================================================== */}
       <section className="border-y-2 border-black bg-white">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider whitespace-nowrap mr-8">Trusted by top brands</span>
+          <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider whitespace-nowrap mr-8">{t.landing.trustedBy}</span>
           <div className="scale-90 origin-right">
             <LogoMarquee />
           </div>
@@ -317,38 +331,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
         <div className="max-w-7xl mx-auto px-6">
            {/* Section Header - NEO-BRUTALIST (January 9th, 2026) */}
            <div className="mb-16 max-w-2xl mx-auto text-center">
-             <h2 className="text-2xl md:text-3xl font-black text-[#111827] mb-4 tracking-tight">How Smart Brands 3X Their Affiliate Growth</h2>
+             <h2 className="text-2xl md:text-3xl font-black text-[#111827] mb-4 tracking-tight">{t.landing.features.sectionTitle}</h2>
              <p className="text-base text-slate-500 leading-relaxed">
-               Stop wasting 20+ hours a week manually searching for affiliates. Find every creator and publisher in your niche in minutes.
+               {t.landing.features.sectionSubtitle}
              </p>
            </div>
 
            <BentoGrid>
               {/* Large Main Feature */}
               <BentoCard 
-                title="Reverse-Engineer Competitor Programs"
-                description="Find all their top affiliates across 100+ networks."
+                title={t.landing.features.mainFeature.title}
+                description={t.landing.features.mainFeature.description}
                 className="md:col-span-2 md:row-span-2 bg-white border-[#E5E7EB]"
                 fade="bottom"
                 graphic={<DiscoveryGraphic />}
               >
                 {/* Feature Badges - NEO-BRUTALIST (January 9th, 2026) */}
                 <div className="mt-4 flex gap-2">
-                  <div className="px-3 py-1 bg-[#ffbf23]/20 text-[#1A1D21] text-xs font-black border-2 border-[#ffbf23]">500+ Instant Matches</div>
-                  <div className="px-3 py-1 bg-[#1A1D21]/10 text-[#1A1D21] text-xs font-black border-2 border-[#1A1D21]/30">Weekly Fresh Leads</div>
+                  <div className="px-3 py-1 bg-[#ffbf23]/20 text-[#1A1D21] text-xs font-black border-2 border-[#ffbf23]">{t.landing.features.mainFeature.badge1}</div>
+                  <div className="px-3 py-1 bg-[#1A1D21]/10 text-[#1A1D21] text-xs font-black border-2 border-[#1A1D21]/30">{t.landing.features.mainFeature.badge2}</div>
                 </div>
               </BentoCard>
 
               {/* Standard Cards */}
               <BentoCard 
-                title="Get Emails Nobody Else Can Find"
-                description="90%+ contact rate including LinkedIn profiles."
+                title={t.landing.features.feature2.title}
+                description={t.landing.features.feature2.description}
                 graphic={<VerifiedEmailGraphic />}
               />
 
               <BentoCard 
-                title="Start Recruiting Today"
-                description="Export to CRM and start outreach immediately."
+                title={t.landing.features.feature3.title}
+                description={t.landing.features.feature3.description}
                 graphic={<PipelineGraphic />}
               />
            </BentoGrid>
@@ -378,7 +392,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                transition={{ duration: 0.5 }}
                className="text-3xl md:text-4xl font-black text-[#111827] mb-4 tracking-tight"
              >
-               From Zero to 500+ Affiliates in Minutes
+               {t.landing.howItWorks.sectionTitle}
              </motion.h2>
              <motion.p 
                initial={{ opacity: 0, y: 20 }}
@@ -387,50 +401,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                transition={{ duration: 0.5, delay: 0.1 }}
                className="text-slate-500 text-lg"
              >
-               Watch your dashboard fill with qualified partners ready to promote your brand.
+               {t.landing.howItWorks.sectionSubtitle}
              </motion.p>
            </div>
 
            <div className="space-y-24">
              {[
                {
-                 step: "01",
-                 title: "Find Your Competitors' Top Affiliates",
-                 desc: "Enter your competitors and we'll reverse-engineer their affiliate programs across 100+ networks to find all their top affiliates — even the hidden ones.",
+                 step: t.landing.howItWorks.step1.number,
+                 title: t.landing.howItWorks.step1.title,
+                 desc: t.landing.howItWorks.step1.description,
                  image: "/Find Your Competitors' Top Affiliates.jpeg",
-                 overlayTitle: "Competitor Analysis",
-                 overlaySubtitle: "Found 1,243 affiliates",
-                 bullets: [
-                   "Scan across YouTube, Instagram, TikTok, and blogs",
-                   "Find affiliates promoting similar products",
-                   "No more digging through Ahrefs or Semrush"
-                 ]
+                 overlayTitle: t.landing.howItWorks.step1.overlayTitle,
+                 overlaySubtitle: t.landing.howItWorks.step1.overlaySubtitle,
+                 bullets: t.landing.howItWorks.step1.bullets
                },
                {
-                 step: "02",
-                 title: "Get 500-2,500 Qualified Prospects",
-                 desc: "Watch your dashboard fill with qualified affiliates. Sort by traffic volume, Google rankings, follower count, or engagement rates to find your perfect partners fast.",
+                 step: t.landing.howItWorks.step2.number,
+                 title: t.landing.howItWorks.step2.title,
+                 desc: t.landing.howItWorks.step2.description,
                  image: "/Get 500-2,500 Qualified Prospects.jpeg",
-                 overlayTitle: "High-Quality Matches",
-                 overlaySubtitle: "Sorted by engagement rate",
-                 bullets: [
-                   "Filter by traffic, rankings, and engagement",
-                   "View audience demographics and location data",
-                   "Track previous brand partnerships"
-                 ]
+                 overlayTitle: t.landing.howItWorks.step2.overlayTitle,
+                 overlaySubtitle: t.landing.howItWorks.step2.overlaySubtitle,
+                 bullets: t.landing.howItWorks.step2.bullets
                },
                {
-                 step: "03",
-                 title: "Start Recruiting Immediately",
-                 desc: "Export verified emails, use our proven-to-convert templates, and start building partnerships today. Get 150+ fresh leads delivered every week.",
+                 step: t.landing.howItWorks.step3.number,
+                 title: t.landing.howItWorks.step3.title,
+                 desc: t.landing.howItWorks.step3.description,
                  image: "/Start Recruiting Immediately.jpeg",
-                 overlayTitle: "Outreach Ready",
-                 overlaySubtitle: "150+ new leads weekly",
-                 bullets: [
-                   "90%+ email deliverability rate",
-                   "Proven outreach templates included",
-                   "One-click CRM export"
-                 ]
+                 overlayTitle: t.landing.howItWorks.step3.overlayTitle,
+                 overlaySubtitle: t.landing.howItWorks.step3.overlaySubtitle,
+                 bullets: t.landing.howItWorks.step3.bullets
                }
              ].map((item, idx) => (
                <motion.div 
@@ -520,13 +522,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
             >
               <span className="inline-flex items-center gap-2 px-3 py-1 bg-[#ffbf23]/20 border-2 border-[#ffbf23] text-[11px] font-black text-[#1A1D21] mb-4 uppercase">
                 <Zap size={12} fill="currentColor" />
-                Simple, Transparent Pricing
+                {t.landing.pricing.badge}
               </span>
               <h2 className="text-3xl md:text-4xl font-black text-[#111827] mb-4 tracking-tight">
-                Find the Perfect Plan for Your Growth
+                {t.landing.pricing.sectionTitle}
               </h2>
               <p className="text-slate-500 text-lg max-w-xl mx-auto">
-                All plans include weekly affiliate discovery to keep your pipeline full. Start with a 7-day free trial.
+                {t.landing.pricing.sectionSubtitle}
               </p>
             </motion.div>
           </div>
@@ -544,16 +546,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               {/* Popular Badge - NEO-BRUTALIST (January 9th, 2026) */}
               <div className="bg-[#1A1D21] text-white text-xs font-black tracking-wider uppercase text-center py-2 flex items-center justify-center gap-1.5">
                 <Zap size={12} fill="currentColor" className="text-[#ffbf23]" />
-                Most Popular
+                {t.landing.pricing.mostPopular}
               </div>
 
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-black text-[#111827] mb-1">Pro</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">For growing SaaS & e-commerce brands</p>
+                  <h3 className="text-lg font-black text-[#111827] mb-1">{t.landing.pricing.pro.name}</h3>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.pro.description}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-black tracking-tight text-[#1A1D21]">$99</span>
-                    <span className="text-base font-bold text-[#333333]">/month</span>
+                    <span className="text-3xl font-black tracking-tight text-[#1A1D21]">{t.landing.pricing.pro.price}</span>
+                    <span className="text-base font-bold text-[#333333]">{t.landing.pricing.perMonth}</span>
                   </div>
                 </div>
 
@@ -562,19 +564,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   onClick={onSignupClick}
                   className="w-full py-3 text-sm font-black uppercase mb-6 transition-all duration-200 bg-[#ffbf23] text-[#1A1D21] border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
                 >
-                  Start 7-Day Free Trial
+                  {t.landing.pricing.pro.cta}
                 </button>
 
                 {/* Features - NEO-BRUTALIST (January 9th, 2026) */}
                 <div className="space-y-3 flex-1">
-                  {[
-                    'Unlimited affiliate discovery (500+ matches)',
-                    'Weekly new affiliate discoveries',
-                    '150 verified email credits/month',
-                    'Advanced search & filtering tools',
-                    '2 Team Seats',
-                    'One-click CRM export'
-                  ].map((feature, idx) => (
+                  {t.landing.pricing.pro.features.map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2.5">
                       <div className="mt-0.5 w-4 h-4 bg-[#1A1D21] text-[#ffbf23] flex items-center justify-center shrink-0 border border-black">
                         <CheckCircle2 size={10} strokeWidth={3} />
@@ -598,11 +593,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               <div className="h-[34px]" />
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-black text-[#111827] mb-1">Growth</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">For agencies & multi-brand companies</p>
+                  <h3 className="text-lg font-black text-[#111827] mb-1">{t.landing.pricing.growth.name}</h3>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.growth.description}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-black tracking-tight text-[#111827]">$249</span>
-                    <span className="text-base font-bold text-[#333333]">/month</span>
+                    <span className="text-3xl font-black tracking-tight text-[#111827]">{t.landing.pricing.growth.price}</span>
+                    <span className="text-base font-bold text-[#333333]">{t.landing.pricing.perMonth}</span>
                   </div>
                 </div>
 
@@ -610,18 +605,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   onClick={onSignupClick}
                   className="w-full py-3 text-sm font-black uppercase mb-6 transition-all duration-200 bg-[#333333] text-white border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
                 >
-                  Start 7-Day Free Trial
+                  {t.landing.pricing.growth.cta}
                 </button>
 
                 <div className="space-y-3 flex-1">
-                  {[
-                    'Everything in Pro +',
-                    '500 verified email credits/month',
-                    '5 brands or geographical markets',
-                    '5 Team Seats',
-                    'Advanced analytics dashboard',
-                    'Dedicated account manager'
-                  ].map((feature, idx) => (
+                  {t.landing.pricing.growth.features.map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2.5">
                       <div className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#1A1D21] text-[#ffbf23] border border-black'}`}>
                         {idx !== 0 && <CheckCircle2 size={10} strokeWidth={3} />}
@@ -645,10 +633,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               <div className="h-[34px]" />
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-black text-[#111827] mb-1">Enterprise</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">For large organizations with custom needs</p>
+                  <h3 className="text-lg font-black text-[#111827] mb-1">{t.landing.pricing.enterprise.name}</h3>
+                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.enterprise.description}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-black tracking-tight text-[#111827]">Custom</span>
+                    <span className="text-3xl font-black tracking-tight text-[#111827]">{t.landing.pricing.enterprise.price}</span>
                   </div>
                 </div>
 
@@ -656,18 +644,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   onClick={onLoginClick}
                   className="w-full py-3 text-sm font-black uppercase mb-6 transition-all duration-200 bg-white text-[#111827] border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
                 >
-                  Let's Talk
+                  {t.landing.pricing.enterprise.cta}
                 </button>
 
                 <div className="space-y-3 flex-1">
-                  {[
-                    'Everything in Growth +',
-                    'Unlimited verified emails',
-                    'Unlimited brand portfolio',
-                    'Unlimited team access',
-                    'API access & webhooks',
-                    '24/7 priority support'
-                  ].map((feature, idx) => (
+                  {t.landing.pricing.enterprise.features.map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2.5">
                       <div className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#1A1D21] text-[#ffbf23] border border-black'}`}>
                         {idx !== 0 && <CheckCircle2 size={10} strokeWidth={3} />}
@@ -688,7 +669,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-center text-sm text-slate-500 mt-8 font-bold"
           >
-            ✨ 7-day free trial • Cancel anytime • 30-day money-back guarantee
+            {t.landing.pricing.trustNote}
           </motion.p>
         </div>
       </section>
@@ -712,10 +693,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
             <div className="relative z-10 space-y-6">
               {/* Heading - NEO-BRUTALIST (January 9th, 2026) */}
               <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-                Ready to Find Your Perfect Affiliates?
+                {t.landing.cta.title}
               </h2>
               <p className="text-lg text-slate-300 max-w-xl mx-auto">
-                Join 1,300+ brands that have found their ideal affiliate partners in minutes, not months.
+                {t.landing.cta.subtitle}
               </p>
               {/* Buttons - NEO-BRUTALIST (January 9th, 2026) */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
@@ -723,13 +704,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   onClick={onSignupClick}
                   className="px-6 py-3 bg-[#ffbf23] text-[#1A1D21] text-base font-black uppercase border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-200 w-full sm:w-auto cursor-pointer"
                 >
-                  Start Your 7-Day Free Trial
+                  {t.landing.cta.ctaPrimary}
                 </button>
                 <button className="px-6 py-3 bg-transparent border-2 border-white text-white text-base font-black uppercase hover:bg-white hover:text-[#1A1D21] transition-all duration-200 w-full sm:w-auto cursor-pointer">
-                  Get a Demo
+                  {t.landing.cta.ctaSecondary}
                 </button>
               </div>
-              <p className="text-xs text-slate-400 pt-2 font-bold">7-day free trial • Cancel anytime</p>
+              <p className="text-xs text-slate-400 pt-2 font-bold">{t.landing.cta.trustNote}</p>
             </div>
          </div>
       </section>

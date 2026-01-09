@@ -17,6 +17,7 @@
  *   - Updated color from #D4E815 to #ffbf23 (brand yellow)
  *   - Bold borders (border-2)
  *   - Sharp avatars and badges
+ * - January 9th, 2026: Added i18n support via useLanguage hook
  * 
  * IMPORTANT: Do not modify the animation logic (useEffect, motion components)
  * =============================================================================
@@ -25,6 +26,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Mail, Check, Globe, Youtube, Instagram, ArrowRight, Loader2, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type Step = 'IDLE' | 'TYPING' | 'SEARCHING' | 'ANALYZING' | 'COMPLETE';
 type Tab = 'All' | 'Web' | 'YouTube' | 'Instagram' | 'TikTok';
@@ -87,6 +89,9 @@ export const InteractiveSearchDemo = () => {
   const [text, setText] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>('All');
   const [analyzedIds, setAnalyzedIds] = useState<number[]>([]);
+  
+  // i18n translations (January 9th, 2026)
+  const { t } = useLanguage();
   
   // We want to demonstrate filtering, so let's just show everything when "COMPLETE"
   // and filter by tab visually.
@@ -220,13 +225,13 @@ export const InteractiveSearchDemo = () => {
               </span>
               {/* Placeholder when empty */}
               {!text && step !== 'TYPING' && (
-                <span className="text-slate-400 font-bold text-sm">Enter a niche or keyword...</span>
+                <span className="text-slate-400 font-bold text-sm">{t.landing.demo.searchPlaceholder}</span>
               )}
             </div>
             {/* Scout Button - NEO-BRUTALIST (January 9th, 2026) */}
             <div className="absolute right-2 top-1/2 -translate-y-1/2">
                <button className={`px-3 py-1.5 text-xs font-black uppercase transition-all duration-300 ${text.length > 5 ? 'bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000000]' : 'bg-gray-200 text-gray-400 border-2 border-gray-300'}`}>
-                 Scout
+                 {t.landing.demo.scoutButton}
                </button>
             </div>
           </div>
@@ -260,7 +265,7 @@ export const InteractiveSearchDemo = () => {
                       className="text-xs text-[#1A1D21] font-bold flex items-center gap-1.5"
                     >
                       <div className="w-3 h-3 bg-[#ffbf23] border border-black"></div>
-                      Scanning...
+                      {t.landing.demo.scanning}
                     </motion.div>
                  )}
                  {step === 'ANALYZING' && (
@@ -272,7 +277,7 @@ export const InteractiveSearchDemo = () => {
                       className="text-xs text-[#333333] font-bold flex items-center gap-1.5"
                     >
                       <Loader2 size={12} className="animate-spin text-[#ffbf23]" />
-                      Analyzing...
+                      {t.landing.demo.analyzing}
                     </motion.div>
                  )}
                </AnimatePresence>
@@ -293,7 +298,7 @@ export const InteractiveSearchDemo = () => {
                   <div className="w-12 h-12 bg-gray-100 border-2 border-gray-200 flex items-center justify-center mb-3">
                     <Search className="text-slate-300" size={20} />
                   </div>
-                  <p className="text-slate-400 text-sm font-bold">Enter a niche to find affiliates</p>
+                  <p className="text-slate-400 text-sm font-bold">{t.landing.demo.emptyState}</p>
                 </motion.div>
               )}
 
@@ -365,12 +370,12 @@ export const InteractiveSearchDemo = () => {
                          {result.email ? (
                            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffbf23]/20 text-[#1A1D21] border-2 border-[#ffbf23] whitespace-nowrap">
                              <Mail size={12} />
-                             <span className="text-[10px] font-bold">Found</span>
+                             <span className="text-[10px] font-bold">{t.landing.demo.emailFound}</span>
                            </div>
                          ) : (
                             <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 text-slate-400 border-2 border-gray-200 whitespace-nowrap">
                               <Search size={12} />
-                              <span className="text-[10px] font-bold">No Email</span>
+                              <span className="text-[10px] font-bold">{t.landing.demo.noEmail}</span>
                             </div>
                          )}
                        </motion.div>
@@ -395,13 +400,13 @@ export const InteractiveSearchDemo = () => {
               >
                  <div className="flex gap-3 font-bold">
                    <span>
-                     <strong className="text-[#111827]">{visibleResults.length}</strong> Results Visible
+                     <strong className="text-[#111827]">{visibleResults.length}</strong> {t.landing.demo.resultsVisible}
                    </span>
-                   <span>0.8s Search Time</span>
+                   <span>{t.landing.demo.searchTime}</span>
                  </div>
                  <div className="flex items-center gap-1 text-[#1A1D21] font-black uppercase tracking-wide">
                    <Check size={10} className="text-[#ffbf23]" />
-                   Analysis Complete
+                   {t.landing.demo.analysisComplete}
                  </div>
               </motion.div>
             )}

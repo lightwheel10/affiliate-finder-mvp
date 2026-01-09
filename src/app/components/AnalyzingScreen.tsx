@@ -32,6 +32,7 @@
 import React from 'react';
 import { Loader2, Check, Globe, Sparkles, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // =============================================================================
 // TYPES
@@ -46,31 +47,15 @@ interface AnalyzingScreenProps {
 
 // =============================================================================
 // STEP CONFIGURATION
+// Moved inside component to access translations (January 9th, 2026)
 // =============================================================================
 
-const ANALYSIS_STEPS = [
-  {
-    id: 1,
-    label: 'Analyzing your website',
-    description: 'Reading your content and structure',
-    icon: Globe,
-  },
-  {
-    id: 2,
-    label: 'Understanding your products',
-    description: 'Identifying what you offer',
-    icon: Sparkles,
-  },
-  {
-    id: 3,
-    label: 'Finding your competitors',
-    description: 'Discovering similar businesses',
-    icon: Users,
-  },
-];
+// Icon configuration (kept separate as icons don't need translation)
+const STEP_ICONS = [Globe, Sparkles, Users];
 
 // =============================================================================
 // COMPONENT - NEO-BRUTALIST (Updated January 8th, 2026)
+// Translated (January 9th, 2026)
 // =============================================================================
 
 export function AnalyzingScreen({ 
@@ -79,6 +64,30 @@ export function AnalyzingScreen({
   error,
   onSkip,
 }: AnalyzingScreenProps) {
+  // Translation hook (January 9th, 2026)
+  const { t } = useLanguage();
+  
+  // Analysis steps with translated strings (January 9th, 2026)
+  const ANALYSIS_STEPS = [
+    {
+      id: 1,
+      label: t.onboarding.analyzing.steps.step1Label,
+      description: t.onboarding.analyzing.steps.step1Desc,
+      icon: Globe,
+    },
+    {
+      id: 2,
+      label: t.onboarding.analyzing.steps.step2Label,
+      description: t.onboarding.analyzing.steps.step2Desc,
+      icon: Sparkles,
+    },
+    {
+      id: 3,
+      label: t.onboarding.analyzing.steps.step3Label,
+      description: t.onboarding.analyzing.steps.step3Desc,
+      icon: Users,
+    },
+  ];
   return (
     <div className="animate-in fade-in duration-500">
       {/* Header - NEO-BRUTALIST */}
@@ -93,40 +102,40 @@ export function AnalyzingScreen({
           </span>
         </div>
         
-        {/* Title */}
+        {/* Title - Translated (January 9th, 2026) */}
         <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1 uppercase tracking-wide">
-          {error ? 'Analysis Complete' : 'Analyzing Your Brand'}
+          {error ? t.onboarding.analyzing.titleError : t.onboarding.analyzing.title}
         </h2>
         
-        {/* Subtitle with brand name */}
+        {/* Subtitle with brand name - Translated (January 9th, 2026) */}
         {brandName && !error && (
           <p className="text-gray-500 text-sm font-medium">
-            Getting insights for <span className="font-bold text-gray-700 dark:text-gray-300">{brandName}</span>
+            {t.onboarding.analyzing.gettingInsightsFor} <span className="font-bold text-gray-700 dark:text-gray-300">{brandName}</span>
           </p>
         )}
       </div>
 
-      {/* Error State - NEO-BRUTALIST */}
+      {/* Error State - NEO-BRUTALIST - Translated (January 9th, 2026) */}
       {error ? (
         <div className="space-y-4">
           {/* Error Message Box */}
           <div className="bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500 p-4 text-center">
             <p className="text-amber-800 dark:text-amber-300 text-sm font-bold mb-1">
-              We couldn&apos;t find suggestions automatically
+              {t.onboarding.analyzing.errorTitle}
             </p>
             <p className="text-amber-600 dark:text-amber-400 text-xs">
               {error}
             </p>
           </div>
           
-          {/* Skip Button - NEO-BRUTALIST */}
+          {/* Skip Button - NEO-BRUTALIST - Translated (January 9th, 2026) */}
           {onSkip && (
             <button
               type="button"
               onClick={onSkip}
               className="w-full py-3 font-black text-sm bg-[#ffbf23] text-black uppercase tracking-wide border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
-              Continue & Enter Manually
+              {t.onboarding.analyzing.continueManually}
             </button>
           )}
         </div>
@@ -209,7 +218,7 @@ export function AnalyzingScreen({
               />
             </div>
             <p className="text-center text-xs text-gray-400 font-medium">
-              This usually takes 10-15 seconds
+              {t.onboarding.analyzing.timeEstimate}
             </p>
           </div>
         </>

@@ -3,7 +3,7 @@
  * Footer Component - NEO-BRUTALIST
  * =============================================================================
  * 
- * Updated: January 8th, 2026
+ * Updated: January 9th, 2026
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -12,13 +12,22 @@
  * - Bold typography (font-black uppercase)
  * - Dark mode support
  * 
+ * i18n TRANSLATIONS (January 9th, 2026):
+ * - All UI strings are now translated via useLanguage hook
+ * - See LANGUAGE_MIGRATION.md for details
+ * 
  * =============================================================================
  */
 
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const Footer = () => {
+  const { t } = useLanguage();
+  
   return (
     <footer className="bg-white dark:bg-[#0a0a0a] border-t-4 border-black dark:border-gray-700 pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-6">
@@ -34,28 +43,27 @@ export const Footer = () => {
               <span>CrewCast Studio</span>
             </Link>
             <p className="text-gray-500 text-xs leading-relaxed max-w-xs">
-              The new standard for affiliate discovery. Backed by selecdoo AI.
-              Helping brands scale their partner networks 10x faster.
+              {t.landing.footer.brandDescription}
             </p>
           </div>
           
           {/* Product Links */}
           <div>
-            <h4 className="font-black text-gray-900 dark:text-white text-sm mb-4 uppercase">Product</h4>
+            <h4 className="font-black text-gray-900 dark:text-white text-sm mb-4 uppercase">{t.landing.footer.product}</h4>
             <ul className="space-y-2.5 text-xs text-gray-500">
-              <li><a href="#features" className="hover:text-black dark:hover:text-white transition-colors font-medium">Features</a></li>
-              <li><a href="#pricing" className="hover:text-black dark:hover:text-white transition-colors font-medium">Pricing</a></li>
+              <li><a href="#features" className="hover:text-black dark:hover:text-white transition-colors font-medium">{t.nav.features}</a></li>
+              <li><a href="#pricing" className="hover:text-black dark:hover:text-white transition-colors font-medium">{t.nav.pricing}</a></li>
             </ul>
           </div>
 
           {/* Legal Links */}
           <div>
-            <h4 className="font-black text-gray-900 dark:text-white text-sm mb-4 uppercase">Legal</h4>
+            <h4 className="font-black text-gray-900 dark:text-white text-sm mb-4 uppercase">{t.landing.footer.legal}</h4>
             <ul className="space-y-2.5 text-xs text-gray-500">
-              <li><Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors font-medium">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors font-medium">Terms of Service</Link></li>
-              <li><Link href="/cookies" className="hover:text-black dark:hover:text-white transition-colors font-medium">Cookie Policy</Link></li>
-              <li><Link href="/security" className="hover:text-black dark:hover:text-white transition-colors font-medium">Security</Link></li>
+              <li><Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors font-medium">{t.landing.footer.privacyPolicy}</Link></li>
+              <li><Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors font-medium">{t.landing.footer.termsOfService}</Link></li>
+              <li><Link href="/cookies" className="hover:text-black dark:hover:text-white transition-colors font-medium">{t.landing.footer.cookiePolicy}</Link></li>
+              <li><Link href="/security" className="hover:text-black dark:hover:text-white transition-colors font-medium">{t.landing.footer.security}</Link></li>
             </ul>
           </div>
         </div>
@@ -63,13 +71,13 @@ export const Footer = () => {
         {/* Bottom Bar - NEO-BRUTALIST */}
         <div className="pt-8 border-t-2 border-gray-200 dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex flex-col md:flex-row items-center gap-4">
-             <p className="text-[10px] text-gray-400 font-medium">© 2025 CrewCast Studio. All rights reserved.</p>
+             <p className="text-[10px] text-gray-400 font-medium">{t.landing.footer.copyright}</p>
              <span className="hidden md:block text-[10px] text-gray-300">•</span>
-             <a href="https://www.spectrumailabs.com" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-400 hover:text-[#ffbf23] transition-colors font-medium">Made by Spectrum AI Labs</a>
+             <a href="https://www.spectrumailabs.com" target="_blank" rel="noopener noreferrer" className="text-[10px] text-gray-400 hover:text-[#ffbf23] transition-colors font-medium">{t.landing.footer.madeBy}</a>
           </div>
           <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold">
             <div className="w-2 h-2 bg-[#ffbf23] border border-black"></div>
-            All systems operational
+            {t.landing.footer.systemStatus}
           </div>
         </div>
       </div>
