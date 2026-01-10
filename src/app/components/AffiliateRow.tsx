@@ -1,7 +1,20 @@
+/**
+ * =============================================================================
+ * AffiliateRow Component - i18n Migration
+ * =============================================================================
+ * Updated: January 10th, 2026 - Priority 5: Shared Components
+ * 
+ * This component displays individual affiliate results in a table row format.
+ * All UI strings have been migrated to use the translation dictionary.
+ * 
+ * Translation hook usage: const { t } = useLanguage();
+ * =============================================================================
+ */
 import React, { useState } from 'react';
 import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User, BarChart2, TrendingUp, MapPin, Clock, MousePointer, FileText, ArrowUpRight } from 'lucide-react';
 import { Modal } from './Modal';
 import { ResultItem, YouTubeChannelInfo } from '../types';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // TikTok icon component
 const TikTokIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
@@ -136,6 +149,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   affiliateData,     // Added Dec 2025: Full data for View modal
   showStatusInsteadOfDate = false,  // Added Jan 2026: Show "SAVED" status instead of date
 }) => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);  // Added Dec 2025: View modal state
@@ -304,12 +320,12 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   };
 
   // Updated January 6th, 2026 - Neo-brutalist design for discovery method
+  // Updated January 10th, 2026 - i18n migration
   const renderDiscoveryMethod = () => {
     if (!discoveryMethod) return null;
     
-    const label = discoveryMethod.type === 'competitor' ? 'Keyword:' : 
-                 discoveryMethod.type === 'tagged' ? 'Keyword:' : 
-                 discoveryMethod.type === 'topic' ? 'Keyword:' : 'Keyword:';
+    // i18n: Use translated keyword label
+    const label = t.affiliateRow.discovery.keywordLabel;
 
     return (
       <div>
@@ -344,18 +360,19 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   };
 
   // Get visit button text and link based on source
+  // Updated January 10th, 2026 - i18n migration
   const getVisitButtonConfig = () => {
     const sourceLower = source.toLowerCase();
     switch (sourceLower) {
       case 'youtube':
         return {
-          text: 'Visit Channel',
+          text: t.affiliateRow.viewModal.visitChannel,
           icon: <Youtube size={12} />,
           link: channel?.link || link,
         };
       case 'instagram':
         return {
-          text: 'Visit Account',
+          text: t.affiliateRow.viewModal.visitAccount,
           icon: <Instagram size={12} />,
           link: affiliateData?.instagramUsername 
             ? `https://instagram.com/${affiliateData.instagramUsername}` 
@@ -363,7 +380,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         };
       case 'tiktok':
         return {
-          text: 'Visit Account',
+          text: t.affiliateRow.viewModal.visitAccount,
           icon: <TikTokIcon size={12} />,
           link: affiliateData?.tiktokUsername 
             ? `https://tiktok.com/@${affiliateData.tiktokUsername}` 
@@ -371,7 +388,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         };
       default:
         return {
-          text: 'Visit Website',
+          text: t.affiliateRow.viewModal.visitWebsite,
           icon: <Globe size={12} />,
           link: `https://${domain}`,
         };
@@ -412,13 +429,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600">
           <Users size={14} className="text-gray-500" />
           <span className="text-xs font-black text-black dark:text-white">{channel?.subscribers || '0'}</span>
-          <span className="text-xs text-gray-500 font-medium">subscribers</span>
+          <span className="text-xs text-gray-500 font-medium">{t.affiliateRow.viewModal.youtube.subscribers}</span>
         </div>
 
         {/* Relevant Videos Section - NEO-BRUTALIST */}
         <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
           <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
-            Relevant Videos ({1 + (subItems?.length || 0)})
+            {t.affiliateRow.viewModal.youtube.relevantVideos} ({1 + (subItems?.length || 0)})
           </h4>
 
           {/* Main Video Card - NEO-BRUTALIST */}
@@ -470,8 +487,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               )}
 
               <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                {videoViews && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{videoViews} views</span>}
-                {videoLikes !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoLikes)} likes</span>}
+                {videoViews && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{videoViews} {t.affiliateRow.metrics.views}</span>}
+                {videoLikes !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoLikes)} {t.affiliateRow.metrics.likes}</span>}
                 {videoDate && <span className="text-gray-400">{formatDate(videoDate)}</span>}
               </div>
             </div>
@@ -499,7 +516,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                       {item.title}
                     </a>
                     <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
-                      {item.views && <span>{item.views} views</span>}
+                      {item.views && <span>{item.views} {t.affiliateRow.metrics.views}</span>}
                       {item.date && <span>• {formatDate(item.date)}</span>}
                     </div>
                   </div>
@@ -547,7 +564,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           )}
           {followers && (
             <span className="px-2 py-1 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
-              {formatNumber(followers)} followers
+              {formatNumber(followers)} {t.affiliateRow.viewModal.instagram.followers}
             </span>
           )}
         </div>
@@ -564,7 +581,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         {/* Relevant Posts Section - NEO-BRUTALIST */}
         <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
           <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
-            Relevant Posts ({1 + (subItems?.length || 0)})
+            {t.affiliateRow.viewModal.instagram.relevantPosts} ({1 + (subItems?.length || 0)})
           </h4>
 
           {/* Main Post Card - NEO-BRUTALIST */}
@@ -587,8 +604,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 {title || snippet}
               </p>
               <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                {postLikes !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postLikes)} likes</span>}
-                {postComments !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postComments)} comments</span>}
+                {postLikes !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postLikes)} {t.affiliateRow.metrics.likes}</span>}
+                {postComments !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postComments)} {t.affiliateRow.metrics.comments}</span>}
                 {date && <span className="text-gray-400">{formatDate(date)}</span>}
               </div>
             </div>
@@ -609,7 +626,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-700 dark:text-gray-300 font-medium line-clamp-3 mb-2">{item.title || item.snippet}</p>
                     <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
-                      {item.instagramPostLikes !== undefined && <span>{formatNumber(item.instagramPostLikes)} likes</span>}
+                      {item.instagramPostLikes !== undefined && <span>{formatNumber(item.instagramPostLikes)} {t.affiliateRow.metrics.likes}</span>}
                       {item.date && <span>• {formatDate(item.date)}</span>}
                     </div>
                   </div>
@@ -673,7 +690,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             )}
             {followers && (
               <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
-                {formatNumber(followers)} followers
+                {formatNumber(followers)} {t.affiliateRow.viewModal.tiktok.followers}
               </span>
             )}
           </div>
@@ -691,7 +708,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         {/* Relevant Posts Section - NEO-BRUTALIST */}
         <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
           <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
-            Relevant Posts ({1 + (subItems?.length || 0)})
+            {t.affiliateRow.viewModal.tiktok.relevantPosts} ({1 + (subItems?.length || 0)})
           </h4>
 
           {/* Main Video Card - NEO-BRUTALIST */}
@@ -719,8 +736,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 {title || snippet}
               </p>
               <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                {videoPlays && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoPlays)} views</span>}
-                {videoLikes && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoLikes)} likes</span>}
+                {videoPlays && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoPlays)} {t.affiliateRow.metrics.views}</span>}
+                {videoLikes && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoLikes)} {t.affiliateRow.metrics.likes}</span>}
                 {date && <span className="text-gray-400">{formatDate(date)}</span>}
               </div>
             </div>
@@ -741,7 +758,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-700 dark:text-gray-300 font-medium line-clamp-3 mb-2">{item.title || item.snippet}</p>
                     <div className="flex items-center gap-2 text-[10px] text-gray-500">
-                      {item.views && <span>{item.views} views</span>}
+                      {item.views && <span>{item.views} {t.affiliateRow.metrics.views}</span>}
                       {item.date && <span>• {formatDate(item.date)}</span>}
                     </div>
                   </div>
@@ -846,7 +863,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               {swData && (
                 <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black">
                   <ArrowUpRight size={12} />
-                  {swData.monthlyVisitsFormatted} traffic/mo
+                  {swData.monthlyVisitsFormatted} {t.affiliateRow.viewModal.web.trafficPerMonth}
                 </span>
               )}
             </div>
@@ -856,7 +873,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         {/* About this website - NEO-BRUTALIST */}
         {swData?.siteDescription && (
           <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
-            <h5 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">About</h5>
+            <h5 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">{t.affiliateRow.viewModal.web.about}</h5>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{swData.siteDescription}</p>
           </div>
         )}
@@ -865,18 +882,18 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         {swData ? (
           <>
             {/* Section Title */}
-            <h4 className="text-sm font-black text-gray-800 dark:text-white uppercase tracking-wide">Traffic & Engagement Metrics</h4>
+            <h4 className="text-sm font-black text-gray-800 dark:text-white uppercase tracking-wide">{t.affiliateRow.viewModal.web.trafficMetrics}</h4>
 
             {/* Two-column layout for Ranking and Engagement */}
             <div className="grid grid-cols-2 gap-4">
               {/* Ranking Card - NEO-BRUTALIST */}
               <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 overflow-hidden">
-                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">Ranking</h5>
+                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">{t.affiliateRow.viewModal.web.ranking}</h5>
                 <div className="space-y-3">
                   {/* Global Rank */}
                   <div className="flex items-center gap-2">
                     <Globe size={14} className="text-gray-400 flex-shrink-0" />
-                    <span className="text-xs text-gray-500 font-medium">Global</span>
+                    <span className="text-xs text-gray-500 font-medium">{t.affiliateRow.viewModal.web.global}</span>
                   </div>
                   <p className="text-xl font-black text-black dark:text-white -mt-1 ml-6">
                     {swData.globalRank ? `#${Number(swData.globalRank).toLocaleString()}` : 'N/A'}
@@ -898,7 +915,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   {/* Category */}
                   <div className="flex items-center gap-2 pt-1">
                     <FileText size={14} className="text-gray-400 flex-shrink-0" />
-                    <span className="text-xs text-gray-500 font-medium">Category</span>
+                    <span className="text-xs text-gray-500 font-medium">{t.affiliateRow.viewModal.web.category}</span>
                   </div>
                   <div className="-mt-1 ml-6 overflow-hidden">
                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300 break-words leading-relaxed">
@@ -910,7 +927,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
               {/* User Engagement Metrics Card - NEO-BRUTALIST */}
               <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 overflow-hidden">
-                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">User Engagement</h5>
+                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">{t.affiliateRow.viewModal.web.userEngagement}</h5>
                 <div className="grid grid-cols-3 gap-2">
                   {/* Pages/Visit */}
                   <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
@@ -918,7 +935,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                     <p className="text-lg font-black text-black dark:text-white">
                       {Number(swData.pagesPerVisit).toFixed(1)}
                     </p>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase">Pages/Visit</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase">{t.affiliateRow.viewModal.web.pagesPerVisit}</p>
                   </div>
                   
                   {/* Time on Site */}
@@ -927,7 +944,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                     <p className="text-lg font-black text-black dark:text-white">
                       {formatTime(Number(swData.timeOnSite))}
                     </p>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase">Time on Site</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase">{t.affiliateRow.viewModal.web.timeOnSite}</p>
                   </div>
                   
                   {/* Bounce Rate */}
@@ -936,7 +953,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                     <p className="text-lg font-black text-black dark:text-white">
                       {(Number(swData.bounceRate) * 100).toFixed(1)}%
                     </p>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase">Bounce Rate</p>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase">{t.affiliateRow.viewModal.web.bounceRate}</p>
                   </div>
                 </div>
               </div>
@@ -945,17 +962,17 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {/* Traffic Sources Section - NEO-BRUTALIST */}
             {swData.trafficSources && (
               <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600">
-                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">Traffic Sources</h5>
+                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">{t.affiliateRow.viewModal.web.trafficSources}</h5>
                 
                 {/* Traffic Sources with color dots and percentages */}
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                   {[
-                    { label: 'Search', value: Number(swData.trafficSources.search) || 0, color: 'bg-[#ffbf23]' },
-                    { label: 'Direct', value: Number(swData.trafficSources.direct) || 0, color: 'bg-black dark:bg-white' },
-                    { label: 'Referrals', value: Number(swData.trafficSources.referrals) || 0, color: 'bg-gray-400' },
-                    { label: 'Social', value: Number(swData.trafficSources.social) || 0, color: 'bg-gray-600' },
-                    { label: 'Paid', value: Number(swData.trafficSources.paid) || 0, color: 'bg-gray-500' },
-                    { label: 'Mail', value: Number(swData.trafficSources.mail) || 0, color: 'bg-gray-300' },
+                    { label: t.affiliateRow.viewModal.web.search, value: Number(swData.trafficSources.search) || 0, color: 'bg-[#ffbf23]' },
+                    { label: t.affiliateRow.viewModal.web.direct, value: Number(swData.trafficSources.direct) || 0, color: 'bg-black dark:bg-white' },
+                    { label: t.affiliateRow.viewModal.web.referrals, value: Number(swData.trafficSources.referrals) || 0, color: 'bg-gray-400' },
+                    { label: t.affiliateRow.viewModal.web.social, value: Number(swData.trafficSources.social) || 0, color: 'bg-gray-600' },
+                    { label: t.affiliateRow.viewModal.web.paid, value: Number(swData.trafficSources.paid) || 0, color: 'bg-gray-500' },
+                    { label: t.affiliateRow.viewModal.web.mail, value: Number(swData.trafficSources.mail) || 0, color: 'bg-gray-300' },
                   ].sort((a, b) => b.value - a.value).map(source => (
                     <div key={source.label} className="flex items-center justify-between py-1.5">
                       <div className="flex items-center gap-2">
@@ -993,15 +1010,15 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           /* No SimilarWeb data available - NEO-BRUTALIST */
           <div className="text-center py-8 text-gray-400 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
             <BarChart2 size={32} className="mx-auto mb-3 text-gray-300" />
-            <p className="text-sm font-black text-gray-500 uppercase">No traffic data</p>
-            <p className="text-xs mt-1 text-gray-400">Traffic data will be fetched during search</p>
+            <p className="text-sm font-black text-gray-500 uppercase">{t.affiliateRow.viewModal.web.noTrafficData}</p>
+            <p className="text-xs mt-1 text-gray-400">{t.affiliateRow.viewModal.web.noTrafficDataDesc}</p>
           </div>
         )}
 
         {/* Relevant Content Section - NEO-BRUTALIST */}
         {(snippet || title) && (
           <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600">
-            <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">Relevant Content</h5>
+            <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">{t.affiliateRow.viewModal.web.relevantContent}</h5>
             <a 
               href={link} 
               target="_blank" 
@@ -1108,36 +1125,38 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               {channel?.verified && (
                 <CheckCircle2 size={12} className="text-blue-500 fill-blue-500 shrink-0" />
               )}
-              {/* Neo-brutalist badges */}
+              {/* Neo-brutalist badges - i18n January 10th, 2026 */}
               {isNew && !isAlreadyAffiliate && (
-                <span className="px-1.5 py-[1px] bg-emerald-500 text-white text-[9px] font-black uppercase border border-black shrink-0">NEW</span>
+                <span className="px-1.5 py-[1px] bg-emerald-500 text-white text-[9px] font-black uppercase border border-black shrink-0">{t.affiliateRow.badges.new}</span>
               )}
               {isAlreadyAffiliate && (
-                <span className="px-1.5 py-[1px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black uppercase border border-black dark:border-gray-500 shrink-0">SAVED</span>
+                <span className="px-1.5 py-[1px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black uppercase border border-black dark:border-gray-500 shrink-0">{t.affiliateRow.badges.saved}</span>
               )}
             </div>
             
             {/* Row 2: Stats - Updated January 6th, 2026 for neo-brutalist design */}
+            {/* Updated January 10th, 2026 - i18n migration */}
             {isSocialMedia && (
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {/* Followers/Subscribers - Neo-brutalist badge */}
                 {channel?.subscribers && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#ffbf23] text-black border-2 border-black">
                     <Users size={10} />
-                    {channel.subscribers} followers
+                    {channel.subscribers} {t.affiliateRow.metrics.followers}
                   </span>
                 )}
               </div>
             )}
             
             {/* Row 2: SimilarWeb Stats for Web sources - Updated January 6th, 2026 */}
+            {/* Updated January 10th, 2026 - i18n migration */}
             {!isSocialMedia && (affiliateData?.similarWeb ? (
               // Show actual SimilarWeb stats when data is available - Neo-brutalist style
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {/* Monthly Traffic */}
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#ffbf23] text-black border-2 border-black">
                   <BarChart2 size={10} />
-                  {affiliateData.similarWeb.monthlyVisitsFormatted} visits/mo
+                  {affiliateData.similarWeb.monthlyVisitsFormatted} {t.affiliateRow.metrics.visitsPerMonth}
                 </span>
                 {/* Global Rank */}
                 {affiliateData.similarWeb.globalRank && (
@@ -1152,7 +1171,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               <div className="flex items-center gap-2 mt-1">
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-300 dark:border-gray-600">
                   <Loader2 size={10} className="animate-spin" />
-                  Loading...
+                  {t.affiliateRow.metrics.loading}
                 </span>
               </div>
             ) : null)}
@@ -1205,12 +1224,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             </a>
             
             {/* Stats row for social media - Neo-brutalist with bold styling */}
+            {/* Updated January 10th, 2026 - i18n migration */}
             {isSocialMedia && (views || date) && (
               <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
                 {views && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">
                     <Eye size={10} />
-                    {views} views
+                    {views} {t.affiliateRow.metrics.views}
                   </span>
                 )}
                 {date && (
@@ -1222,10 +1242,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             )}
             
             {/* Keyword info for web results - Neo-brutalist */}
+            {/* Updated January 10th, 2026 - i18n migration */}
             {!isSocialMedia && (
               <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
                 <span className="font-bold text-gray-700 dark:text-gray-300">rank {rank}</span>
-                <span>for</span>
+                <span>{t.affiliateRow.discovery.rankFor}</span>
                 <span className="font-bold text-gray-900 dark:text-white truncate max-w-[100px]">{keyword}</span>
               </div>
             )}
@@ -1235,7 +1256,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                  onClick={() => setIsModalOpen(true)}
                  className="text-[9px] text-[#ffbf23] font-black cursor-pointer hover:underline inline-block select-none uppercase"
                >
-                 +{subItems.length} more
+                 +{subItems.length} {t.affiliateRow.discovery.more}
                </p>
             )}
           </div>
@@ -1248,12 +1269,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       </div>
 
       {/* Date/Status column - col-span-1 - Only show in non-pipeline view */}
+      {/* Updated January 10th, 2026 - i18n migration */}
       {!isPipelineView && (
         <div className="col-span-1">
           {showStatusInsteadOfDate ? (
             /* Status badge for Saved page */
             <span className="inline-flex items-center px-2 py-1 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
-              Saved
+              {t.affiliateRow.badges.saved}
             </span>
           ) : (
             /* Date for Find/Discovered pages */
@@ -1268,12 +1290,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       {isPipelineView && (
         <div className="col-span-1">
            <span className="inline-flex items-center px-2 py-1 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
-             Discovered <ChevronDown size={10} className="ml-1" />
+             {t.affiliateRow.badges.discovered} <ChevronDown size={10} className="ml-1" />
            </span>
         </div>
       )}
 
       {/* Emails (Pipeline Only) - col-span-1 Neo-brutalist */}
+      {/* Updated January 10th, 2026 - i18n migration */}
       {isPipelineView && (
          <div className="col-span-1">
             {/* Email Found - Show email count badge that opens modal */}
@@ -1281,10 +1304,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                <button 
                  onClick={() => setIsEmailModalOpen(true)}
                  className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase border-2 border-black hover:bg-emerald-600 transition-colors group"
-                 title="View email results"
+                 title={t.affiliateRow.actions.view}
                >
                  <Mail size={12} />
-                 <span>{emailResults?.emails?.length || 1} Found</span>
+                 <span>{emailResults?.emails?.length || 1} {t.affiliateRow.actions.found}</span>
                  <Eye size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                </button>
             ) : emailStatus === 'searching' ? (
@@ -1298,15 +1321,15 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                  <button 
                    onClick={() => setIsEmailModalOpen(true)}
                    className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase border-2 border-black dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                   title="View search results"
+                   title={t.affiliateRow.actions.view}
                  >
                    <X size={10} />
-                   0 Found
+                   {t.affiliateRow.actions.notFound}
                  </button>
                  <button 
                    onClick={onFindEmail}
                    className="w-7 h-7 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors group"
-                   title="Retry search"
+                   title={t.affiliateRow.actions.retry}
                  >
                    <RotateCw size={12} className="text-gray-500 group-hover:rotate-180 transition-transform duration-300" />
                  </button>
@@ -1316,14 +1339,14 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                <div className="flex items-center gap-1">
                  <div 
                    className="w-7 h-7 bg-red-400 border-2 border-black flex items-center justify-center"
-                   title="Error occurred"
+                   title={t.common.error}
                  >
                    <AlertCircle size={12} className="text-white" />
                  </div>
                  <button 
                    onClick={onFindEmail}
                    className="w-7 h-7 bg-red-300 border-2 border-black flex items-center justify-center hover:bg-red-400 transition-colors group"
-                   title="Retry search"
+                   title={t.affiliateRow.actions.retry}
                  >
                    <RotateCw size={12} className="text-black group-hover:rotate-180 transition-transform duration-300" />
                  </button>
@@ -1333,16 +1356,17 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                <button 
                  onClick={onFindEmail}
                  className="flex items-center gap-1.5 px-2 py-1.5 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black hover:shadow-[2px_2px_0px_0px_#000000] transition-all"
-                 title="Find email"
+                 title={t.affiliateRow.actions.findEmail}
                >
                  <Search size={12} />
-                 Find Email
+                 {t.affiliateRow.actions.findEmail}
                </button>
             )}
          </div>
       )}
 
       {/* Actions - col-span-2 (NEW DESIGN January 6th, 2026) */}
+      {/* Updated January 10th, 2026 - i18n migration */}
       <div className="col-span-2 flex items-center justify-end gap-2">
         {/* Delete Button - Neo-brutalist style */}
         <button 
@@ -1352,10 +1376,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               ? 'w-[70px] h-7 bg-red-500 text-white hover:bg-red-600 animate-pulse'
               : 'w-7 h-7 bg-red-400 text-white hover:bg-red-500'
           }`}
-          title={isDeleteConfirming ? "Click again to confirm delete" : "Delete"}
+          title={isDeleteConfirming ? t.affiliateRow.actions.confirm : t.affiliateRow.actions.delete}
         >
           {isDeleteConfirming ? (
-            <span className="text-[10px] font-bold">Confirm?</span>
+            <span className="text-[10px] font-bold">{t.affiliateRow.actions.confirm}</span>
           ) : (
             <Trash2 size={14} />
           )}
@@ -1364,7 +1388,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         <button 
           onClick={() => setIsViewModalOpen(true)}
           className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 border-2 border-black dark:border-white text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" 
-          title="View details"
+          title={t.affiliateRow.actions.view}
         >
           <Eye size={14} />
         </button>
@@ -1379,7 +1403,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 ? 'bg-emerald-500 text-white' 
                 : 'bg-emerald-50 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800'
           }`}
-          title={isSaving ? "Saving..." : isSaved ? "Saved" : "Save to Pipeline"}
+          title={isSaving ? t.affiliateRow.actions.saving : isSaved ? t.affiliateRow.actions.saved : t.affiliateRow.actions.saveToPipeline}
         >
           {isSaving ? (
             <Loader2 size={14} className="animate-spin text-black" />
@@ -1390,6 +1414,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       </div>
 
       {/* Relevant Content Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
+      {/* Updated January 10th, 2026 - i18n migration */}
       {isModalOpen && (
         <div 
           className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
@@ -1402,7 +1427,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {/* Modal Header */}
             <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23] flex items-center justify-between">
               <h3 className="text-lg font-black text-black uppercase">
-                Relevant Content ({(subItems?.length || 0) + 1} articles)
+                {t.affiliateRow.contentModal.title} ({(subItems?.length || 0) + 1} {t.affiliateRow.contentModal.articles})
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -1426,15 +1451,15 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 
                 <div className="flex flex-wrap gap-2.5 mb-4">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold border-2 border-gray-200 dark:border-gray-600">
-                    Ranking: <span className="text-black dark:text-white font-black bg-white dark:bg-black px-1.5 border border-black dark:border-gray-500">{rank}</span>
+                    {t.affiliateRow.contentModal.ranking} <span className="text-black dark:text-white font-black bg-white dark:bg-black px-1.5 border border-black dark:border-gray-500">{rank}</span>
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#ffbf23]/20 text-black dark:text-[#ffbf23] text-xs font-bold border-2 border-[#ffbf23]">
-                    Keyword: <span className="font-black bg-white dark:bg-black px-1.5 border border-black dark:border-[#ffbf23]">{keyword}</span>
+                    {t.affiliateRow.contentModal.keyword} <span className="font-black bg-white dark:bg-black px-1.5 border border-black dark:border-[#ffbf23]">{keyword}</span>
                   </span>
                 </div>
                 
                 <p className="text-xs font-bold text-gray-400 mb-2.5 border-b-2 border-gray-100 dark:border-gray-700 pb-2 uppercase">
-                  {date || new Date().toLocaleDateString()} — Discovered via {discoveryMethod?.type}
+                  {date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia} {discoveryMethod?.type}
                 </p>
                 
                 <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
@@ -1455,15 +1480,15 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
                   <div className="flex flex-wrap gap-2.5 mb-4">
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold border-2 border-gray-200 dark:border-gray-600">
-                      Ranking: <span className="text-black dark:text-white font-black bg-white dark:bg-black px-1.5 border border-black dark:border-gray-500">{item.rank || '-'}</span>
+                      {t.affiliateRow.contentModal.ranking} <span className="text-black dark:text-white font-black bg-white dark:bg-black px-1.5 border border-black dark:border-gray-500">{item.rank || '-'}</span>
                     </span>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#ffbf23]/20 text-black dark:text-[#ffbf23] text-xs font-bold border-2 border-[#ffbf23]">
-                      Keyword: <span className="font-black bg-white dark:bg-black px-1.5 border border-black dark:border-[#ffbf23]">{item.keyword || keyword}</span>
+                      {t.affiliateRow.contentModal.keyword} <span className="font-black bg-white dark:bg-black px-1.5 border border-black dark:border-[#ffbf23]">{item.keyword || keyword}</span>
                     </span>
                   </div>
 
                   <p className="text-xs font-bold text-gray-400 mb-2.5 border-b-2 border-gray-100 dark:border-gray-700 pb-2 uppercase">
-                    {item.date || date || new Date().toLocaleDateString()} — Discovered via {item.discoveryMethod?.type || 'search'}
+                    {item.date || date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia} {item.discoveryMethod?.type || 'search'}
                   </p>
                   
                   <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
@@ -1476,10 +1501,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex justify-end gap-3">
               <button className="px-4 py-2 bg-emerald-500 text-white text-sm font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2">
-                <Save size={16} /> Save
+                <Save size={16} /> {t.affiliateRow.actions.save}
               </button>
               <button className="px-4 py-2 bg-red-500 text-white text-sm font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2">
-                <Trash2 size={16} /> Delete
+                <Trash2 size={16} /> {t.affiliateRow.actions.delete}
               </button>
             </div>
           </div>
@@ -1487,6 +1512,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       )}
 
       {/* Email Results Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
+      {/* Updated January 10th, 2026 - i18n migration */}
       {isEmailModalOpen && (
         <div 
           className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
@@ -1503,7 +1529,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   <Mail size={18} className="text-[#ffbf23]" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-black uppercase">Email Results</h3>
+                  <h3 className="text-lg font-black text-black uppercase">{t.affiliateRow.emailModal.title}</h3>
                   <p className="text-xs text-black/70 font-medium">
                     {personName || channel?.name || domain.replace(/^www\./, '').split('.')[0]}
                   </p>
@@ -1512,7 +1538,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-white text-xs font-black uppercase border-2 border-black">
                   <Mail size={12} />
-                  {emailResults?.emails?.length || (email ? 1 : 0)} Found
+                  {emailResults?.emails?.length || (email ? 1 : 0)} {t.affiliateRow.emailModal.found}
                 </span>
                 <button
                   onClick={() => setIsEmailModalOpen(false)}
@@ -1563,7 +1589,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                               )}
                             </div>
                             <span className="text-[10px] font-black text-black bg-[#ffbf23] px-2 py-1 border-2 border-black uppercase">
-                              {contact.emails.length} email{contact.emails.length !== 1 ? 's' : ''}
+                              {contact.emails.length} {contact.emails.length !== 1 ? t.affiliateRow.emailModal.emails : t.affiliateRow.emailModal.email}
                             </span>
                           </div>
                         </div>
@@ -1590,7 +1616,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                                 }`}
                               >
                                 {copiedEmail === emailAddr ? <Check size={10} /> : <Copy size={10} />}
-                                {copiedEmail === emailAddr ? 'Done!' : 'Copy'}
+                                {copiedEmail === emailAddr ? t.affiliateRow.emailModal.done : t.affiliateRow.emailModal.copy}
                               </button>
                             </div>
                           ))}
@@ -1622,7 +1648,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                                     }`}
                                   >
                                     {copiedEmail === phone ? <Check size={10} /> : <Copy size={10} />}
-                                    {copiedEmail === phone ? 'Done!' : 'Copy'}
+                                    {copiedEmail === phone ? t.affiliateRow.emailModal.done : t.affiliateRow.emailModal.copy}
                                   </button>
                                 </div>
                               ))}
@@ -1636,7 +1662,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               ) : (emailResults?.emails?.length || (email ? 1 : 0)) > 0 ? (
                 /* Fallback: Simple email list */
                 <div>
-                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Email Addresses</h4>
+                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">{t.affiliateRow.emailModal.emailAddresses}</h4>
                   <div className="space-y-2">
                     {(emailResults?.emails || (email ? [email] : [])).map((emailAddr, idx) => (
                       <div 
@@ -1658,7 +1684,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                           }`}
                         >
                           {copiedEmail === emailAddr ? <Check size={12} /> : <Copy size={12} />}
-                          {copiedEmail === emailAddr ? 'Done!' : 'Copy'}
+                          {copiedEmail === emailAddr ? t.affiliateRow.emailModal.done : t.affiliateRow.emailModal.copy}
                         </button>
                       </div>
                     ))}
@@ -1670,8 +1696,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center mx-auto mb-3">
                     <X size={20} className="text-gray-400" />
                   </div>
-                  <p className="text-sm font-black text-gray-600 dark:text-gray-300 uppercase">No emails found</p>
-                  <p className="text-xs text-gray-400 mt-1">Try searching again</p>
+                  <p className="text-sm font-black text-gray-600 dark:text-gray-300 uppercase">{t.affiliateRow.emailModal.noEmailsFound}</p>
+                  <p className="text-xs text-gray-400 mt-1">{t.affiliateRow.emailModal.trySearchingAgain}</p>
                   <button
                     onClick={() => {
                       setIsEmailModalOpen(false);
@@ -1680,7 +1706,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                     className="mt-4 px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all inline-flex items-center gap-2"
                   >
                     <RotateCw size={12} />
-                    Retry
+                    {t.affiliateRow.actions.retry}
                   </button>
                 </div>
               )}
@@ -1697,6 +1723,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           - TikTok: Profile with avatar, followers, bio, relevant posts
           ============================================================================ */}
       {/* View Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
+      {/* Updated January 10th, 2026 - i18n migration */}
       {isViewModalOpen && (
         <div 
           className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
@@ -1708,7 +1735,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           >
             {/* Modal Header */}
             <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23] flex items-center justify-between">
-              <h3 className="text-lg font-black text-black uppercase">View Details</h3>
+              <h3 className="text-lg font-black text-black uppercase">{t.affiliateRow.viewModal.title}</h3>
               <button
                 onClick={() => setIsViewModalOpen(false)}
                 className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
@@ -1749,7 +1776,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   }`}
                 >
                   <Save size={12} />
-                  {isSaved ? 'Saved' : 'Save'}
+                  {isSaved ? t.affiliateRow.actions.saved : t.affiliateRow.actions.save}
                 </button>
                 <button
                   onClick={() => {
@@ -1759,7 +1786,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                 >
                   <Trash2 size={12} />
-                  Delete
+                  {t.affiliateRow.actions.delete}
                 </button>
               </div>
             </div>

@@ -6,6 +6,7 @@
  * =============================================================================
  * 
  * Updated: January 8th, 2026
+ * i18n Migration: January 10th, 2026 - Priority 6: Static Pages
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -14,6 +15,9 @@
  * - Bold typography (font-black uppercase)
  * - Dark mode support
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
@@ -21,14 +25,18 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Cookie, Sparkles } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CookiePolicyPage() {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-black font-sans text-gray-900 dark:text-white">
       {/* Header - NEO-BRUTALIST */}
       <header className="sticky top-0 z-50 bg-white dark:bg-[#0a0a0a] border-b-4 border-black dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-black text-lg tracking-tight uppercase">
+          <Link href="/" className="flex items-center gap-2 font-black text-lg-tight uppercase">
             <img 
               src="/logo.jpg" 
               alt="CrewCast Studio" 
@@ -41,7 +49,7 @@ export default function CookiePolicyPage() {
             className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors uppercase"
           >
             <ArrowLeft size={16} />
-            Back to Home
+            {t.legalPages.common.backToHome}
           </Link>
         </div>
       </header>
@@ -53,8 +61,8 @@ export default function CookiePolicyPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-[#ffbf23] border-4 border-black mb-6 shadow-[4px_4px_0px_0px_#000000]">
             <Cookie size={32} className="text-black" />
           </div>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Cookie Policy</h1>
-          <p className="text-gray-500 text-sm font-medium">Last updated: January 2025</p>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">{t.legalPages.cookies.title}</h1>
+          <p className="text-gray-500 text-sm font-medium">{t.legalPages.common.lastUpdated} January 2025</p>
         </div>
 
         {/* Content - NEO-BRUTALIST */}
@@ -64,48 +72,47 @@ export default function CookiePolicyPage() {
               <div className="flex items-start gap-3">
                 <Sparkles size={20} className="text-black dark:text-white mt-0.5 shrink-0" />
                 <div>
-                  <h3 className="font-black text-black dark:text-white mb-1 uppercase">Content Coming Soon</h3>
+                  <h3 className="font-black text-black dark:text-white mb-1 uppercase">{t.legalPages.common.contentComingSoon}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    This Cookie Policy is currently being drafted by our legal team. 
-                    The final version will explain how we use cookies and similar technologies.
+                    {t.legalPages.cookies.comingSoonMessage}
                   </p>
                 </div>
               </div>
             </div>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">1. What Are Cookies?</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.cookies.sections.whatAreCookies}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Explanation of cookies, how they work, and why websites use them will be added here.]
+              {t.legalPages.cookies.sections.whatAreCookiesPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">2. Types of Cookies We Use</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.cookies.sections.typesOfCookies}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about essential cookies, analytics cookies, functional cookies, and marketing cookies will be added here.]
+              {t.legalPages.cookies.sections.typesOfCookiesPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">3. Essential Cookies</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.cookies.sections.essentialCookies}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about cookies necessary for the website to function properly will be added here.]
+              {t.legalPages.cookies.sections.essentialCookiesPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">4. Analytics Cookies</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.cookies.sections.analyticsCookies}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about cookies used to understand how visitors interact with our website will be added here.]
+              {t.legalPages.cookies.sections.analyticsCookiesPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">5. Third-Party Cookies</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.cookies.sections.thirdPartyCookies}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about cookies set by third-party services like Stripe, analytics providers, etc. will be added here.]
+              {t.legalPages.cookies.sections.thirdPartyCookiesPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">6. Managing Cookies</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.cookies.sections.managingCookies}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Instructions on how to control, disable, or delete cookies through browser settings will be added here.]
+              {t.legalPages.cookies.sections.managingCookiesPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">7. Contact Us</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.cookies.sections.contactUs}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              If you have any questions about our Cookie Policy, please contact us at{' '}
+              {t.legalPages.cookies.sections.contactUsText}{' '}
               <a href="mailto:privacy@crewcaststudio.com" className="text-black dark:text-white font-bold hover:text-[#ffbf23] transition-colors">
                 privacy@crewcaststudio.com
               </a>

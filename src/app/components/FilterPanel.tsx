@@ -3,6 +3,7 @@
 /**
  * =============================================================================
  * FILTER PANEL COMPONENT - Updated January 6th, 2026
+ * i18n Migration: January 10th, 2026 - Priority 5: Shared Components
  * =============================================================================
  * 
  * DESIGN UPDATE: Neo-brutalist style from DashboardDemo.tsx
@@ -10,6 +11,9 @@
  * - Bold borders (border-2) instead of subtle borders
  * - Industrial typography and styling
  * - Dark mode support
+ * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
  * =============================================================================
  */
 
@@ -32,6 +36,8 @@ import {
   countActiveFilters,
   parseSubscriberCount
 } from '../types';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Dictionary } from '@/dictionaries';
 
 interface FilterPanelProps {
   affiliates: ResultItem[];
@@ -198,26 +204,29 @@ const FilterPill: React.FC<FilterPillProps> = ({
 
 // ============================================================================
 // MULTI-SELECT COMPONENT (for Competitors, Topics)
+// Updated January 10th, 2026 - i18n migration
 // ============================================================================
 interface MultiSelectProps {
   options: string[];
   selected: string[];
   onChange: (selected: string[]) => void;
   emptyMessage?: string;
+  t: Dictionary['filterPanel']; // i18n translations
 }
 
 const MultiSelect: React.FC<MultiSelectProps> = ({
   options,
   selected,
   onChange,
-  emptyMessage = "No options available",
+  emptyMessage,
+  t,
 }) => {
   const [showAll, setShowAll] = useState(false);
   const maxVisible = 8;
   const visibleOptions = showAll ? options : options.slice(0, maxVisible);
 
   if (options.length === 0) {
-    return <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono uppercase">{emptyMessage}</p>;
+    return <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono uppercase">{emptyMessage || t.noOptionsAvailable}</p>;
   }
 
   return (
@@ -249,7 +258,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           onClick={() => setShowAll(!showAll)}
           className="text-[10px] text-black dark:text-[#ffbf23] hover:underline font-black uppercase"
         >
-          {showAll ? '− Show less' : `+ ${options.length - maxVisible} more`}
+          {showAll ? t.showLess : `+ ${options.length - maxVisible} ${t.more}`}
         </button>
       )}
       {selected.length > 0 && (
@@ -257,7 +266,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           onClick={() => onChange([])}
           className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
         >
-          × Clear all
+          {t.clearAll}
         </button>
       )}
     </div>
@@ -266,17 +275,20 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
 // ============================================================================
 // RANGE PRESETS (for Subscribers, Content Count)
+// Updated January 10th, 2026 - i18n migration
 // ============================================================================
 interface RangePresetsProps {
   value: { min?: number; max?: number } | null;
   onChange: (range: { min?: number; max?: number } | null) => void;
   presets: { label: string; min: number; max?: number }[];
+  clearLabel: string; // i18n
 }
 
 const RangePresets: React.FC<RangePresetsProps> = ({
   value,
   onChange,
   presets,
+  clearLabel,
 }) => {
   return (
     <div className="space-y-2">
@@ -307,7 +319,7 @@ const RangePresets: React.FC<RangePresetsProps> = ({
           onClick={() => onChange(null)}
           className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
         >
-          × Clear
+          {clearLabel}
         </button>
       )}
     </div>
@@ -316,21 +328,25 @@ const RangePresets: React.FC<RangePresetsProps> = ({
 
 // ============================================================================
 // DATE PRESETS (for Date Published, Last Posted)
+// Updated January 10th, 2026 - i18n migration
 // ============================================================================
 interface DatePresetsProps {
   value: { start?: string; end?: string } | null;
   onChange: (range: { start?: string; end?: string } | null) => void;
+  t: Dictionary['filterPanel']; // i18n translations
 }
 
 const DatePresets: React.FC<DatePresetsProps> = ({
   value,
   onChange,
+  t,
 }) => {
+  // i18n: Use translated labels for date presets
   const presets = [
-    { label: '7 days', days: 7 },
-    { label: '30 days', days: 30 },
-    { label: '90 days', days: 90 },
-    { label: '1 year', days: 365 },
+    { label: t.days7, days: 7 },
+    { label: t.days30, days: 30 },
+    { label: t.days90, days: 90 },
+    { label: t.year1, days: 365 },
   ];
 
   const handlePreset = (days: number) => {
@@ -380,7 +396,7 @@ const DatePresets: React.FC<DatePresetsProps> = ({
           onClick={() => onChange(null)}
           className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
         >
-          × Clear
+          {t.clear}
         </button>
       )}
     </div>
@@ -390,6 +406,7 @@ const DatePresets: React.FC<DatePresetsProps> = ({
 // ============================================================================
 // MAIN FILTER PANEL COMPONENT
 // Horizontal layout with expandable filter pills
+// Updated January 10th, 2026 - i18n migration
 // ============================================================================
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   affiliates,
@@ -399,6 +416,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onClose,
   onOpen,
 }) => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+  
   // Track which dropdown is currently open
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   
@@ -443,11 +463,12 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   return (
     <div className="flex items-center gap-2">
       {/* Expanded Filter Pills - Only show when isOpen */}
+      {/* Updated January 10th, 2026 - i18n migration */}
       {isOpen && (
         <div className="flex items-center gap-2">
           {/* Competitors Filter */}
           <FilterPill
-            label="Competitors"
+            label={t.filterPanel.competitors}
             icon={<Users size={12} />}
             isActive={activeFilters.competitors.length > 0}
             activeCount={activeFilters.competitors.length}
@@ -459,13 +480,14 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               options={filterOptions.competitors}
               selected={activeFilters.competitors}
               onChange={competitors => onFilterChange({ ...activeFilters, competitors })}
-              emptyMessage="No competitors found"
+              emptyMessage={t.filterPanel.noCompetitorsFound}
+              t={t.filterPanel}
             />
           </FilterPill>
 
           {/* Topics Filter */}
           <FilterPill
-            label="Topics"
+            label={t.filterPanel.topics}
             icon={<Tag size={12} />}
             isActive={activeFilters.topics.length > 0}
             activeCount={activeFilters.topics.length}
@@ -477,13 +499,14 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               options={filterOptions.topics}
               selected={activeFilters.topics}
               onChange={topics => onFilterChange({ ...activeFilters, topics })}
-              emptyMessage="No topics found"
+              emptyMessage={t.filterPanel.noTopicsFound}
+              t={t.filterPanel}
             />
           </FilterPill>
 
           {/* Subscribers Filter */}
           <FilterPill
-            label="Followers"
+            label={t.filterPanel.followers}
             icon={<Users size={12} />}
             isActive={activeFilters.subscribers !== null}
             isDropdownOpen={openDropdown === 'subscribers'}
@@ -494,12 +517,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               value={activeFilters.subscribers}
               onChange={subscribers => onFilterChange({ ...activeFilters, subscribers })}
               presets={subscriberPresets}
+              clearLabel={t.filterPanel.clear}
             />
           </FilterPill>
 
           {/* Date Published Filter */}
           <FilterPill
-            label="Date"
+            label={t.filterPanel.date}
             icon={<Calendar size={12} />}
             isActive={activeFilters.datePublished !== null}
             isDropdownOpen={openDropdown === 'datePublished'}
@@ -509,12 +533,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             <DatePresets
               value={activeFilters.datePublished}
               onChange={datePublished => onFilterChange({ ...activeFilters, datePublished })}
+              t={t.filterPanel}
             />
           </FilterPill>
 
           {/* Content Count Filter */}
           <FilterPill
-            label="Posts"
+            label={t.filterPanel.posts}
             icon={<Hash size={12} />}
             isActive={activeFilters.contentCount !== null}
             isDropdownOpen={openDropdown === 'contentCount'}
@@ -525,6 +550,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               value={activeFilters.contentCount}
               onChange={contentCount => onFilterChange({ ...activeFilters, contentCount })}
               presets={contentPresets}
+              clearLabel={t.filterPanel.clear}
             />
           </FilterPill>
 
@@ -535,7 +561,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               className="flex items-center gap-1 px-2 py-2 text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-black uppercase tracking-wide"
             >
               <X size={10} strokeWidth={3} />
-              <span>Clear All</span>
+              <span>{t.filterPanel.clearAll}</span>
             </button>
           )}
 

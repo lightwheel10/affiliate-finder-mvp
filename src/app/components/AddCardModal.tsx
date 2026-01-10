@@ -6,6 +6,7 @@
  * =============================================================================
  * 
  * Updated: January 8th, 2026
+ * i18n Migration: January 10th, 2026 - Priority 5: Shared Components
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -23,6 +24,9 @@
  * - Card details handled entirely by Stripe.js
  * - 3D Secure authentication handled automatically
  * - No raw card data stored anywhere
+ * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
  * =============================================================================
  */
 
@@ -32,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { Modal } from './Modal';
 import { StripeProvider } from './StripeProvider';
 import { StripeCardInput, useStripeCardSetup } from './StripeCardInput';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AddCardModalProps {
   isOpen: boolean;
@@ -48,6 +53,9 @@ const CardForm: React.FC<{
   onSuccess: () => void;
   onClose: () => void;
 }> = ({ userId, userEmail, onSuccess, onClose }) => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+  
   const { confirmSetup, isProcessing, error: setupError } = useStripeCardSetup();
   
   const [cardholderName, setCardholderName] = useState('');
@@ -69,7 +77,7 @@ const CardForm: React.FC<{
     e.preventDefault();
     
     if (!isCardReady || !cardholderName.trim()) {
-      setError('Please complete all card details');
+      setError(t.modals.addCard.completeCardDetails);
       return;
     }
 
@@ -155,9 +163,9 @@ const CardForm: React.FC<{
         </div>
       )}
 
-      {/* Discount Code Section - NEO-BRUTALIST */}
+      {/* Discount Code Section - NEO-BRUTALIST - i18n January 10th, 2026 */}
       <div className="space-y-1.5 col-span-2">
-        <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Discount Code (Optional)</label>
+        <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.modals.addCard.discountLabel}</label>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -168,7 +176,7 @@ const CardForm: React.FC<{
                 setDiscountError('');
                 setDiscountApplied(false);
               }}
-              placeholder="SAVE20"
+              placeholder={t.modals.addCard.discountPlaceholder}
               disabled={discountApplied || isLoading}
               className={cn(
                 "w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 text-sm text-gray-900 dark:text-white focus:outline-none transition-all placeholder:text-gray-400 uppercase font-mono",
@@ -211,11 +219,11 @@ const CardForm: React.FC<{
               
               try {
                 // TODO: Replace with real API call to validate promo code
-                setDiscountError('Discount codes coming soon');
+                setDiscountError(t.modals.addCard.discountComingSoon);
                 setDiscountApplied(false);
                 setDiscountAmount(0);
               } catch {
-                setDiscountError('Failed to validate code');
+                setDiscountError(t.modals.addCard.failedToValidate);
               } finally {
                 setIsApplyingDiscount(false);
               }
@@ -233,9 +241,9 @@ const CardForm: React.FC<{
             {isApplyingDiscount ? (
               <Loader2 size={14} className="animate-spin" />
             ) : discountApplied ? (
-              'Applied'
+              t.modals.addCard.applied
             ) : (
-              'Apply'
+              t.modals.addCard.apply
             )}
           </button>
         </div>
@@ -249,13 +257,13 @@ const CardForm: React.FC<{
           <div className="flex items-center gap-1.5 p-2 bg-green-100 dark:bg-green-900/30 border-2 border-green-500">
             <Sparkles size={12} className="text-green-600" />
             <p className="text-[10px] text-green-700 dark:text-green-400 font-bold">
-              {discountAmount}% discount will be applied to your next billing cycle
+              {discountAmount}{t.modals.addCard.discountApplied}
             </p>
           </div>
         )}
       </div>
 
-      {/* Submit Button - NEO-BRUTALIST */}
+      {/* Submit Button - NEO-BRUTALIST - i18n January 10th, 2026 */}
       <button
         type="submit"
         disabled={!isCardReady || !cardholderName.trim() || isLoading || isProcessing}
@@ -269,19 +277,19 @@ const CardForm: React.FC<{
         {(isLoading || isProcessing) ? (
           <>
             <Loader2 size={16} className="animate-spin" />
-            Processing...
+            {t.modals.addCard.processing}
           </>
         ) : (
           <>
             <Lock size={14} />
-            Save Payment Method
+            {t.modals.addCard.saveButton}
           </>
         )}
       </button>
 
-      {/* Security Note - NEO-BRUTALIST */}
+      {/* Security Note - NEO-BRUTALIST - i18n January 10th, 2026 */}
       <p className="text-[10px] text-gray-400 text-center font-medium">
-        Your card details are stored securely by Stripe. We never see your full card number.
+        {t.modals.addCard.securityNote}
       </p>
     </form>
   );
@@ -294,12 +302,15 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
   userId,
   userEmail,
 }) => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+  
   const handleClose = () => {
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Add Payment Method" width="max-w-md">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t.modals.addCard.title} width="max-w-md">
       <StripeProvider>
         <CardForm 
           userId={userId} 

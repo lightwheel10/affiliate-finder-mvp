@@ -732,12 +732,27 @@ export interface Dictionary {
       message: string;
       deleteButton: string;
       deleting: string;
+      deleteCount: string;
+      willBeDeleted: string;
+      affiliates: string;
+      affiliate: string;
+      cancel: string;
     };
     addCard: {
       title: string;
       subtitle: string;
       saveButton: string;
       saving: string;
+      discountLabel: string;
+      discountPlaceholder: string;
+      apply: string;
+      applied: string;
+      discountComingSoon: string;
+      failedToValidate: string;
+      discountApplied: string;
+      completeCardDetails: string;
+      securityNote: string;
+      processing: string;
     };
   };
 
@@ -784,6 +799,311 @@ export interface Dictionary {
       title: string;
       subtitle: string;
     };
+  };
+
+  // =========================================================================
+  // ERROR BOUNDARY - Error fallback UI
+  // Added: January 10th, 2026 - Priority 5: Shared Components
+  // =========================================================================
+  errorBoundary: {
+    title: string;
+    message: string;
+    contactPrefix: string;
+    tryAgain: string;
+  };
+
+  // =========================================================================
+  // LEGAL PAGES - Privacy, Terms, Cookies, Security
+  // Added: January 10th, 2026 - Priority 6: Static Pages
+  // =========================================================================
+  legalPages: {
+    // Shared strings across all legal pages
+    common: {
+      backToHome: string;
+      lastUpdated: string;
+      contentComingSoon: string;
+      contactUs: string;
+    };
+    // Privacy Policy page
+    privacy: {
+      title: string;
+      comingSoonMessage: string;
+      sections: {
+        informationWeCollect: string;
+        informationWeCollectPlaceholder: string;
+        howWeUseInfo: string;
+        howWeUseInfoPlaceholder: string;
+        dataSharing: string;
+        dataSharingPlaceholder: string;
+        dataSecurity: string;
+        dataSecurityPlaceholder: string;
+        yourRights: string;
+        yourRightsPlaceholder: string;
+        contactUs: string;
+        contactUsText: string;
+      };
+    };
+    // Terms of Service page
+    terms: {
+      title: string;
+      comingSoonMessage: string;
+      sections: {
+        acceptanceOfTerms: string;
+        acceptanceOfTermsPlaceholder: string;
+        descriptionOfService: string;
+        descriptionOfServicePlaceholder: string;
+        userAccounts: string;
+        userAccountsPlaceholder: string;
+        paymentAndBilling: string;
+        paymentAndBillingPlaceholder: string;
+        acceptableUse: string;
+        acceptableUsePlaceholder: string;
+        intellectualProperty: string;
+        intellectualPropertyPlaceholder: string;
+        limitationOfLiability: string;
+        limitationOfLiabilityPlaceholder: string;
+        contactUs: string;
+        contactUsText: string;
+      };
+    };
+    // Cookie Policy page
+    cookies: {
+      title: string;
+      comingSoonMessage: string;
+      sections: {
+        whatAreCookies: string;
+        whatAreCookiesPlaceholder: string;
+        typesOfCookies: string;
+        typesOfCookiesPlaceholder: string;
+        essentialCookies: string;
+        essentialCookiesPlaceholder: string;
+        analyticsCookies: string;
+        analyticsCookiesPlaceholder: string;
+        thirdPartyCookies: string;
+        thirdPartyCookiesPlaceholder: string;
+        managingCookies: string;
+        managingCookiesPlaceholder: string;
+        contactUs: string;
+        contactUsText: string;
+      };
+    };
+    // Security page
+    security: {
+      title: string;
+      subtitle: string;
+      comingSoonMessage: string;
+      highlights: {
+        soc2Title: string;
+        soc2Description: string;
+        encryptionTitle: string;
+        encryptionDescription: string;
+        infrastructureTitle: string;
+        infrastructureDescription: string;
+        gdprTitle: string;
+        gdprDescription: string;
+      };
+      sections: {
+        dataProtection: string;
+        dataProtectionPlaceholder: string;
+        authentication: string;
+        authenticationPlaceholder: string;
+        paymentSecurity: string;
+        paymentSecurityPlaceholder: string;
+        infrastructureSecurity: string;
+        infrastructureSecurityPlaceholder: string;
+        vulnerabilityManagement: string;
+        vulnerabilityManagementPlaceholder: string;
+        reportVulnerability: string;
+        reportVulnerabilityText: string;
+      };
+    };
+  };
+
+  // =========================================================================
+  // AFFILIATE ROW - Shared component for displaying affiliate results
+  // Added: January 10th, 2026 - Priority 5: Shared Components
+  // =========================================================================
+  affiliateRow: {
+    // Status badges
+    badges: {
+      new: string;
+      saved: string;
+      discovered: string;
+    };
+    // Metrics labels
+    metrics: {
+      followers: string;
+      subscribers: string;
+      views: string;
+      likes: string;
+      comments: string;
+      visitsPerMonth: string;
+      loading: string;
+    };
+    // Discovery method
+    discovery: {
+      keywordLabel: string;
+      rankFor: string;
+      more: string;
+    };
+    // Action buttons
+    actions: {
+      confirm: string;
+      findEmail: string;
+      found: string;
+      notFound: string;
+      retry: string;
+      save: string;
+      saved: string;
+      saving: string;
+      saveToPipeline: string;
+      delete: string;
+      view: string;
+    };
+    // Relevant content modal
+    contentModal: {
+      title: string;
+      articles: string;
+      ranking: string;
+      keyword: string;
+      discoveredVia: string;
+    };
+    // Email results modal
+    emailModal: {
+      title: string;
+      found: string;
+      emailAddresses: string;
+      noEmailsFound: string;
+      trySearchingAgain: string;
+      email: string;
+      emails: string;
+      copy: string;
+      done: string;
+    };
+    // View details modal
+    viewModal: {
+      title: string;
+      visitChannel: string;
+      visitAccount: string;
+      visitWebsite: string;
+      // YouTube specific
+      youtube: {
+        subscribers: string;
+        relevantVideos: string;
+      };
+      // Instagram specific
+      instagram: {
+        followers: string;
+        relevantPosts: string;
+      };
+      // TikTok specific
+      tiktok: {
+        followers: string;
+        relevantPosts: string;
+      };
+      // Web/SimilarWeb specific
+      web: {
+        trafficPerMonth: string;
+        about: string;
+        trafficMetrics: string;
+        ranking: string;
+        global: string;
+        category: string;
+        userEngagement: string;
+        pagesPerVisit: string;
+        timeOnSite: string;
+        bounceRate: string;
+        trafficSources: string;
+        search: string;
+        direct: string;
+        referrals: string;
+        social: string;
+        paid: string;
+        mail: string;
+        noTrafficData: string;
+        noTrafficDataDesc: string;
+        relevantContent: string;
+      };
+    };
+  };
+
+  // =========================================================================
+  // AFFILIATE CARD - Card component for displaying affiliate summary
+  // Added: January 10th, 2026 - Priority 5: Shared Components
+  // =========================================================================
+  affiliateCard: {
+    totalFollowers: string;
+    engagementRate: string;
+    recentGrowth: string;
+    addProfile: string;
+  };
+
+  // =========================================================================
+  // FILTER PANEL - Advanced filtering for affiliates
+  // Added: January 10th, 2026 - Priority 5: Shared Components
+  // =========================================================================
+  filterPanel: {
+    competitors: string;
+    topics: string;
+    followers: string;
+    date: string;
+    posts: string;
+    noCompetitorsFound: string;
+    noTopicsFound: string;
+    noOptionsAvailable: string;
+    showLess: string;
+    more: string;
+    clearAll: string;
+    clear: string;
+    // Date presets
+    days7: string;
+    days30: string;
+    days90: string;
+    year1: string;
+  };
+
+  // =========================================================================
+  // PRICING MODAL - Plan selection and subscription management
+  // Added: January 10th, 2026 - Priority 5: Shared Components
+  // =========================================================================
+  pricingModal: {
+    manageYourPlan: string;
+    superchargeYour: string;
+    affiliateGrowth: string;
+    manageSubtitle: string;
+    newSubtitle: string;
+    currentPlan: string;
+    trial: string;
+    monthly: string;
+    annual: string;
+    save20: string;
+    perMonth: string;
+    billedYearly: string;
+    custom: string;
+    whatsIncluded: string;
+    bestValue: string;
+    // Button text
+    contactSales: string;
+    buyNow: string;
+    upgradeNow: string;
+    switchPlan: string;
+    switchToAnnual: string;
+    switchToMonthly: string;
+    getStarted: string;
+    // Trial options
+    trialTitle: string;
+    trialMessage: string;
+    keepTrialChangePlan: string;
+    endTrialStartBilling: string;
+    // Change type indicators
+    immediateUpgrade: string;
+    takesEffectNextCycle: string;
+    billingChangeProration: string;
+    // Footer
+    securePayment: string;
+    cancelAnytime: string;
+    upgradeDowngradeNote: string;
+    signInRequired: string;
   };
 }
 

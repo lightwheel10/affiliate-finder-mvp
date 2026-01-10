@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * =============================================================================
@@ -8,6 +9,7 @@ import { Loader2 } from 'lucide-react';
  * =============================================================================
  * 
  * Updated: January 8th, 2026
+ * i18n Migration: January 10th, 2026 - Priority 5: Shared Components
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -27,10 +29,15 @@ import { Loader2 } from 'lucide-react';
  * - Neon user is being fetched/created (neonLoading === true)
  * - Race condition guards (userId is null)
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
 export const AuthLoadingScreen = () => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-100 dark:bg-black">
       <div className="flex flex-col items-center gap-8">
@@ -72,7 +79,7 @@ export const AuthLoadingScreen = () => {
         </div>
         
         {/* Loading text - NEO-BRUTALIST */}
-        <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">Loading...</p>
+        <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">{t.common.loading}</p>
         
       </div>
     </div>

@@ -6,6 +6,7 @@
  * =============================================================================
  * 
  * Updated: January 8th, 2026
+ * i18n Migration: January 10th, 2026 - Priority 6: Static Pages
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -14,6 +15,9 @@
  * - Bold typography (font-black uppercase)
  * - Dark mode support
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
@@ -21,8 +25,12 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FileText, Sparkles } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function TermsOfServicePage() {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-black font-sans text-gray-900 dark:text-white">
       {/* Header - NEO-BRUTALIST */}
@@ -41,7 +49,7 @@ export default function TermsOfServicePage() {
             className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors uppercase"
           >
             <ArrowLeft size={16} />
-            Back to Home
+            {t.legalPages.common.backToHome}
           </Link>
         </div>
       </header>
@@ -53,8 +61,8 @@ export default function TermsOfServicePage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-[#ffbf23] border-4 border-black mb-6 shadow-[4px_4px_0px_0px_#000000]">
             <FileText size={32} className="text-black" />
           </div>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Terms of Service</h1>
-          <p className="text-gray-500 text-sm font-medium">Last updated: January 2025</p>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">{t.legalPages.terms.title}</h1>
+          <p className="text-gray-500 text-sm font-medium">{t.legalPages.common.lastUpdated} January 2025</p>
         </div>
 
         {/* Content - NEO-BRUTALIST */}
@@ -64,53 +72,52 @@ export default function TermsOfServicePage() {
               <div className="flex items-start gap-3">
                 <Sparkles size={20} className="text-black dark:text-white mt-0.5 shrink-0" />
                 <div>
-                  <h3 className="font-black text-black dark:text-white mb-1 uppercase">Content Coming Soon</h3>
+                  <h3 className="font-black text-black dark:text-white mb-1 uppercase">{t.legalPages.common.contentComingSoon}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    These Terms of Service are currently being drafted by our legal team. 
-                    The final version will detail the rules and guidelines for using CrewCast Studio.
+                    {t.legalPages.terms.comingSoonMessage}
                   </p>
                 </div>
               </div>
             </div>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">1. Acceptance of Terms</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.terms.sections.acceptanceOfTerms}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about agreement to terms, eligibility requirements, and account responsibilities will be added here.]
+              {t.legalPages.terms.sections.acceptanceOfTermsPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">2. Description of Service</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.terms.sections.descriptionOfService}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about the CrewCast Studio platform, features, and service availability will be added here.]
+              {t.legalPages.terms.sections.descriptionOfServicePlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">3. User Accounts</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.terms.sections.userAccounts}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about account creation, security, and user responsibilities will be added here.]
+              {t.legalPages.terms.sections.userAccountsPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">4. Payment and Billing</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.terms.sections.paymentAndBilling}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about subscription plans, pricing, refunds, and payment processing will be added here.]
+              {t.legalPages.terms.sections.paymentAndBillingPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">5. Acceptable Use</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.terms.sections.acceptableUse}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Guidelines for proper use of the platform, prohibited activities, and content restrictions will be added here.]
+              {t.legalPages.terms.sections.acceptableUsePlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">6. Intellectual Property</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.terms.sections.intellectualProperty}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about ownership rights, licenses, and intellectual property protections will be added here.]
+              {t.legalPages.terms.sections.intellectualPropertyPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">7. Limitation of Liability</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.terms.sections.limitationOfLiability}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about liability limitations, disclaimers, and indemnification will be added here.]
+              {t.legalPages.terms.sections.limitationOfLiabilityPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">8. Contact Us</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.terms.sections.contactUs}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              If you have any questions about these Terms, please contact us at{' '}
+              {t.legalPages.terms.sections.contactUsText}{' '}
               <a href="mailto:legal@crewcaststudio.com" className="text-black dark:text-white font-bold hover:text-[#ffbf23] transition-colors">
                 legal@crewcaststudio.com
               </a>

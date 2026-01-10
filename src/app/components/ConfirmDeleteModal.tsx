@@ -1,6 +1,7 @@
 /**
  * ConfirmDeleteModal.tsx
  * Created: December 2025
+ * i18n Migration: January 10th, 2026 - Priority 5: Shared Components
  * 
  * A reusable confirmation modal for delete operations.
  * Used by:
@@ -13,6 +14,9 @@
  * - Customizable title, message, and item count
  * - Loading state during deletion
  * - Keyboard support (Escape to cancel)
+ * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
  */
 
 'use client';
@@ -20,6 +24,7 @@
 import React from 'react';
 import { Modal } from './Modal';
 import { AlertTriangle, Trash2, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ConfirmDeleteModalProps {
   /** Whether the modal is open */
@@ -50,13 +55,17 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   message,
   itemType = 'affiliate'
 }) => {
-  // Pluralize item type based on count
-  const pluralizedType = itemCount === 1 ? itemType : `${itemType}s`;
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+  
+  // Pluralize item type based on count - use translated strings for affiliates
+  const pluralizedType = itemCount === 1 
+    ? (itemType === 'affiliate' ? t.modals.confirmDelete.affiliate : itemType)
+    : (itemType === 'affiliate' ? t.modals.confirmDelete.affiliates : `${itemType}s`);
   
   // Default title and message if not provided
-  const displayTitle = title || `Delete ${itemCount} ${pluralizedType}?`;
-  const displayMessage = message || 
-    `Are you sure you want to delete ${itemCount} selected ${pluralizedType}? This action cannot be undone.`;
+  const displayTitle = title || `${t.modals.confirmDelete.deleteCount} ${itemCount} ${pluralizedType}?`;
+  const displayMessage = message || t.modals.confirmDelete.message;
 
   return (
     <Modal
@@ -88,7 +97,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
             <Trash2 size={14} className="text-red-600 dark:text-red-400" />
             <span className="text-sm font-bold text-red-700 dark:text-red-300">
-              {itemCount} {pluralizedType} will be permanently deleted
+              {itemCount} {pluralizedType} {t.modals.confirmDelete.willBeDeleted}
             </span>
           </div>
         </div>
@@ -100,7 +109,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
             disabled={isDeleting}
             className="px-5 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide"
           >
-            Cancel
+            {t.modals.confirmDelete.cancel}
           </button>
           <button
             onClick={onConfirm}
@@ -110,12 +119,12 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
             {isDeleting ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                Deleting...
+                {t.modals.confirmDelete.deleting}
               </>
             ) : (
               <>
                 <Trash2 size={16} />
-                Delete {itemCount} {pluralizedType}
+                {t.modals.confirmDelete.deleteCount} {itemCount} {pluralizedType}
               </>
             )}
           </button>

@@ -2,6 +2,7 @@
 
 import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -11,6 +12,15 @@ interface ErrorBoundaryState {
   hasError: boolean;
 }
 
+interface TranslatedErrorBoundaryProps extends ErrorBoundaryProps {
+  translations: {
+    title: string;
+    message: string;
+    contactPrefix: string;
+    tryAgain: string;
+  };
+}
+
 /**
  * =============================================================================
  * ErrorBoundary Component - NEO-BRUTALIST
@@ -18,6 +28,7 @@ interface ErrorBoundaryState {
  * 
  * Created: 29th December 2025
  * Updated: January 8th, 2026
+ * i18n Migration: January 10th, 2026 - Priority 5: Shared Components
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -37,10 +48,19 @@ interface ErrorBoundaryState {
  * - Shows "Something went wrong" message with refresh button
  * - Logs error to console for debugging
  * 
+ * i18n NOTES:
+ * Since ErrorBoundary is a class component (required for error boundaries),
+ * we use a wrapper functional component to access the translation hook and
+ * pass translations as props to the class component.
+ * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * 
  * =============================================================================
  */
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+
+// Inner class component that receives translations as props
+class ErrorBoundaryInner extends Component<TranslatedErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: TranslatedErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
@@ -60,6 +80,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   render() {
     if (this.state.hasError) {
+      const { translations } = this.props;
+      
       return (
         <div className="flex items-center justify-center min-h-[400px] p-8">
           <div className="text-center max-w-md">
@@ -70,15 +92,15 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             
             {/* Message - NEO-BRUTALIST */}
             <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2 uppercase tracking-wide">
-              Something went wrong
+              {translations.title}
             </h2>
             <p className="text-sm text-gray-500 mb-6">
-              Please try again later. If the problem continues, contact us at{' '}
+              {translations.message}{' '}
               <a 
                 href="mailto:support@crewcast.studio" 
                 className="text-black dark:text-white font-bold hover:underline"
               >
-                support@crewcast.studio
+                {translations.contactPrefix}
               </a>
             </p>
             
@@ -88,7 +110,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
               <RefreshCw size={16} />
-              Try Again
+              {translations.tryAgain}
             </button>
           </div>
         </div>
@@ -98,5 +120,16 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     return this.props.children;
   }
 }
+
+// Wrapper functional component that provides translations to the class component
+const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({ children }) => {
+  const { t } = useLanguage();
+  
+  return (
+    <ErrorBoundaryInner translations={t.errorBoundary}>
+      {children}
+    </ErrorBoundaryInner>
+  );
+};
 
 export default ErrorBoundary;

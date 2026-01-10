@@ -6,6 +6,7 @@
  * =============================================================================
  * 
  * Updated: January 8th, 2026
+ * i18n Migration: January 10th, 2026 - Priority 6: Static Pages
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -14,6 +15,9 @@
  * - Bold typography (font-black uppercase)
  * - Dark mode support
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
@@ -21,8 +25,12 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Lock, Sparkles, ShieldCheck, Server, Key, Eye } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function SecurityPage() {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-black font-sans text-gray-900 dark:text-white">
       {/* Header - NEO-BRUTALIST */}
@@ -41,7 +49,7 @@ export default function SecurityPage() {
             className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors uppercase"
           >
             <ArrowLeft size={16} />
-            Back to Home
+            {t.legalPages.common.backToHome}
           </Link>
         </div>
       </header>
@@ -53,8 +61,8 @@ export default function SecurityPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-[#ffbf23] border-4 border-black mb-6 shadow-[4px_4px_0px_0px_#000000]">
             <Lock size={32} className="text-black" />
           </div>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Security</h1>
-          <p className="text-gray-500 text-sm font-medium">How we protect your data</p>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">{t.legalPages.security.title}</h1>
+          <p className="text-gray-500 text-sm font-medium">{t.legalPages.security.subtitle}</p>
         </div>
 
         {/* Security Highlights - NEO-BRUTALIST */}
@@ -64,8 +72,8 @@ export default function SecurityPage() {
               <ShieldCheck size={20} className="text-[#ffbf23]" />
             </div>
             <div>
-              <h3 className="font-black text-gray-900 dark:text-white mb-1 uppercase">SOC 2 Compliant</h3>
-              <p className="text-sm text-gray-500">Enterprise-grade security standards</p>
+              <h3 className="font-black text-gray-900 dark:text-white mb-1 uppercase">{t.legalPages.security.highlights.soc2Title}</h3>
+              <p className="text-sm text-gray-500">{t.legalPages.security.highlights.soc2Description}</p>
             </div>
           </div>
           <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 p-6 flex items-start gap-4 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333]">
@@ -73,8 +81,8 @@ export default function SecurityPage() {
               <Key size={20} className="text-[#ffbf23]" />
             </div>
             <div>
-              <h3 className="font-black text-gray-900 dark:text-white mb-1 uppercase">End-to-End Encryption</h3>
-              <p className="text-sm text-gray-500">All data encrypted in transit and at rest</p>
+              <h3 className="font-black text-gray-900 dark:text-white mb-1 uppercase">{t.legalPages.security.highlights.encryptionTitle}</h3>
+              <p className="text-sm text-gray-500">{t.legalPages.security.highlights.encryptionDescription}</p>
             </div>
           </div>
           <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 p-6 flex items-start gap-4 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333]">
@@ -82,8 +90,8 @@ export default function SecurityPage() {
               <Server size={20} className="text-[#ffbf23]" />
             </div>
             <div>
-              <h3 className="font-black text-gray-900 dark:text-white mb-1 uppercase">Secure Infrastructure</h3>
-              <p className="text-sm text-gray-500">Hosted on Vercel & Neon with 99.9% uptime</p>
+              <h3 className="font-black text-gray-900 dark:text-white mb-1 uppercase">{t.legalPages.security.highlights.infrastructureTitle}</h3>
+              <p className="text-sm text-gray-500">{t.legalPages.security.highlights.infrastructureDescription}</p>
             </div>
           </div>
           <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 p-6 flex items-start gap-4 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333]">
@@ -91,8 +99,8 @@ export default function SecurityPage() {
               <Eye size={20} className="text-[#ffbf23]" />
             </div>
             <div>
-              <h3 className="font-black text-gray-900 dark:text-white mb-1 uppercase">GDPR Compliant</h3>
-              <p className="text-sm text-gray-500">Full compliance with EU data protection</p>
+              <h3 className="font-black text-gray-900 dark:text-white mb-1 uppercase">{t.legalPages.security.highlights.gdprTitle}</h3>
+              <p className="text-sm text-gray-500">{t.legalPages.security.highlights.gdprDescription}</p>
             </div>
           </div>
         </div>
@@ -104,43 +112,42 @@ export default function SecurityPage() {
               <div className="flex items-start gap-3">
                 <Sparkles size={20} className="text-black dark:text-white mt-0.5 shrink-0" />
                 <div>
-                  <h3 className="font-black text-black dark:text-white mb-1 uppercase">Content Coming Soon</h3>
+                  <h3 className="font-black text-black dark:text-white mb-1 uppercase">{t.legalPages.common.contentComingSoon}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Our comprehensive security documentation is currently being prepared. 
-                    It will detail our security practices, certifications, and data protection measures.
+                    {t.legalPages.security.comingSoonMessage}
                   </p>
                 </div>
               </div>
             </div>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">1. Data Protection</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.security.sections.dataProtection}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about encryption standards, data storage practices, and access controls will be added here.]
+              {t.legalPages.security.sections.dataProtectionPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">2. Authentication & Access</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.security.sections.authentication}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about secure authentication, session management, and role-based access will be added here.]
+              {t.legalPages.security.sections.authenticationPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">3. Payment Security</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.security.sections.paymentSecurity}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about PCI DSS compliance, Stripe integration, and how we handle payment data will be added here.]
+              {t.legalPages.security.sections.paymentSecurityPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">4. Infrastructure Security</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.security.sections.infrastructureSecurity}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about our hosting providers, network security, and monitoring systems will be added here.]
+              {t.legalPages.security.sections.infrastructureSecurityPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">5. Vulnerability Management</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.security.sections.vulnerabilityManagement}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about security testing, bug bounty programs, and incident response will be added here.]
+              {t.legalPages.security.sections.vulnerabilityManagementPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">6. Report a Vulnerability</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.security.sections.reportVulnerability}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              If you discover a security vulnerability, please report it responsibly to{' '}
+              {t.legalPages.security.sections.reportVulnerabilityText}{' '}
               <a href="mailto:security@crewcaststudio.com" className="text-black dark:text-white font-bold hover:text-[#ffbf23] transition-colors">
                 security@crewcaststudio.com
               </a>

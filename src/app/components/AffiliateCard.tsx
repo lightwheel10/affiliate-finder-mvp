@@ -1,8 +1,21 @@
+/**
+ * =============================================================================
+ * AffiliateCard Component - i18n Migration
+ * =============================================================================
+ * Updated: January 10th, 2026 - Priority 5: Shared Components
+ * 
+ * This component displays affiliate information in a card format.
+ * All UI strings have been migrated to use the translation dictionary.
+ * 
+ * Translation hook usage: const { t } = useLanguage();
+ * =============================================================================
+ */
 'use client';
 
 import React from 'react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { Instagram, Youtube, Music, CheckCircle2, MoreVertical } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AffiliateCardProps {
   id: string;
@@ -33,6 +46,9 @@ export const AffiliateCard: React.FC<AffiliateCardProps> = ({
   sparklineData,
   onAddProfile,
 }) => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+
   // Format followers count
   const formatFollowers = (count: number) => {
     if (count >= 1000000) {
@@ -118,26 +134,26 @@ export const AffiliateCard: React.FC<AffiliateCardProps> = ({
         </button>
       </div>
 
-      {/* Stats Row */}
+      {/* Stats Row - i18n January 10th, 2026 */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         {/* Followers */}
         <div>
           <p className="text-xl font-bold text-slate-900 tracking-tight leading-none">{formatFollowers(followers)}</p>
-          <p className="text-[10px] text-slate-500 mt-1">Total followers</p>
+          <p className="text-[10px] text-slate-500 mt-1">{t.affiliateCard.totalFollowers}</p>
         </div>
         
         {/* Engagement */}
         <div>
           <p className="text-xl font-bold text-slate-900 tracking-tight leading-none">{formatEngagement(engagementRate)}</p>
-          <p className="text-[10px] text-slate-500 mt-1">Engagement rate</p>
+          <p className="text-[10px] text-slate-500 mt-1">{t.affiliateCard.engagementRate}</p>
         </div>
       </div>
 
-      {/* Growth & Sparkline */}
+      {/* Growth & Sparkline - i18n January 10th, 2026 */}
       <div className="flex items-end justify-between mb-4">
         <div>
           <p className="text-lg font-bold text-slate-900 leading-none">{recentGrowth}%</p>
-          <p className="text-[10px] text-slate-500 mt-1">Recent growth</p>
+          <p className="text-[10px] text-slate-500 mt-1">{t.affiliateCard.recentGrowth}</p>
         </div>
         
         {/* Sparkline */}
@@ -156,12 +172,12 @@ export const AffiliateCard: React.FC<AffiliateCardProps> = ({
         </div>
       </div>
 
-      {/* Add Profile Button */}
+      {/* Add Profile Button - i18n January 10th, 2026 */}
       <button
         onClick={onAddProfile}
         className="w-full py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-semibold rounded-lg hover:bg-[#c5d913] transition-all"
       >
-        Add profile
+        {t.affiliateCard.addProfile}
       </button>
     </div>
   );

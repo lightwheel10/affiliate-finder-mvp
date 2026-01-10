@@ -6,6 +6,7 @@
  * =============================================================================
  * 
  * Updated: January 8th, 2026
+ * i18n Migration: January 10th, 2026 - Priority 6: Static Pages
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -14,6 +15,9 @@
  * - Bold typography (font-black uppercase)
  * - Dark mode support
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
@@ -21,8 +25,12 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Shield, Sparkles } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function PrivacyPolicyPage() {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-black font-sans text-gray-900 dark:text-white">
       {/* Header - NEO-BRUTALIST */}
@@ -41,7 +49,7 @@ export default function PrivacyPolicyPage() {
             className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors uppercase"
           >
             <ArrowLeft size={16} />
-            Back to Home
+            {t.legalPages.common.backToHome}
           </Link>
         </div>
       </header>
@@ -53,8 +61,8 @@ export default function PrivacyPolicyPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-[#ffbf23] border-4 border-black mb-6 shadow-[4px_4px_0px_0px_#000000]">
             <Shield size={32} className="text-black" />
           </div>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Privacy Policy</h1>
-          <p className="text-gray-500 text-sm font-medium">Last updated: January 2025</p>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">{t.legalPages.privacy.title}</h1>
+          <p className="text-gray-500 text-sm font-medium">{t.legalPages.common.lastUpdated} January 2025</p>
         </div>
 
         {/* Content - NEO-BRUTALIST */}
@@ -64,43 +72,42 @@ export default function PrivacyPolicyPage() {
               <div className="flex items-start gap-3">
                 <Sparkles size={20} className="text-black dark:text-white mt-0.5 shrink-0" />
                 <div>
-                  <h3 className="font-black text-black dark:text-white mb-1 uppercase">Content Coming Soon</h3>
+                  <h3 className="font-black text-black dark:text-white mb-1 uppercase">{t.legalPages.common.contentComingSoon}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    This privacy policy is currently being drafted by our legal team. 
-                    The final version will detail how we collect, use, and protect your personal information.
+                    {t.legalPages.privacy.comingSoonMessage}
                   </p>
                 </div>
               </div>
             </div>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">1. Information We Collect</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.privacy.sections.informationWeCollect}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about personal information, usage data, cookies, and third-party integrations will be added here.]
+              {t.legalPages.privacy.sections.informationWeCollectPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">2. How We Use Your Information</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.privacy.sections.howWeUseInfo}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about how we use collected data for service provision, improvement, and communication will be added here.]
+              {t.legalPages.privacy.sections.howWeUseInfoPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">3. Data Sharing and Disclosure</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.privacy.sections.dataSharing}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about third-party services, legal requirements, and business transfers will be added here.]
+              {t.legalPages.privacy.sections.dataSharingPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">4. Data Security</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.privacy.sections.dataSecurity}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Information about our security measures, encryption, and data protection practices will be added here.]
+              {t.legalPages.privacy.sections.dataSecurityPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">5. Your Rights</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.privacy.sections.yourRights}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              [Placeholder: Details about GDPR rights, data access, deletion requests, and opt-out options will be added here.]
+              {t.legalPages.privacy.sections.yourRightsPlaceholder}
             </p>
 
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">6. Contact Us</h2>
+            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.privacy.sections.contactUs}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              If you have any questions about this Privacy Policy, please contact us at{' '}
+              {t.legalPages.privacy.sections.contactUsText}{' '}
               <a href="mailto:privacy@crewcaststudio.com" className="text-black dark:text-white font-bold hover:text-[#ffbf23] transition-colors">
                 privacy@crewcaststudio.com
               </a>
