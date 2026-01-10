@@ -904,128 +904,127 @@ export default function OutreachPage() {
             </div>
           </div>
 
-              {/* Right: Actions - NEO-BRUTALIST */}
-              <div className="flex items-center gap-3">
-                {selectedAffiliates.size > 0 && (
-                  <>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
-                      <Check size={12} />
-                      {selectedAffiliates.size} SELECTED
-                    </div>
-                    <button
-                      onClick={handleSelectAll}
-                      className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
-                    >
-                      Deselect All
-                    </button>
-                  </>
-                )}
-                {selectedAffiliates.size === 0 && filteredResults.length > 0 && (
-                  <button
-                    onClick={handleSelectAll}
-                    className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
-                  >
-                    Select All
-                  </button>
-                )}
-                {/* ================================================================
-                    BULK GENERATE BUTTON - NEO-BRUTALIST (Updated January 6th, 2026)
-                    ================================================================ */}
+          {/* Right: Actions - NEO-BRUTALIST */}
+          <div className="flex items-center gap-3">
+            {selectedAffiliates.size > 0 && (
+              <>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
+                  <Check size={12} />
+                  {selectedAffiliates.size} SELECTED
+                </div>
                 <button
-                  onClick={handleGenerateMessages}
-                  disabled={selectedAffiliates.size === 0 || generatingIds.size > 0}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 font-black text-xs uppercase transition-all",
-                    selectedAffiliates.size > 0 && generatingIds.size === 0
-                      ? "bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-200 dark:border-gray-700 cursor-not-allowed"
-                  )}
+                  onClick={handleSelectAll}
+                  className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
                 >
-                  {bulkProgress ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      {bulkProgress.current}/{bulkProgress.total}
-                    </>
-                  ) : generatingIds.size > 0 ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 size={14} />
-                      Generate ({selectedAffiliates.size})
-                    </>
-                  )}
+                  Deselect All
                 </button>
-              </div>
+              </>
+            )}
+            {selectedAffiliates.size === 0 && filteredResults.length > 0 && (
+              <button
+                onClick={handleSelectAll}
+                className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
+              >
+                Select All
+              </button>
+            )}
+            {/* ================================================================
+                BULK GENERATE BUTTON - NEO-BRUTALIST (Updated January 6th, 2026)
+                ================================================================ */}
+            <button
+              onClick={handleGenerateMessages}
+              disabled={selectedAffiliates.size === 0 || generatingIds.size > 0}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 font-black text-xs uppercase transition-all",
+                selectedAffiliates.size > 0 && generatingIds.size === 0
+                  ? "bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-200 dark:border-gray-700 cursor-not-allowed"
+              )}
+            >
+              {bulkProgress ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  {bulkProgress.current}/{bulkProgress.total}
+                </>
+              ) : generatingIds.size > 0 ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Wand2 size={14} />
+                  Generate ({selectedAffiliates.size})
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* =============================================================================
+            TABLE AREA - DashboardDemo.tsx EXACT STYLING (Outreach)
+            ============================================================================= */}
+        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
+          {/* Table Header - Translated (January 9th, 2026) */}
+          <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            <div className="col-span-1 flex justify-center">
+              <input
+                type="checkbox"
+                checked={selectedAffiliates.size === filteredResults.length && filteredResults.length > 0}
+                onChange={handleSelectAll}
+                className="accent-[#ffbf23] w-4 h-4"
+              />
             </div>
+            <div className="col-span-3">{t.dashboard.table.affiliate}</div>
+            <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
+            <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
+            <div className="col-span-1">{t.dashboard.table.email}</div>
+            <div className="col-span-2 text-right">{t.dashboard.table.message}</div>
           </div>
 
-          {/* =============================================================================
-              TABLE AREA - DashboardDemo.tsx EXACT STYLING (Outreach)
-              ============================================================================= */}
-          <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
-            {/* Table Header - Translated (January 9th, 2026) */}
-            <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-              <div className="col-span-1 flex justify-center">
-                <input
-                  type="checkbox"
-                  checked={selectedAffiliates.size === filteredResults.length && filteredResults.length > 0}
-                  onChange={handleSelectAll}
-                  className="accent-[#ffbf23] w-4 h-4"
-                />
+          {/* Results Content */}
+          <div className="flex-1">
+          
+          {/* Loading State - Neo-brutalist */}
+          {loading && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="relative w-12 h-12 mx-auto">
+                <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <div className="col-span-3">{t.dashboard.table.affiliate}</div>
-              <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
-              <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
-              <div className="col-span-1">{t.dashboard.table.email}</div>
-              <div className="col-span-2 text-right">{t.dashboard.table.message}</div>
+              <p className="text-gray-500 text-sm mt-4 font-medium">Loading your affiliates...</p>
             </div>
-
-            {/* Results Content */}
-            <div className="flex-1">
-            
-            {/* Loading State - Neo-brutalist */}
-            {loading && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                <div className="relative w-12 h-12 mx-auto">
-                  <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
-                  <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
-                </div>
-                <p className="text-gray-500 text-sm mt-4 font-medium">Loading your affiliates...</p>
+          )}
+          
+          {/* Empty State - Translated (January 9th, 2026) */}
+          {!loading && savedAffiliates.length === 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
+                <MessageSquare size={24} className="text-gray-300" />
               </div>
-            )}
-            
-            {/* Empty State - Translated (January 9th, 2026) */}
-            {!loading && savedAffiliates.length === 0 && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                  <MessageSquare size={24} className="text-gray-300" />
-                </div>
-                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
-                  {t.dashboard.outreach.emptyState.title}
-                </h3>
-                <p className="text-gray-500 text-sm max-w-xs">
-                  {t.dashboard.outreach.emptyState.subtitle}
-                </p>
+              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+                {t.dashboard.outreach.emptyState.title}
+              </h3>
+              <p className="text-gray-500 text-sm max-w-xs">
+                {t.dashboard.outreach.emptyState.subtitle}
+              </p>
+            </div>
+          )}
+          
+          {/* No Results State - Neo-brutalist */}
+          {!loading && savedAffiliates.length > 0 && filteredResults.length === 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
+                <Search size={24} className="text-gray-300" />
               </div>
-            )}
-            
-            {/* No Results State - Neo-brutalist */}
-            {!loading && savedAffiliates.length > 0 && filteredResults.length === 0 && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                  <Search size={24} className="text-gray-300" />
-                </div>
-                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
-                  No Results Found
-                </h3>
-                <p className="text-gray-500 text-sm max-w-xs">
-                  Try adjusting your search or filter to find affiliates.
-                </p>
-              </div>
-            )}
+              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+                No Results Found
+              </h3>
+              <p className="text-gray-500 text-sm max-w-xs">
+                Try adjusting your search or filter to find affiliates.
+              </p>
+            </div>
+          )}
 
             {/* Affiliate Rows */}
             {/* ================================================================
@@ -1690,6 +1689,7 @@ export default function OutreachPage() {
               toast.warning('Warning!');
               toast.info('Info');
             ================================================================ */}
+      </div>
     </>
   );
 }
