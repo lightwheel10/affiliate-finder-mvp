@@ -303,21 +303,21 @@ export const Sidebar: React.FC = () => {
           </div>
         </nav>
 
-        {/* Bottom Actions - Neo-brutalist style */}
-        <div className="p-4 border-t-4 border-black dark:border-white bg-gray-50 dark:bg-[#111]">
-          {/* =================================================================
-              LANGUAGE SWITCHER (January 9th, 2026)
-              
-              Allows users to switch between English and German.
-              See LANGUAGE_MIGRATION.md for i18n documentation.
-              ================================================================= */}
+        {/* =================================================================
+            LANGUAGE SWITCHER & PLAN CARD (January 10th, 2026)
+            Moved above the black divider line per client request.
+            These should appear above the profile section separator.
+            See LANGUAGE_MIGRATION.md for i18n documentation.
+            ================================================================= */}
+        <div className="px-4 pb-4">
+          {/* Language Switcher */}
           <div className="mb-4">
             <LanguageSwitcher variant="sidebar" />
           </div>
 
           {/* Plan Card - Neo-brutalist style - Translated (January 9th, 2026) */}
           <div 
-            className="bg-[#1a1a1a] p-4 rounded-lg mb-4 text-white border-2 border-black dark:border-gray-700 shadow-[2px_2px_0px_0px_#000000] cursor-pointer hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+            className="bg-[#1a1a1a] p-4 rounded-lg text-white border-2 border-black dark:border-gray-700 shadow-[2px_2px_0px_0px_#000000] cursor-pointer hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
             onClick={() => setIsPricingModalOpen(true)}
           >
             <div className="flex items-start gap-3 mb-3">
@@ -348,7 +348,10 @@ export const Sidebar: React.FC = () => {
               {subscription?.status === 'active' ? t.sidebar.planCard.managePlan : t.sidebar.planCard.upgradePlan} <ChevronRight size={10} />
             </button>
           </div>
+        </div>
 
+        {/* User Profile Section - Below black divider line (January 10th, 2026) */}
+        <div className="p-4 border-t-4 border-black dark:border-white bg-gray-50 dark:bg-[#111]">
           {/* User Profile - Neo-brutalist style */}
           <div className="relative">
             <button 
