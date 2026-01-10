@@ -177,13 +177,14 @@ export default function DiscoveredPage() {
       // =========================================================================
       // TOAST NOTIFICATIONS (January 5th, 2026)
       // Show success/info toast based on save results
+      // i18n: January 10th, 2026
       // =========================================================================
       if (result.savedCount > 0 && result.duplicateCount === 0) {
-        toast.success(`Saved ${result.savedCount} affiliate${result.savedCount !== 1 ? 's' : ''} to pipeline!`);
+        toast.success(`${t.dashboard.saved.savedCount.replace('{count}', String(result.savedCount))} ${t.toasts.success.affiliatesSaved}`);
       } else if (result.savedCount > 0 && result.duplicateCount > 0) {
-        toast.success(`Saved ${result.savedCount} affiliate${result.savedCount !== 1 ? 's' : ''}! (${result.duplicateCount} already in pipeline)`);
+        toast.success(`${t.dashboard.saved.savedCount.replace('{count}', String(result.savedCount))} (${result.duplicateCount} ${t.toasts.success.affiliatesSavedWithDuplicates})`);
       } else if (result.duplicateCount > 0) {
-        toast.info(`All ${result.duplicateCount} affiliates are already in your pipeline`);
+        toast.info(`${t.dashboard.find.allAlreadyInPipeline.replace('{count}', String(result.duplicateCount))}`);
       }
       
       setTimeout(() => {
@@ -198,7 +199,8 @@ export default function DiscoveredPage() {
     } catch (err) {
       console.error('Bulk save failed:', err);
       // January 5th, 2026: Added error toast
-      toast.error('Failed to save affiliates. Please try again.');
+      // i18n: January 10th, 2026
+      toast.error(t.toasts.error.saveFailed);
     } finally {
       setIsBulkSaving(false);
       setSavingLinks(new Set());
@@ -225,14 +227,16 @@ export default function DiscoveredPage() {
       
       setDeleteResult({ count: deleteCount, show: true });
       // January 5th, 2026: Added success toast for bulk delete
-      toast.success(`Deleted ${deleteCount} affiliate${deleteCount !== 1 ? 's' : ''}`);
+      // i18n: January 10th, 2026
+      toast.success(`${t.dashboard.saved.deletedCount.replace('{count}', String(deleteCount))}`);
       setTimeout(() => {
         setDeleteResult(prev => prev ? { ...prev, show: false } : null);
       }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
       // January 5th, 2026: Added error toast for bulk delete failure
-      toast.error('Failed to delete affiliates. Please try again.');
+      // i18n: January 10th, 2026
+      toast.error(t.toasts.error.deleteFailed);
     } finally {
       setIsBulkDeleting(false);
     }

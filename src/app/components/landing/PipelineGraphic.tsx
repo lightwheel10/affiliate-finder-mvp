@@ -9,6 +9,10 @@
  * feature section. Shows affiliates moving through recruitment stages.
  * 
  * CHANGELOG:
+ * - January 10th, 2026: i18n Migration - Remaining Components
+ *   - Added useLanguage hook for translations
+ *   - Translated column labels: "New", "Outreach", "Done"
+ * 
  * - January 9th, 2026: Updated to neo-brutalist design
  *   - Sharp edges on cards (removed rounded-lg, rounded-full)
  *   - Bold borders (border-2)
@@ -17,12 +21,16 @@
  * 
  * - January 5th, 2026: Simplified animation with fixed card positions
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PipelineGraphicProps {
   isHovered?: boolean;
@@ -41,6 +49,9 @@ const affiliates = {
 };
 
 export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+
   // Stage 0: Initial state
   // Stage 1: outreachCard1 fades out from Outreach, appears in Done
   // Stage 2: newCard2 fades out from New, appears in Outreach
@@ -84,7 +95,7 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
          
          {/* Column 1: New - 2 cards initially */}
          <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 pr-1">
-            <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider">New</span>
+            <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider">{t.landingGraphics.pipeline.new}</span>
             
             {/* Card 1 - always visible */}
             <KanbanCard affiliate={affiliates.newCard1} />
@@ -103,7 +114,7 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
 
          {/* Column 2: Outreach - NEO-BRUTALIST (January 9th, 2026) */}
          <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 pl-2 pr-1">
-            <span className="text-[7px] font-black text-[#ffbf23] uppercase tracking-wider">Outreach</span>
+            <span className="text-[7px] font-black text-[#ffbf23] uppercase tracking-wider">{t.landingGraphics.pipeline.outreach}</span>
             
             {/* Slot 1: Fixed container - swaps between Ryan C. and Maria S. */}
             <div className="relative">
@@ -132,7 +143,7 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
 
          {/* Column 3: Done - NEO-BRUTALIST (January 9th, 2026) */}
          <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 pl-2">
-            <span className="text-[7px] font-black text-[#1A1D21] uppercase tracking-wider">Done</span>
+            <span className="text-[7px] font-black text-[#1A1D21] uppercase tracking-wider">{t.landingGraphics.pipeline.done}</span>
             
             {/* Card from Outreach - appears at stage 1+ */}
             <motion.div

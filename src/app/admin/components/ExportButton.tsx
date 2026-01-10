@@ -1,8 +1,17 @@
 'use client';
 
+/**
+ * ExportButton.tsx
+ * i18n Migration: January 10th, 2026 - Phase 3: Toast Notifications
+ * 
+ * Component for exporting data to CSV format.
+ * All toast notifications have been migrated to use the translation dictionary.
+ */
+
 import { useState } from 'react';
 import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { Download, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ExportButtonProps {
   endpoint: string;
@@ -11,6 +20,8 @@ interface ExportButtonProps {
 }
 
 export function ExportButton({ endpoint, filename, params = {} }: ExportButtonProps) {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
@@ -40,11 +51,13 @@ export function ExportButton({ endpoint, filename, params = {} }: ExportButtonPr
       window.URL.revokeObjectURL(downloadUrl);
       
       // January 5th, 2026: Show success toast after download
-      toast.success('CSV exported successfully!');
+      // i18n: January 10th, 2026
+      toast.success(t.toasts.success.csvExported);
     } catch (error) {
       console.error('Export error:', error);
       // January 5th, 2026: Replaced alert() with Sonner toast
-      toast.error('Failed to export data');
+      // i18n: January 10th, 2026
+      toast.error(t.toasts.error.exportFailed);
     } finally {
       setIsExporting(false);
     }

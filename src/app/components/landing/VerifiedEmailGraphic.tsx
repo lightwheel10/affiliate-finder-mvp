@@ -9,6 +9,10 @@
  * feature section. Shows a sample affiliate contact being verified.
  * 
  * CHANGELOG:
+ * - January 10th, 2026: i18n Migration - Remaining Components
+ *   - Added useLanguage hook for translations
+ *   - Translated verification step labels and "Verified Deliverable" text
+ * 
  * - January 9th, 2026: Updated to neo-brutalist design
  *   - Sharp edges on card and avatar (removed rounded-xl, rounded-full)
  *   - Bold borders (border-2)
@@ -17,6 +21,9 @@
  * 
  * - January 5th, 2026: Replaced skeleton placeholders with actual affiliate data
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
@@ -24,6 +31,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Mail, ShieldCheck, MousePointer2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface VerifiedEmailGraphicProps {
   isHovered?: boolean;
@@ -39,18 +47,18 @@ const sampleAffiliate = {
   followers: "156K"
 };
 
-/**
- * Email verification steps that animate on hover
- */
-const verificationSteps = [
-  { id: 1, label: "Syntax", status: "verified", delay: 100 },
-  { id: 2, label: "Domain", status: "verified", delay: 300 },
-  { id: 3, label: "MX", status: "verified", delay: 500 },
-  { id: 4, label: "SMTP", status: "verified", delay: 700 },
-];
-
 export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphicProps) => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
   const [step, setStep] = useState(0);
+
+  // Verification steps that animate on hover (January 10th, 2026 - now uses translations)
+  const verificationSteps = [
+    { id: 1, label: t.landingGraphics.verifiedEmail.syntax, status: "verified", delay: 100 },
+    { id: 2, label: t.landingGraphics.verifiedEmail.domain, status: "verified", delay: 300 },
+    { id: 3, label: t.landingGraphics.verifiedEmail.mx, status: "verified", delay: 500 },
+    { id: 4, label: t.landingGraphics.verifiedEmail.smtp, status: "verified", delay: 700 },
+  ];
 
   useEffect(() => {
     if (isHovered) {
@@ -130,7 +138,7 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
                 isHovered && step >= 4 ? "opacity-100" : "opacity-0 h-0 overflow-hidden p-0"
             )}>
                 <ShieldCheck size={12} className="text-[#1A1D21]" />
-                <span className="text-[10px] font-black text-[#1A1D21] uppercase">Verified Deliverable</span>
+                <span className="text-[10px] font-black text-[#1A1D21] uppercase">{t.landingGraphics.verifiedEmail.verified}</span>
             </div>
         </motion.div>
 

@@ -514,6 +514,13 @@ export const de: Dictionary = {
         searching: 'Suche läuft...',
         none: 'Keine',
       },
+      // Toast notification helpers (January 10th, 2026)
+      savedCount: '{count} gespeichert',
+      deletedCount: '{count} gelöscht',
+      emailResults: {
+        found: 'Gefunden',
+        errors: 'Fehler',
+      },
     },
     outreach: {
       pageTitle: 'Kontaktaufnahme',
@@ -554,6 +561,10 @@ export const de: Dictionary = {
         copy: 'Kopieren',
         done: 'Fertig!',
       },
+      // Additional strings for toast notifications (January 10th, 2026)
+      email: 'E-Mail',
+      emails: 'E-Mails',
+      failedRetry: 'fehlgeschlagen - klicken Sie auf "Erneut versuchen".',
     },
     settings: {
       pageTitle: 'Einstellungen',
@@ -751,12 +762,21 @@ export const de: Dictionary = {
   // =========================================================================
   // TOASTS
   // =========================================================================
+  // =========================================================================
+  // TOASTS - Notification messages
+  // Updated: January 10th, 2026 - Phase 3: Toast Notifications
+  // =========================================================================
   toasts: {
     success: {
       emailGenerated: 'E-Mail erfolgreich generiert!',
       messageCopied: 'Nachricht in Zwischenablage kopiert!',
       affiliatesSaved: 'In Pipeline gespeichert!',
+      affiliatesSavedWithDuplicates: 'bereits in Pipeline',
       affiliatesDeleted: 'Erfolgreich gelöscht',
+      affiliatesDeletedFromPipeline: 'aus Pipeline',
+      emailsFound: 'E-Mail(s) gefunden!',
+      bulkEmailsGenerated: 'Erfolgreich generiert',
+      csvExported: 'CSV erfolgreich exportiert!',
       planChanged: 'Plan erfolgreich geändert!',
       cardAdded: 'Zahlungsmethode hinzugefügt!',
       subscriptionCancelled: 'Abonnement gekündigt',
@@ -765,19 +785,31 @@ export const de: Dictionary = {
     error: {
       genericError: 'Etwas ist schief gelaufen. Bitte versuchen Sie es erneut.',
       searchFailed: 'Suche fehlgeschlagen. Bitte versuchen Sie es erneut.',
-      saveFailed: 'Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.',
-      deleteFailed: 'Löschen fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      saveFailed: 'Affiliates konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.',
+      deleteFailed: 'Affiliates konnten nicht gelöscht werden. Bitte versuchen Sie es erneut.',
       emailLookupFailed: 'E-Mail-Suche fehlgeschlagen. Bitte versuchen Sie es erneut.',
-      aiGenerationFailed: 'Nachrichtengenerierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      emailLookupFailedCount: 'E-Mail-Suche fehlgeschlagen für',
+      aiGenerationFailed: 'Nachrichtengenerierung fehlgeschlagen',
+      aiServiceNotConfigured: 'KI-Dienst nicht konfiguriert. Bitte kontaktieren Sie den Support.',
+      aiConnectionFailed: 'Verbindung zum KI-Dienst fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      bulkGenerationFailed: 'Generierung fehlgeschlagen für',
+      exportFailed: 'Export fehlgeschlagen',
       paymentFailed: 'Zahlung fehlgeschlagen. Bitte versuchen Sie es erneut.',
     },
     warning: {
-      insufficientCredits: 'Unzureichende Credits. Bitte upgraden Sie Ihren Plan.',
+      insufficientCredits: 'Unzureichende Such-Credits. Bitte upgraden Sie Ihren Plan.',
+      insufficientAICredits: 'Unzureichende KI-Credits. Bitte upgraden Sie Ihren Plan.',
+      insufficientEmailCredits: 'E-Mail-Credits aufgebraucht',
+      noEmailsFound: 'Keine E-Mails gefunden für',
+      partialBulkFailure: 'von',
+      invalidThreshold: 'Bitte geben Sie einen gültigen Schwellenwert ein',
       trialEnding: 'Ihre Testversion endet bald. Fügen Sie eine Zahlungsmethode hinzu, um fortzufahren.',
       allAlreadyHaveEmails: 'Alle ausgewählten Affiliates haben bereits E-Mails',
     },
     info: {
-      allAlreadyInPipeline: 'Alle Affiliates sind bereits in Ihrer Pipeline',
+      allAlreadyInPipeline: 'Affiliates sind bereits in Ihrer Pipeline',
+      allAlreadyHaveEmails: 'Alle ausgewählten Affiliates haben bereits E-Mails',
+      mixedEmailResults: 'nicht gefunden',
       mixedResults: 'Einige Vorgänge wurden mit Warnungen abgeschlossen',
       noEmailsFound: 'Keine E-Mails für ausgewählte Affiliates gefunden',
     },
@@ -790,6 +822,40 @@ export const de: Dictionary = {
     loading: {
       title: 'Wird geladen...',
       subtitle: 'Ihr Arbeitsbereich wird vorbereitet',
+    },
+  },
+
+  // =========================================================================
+  // LOADING ONBOARDING SCREEN - Post-onboarding loading state
+  // Added: January 10th, 2026 - Remaining Components
+  // =========================================================================
+  loadingOnboarding: {
+    title: 'Ihr Arbeitsbereich wird eingerichtet!',
+    subtitle: 'Einen Moment, während wir Ihr Dashboard vorbereiten...',
+    description: 'Ihre Affiliate-Discovery-Tools werden konfiguriert.',
+  },
+
+  // =========================================================================
+  // LANDING PAGE GRAPHICS - Decorative animations in BentoGrid
+  // Added: January 10th, 2026 - Remaining Components
+  // =========================================================================
+  landingGraphics: {
+    discovery: {
+      scanning: 'Wird gescannt...',
+      indexing: 'Indizierung',
+      followers: 'Follower',
+    },
+    verifiedEmail: {
+      verified: 'Verifiziert & zustellbar',
+      syntax: 'Syntax',
+      domain: 'Domain',
+      mx: 'MX',
+      smtp: 'SMTP',
+    },
+    pipeline: {
+      new: 'Neu',
+      outreach: 'Kontakt',
+      done: 'Fertig',
     },
   },
 

@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * Admin Settings Page
+ * i18n Migration: January 10th, 2026 - Phase 3: Toast Notifications
+ * 
+ * All toast notifications have been migrated to use the translation dictionary.
+ */
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
@@ -13,6 +20,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Alert {
   id: number;
@@ -38,6 +46,8 @@ const ALERT_TYPES = [
 
 export default function AdminSettingsPage() {
   const router = useRouter();
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [currentCosts, setCurrentCosts] = useState<CurrentCosts | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +102,8 @@ export default function AdminSettingsPage() {
     const threshold = parseFloat(thresholds[alertType]);
     if (isNaN(threshold) || threshold < 0) {
       // January 5th, 2026: Replaced alert() with Sonner toast
-      toast.warning('Please enter a valid threshold amount');
+      // i18n: January 10th, 2026
+      toast.warning(t.toasts.warning.invalidThreshold);
       return;
     }
 

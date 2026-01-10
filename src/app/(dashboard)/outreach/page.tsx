@@ -584,7 +584,8 @@ export default function OutreachPage() {
         });
         
         // Show success notification
-        toast.success('Email generated successfully!');
+        // i18n: January 10th, 2026
+        toast.success(t.toasts.success.emailGenerated);
 
         // =====================================================================
         // CREDITS REFRESH - January 4th, 2026
@@ -606,22 +607,24 @@ export default function OutreachPage() {
         
         // Show user-friendly error message based on error type
         // January 5th, 2026: Using global Sonner toast instead of local notification
+        // i18n: January 10th, 2026
         if (response.status === 402) {
-          toast.warning('Insufficient AI credits. Please upgrade your plan.');
+          toast.warning(t.toasts.warning.insufficientAICredits);
         } else if (data.error?.includes('webhook not configured')) {
-          toast.error('AI service not configured. Please contact support.');
+          toast.error(t.toasts.error.aiServiceNotConfigured);
         } else {
-          toast.error(data.error || 'Failed to generate message');
+          toast.error(data.error || t.toasts.error.aiGenerationFailed);
         }
       }
     } catch (error) {
       // =====================================================================
       // NETWORK ERROR: Mark as failed
       // January 5th, 2026: Using global Sonner toast
+      // i18n: January 10th, 2026
       // =====================================================================
       console.error('Error generating message:', error);
       setFailedIds(prev => new Set(prev).add(messageKey));
-      toast.error('Failed to connect to AI service. Please try again.');
+      toast.error(t.toasts.error.aiConnectionFailed);
     } finally {
       // Remove from generating set (hides spinner)
       setGeneratingIds(prev => {
@@ -768,12 +771,13 @@ export default function OutreachPage() {
     
     // Show summary notification based on results
     // January 5th, 2026: Using global Sonner toast with success/warning/error states
+    // i18n: January 10th, 2026
     if (failCount === 0 && successCount > 0) {
       // All succeeded
-      toast.success(`Successfully generated ${successCount} email${successCount !== 1 ? 's' : ''}!`);
+      toast.success(`${t.toasts.success.bulkEmailsGenerated} ${successCount} ${successCount !== 1 ? t.dashboard.outreach.emails : t.dashboard.outreach.email}!`);
     } else if (failCount > 0) {
       // Some or all failed
-      const message = `Generated ${successCount} of ${total} messages. ${failCount} failed - click "Retry" to try again.`;
+      const message = `${t.toasts.error.bulkGenerationFailed} ${successCount} ${t.toasts.warning.partialBulkFailure} ${total}. ${failCount} ${t.dashboard.outreach.failedRetry}`;
       if (failCount === total) {
         toast.error(message);
       } else {
@@ -795,7 +799,8 @@ export default function OutreachPage() {
       setTimeout(() => setCopiedId(null), 2000);
       
       // January 5th, 2026: Show success toast
-      toast.success('Message copied to clipboard!');
+      // i18n: January 10th, 2026
+      toast.success(t.toasts.success.messageCopied);
     }
   };
 

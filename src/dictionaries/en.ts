@@ -514,6 +514,13 @@ export const en: Dictionary = {
         searching: 'Searching...',
         none: 'None',
       },
+      // Toast notification helpers (January 10th, 2026)
+      savedCount: 'Saved {count}',
+      deletedCount: 'Deleted {count}',
+      emailResults: {
+        found: 'Found',
+        errors: 'errors',
+      },
     },
     outreach: {
       pageTitle: 'Outreach',
@@ -554,6 +561,10 @@ export const en: Dictionary = {
         copy: 'Copy',
         done: 'Done!',
       },
+      // Additional strings for toast notifications (January 10th, 2026)
+      email: 'email',
+      emails: 'emails',
+      failedRetry: 'failed - click "Retry" to try again.',
     },
     settings: {
       pageTitle: 'Settings',
@@ -751,12 +762,21 @@ export const en: Dictionary = {
   // =========================================================================
   // TOASTS
   // =========================================================================
+  // =========================================================================
+  // TOASTS - Notification messages
+  // Updated: January 10th, 2026 - Phase 3: Toast Notifications
+  // =========================================================================
   toasts: {
     success: {
       emailGenerated: 'Email generated successfully!',
       messageCopied: 'Message copied to clipboard!',
       affiliatesSaved: 'Saved to pipeline!',
+      affiliatesSavedWithDuplicates: 'already in pipeline',
       affiliatesDeleted: 'Deleted successfully',
+      affiliatesDeletedFromPipeline: 'from pipeline',
+      emailsFound: 'email(s) found!',
+      bulkEmailsGenerated: 'Successfully generated',
+      csvExported: 'CSV exported successfully!',
       planChanged: 'Plan changed successfully!',
       cardAdded: 'Payment method added!',
       subscriptionCancelled: 'Subscription cancelled',
@@ -765,19 +785,31 @@ export const en: Dictionary = {
     error: {
       genericError: 'Something went wrong. Please try again.',
       searchFailed: 'Search failed. Please try again.',
-      saveFailed: 'Failed to save. Please try again.',
-      deleteFailed: 'Failed to delete. Please try again.',
+      saveFailed: 'Failed to save affiliates. Please try again.',
+      deleteFailed: 'Failed to delete affiliates. Please try again.',
       emailLookupFailed: 'Failed to find emails. Please try again.',
-      aiGenerationFailed: 'Failed to generate message. Please try again.',
+      emailLookupFailedCount: 'Email lookup failed for',
+      aiGenerationFailed: 'Failed to generate message',
+      aiServiceNotConfigured: 'AI service not configured. Please contact support.',
+      aiConnectionFailed: 'Failed to connect to AI service. Please try again.',
+      bulkGenerationFailed: 'Failed to generate',
+      exportFailed: 'Failed to export data',
       paymentFailed: 'Payment failed. Please try again.',
     },
     warning: {
-      insufficientCredits: 'Insufficient credits. Please upgrade your plan.',
+      insufficientCredits: 'Insufficient search credits. Please upgrade your plan.',
+      insufficientAICredits: 'Insufficient AI credits. Please upgrade your plan.',
+      insufficientEmailCredits: 'Ran out of email credits',
+      noEmailsFound: 'No emails found for',
+      partialBulkFailure: 'of',
+      invalidThreshold: 'Please enter a valid threshold amount',
       trialEnding: 'Your trial is ending soon. Add a payment method to continue.',
       allAlreadyHaveEmails: 'All selected affiliates already have emails',
     },
     info: {
-      allAlreadyInPipeline: 'All affiliates are already in your pipeline',
+      allAlreadyInPipeline: 'affiliates are already in your pipeline',
+      allAlreadyHaveEmails: 'All selected affiliates already have emails',
+      mixedEmailResults: 'not found',
       mixedResults: 'Some operations completed with warnings',
       noEmailsFound: 'No emails found for selected affiliates',
     },
@@ -790,6 +822,40 @@ export const en: Dictionary = {
     loading: {
       title: 'Loading...',
       subtitle: 'Preparing your workspace',
+    },
+  },
+
+  // =========================================================================
+  // LOADING ONBOARDING SCREEN - Post-onboarding loading state
+  // Added: January 10th, 2026 - Remaining Components
+  // =========================================================================
+  loadingOnboarding: {
+    title: 'Setting up your workspace!',
+    subtitle: 'Just a moment while we prepare your dashboard...',
+    description: 'Your affiliate discovery tools are being configured.',
+  },
+
+  // =========================================================================
+  // LANDING PAGE GRAPHICS - Decorative animations in BentoGrid
+  // Added: January 10th, 2026 - Remaining Components
+  // =========================================================================
+  landingGraphics: {
+    discovery: {
+      scanning: 'Scanning...',
+      indexing: 'Indexing',
+      followers: 'followers',
+    },
+    verifiedEmail: {
+      verified: 'Verified Deliverable',
+      syntax: 'Syntax',
+      domain: 'Domain',
+      mx: 'MX',
+      smtp: 'SMTP',
+    },
+    pipeline: {
+      new: 'New',
+      outreach: 'Outreach',
+      done: 'Done',
     },
   },
 

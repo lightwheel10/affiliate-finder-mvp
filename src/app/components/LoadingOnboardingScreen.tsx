@@ -1,14 +1,12 @@
 'use client';
 
-import React from 'react';
-import { Loader2 } from 'lucide-react';
-
 /**
  * =============================================================================
  * LoadingOnboardingScreen - NEO-BRUTALIST
  * =============================================================================
  * 
  * Updated: January 8th, 2026
+ * i18n Migration: January 10th, 2026 - Remaining Components
  * 
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -21,10 +19,20 @@ import { Loader2 } from 'lucide-react';
  * This screen displays briefly (2 seconds) after onboarding completion
  * while the user data is being refetched.
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
+import React from 'react';
+import { Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+
 export const LoadingOnboardingScreen = () => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-100 dark:bg-black font-sans p-4">
       <div className="w-full max-w-[420px] bg-white dark:bg-[#0f0f0f] border-4 border-black dark:border-gray-600 shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#333333] p-8 text-center">
@@ -45,16 +53,16 @@ export const LoadingOnboardingScreen = () => {
 
         {/* Main Heading - NEO-BRUTALIST */}
         <h1 className="text-xl text-gray-900 dark:text-white font-black uppercase tracking-wide mb-3">
-          Setting up your workspace!
+          {t.loadingOnboarding.title}
         </h1>
 
         {/* Description Text */}
         <div className="space-y-2 max-w-sm mx-auto">
           <p className="text-gray-500 text-sm leading-relaxed font-medium">
-            Just a moment while we prepare your dashboard...
+            {t.loadingOnboarding.subtitle}
           </p>
           <p className="text-gray-400 text-xs leading-relaxed">
-            Your affiliate discovery tools are being configured.
+            {t.loadingOnboarding.description}
           </p>
         </div>
 

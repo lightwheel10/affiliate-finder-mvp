@@ -520,6 +520,13 @@ export interface Dictionary {
         searching: string;
         none: string;
       };
+      // Toast notification helpers (January 10th, 2026)
+      savedCount: string;     // "Saved {count}"
+      deletedCount: string;   // "Deleted {count}"
+      emailResults: {
+        found: string;
+        errors: string;
+      };
     };
     // Outreach page
     outreach: {
@@ -561,6 +568,10 @@ export interface Dictionary {
         copy: string;
         done: string;
       };
+      // Additional strings for toast notifications (January 10th, 2026)
+      email: string;
+      emails: string;
+      failedRetry: string;
     };
     // Settings page
     settings: {
@@ -759,12 +770,21 @@ export interface Dictionary {
   // =========================================================================
   // TOASTS - Notification messages
   // =========================================================================
+  // =========================================================================
+  // TOASTS - Notification messages
+  // Updated: January 10th, 2026 - Phase 3: Toast Notifications
+  // =========================================================================
   toasts: {
     success: {
       emailGenerated: string;
       messageCopied: string;
-      affiliatesSaved: string;
-      affiliatesDeleted: string;
+      affiliatesSaved: string;           // "Saved {count} affiliate(s) to pipeline!"
+      affiliatesSavedWithDuplicates: string; // "Saved {count} affiliate(s)! ({duplicates} already in pipeline)"
+      affiliatesDeleted: string;         // "Deleted {count} affiliate(s)"
+      affiliatesDeletedFromPipeline: string; // "Deleted {count} affiliate(s) from pipeline"
+      emailsFound: string;               // "Found {count} email(s)!"
+      bulkEmailsGenerated: string;       // "Successfully generated {count} email(s)!"
+      csvExported: string;               // "CSV exported successfully!"
       planChanged: string;
       cardAdded: string;
       subscriptionCancelled: string;
@@ -776,16 +796,28 @@ export interface Dictionary {
       saveFailed: string;
       deleteFailed: string;
       emailLookupFailed: string;
+      emailLookupFailedCount: string;    // "Email lookup failed for {count} affiliate(s)"
       aiGenerationFailed: string;
+      aiServiceNotConfigured: string;
+      aiConnectionFailed: string;
+      bulkGenerationFailed: string;      // "Failed to generate {failed} of {total} emails"
+      exportFailed: string;
       paymentFailed: string;
     };
     warning: {
-      insufficientCredits: string;
+      insufficientCredits: string;       // Search credits
+      insufficientAICredits: string;     // AI credits
+      insufficientEmailCredits: string;  // Email credits
+      noEmailsFound: string;             // "No emails found for {count} affiliate(s)"
+      partialBulkFailure: string;        // "Failed to generate {failed} of {total} emails"
+      invalidThreshold: string;          // Admin: "Please enter a valid threshold amount"
       trialEnding: string;
       allAlreadyHaveEmails: string;
     };
     info: {
-      allAlreadyInPipeline: string;
+      allAlreadyInPipeline: string;      // "All {count} affiliates are already in your pipeline"
+      allAlreadyHaveEmails: string;      // "All selected affiliates already have emails"
+      mixedEmailResults: string;         // "Found {found}, not found {notFound}, errors {errors}"
       mixedResults: string;
       noEmailsFound: string;
     };
@@ -798,6 +830,40 @@ export interface Dictionary {
     loading: {
       title: string;
       subtitle: string;
+    };
+  };
+
+  // =========================================================================
+  // LOADING ONBOARDING SCREEN - Post-onboarding loading state
+  // Added: January 10th, 2026 - Remaining Components
+  // =========================================================================
+  loadingOnboarding: {
+    title: string;
+    subtitle: string;
+    description: string;
+  };
+
+  // =========================================================================
+  // LANDING PAGE GRAPHICS - Decorative animations in BentoGrid
+  // Added: January 10th, 2026 - Remaining Components
+  // =========================================================================
+  landingGraphics: {
+    discovery: {
+      scanning: string;
+      indexing: string;
+      followers: string;
+    };
+    verifiedEmail: {
+      verified: string;
+      syntax: string;
+      domain: string;
+      mx: string;
+      smtp: string;
+    };
+    pipeline: {
+      new: string;
+      outreach: string;
+      done: string;
     };
   };
 

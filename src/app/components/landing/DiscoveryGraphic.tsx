@@ -10,6 +10,10 @@
  * match scores.
  * 
  * CHANGELOG:
+ * - January 10th, 2026: i18n Migration - Remaining Components
+ *   - Added useLanguage hook for translations
+ *   - Translated "Scanning...", "Indexing", "followers" labels
+ * 
  * - January 9th, 2026: Updated to neo-brutalist design
  *   - Sharp edges on all cards (removed rounded-xl, rounded-full, rounded)
  *   - Bold borders (border-2)
@@ -18,6 +22,9 @@
  * 
  * - January 5th, 2026: Replaced skeleton placeholders with actual affiliate data
  * 
+ * All UI strings have been migrated to use the translation dictionary.
+ * Translation hook usage: const { t } = useLanguage();
+ * 
  * =============================================================================
  */
 
@@ -25,6 +32,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DiscoveryGraphicProps {
   isHovered?: boolean;
@@ -41,6 +49,9 @@ const candidates = [
 ];
 
 export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) => {
+  // i18n translation hook (January 10th, 2026)
+  const { t } = useLanguage();
+
   return (
     <div className="absolute inset-0 overflow-hidden bg-white">
       {/* Abstract Grid Background - NEO-BRUTALIST (January 9th, 2026) */}
@@ -96,7 +107,7 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
           </motion.div>
         )}
         <span className="text-[9px] font-black text-[#111827] uppercase tracking-wider">
-          {isHovered ? 'Scanning...' : 'Indexing'}
+          {isHovered ? t.landingGraphics.discovery.scanning : t.landingGraphics.discovery.indexing}
         </span>
       </div>
 
@@ -110,6 +121,7 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
             index={index} 
             isHovered={isHovered}
             candidate={candidate}
+            followersLabel={t.landingGraphics.discovery.followers}
           />
         ))}
       </div>
@@ -119,6 +131,7 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
 
 /**
  * ProfileRow Component - NEO-BRUTALIST (Updated January 9th, 2026)
+ * i18n Migration: January 10th, 2026 - Added followersLabel prop
  * 
  * Renders an individual affiliate row with avatar, name, niche, platform, and match score.
  * Displays real data in both hover and non-hover states.
@@ -129,7 +142,14 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
  * - Sharp badges (removed rounded)
  * - Updated color from #D4E815 to #ffbf23
  */
-const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered: boolean; candidate: typeof candidates[0] }) => {
+interface ProfileRowProps {
+  index: number;
+  isHovered: boolean;
+  candidate: typeof candidates[0];
+  followersLabel: string;
+}
+
+const ProfileRow = ({ index, isHovered, candidate, followersLabel }: ProfileRowProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -176,7 +196,7 @@ const ProfileRow = ({ index, isHovered, candidate }: { index: number; isHovered:
             "transition-colors duration-300",
             isHovered ? "text-[#1A1D21] font-bold" : ""
           )}>
-            {candidate.followers} followers
+            {candidate.followers} {followersLabel}
           </span>
         </div>
       </div>

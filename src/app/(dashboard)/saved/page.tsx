@@ -174,14 +174,16 @@ export default function SavedPage() {
       
       setDeleteResult({ count: deleteCount, show: true });
       // January 5th, 2026: Added success toast for bulk delete
-      toast.success(`Deleted ${deleteCount} affiliate${deleteCount !== 1 ? 's' : ''} from pipeline`);
+      // i18n: January 10th, 2026
+      toast.success(`${t.dashboard.saved.deletedCount.replace('{count}', String(deleteCount))} ${t.toasts.success.affiliatesDeletedFromPipeline}`);
       setTimeout(() => {
         setDeleteResult(prev => prev ? { ...prev, show: false } : null);
       }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
       // January 5th, 2026: Added error toast for bulk delete failure
-      toast.error('Failed to delete affiliates. Please try again.');
+      // i18n: January 10th, 2026
+      toast.error(t.toasts.error.deleteFailed);
     } finally {
       setIsBulkDeleting(false);
     }
@@ -210,7 +212,8 @@ export default function SavedPage() {
         },
       });
       // January 5th, 2026: Added info toast when all already have emails
-      toast.info('All selected affiliates already have emails');
+      // i18n: January 10th, 2026
+      toast.info(t.toasts.info.allAlreadyHaveEmails);
       setTimeout(() => setBulkEmailProgress({ current: 0, total: 0, status: 'idle' }), 3000);
       return;
     }
@@ -241,22 +244,23 @@ export default function SavedPage() {
       // =========================================================================
       // NOTIFICATION BASED ON RESULTS (January 5th, 2026)
       // Show appropriate toast based on email lookup results
+      // i18n: January 10th, 2026
       // =========================================================================
       if (results.creditError) {
         // Credit error - ran out of credits during lookup
-        toast.warning(results.creditErrorMessage || 'Ran out of email credits');
+        toast.warning(results.creditErrorMessage || t.toasts.warning.insufficientEmailCredits);
       } else if (results.foundCount > 0 && results.notFoundCount === 0 && results.errorCount === 0) {
         // All found successfully
-        toast.success(`Found ${results.foundCount} email${results.foundCount !== 1 ? 's' : ''}!`);
+        toast.success(`${results.foundCount} ${t.toasts.success.emailsFound}`);
       } else if (results.foundCount > 0) {
         // Mixed results
-        toast.info(`Found ${results.foundCount}, not found ${results.notFoundCount}, errors ${results.errorCount}`);
+        toast.info(`${t.dashboard.saved.emailResults.found} ${results.foundCount}, ${t.toasts.info.mixedEmailResults} ${results.notFoundCount}, ${t.dashboard.saved.emailResults.errors} ${results.errorCount}`);
       } else if (results.notFoundCount > 0) {
         // None found
-        toast.warning(`No emails found for ${results.notFoundCount} affiliate${results.notFoundCount !== 1 ? 's' : ''}`);
+        toast.warning(`${t.toasts.warning.noEmailsFound} ${results.notFoundCount} ${results.notFoundCount !== 1 ? t.affiliateRow.badges.saved.toLowerCase() + 's' : t.affiliateRow.badges.saved.toLowerCase()}`);
       } else if (results.errorCount > 0) {
         // All errors
-        toast.error(`Email lookup failed for ${results.errorCount} affiliate${results.errorCount !== 1 ? 's' : ''}`);
+        toast.error(`${t.toasts.error.emailLookupFailedCount} ${results.errorCount} ${results.errorCount !== 1 ? t.affiliateRow.badges.saved.toLowerCase() + 's' : t.affiliateRow.badges.saved.toLowerCase()}`);
       }
       
       setTimeout(() => {
@@ -266,7 +270,8 @@ export default function SavedPage() {
     } catch (err) {
       console.error('Bulk email finding failed:', err);
       // January 5th, 2026: Show error toast for unexpected failures
-      toast.error('Failed to find emails. Please try again.');
+      // i18n: January 10th, 2026
+      toast.error(t.toasts.error.emailLookupFailed);
     } finally {
       setIsBulkFindingEmails(false);
     }
