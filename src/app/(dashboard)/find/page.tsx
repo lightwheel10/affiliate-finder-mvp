@@ -794,7 +794,7 @@ export default function FindNewPage() {
       } else if (result.savedCount > 0 && result.duplicateCount > 0) {
         toast.success(`${t.dashboard.saved.savedCount.replace('{count}', String(result.savedCount))} (${result.duplicateCount} ${t.toasts.success.affiliatesSavedWithDuplicates})`);
       } else if (result.duplicateCount > 0) {
-        toast.info(`${t.dashboard.find.allAlreadyInPipeline.replace('{count}', String(result.duplicateCount))}`);
+        toast.info(`${t.toasts.info.allAlreadyInPipeline.replace('{count}', String(result.duplicateCount))}`);
       }
       
       setTimeout(() => {
