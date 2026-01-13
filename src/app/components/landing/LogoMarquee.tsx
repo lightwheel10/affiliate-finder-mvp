@@ -3,11 +3,14 @@
  * LOGO MARQUEE - NEO-BRUTALIST
  * =============================================================================
  * 
- * Last Updated: January 9th, 2026
+ * Last Updated: January 13th, 2026
  * 
- * Displays a scrolling marquee of trusted brand names in the Logo Cloud section.
+ * Displays a scrolling marquee of trusted platform names in the Logo Cloud section.
  * 
  * CHANGELOG:
+ * - January 13th, 2026: Updated to show platform logos
+ *   - Changed from brand names to platforms: Serper, OpenAI, YouTube, Instagram, TikTok, Lusha
+ * 
  * - January 9th, 2026: Updated to neo-brutalist design
  *   - Bold typography (font-black uppercase)
  *   - Tighter spacing
@@ -18,9 +21,9 @@
 import React from 'react';
 
 export const LogoMarquee = () => {
+  // Updated to platform names (January 13th, 2026)
   const logos = [
-    "SaaS Master", "TechFlow", "Growth.io", "ScaleUp", "Founders Inc", 
-    "IndieHackers", "ProductHunt", "Y Combinator", "TechCrunch"
+    "Serper", "OpenAI", "YouTube", "Instagram", "TikTok", "Lusha"
   ];
   
   return (

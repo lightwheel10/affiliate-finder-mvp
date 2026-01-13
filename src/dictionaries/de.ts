@@ -114,7 +114,7 @@ export const de: Dictionary = {
       ctaSecondary: 'Demo anfordern',
       socialProof: 'Beliebt bei über 1.300 SaaS- und E-Commerce-Marken',
     },
-    trustedBy: 'Vertraut von Top-Marken',
+    trustedBy: 'Vertraut von Plattformen',
     features: {
       sectionTitle: 'Wie clevere Marken ihr Affiliate-Wachstum verdreifachen',
       sectionSubtitle: 'Verschwenden Sie keine 20+ Stunden pro Woche mit manueller Affiliate-Suche. Finden Sie alle Creator und Publisher in Ihrer Nische in wenigen Minuten.',

@@ -5,12 +5,18 @@
  * BENTO GRID & BENTO CARD - NEO-BRUTALIST
  * =============================================================================
  * 
- * Last Updated: January 9th, 2026
+ * Last Updated: January 13th, 2026
  * 
  * These components create a bento-style grid layout for feature cards on the
  * landing page.
  * 
  * CHANGELOG:
+ * - January 13th, 2026: Removed description/subtext from BentoCard
+ *   - Removed description paragraph element
+ *   - Title now sits alone at the bottom of the card
+ *   - Simplified content layout (removed space-y-2)
+ *   - Shifted graphic layer down by 20% (top-[20%])
+ * 
  * - January 9th, 2026: Updated to neo-brutalist design
  *   - Sharp edges on cards (removed rounded-3xl)
  *   - Bold borders (border-2 border-black)
@@ -36,7 +42,8 @@ interface BentoCardProps {
 
 export const BentoCard = ({
   title,
-  description,
+  // description prop kept for backwards compatibility but no longer rendered (January 13th, 2026)
+  description: _description,
   className,
   children,
   graphic,
@@ -73,9 +80,9 @@ export const BentoCard = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Background Graphic Layer */}
+      {/* Background Graphic Layer - shifted down 20% (January 13th, 2026) */}
       {graphic && (
-        <div className="absolute inset-0 z-0 opacity-100 pointer-events-none transition-opacity duration-500">
+        <div className="absolute top-[10%] left-0 right-0 bottom-0 z-0 opacity-100 pointer-events-none transition-opacity duration-500">
           {isValidElement(graphic) 
             // @ts-ignore
             ? cloneElement(graphic, { isHovered }) 
@@ -83,15 +90,13 @@ export const BentoCard = ({
         </div>
       )}
 
-      {/* Content - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Content - NEO-BRUTALIST (Updated January 13th, 2026) */}
+      {/* Removed description/subtext - title now sits alone at bottom */}
       <div className="relative z-10 flex flex-col h-full pointer-events-none">
-        <div className="mt-auto space-y-2">
+        <div className="mt-auto">
           <h3 className="text-lg font-black text-[#111827] leading-tight tracking-tight">
             {title}
           </h3>
-          <p className="text-sm text-slate-500 leading-relaxed line-clamp-3 font-medium">
-            {description}
-          </p>
         </div>
         
         {children && (

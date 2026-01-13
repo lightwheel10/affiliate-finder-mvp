@@ -29,7 +29,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Mail, ShieldCheck, MousePointer2 } from 'lucide-react';
+import { Check, Mail, MousePointer2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -53,19 +53,19 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
   const [step, setStep] = useState(0);
 
   // Verification steps that animate on hover (January 10th, 2026 - now uses translations)
+  // Simplified to only domain and smtp (January 13th, 2026)
   const verificationSteps = [
-    { id: 1, label: t.landingGraphics.verifiedEmail.syntax, status: "verified", delay: 100 },
-    { id: 2, label: t.landingGraphics.verifiedEmail.domain, status: "verified", delay: 300 },
-    { id: 3, label: t.landingGraphics.verifiedEmail.mx, status: "verified", delay: 500 },
-    { id: 4, label: t.landingGraphics.verifiedEmail.smtp, status: "verified", delay: 700 },
+    { id: 1, label: t.landingGraphics.verifiedEmail.domain, status: "verified", delay: 200 },
+    { id: 2, label: t.landingGraphics.verifiedEmail.smtp, status: "verified", delay: 500 },
   ];
 
   useEffect(() => {
     if (isHovered) {
       setStep(0);
       const interval = setInterval(() => {
-        setStep(s => (s < 4 ? s + 1 : s));
-      }, 200);
+        // Updated to 2 steps (January 13th, 2026)
+        setStep(s => (s < 2 ? s + 1 : s));
+      }, 250);
       return () => clearInterval(interval);
     } else {
       setStep(0);
@@ -84,7 +84,8 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
       />
 
       {/* Main Card - NEO-BRUTALIST (January 9th, 2026) */}
-      <div className="absolute inset-x-6 top-2 bottom-26 flex flex-col items-center justify-center">
+      {/* Reduced bottom margin to show full card with 10% top offset (January 13th, 2026) */}
+      <div className="absolute inset-x-6 top-0 bottom-16 flex flex-col items-center justify-center">
         <motion.div
           className="relative w-full max-w-[240px] bg-white border-2 border-black overflow-hidden"
           animate={isHovered ? { y: -4, x: -4, boxShadow: "4px 4px 0px 0px #ffbf23" } : { y: 0, x: 0, boxShadow: "4px 4px 0px 0px #000000" }}
@@ -115,6 +116,7 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
             </div>
             
             {/* Verification Grid - NEO-BRUTALIST (January 9th, 2026) */}
+            {/* Simplified to domain and smtp only (January 13th, 2026) */}
             <div className="grid grid-cols-2 gap-px bg-gray-200">
                 {verificationSteps.map((item, i) => (
                     <div key={item.id} className="bg-white p-2 flex items-center justify-between">
@@ -130,15 +132,6 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
                         </div>
                     </div>
                 ))}
-            </div>
-            
-            {/* Success Banner - NEO-BRUTALIST (January 9th, 2026) */}
-            <div className={cn(
-                "bg-[#ffbf23]/30 border-t-2 border-[#ffbf23] p-2 flex items-center justify-center gap-1.5 transition-all duration-300",
-                isHovered && step >= 4 ? "opacity-100" : "opacity-0 h-0 overflow-hidden p-0"
-            )}>
-                <ShieldCheck size={12} className="text-[#1A1D21]" />
-                <span className="text-[10px] font-black text-[#1A1D21] uppercase">{t.landingGraphics.verifiedEmail.verified}</span>
             </div>
         </motion.div>
 

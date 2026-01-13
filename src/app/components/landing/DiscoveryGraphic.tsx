@@ -53,7 +53,8 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
   const { t } = useLanguage();
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-white">
+    // Removed overflow-hidden to allow INDEXING badge to extend into top space (January 13th, 2026)
+    <div className="absolute inset-0 bg-white">
       {/* Abstract Grid Background - NEO-BRUTALIST (January 9th, 2026) */}
       <div 
         className="absolute inset-0 opacity-[0.15]" 
@@ -78,7 +79,8 @@ export const DiscoveryGraphic = ({ isHovered = false }: DiscoveryGraphicProps) =
       />
       
       {/* Search Status Indicator - NEO-BRUTALIST (January 9th, 2026) */}
-      <div className="absolute top-2 right-5 flex items-center gap-2 px-2 py-1 bg-white border-2 border-black z-30">
+      {/* Positioned at -8% to account for 10% graphic offset in BentoCard (January 13th, 2026) */}
+      <div className="absolute -top-[8%] right-5 flex items-center gap-2 px-2 py-1 bg-white border-2 border-black z-30">
         {isHovered ? (
           <motion.div
             initial={{ scale: 0 }}
@@ -188,16 +190,17 @@ const ProfileRow = ({ index, isHovered, candidate, followersLabel }: ProfileRowP
             {candidate.platform}
           </span>
         </div>
-        {/* Niche & Followers */}
+        {/* Niche & Followers - followers only visible on hover (January 13th, 2026) */}
         <div className="flex items-center gap-2 text-[9px] text-slate-400 font-medium">
           <span>{candidate.niche}</span>
-          <span>•</span>
-          <span className={cn(
-            "transition-colors duration-300",
-            isHovered ? "text-[#1A1D21] font-bold" : ""
-          )}>
-            {candidate.followers} {followersLabel}
-          </span>
+          {isHovered && (
+            <>
+              <span>•</span>
+              <span className="text-[#1A1D21] font-bold transition-colors duration-300">
+                {candidate.followers} {followersLabel}
+              </span>
+            </>
+          )}
         </div>
       </div>
 

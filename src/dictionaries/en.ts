@@ -115,7 +115,7 @@ export const en: Dictionary = {
       ctaSecondary: 'Get a Demo',
       socialProof: 'Loved by 1,300+ SaaS & e-commerce brands',
     },
-    trustedBy: 'Trusted by top brands',
+    trustedBy: 'Trusted by platforms',
     features: {
       sectionTitle: 'How Smart Brands 3X Their Affiliate Growth',
       sectionSubtitle: 'Stop wasting 20+ hours a week manually searching for affiliates. Find every creator and publisher in your niche in minutes.',
