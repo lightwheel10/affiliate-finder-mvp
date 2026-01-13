@@ -58,7 +58,8 @@ import {
   ChevronDown,  // January 13th, 2026: Added for country/language dropdowns
   Globe,        // January 13th, 2026: Added for country/language section
   Eye,          // January 13th, 2026: Added for password visibility toggle
-  EyeOff        // January 13th, 2026: Added for password visibility toggle
+  EyeOff,       // January 13th, 2026: Added for password visibility toggle
+  Trash2        // January 13th, 2026: Added for delete account
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -177,7 +178,7 @@ export default function SettingsPage() {
                     />
                   )}
                   {activeTab === 'notifications' && <NotificationSettings />}
-                  {activeTab === 'security' && <SecuritySettings user={user} />}
+                  {activeTab === 'security' && <SecuritySettings user={user} neonUserId={userId} />}
                 </div>
               </div>
             </div>
@@ -1224,9 +1225,16 @@ function NotificationSettings() {
 // January 13th, 2026:
 // - Added custom password change form with user.updatePassword()
 // - Simple modal with current/new/confirm password fields
-// - Removed AccountSettings component (was too complex)
+// - Added Delete Account functionality with confirmation modal
+// - User must type "DELETE" to confirm account deletion
+// - Deletes: Stripe subscription, all user data, Stack Auth account
 // =============================================================================
-function SecuritySettings({ user }: { user: any }) {
+interface SecuritySettingsProps {
+  user: any;
+  neonUserId: number | null;
+}
+
+function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
   // January 13th, 2026: State for password change modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   
@@ -1243,8 +1251,14 @@ function SecuritySettings({ user }: { user: any }) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // January 13th, 2026: Reset form when modal closes
-  const resetForm = () => {
+  // January 13th, 2026: Delete account state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // January 13th, 2026: Reset password form when modal closes
+  const resetPasswordForm = () => {
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
@@ -1255,10 +1269,22 @@ function SecuritySettings({ user }: { user: any }) {
     setShowConfirmPassword(false);
   };
 
-  // January 13th, 2026: Handle modal close
-  const handleCloseModal = () => {
+  // January 13th, 2026: Handle password modal close
+  const handleClosePasswordModal = () => {
     setIsPasswordModalOpen(false);
-    resetForm();
+    resetPasswordForm();
+  };
+
+  // January 13th, 2026: Reset delete form when modal closes
+  const resetDeleteForm = () => {
+    setDeleteConfirmText('');
+    setDeleteError(null);
+  };
+
+  // January 13th, 2026: Handle delete modal close
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    resetDeleteForm();
   };
 
   // January 13th, 2026: Handle password change using Stack Auth's user.updatePassword()
@@ -1302,7 +1328,7 @@ function SecuritySettings({ user }: { user: any }) {
       // Success
       setPasswordSuccess(true);
       setTimeout(() => {
-        handleCloseModal();
+        handleClosePasswordModal();
       }, 1500);
     } catch (err: any) {
       console.error('Error changing password:', err);
@@ -1316,6 +1342,55 @@ function SecuritySettings({ user }: { user: any }) {
       }
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  // ==========================================================================
+  // HANDLE DELETE ACCOUNT - January 13th, 2026
+  // 
+  // This is an IRREVERSIBLE action that:
+  // 1. Cancels Stripe subscription immediately
+  // 2. Deletes all user data from Neon DB
+  // 3. Deletes user from Stack Auth
+  // 4. Signs out and redirects to home
+  // ==========================================================================
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      setDeleteError('Please type DELETE to confirm');
+      return;
+    }
+
+    if (!neonUserId) {
+      setDeleteError('User ID not found. Please refresh and try again.');
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const res = await fetch('/api/users/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: neonUserId,
+          confirmText: deleteConfirmText,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to delete account');
+      }
+
+      // Success - redirect to home page
+      // The user is already signed out by the API (Stack Auth deletion)
+      window.location.href = '/';
+    } catch (err: any) {
+      console.error('Error deleting account:', err);
+      setDeleteError(err.message || 'Failed to delete account. Please try again or contact support.');
+      setIsDeleting(false);
     }
   };
 
@@ -1339,12 +1414,20 @@ function SecuritySettings({ user }: { user: any }) {
       
       <div className="h-0.5 bg-gray-200 dark:bg-gray-700" />
 
+      {/* ================================================================= */}
+      {/* DANGER ZONE - January 13th, 2026                                  */}
+      {/* Delete Account button opens confirmation modal                    */}
+      {/* ================================================================= */}
       <div className="space-y-4">
         <h3 className="text-sm font-black text-red-600 uppercase tracking-wide">Danger Zone</h3>
         <p className="text-xs text-gray-500">
           Once you delete your account, there is no going back. Please be certain.
         </p>
-        <button className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-2 border-red-400 text-sm font-bold hover:bg-red-500 hover:text-white hover:border-red-600 transition-all uppercase">
+        <button 
+          onClick={() => setIsDeleteModalOpen(true)}
+          className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-2 border-red-400 text-sm font-bold hover:bg-red-500 hover:text-white hover:border-red-600 transition-all uppercase flex items-center gap-2"
+        >
+          <Trash2 size={14} />
           Delete Account
         </button>
       </div>
@@ -1356,7 +1439,7 @@ function SecuritySettings({ user }: { user: any }) {
       {/* =================================================================== */}
       <Modal
         isOpen={isPasswordModalOpen}
-        onClose={handleCloseModal}
+        onClose={handleClosePasswordModal}
         title="Change Password"
         width="max-w-md"
       >
@@ -1452,7 +1535,7 @@ function SecuritySettings({ user }: { user: any }) {
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
-              onClick={handleCloseModal}
+              onClick={handleClosePasswordModal}
               disabled={isChangingPassword}
               className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
             >
@@ -1472,6 +1555,108 @@ function SecuritySettings({ user }: { user: any }) {
                 <>
                   <Check size={14} />
                   Save Password
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* =================================================================== */}
+      {/* DELETE ACCOUNT CONFIRMATION MODAL - January 13th, 2026              */}
+      {/*                                                                     */}
+      {/* WARNING: This action is IRREVERSIBLE!                               */}
+      {/* - Cancels Stripe subscription immediately                            */}
+      {/* - Deletes all saved/discovered affiliates                           */}
+      {/* - Deletes all search history and API logs                           */}
+      {/* - Deletes user account from database                                */}
+      {/* - Deletes authentication from Stack Auth                            */}
+      {/*                                                                     */}
+      {/* User must type "DELETE" to confirm                                  */}
+      {/* =================================================================== */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        title="Delete Account"
+        width="max-w-md"
+      >
+        <div className="space-y-4">
+          {/* Warning Banner */}
+          <div className="p-4 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-black text-red-800 dark:text-red-300 uppercase">
+                  This action cannot be undone
+                </p>
+                <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                  Your account and all associated data will be permanently deleted.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* What will be deleted */}
+          <div className="space-y-2">
+            <p className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">
+              The following will be permanently deleted:
+            </p>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 pl-4">
+              <li>• Your subscription (canceled immediately)</li>
+              <li>• All saved affiliates</li>
+              <li>• All discovered affiliates</li>
+              <li>• All search history</li>
+              <li>• Your account and login credentials</li>
+            </ul>
+          </div>
+
+          {/* Error Message */}
+          {deleteError && (
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 flex items-center gap-2">
+              <XCircle size={16} className="text-red-600" />
+              <span className="text-sm font-bold text-red-700 dark:text-red-400">{deleteError}</span>
+            </div>
+          )}
+
+          {/* Confirmation Input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              Type DELETE to confirm
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+              disabled={isDeleting}
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-red-400 text-sm text-gray-900 dark:text-white font-bold focus:outline-none focus:border-red-600 disabled:opacity-50 uppercase tracking-widest"
+              placeholder="DELETE"
+              autoComplete="off"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              onClick={handleCloseDeleteModal}
+              disabled={isDeleting}
+              className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={isDeleting || deleteConfirmText !== 'DELETE'}
+              className="px-4 py-2 text-xs font-black text-white bg-red-600 hover:bg-red-700 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={14} />
+                  Delete Forever
                 </>
               )}
             </button>
