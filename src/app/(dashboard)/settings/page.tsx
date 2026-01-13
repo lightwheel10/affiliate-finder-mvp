@@ -56,7 +56,9 @@ import {
   ExternalLink,
   Download,
   ChevronDown,  // January 13th, 2026: Added for country/language dropdowns
-  Globe         // January 13th, 2026: Added for country/language section
+  Globe,        // January 13th, 2026: Added for country/language section
+  Eye,          // January 13th, 2026: Added for password visibility toggle
+  EyeOff        // January 13th, 2026: Added for password visibility toggle
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -152,13 +154,7 @@ export default function SettingsPage() {
             <div className="flex-1 min-w-0 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] overflow-hidden">
               <div className="h-full overflow-y-auto p-6 lg:p-8">
                 <div className="max-w-2xl">
-                  <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1">
-                    {tabs.find(t => t.id === activeTab)?.label}
-                  </h2>
-                  <p className="text-sm text-gray-500 mb-8">
-                    {tabs.find(t => t.id === activeTab)?.description}
-                  </p>
-
+                  {/* January 13th, 2026: Removed tab title and description as per user request */}
                   {activeTab === 'profile' && (
                     <ProfileSettings
                       user={user}
@@ -1218,26 +1214,125 @@ function NotificationSettings() {
 }
 
 // =============================================================================
-// SECURITY SETTINGS - NEO-BRUTALIST (Updated January 8th, 2026)
+// SECURITY SETTINGS - NEO-BRUTALIST (Updated January 13th, 2026)
 // 
 // Design updates:
 // - Sharp-edged buttons
 // - Bold typography
 // - Neo-brutalist Danger Zone section
+// 
+// January 13th, 2026:
+// - Added custom password change form with user.updatePassword()
+// - Simple modal with current/new/confirm password fields
+// - Removed AccountSettings component (was too complex)
 // =============================================================================
 function SecuritySettings({ user }: { user: any }) {
+  // January 13th, 2026: State for password change modal
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  
+  // January 13th, 2026: Password form state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  
+  // January 13th, 2026: Password visibility toggles
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // January 13th, 2026: Reset form when modal closes
+  const resetForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  // January 13th, 2026: Handle modal close
+  const handleCloseModal = () => {
+    setIsPasswordModalOpen(false);
+    resetForm();
+  };
+
+  // January 13th, 2026: Handle password change using Stack Auth's user.updatePassword()
+  const handleChangePassword = async () => {
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('All fields are required');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from current password');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    setPasswordError(null);
+
+    try {
+      // Use Stack Auth's updatePassword method
+      const result = await user.updatePassword({
+        oldPassword: currentPassword,
+        newPassword: newPassword,
+      });
+
+      // Check for errors (Stack Auth returns error object on failure)
+      if (result && result.status === 'error') {
+        throw new Error(result.error?.message || 'Failed to update password');
+      }
+
+      // Success
+      setPasswordSuccess(true);
+      setTimeout(() => {
+        handleCloseModal();
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error changing password:', err);
+      // Handle specific Stack Auth errors
+      if (err.message?.includes('PasswordConfirmationMismatch') || err.message?.includes('incorrect')) {
+        setPasswordError('Current password is incorrect');
+      } else if (err.message?.includes('PasswordRequirementsNotMet')) {
+        setPasswordError('Password does not meet requirements');
+      } else {
+        setPasswordError(err.message || 'Failed to change password. Please try again.');
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">Password & Security</h3>
         <p className="text-sm text-gray-500">
-          Manage your password and security settings through your account portal.
+          Change your password to keep your account secure.
         </p>
         <div className="pt-2">
+          {/* January 13th, 2026: Opens password change modal */}
           <button 
+            onClick={() => setIsPasswordModalOpen(true)}
             className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors uppercase"
           >
-            Manage Security Settings
+            Change Password
           </button>
         </div>
       </div>
@@ -1253,6 +1348,136 @@ function SecuritySettings({ user }: { user: any }) {
           Delete Account
         </button>
       </div>
+
+      {/* =================================================================== */}
+      {/* PASSWORD CHANGE MODAL - January 13th, 2026                          */}
+      {/* Simple form: Current Password -> New Password -> Confirm            */}
+      {/* Uses Stack Auth's user.updatePassword() method                       */}
+      {/* =================================================================== */}
+      <Modal
+        isOpen={isPasswordModalOpen}
+        onClose={handleCloseModal}
+        title="Change Password"
+        width="max-w-md"
+      >
+        <div className="space-y-4">
+          {/* Success Message */}
+          {passwordSuccess && (
+            <div className="p-3 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center gap-2">
+              <Check size={16} className="text-green-600" />
+              <span className="text-sm font-bold text-green-700 dark:text-green-400">Password changed successfully!</span>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {passwordError && (
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 flex items-center gap-2">
+              <XCircle size={16} className="text-red-600" />
+              <span className="text-sm font-bold text-red-700 dark:text-red-400">{passwordError}</span>
+            </div>
+          )}
+
+          {/* Current Password */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              Current Password
+            </label>
+            <div className="relative">
+              <input
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                disabled={isChangingPassword || passwordSuccess}
+                className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
+                placeholder="Enter current password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* New Password */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={isChangingPassword || passwordSuccess}
+                className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
+                placeholder="Enter new password (min 8 characters)"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirm New Password */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+              Confirm New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={isChangingPassword || passwordSuccess}
+                className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
+                placeholder="Confirm new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              onClick={handleCloseModal}
+              disabled={isChangingPassword}
+              className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleChangePassword}
+              disabled={isChangingPassword || passwordSuccess || !currentPassword || !newPassword || !confirmPassword}
+              className="px-4 py-2 text-xs font-black text-black bg-[#ffbf23] hover:bg-yellow-400 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isChangingPassword ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check size={14} />
+                  Save Password
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
