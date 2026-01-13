@@ -18,6 +18,7 @@ export interface DbUser {
   trial_start_date: string | null;
   trial_end_date: string | null;
   bio: string | null;
+  profile_image_url: string | null; // January 13th, 2026: Added for Vercel Blob storage
   target_country: string | null;
   target_language: string | null;
   competitors: string[] | null;

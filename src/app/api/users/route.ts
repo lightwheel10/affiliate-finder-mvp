@@ -110,6 +110,7 @@ export async function PATCH(request: NextRequest) {
       emailUpdates: 'email_updates',
       appReplies: 'app_replies',
       appReminders: 'app_reminders',
+      profileImageUrl: 'profile_image_url', // January 13th, 2026: Added for Vercel Blob storage
     };
 
     for (const [jsKey, dbKey] of Object.entries(fieldMapping)) {

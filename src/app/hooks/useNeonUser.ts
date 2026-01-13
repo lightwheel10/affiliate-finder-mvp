@@ -22,6 +22,7 @@ export interface NeonUserData {
   competitors?: string[];
   topics?: string[];
   affiliate_types?: string[];
+  profile_image_url?: string; // January 13th, 2026: Added for Vercel Blob storage
 }
 
 // =============================================================================

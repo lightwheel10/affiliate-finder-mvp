@@ -30,7 +30,7 @@
  * =============================================================================
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@stackframe/stack';
 import { PricingModal } from '../../components/PricingModal';
@@ -54,7 +54,9 @@ import {
   XCircle,
   FileText,
   ExternalLink,
-  Download
+  Download,
+  ChevronDown,  // January 13th, 2026: Added for country/language dropdowns
+  Globe         // January 13th, 2026: Added for country/language section
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -76,7 +78,8 @@ export default function SettingsPage() {
   
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const user = useUser();
-  const { userId } = useNeonUser();
+  // January 13th, 2026: Added refetch for updating name, country, language
+  const { userId, user: neonUser, refetch: refetchNeonUser } = useNeonUser();
   const { subscription, isLoading: subscriptionLoading, isTrialing, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
@@ -156,7 +159,15 @@ export default function SettingsPage() {
                     {tabs.find(t => t.id === activeTab)?.description}
                   </p>
 
-                  {activeTab === 'profile' && <ProfileSettings user={user} />}
+                  {activeTab === 'profile' && (
+                    <ProfileSettings
+                      user={user}
+                      neonUserId={userId}
+                      currentCountry={neonUser?.target_country}
+                      currentLanguage={neonUser?.target_language}
+                      onProfileUpdated={refetchNeonUser}
+                    />
+                  )}
                   {activeTab === 'plan' && (
                     <PlanSettings 
                       subscription={subscription}
@@ -297,46 +308,205 @@ export default function SettingsPage() {
 }
 
 // =============================================================================
-// PROFILE SETTINGS - NEO-BRUTALIST (Updated January 8th, 2026)
+// PROFILE SETTINGS - NEO-BRUTALIST (Updated January 13th, 2026)
 // 
 // Design updates:
-// - Square avatar with bold border
 // - Sharp-edged input fields
 // - Neo-brutalist Edit Profile button
+// 
+// January 13th, 2026: 
+// - Added editable name functionality
+// - Added country and language dropdowns
+// - Updates both Stack Auth (displayName) and Neon DB (name, target_country, target_language)
 // =============================================================================
-function ProfileSettings({ user }: { user: any }) {
+interface ProfileSettingsProps {
+  user: any;
+  neonUserId: number | null;
+  currentCountry?: string | null;   // January 13th, 2026: From Neon DB
+  currentLanguage?: string | null;  // January 13th, 2026: From Neon DB
+  onProfileUpdated?: () => void;
+}
+
+// =============================================================================
+// COUNTRIES LIST - January 13th, 2026
+// Same list as onboarding for consistency
+// =============================================================================
+const COUNTRIES = [
+  { name: 'United States', code: 'us' },
+  { name: 'United Kingdom', code: 'gb' },
+  { name: 'Germany', code: 'de' },
+  { name: 'Canada', code: 'ca' },
+  { name: 'Australia', code: 'au' },
+  { name: 'France', code: 'fr' },
+  { name: 'Spain', code: 'es' },
+  { name: 'Italy', code: 'it' },
+  { name: 'Netherlands', code: 'nl' },
+  { name: 'Switzerland', code: 'ch' },
+  { name: 'Austria', code: 'at' },
+  { name: 'Sweden', code: 'se' },
+  { name: 'Norway', code: 'no' },
+  { name: 'Denmark', code: 'dk' },
+  { name: 'Poland', code: 'pl' },
+  { name: 'Japan', code: 'jp' },
+  { name: 'Singapore', code: 'sg' },
+  { name: 'United Arab Emirates', code: 'ae' },
+];
+
+// =============================================================================
+// LANGUAGES LIST - January 13th, 2026
+// Same list as onboarding for consistency
+// =============================================================================
+const LANGUAGES = [
+  { name: 'English', symbol: 'Aa' },
+  { name: 'Spanish', symbol: 'Ñ' },
+  { name: 'German', symbol: 'ß' },
+  { name: 'French', symbol: 'Ç' },
+  { name: 'Italian', symbol: 'È' },
+  { name: 'Portuguese', symbol: 'Ã' },
+  { name: 'Dutch', symbol: 'IJ' },
+  { name: 'Swedish', symbol: 'Å' },
+  { name: 'Polish', symbol: 'Ł' },
+  { name: 'Danish', symbol: 'Ø' },
+  { name: 'Norwegian', symbol: 'Æ' },
+  { name: 'Japanese', symbol: '日' },
+  { name: 'Korean', symbol: '한' },
+  { name: 'Chinese', symbol: '中' },
+  { name: 'Arabic', symbol: 'ع' },
+];
+
+function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, onProfileUpdated }: ProfileSettingsProps) {
   const userName = user?.displayName || 'User';
   const userEmail = user?.primaryEmail || '';
   
+  // Editing state (January 13th, 2026)
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(userName);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Country and Language state (January 13th, 2026)
+  const [editCountry, setEditCountry] = useState(currentCountry || '');
+  const [editLanguage, setEditLanguage] = useState(currentLanguage || '');
+  const [isCountryOpen, setIsCountryOpen] = useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  
+  // Refs for click-outside detection (January 13th, 2026)
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close dropdowns (January 13th, 2026)
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+        setIsCountryOpen(false);
+      }
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target as Node)) {
+        setIsLanguageOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Reset form when editing starts or user data changes (January 13th, 2026)
+  useEffect(() => {
+    if (isEditing) {
+      setEditName(userName);
+      setEditCountry(currentCountry || '');
+      setEditLanguage(currentLanguage || '');
+    }
+  }, [isEditing, userName, currentCountry, currentLanguage]);
+
+  // Handle save - update Stack Auth and Neon DB (January 13th, 2026)
+  const handleSave = async () => {
+    if (!editName.trim()) {
+      setSaveError('Name cannot be empty');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      // Update Stack Auth displayName
+      if (user) {
+        await user.update({ displayName: editName.trim() });
+      }
+
+      // Update Neon DB (name, country, language)
+      if (neonUserId) {
+        const res = await fetch('/api/users', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: neonUserId,
+            name: editName.trim(),
+            targetCountry: editCountry || null,
+            targetLanguage: editLanguage || null,
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to update database');
+        }
+      }
+
+      // Success - exit edit mode and notify parent
+      setIsEditing(false);
+      onProfileUpdated?.();
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setSaveError('Failed to save. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle cancel (January 13th, 2026)
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditName(userName);
+    setEditCountry(currentCountry || '');
+    setEditLanguage(currentLanguage || '');
+    setSaveError(null);
+    setIsCountryOpen(false);
+    setIsLanguageOpen(false);
+  };
+
+  // Get country code for flag (January 13th, 2026)
+  const getCountryCode = (countryName: string) => {
+    return COUNTRIES.find(c => c.name === countryName)?.code || '';
+  };
+
+  // Get language symbol (January 13th, 2026)
+  const getLanguageSymbol = (langName: string) => {
+    return LANGUAGES.find(l => l.name === langName)?.symbol || '';
+  };
+  
   return (
     <div className="space-y-6">
-      {/* Avatar Section - NEO-BRUTALIST */}
-      <div className="flex items-center gap-6 pb-6 border-b-2 border-gray-200 dark:border-gray-700">
-        <div className="relative">
-          <img 
-            src={user?.profileImageUrl || `https://ui-avatars.com/api/?name=${userName}&background=0f172a&color=fff&size=128`}
-            alt="Profile" 
-            className="w-20 h-20 border-4 border-black dark:border-gray-600 object-cover"
-          />
-          <button 
-            className="absolute bottom-0 right-0 p-1.5 bg-[#ffbf23] border-2 border-black text-black hover:bg-yellow-400 transition-colors"
-          >
-            <User size={14} />
-          </button>
-        </div>
-        <div>
-          <h3 className="font-black text-gray-900 dark:text-white">Profile Photo</h3>
-          <p className="text-xs text-gray-500 mt-1">Update your profile picture in account settings.</p>
-        </div>
-      </div>
-
-      {/* User Info Display - NEO-BRUTALIST */}
+      {/* User Info - Name & Email (January 13th, 2026) */}
       <div className="grid grid-cols-1 gap-6">
         <div className="space-y-1.5">
           <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Full Name</label>
-          <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium">
-            {userName}
-          </div>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-[#ffbf23] text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23]"
+              placeholder="Enter your name"
+              disabled={isSaving}
+              autoFocus
+            />
+          ) : (
+            <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium">
+              {userName}
+            </div>
+          )}
+          {saveError && (
+            <p className="text-xs text-red-500 font-bold">{saveError}</p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -347,16 +517,201 @@ function ProfileSettings({ user }: { user: any }) {
               {userEmail}
             </div>
           </div>
+          <p className="text-xs text-gray-400">Email cannot be changed here.</p>
         </div>
       </div>
 
-      <div className="pt-4 border-t-2 border-gray-200 dark:border-gray-700 flex justify-end">
-        <button 
-          onClick={() => user?.update({})}
-          className="px-5 py-2.5 bg-[#ffbf23] text-black text-sm font-black uppercase tracking-wide border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-        >
-          Edit Profile
-        </button>
+      {/* Country & Language Section - January 13th, 2026 */}
+      <div className="pt-4 border-t-2 border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe size={16} className="text-gray-500" />
+          <h4 className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Target Market</h4>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Country Dropdown - January 13th, 2026 */}
+          <div className="space-y-1.5 relative" ref={countryDropdownRef}>
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Country</label>
+            {isEditing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCountryOpen(!isCountryOpen);
+                    setIsLanguageOpen(false);
+                  }}
+                  disabled={isSaving}
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-[#ffbf23] text-sm text-left flex items-center justify-between focus:outline-none disabled:opacity-50"
+                >
+                  {editCountry ? (
+                    <span className="flex items-center gap-2">
+                      <img 
+                        src={`https://flagcdn.com/w20/${getCountryCode(editCountry)}.png`}
+                        alt={editCountry}
+                        className="w-5 h-4 object-cover border border-gray-200"
+                      />
+                      <span className="text-gray-900 dark:text-white">{editCountry}</span>
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Select country</span>
+                  )}
+                  <ChevronDown size={14} className={cn("text-gray-400 transition-transform", isCountryOpen && "rotate-180")} />
+                </button>
+                
+                {/* Country Dropdown Menu */}
+                {isCountryOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 max-h-48 overflow-y-auto">
+                    {COUNTRIES.map((country) => (
+                      <button
+                        key={country.code}
+                        type="button"
+                        onClick={() => {
+                          setEditCountry(country.name);
+                          setIsCountryOpen(false);
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800",
+                          editCountry === country.name && "bg-[#ffbf23]/20"
+                        )}
+                      >
+                        <img 
+                          src={`https://flagcdn.com/w20/${country.code}.png`}
+                          alt={country.name}
+                          className="w-5 h-4 object-cover border border-gray-200"
+                        />
+                        <span className="text-gray-900 dark:text-white">{country.name}</span>
+                        {editCountry === country.name && <Check size={14} className="ml-auto text-[#ffbf23]" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center gap-2">
+                {currentCountry ? (
+                  <>
+                    <img 
+                      src={`https://flagcdn.com/w20/${getCountryCode(currentCountry)}.png`}
+                      alt={currentCountry}
+                      className="w-5 h-4 object-cover border border-gray-200"
+                    />
+                    <span>{currentCountry}</span>
+                  </>
+                ) : (
+                  <span className="text-gray-400">Not set</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Language Dropdown - January 13th, 2026 */}
+          <div className="space-y-1.5 relative" ref={languageDropdownRef}>
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Language</label>
+            {isEditing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLanguageOpen(!isLanguageOpen);
+                    setIsCountryOpen(false);
+                  }}
+                  disabled={isSaving}
+                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-[#ffbf23] text-sm text-left flex items-center justify-between focus:outline-none disabled:opacity-50"
+                >
+                  {editLanguage ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                        {getLanguageSymbol(editLanguage)}
+                      </span>
+                      <span className="text-gray-900 dark:text-white">{editLanguage}</span>
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Select language</span>
+                  )}
+                  <ChevronDown size={14} className={cn("text-gray-400 transition-transform", isLanguageOpen && "rotate-180")} />
+                </button>
+                
+                {/* Language Dropdown Menu */}
+                {isLanguageOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 max-h-48 overflow-y-auto">
+                    {LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.name}
+                        type="button"
+                        onClick={() => {
+                          setEditLanguage(lang.name);
+                          setIsLanguageOpen(false);
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800",
+                          editLanguage === lang.name && "bg-[#ffbf23]/20"
+                        )}
+                      >
+                        <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                          {lang.symbol}
+                        </span>
+                        <span className="text-gray-900 dark:text-white">{lang.name}</span>
+                        {editLanguage === lang.name && <Check size={14} className="ml-auto text-[#ffbf23]" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center gap-2">
+                {currentLanguage ? (
+                  <>
+                    <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                      {getLanguageSymbol(currentLanguage)}
+                    </span>
+                    <span>{currentLanguage}</span>
+                  </>
+                ) : (
+                  <span className="text-gray-400">Not set</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons - NEO-BRUTALIST (Updated January 13th, 2026) */}
+      <div className="pt-4 border-t-2 border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        {isEditing ? (
+          <>
+            <button 
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSave}
+              disabled={isSaving || !editName.trim()}
+              className="px-5 py-2 bg-[#ffbf23] text-black text-sm font-black uppercase tracking-wide border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check size={14} />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </>
+        ) : (
+          <button 
+            onClick={() => setIsEditing(true)}
+            className="px-5 py-2.5 bg-[#ffbf23] text-black text-sm font-black uppercase tracking-wide border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+          >
+            Edit Profile
+          </button>
+        )}
       </div>
     </div>
   );
