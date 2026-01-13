@@ -301,5 +301,30 @@ export interface DbSubscription {
   card_exp_year: number | null;
   created_at: string;
   updated_at: string;
+  
+  // ==========================================================================
+  // AUTO-SCAN SCHEDULING FIELDS - January 13th, 2026
+  // 
+  // These fields enable the automatic affiliate scanning feature for paid users.
+  // 
+  // HOW IT WORKS:
+  // 1. User is on trial → Clock is LOCKED (teaser to upgrade)
+  // 2. User upgrades (first invoice.paid with amount > 0) → 
+  //    - first_payment_at is set to NOW()
+  //    - next_auto_scan_at is set to NOW() + 7 days
+  // 3. Vercel Cron runs hourly, checks users where next_auto_scan_at <= NOW()
+  // 4. For each qualifying user with available topic_search credits:
+  //    - Re-run searches using their saved competitors[] and topics[]
+  //    - Save results to discovered_affiliates (duplicates auto-blocked)
+  //    - Update last_auto_scan_at = NOW()
+  //    - Update next_auto_scan_at += 7 days
+  // 5. If no credits available → scan is skipped, clock shows "No credits"
+  // 6. If user cancels/downgrades to trial → clock locks again
+  //
+  // SCAN INTERVAL: 7 days for all plans (Pro, Business, Enterprise)
+  // ==========================================================================
+  first_payment_at: string | null;     // ISO timestamp of first successful payment (unlocks clock)
+  last_auto_scan_at: string | null;    // ISO timestamp of last completed auto-scan
+  next_auto_scan_at: string | null;    // ISO timestamp when next auto-scan is scheduled
 }
 

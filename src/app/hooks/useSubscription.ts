@@ -22,6 +22,24 @@ export interface SubscriptionData extends DbSubscription {
   daysLeftInTrial: number | null;
   formattedPrice: string;
   nextBillingDate: string | null;
+  
+  // ==========================================================================
+  // AUTO-SCAN COMPUTED FIELDS - January 13th, 2026
+  // 
+  // These computed fields help the ScanCountdown component display the correct
+  // state without complex logic in the component itself.
+  // ==========================================================================
+  hasAutoScanAccess: boolean;           // true if user has paid (first_payment_at is set)
+  nextScanAt: Date | null;              // Parsed next_auto_scan_at for countdown
+  lastScanAt: Date | null;              // Parsed last_auto_scan_at for display
+  timeUntilNextScan: {                  // Computed countdown values
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalMs: number;
+    isPast: boolean;                    // true if scan is overdue (cron will pick it up)
+  } | null;
 }
 
 // Plan pricing info
@@ -98,6 +116,42 @@ export function useSubscription(userId: number | null) {
           });
         }
 
+        // ======================================================================
+        // AUTO-SCAN FIELDS COMPUTATION - January 13th, 2026
+        // 
+        // Compute countdown and access state for the ScanCountdown component.
+        // 
+        // Rules:
+        // - hasAutoScanAccess = true only if first_payment_at is set (user paid)
+        // - If trialing or canceled, auto-scan is locked
+        // - Countdown shows time until next_auto_scan_at
+        // ======================================================================
+        const hasAutoScanAccess = !!(sub.first_payment_at && sub.status === 'active');
+        const nextScanAt = sub.next_auto_scan_at ? new Date(sub.next_auto_scan_at) : null;
+        const lastScanAt = sub.last_auto_scan_at ? new Date(sub.last_auto_scan_at) : null;
+        
+        // Compute time until next scan
+        let timeUntilNextScan: SubscriptionData['timeUntilNextScan'] = null;
+        if (nextScanAt) {
+          const diffMs = nextScanAt.getTime() - now.getTime();
+          const isPast = diffMs <= 0;
+          const absDiffMs = Math.abs(diffMs);
+          
+          const days = Math.floor(absDiffMs / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((absDiffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((absDiffMs % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((absDiffMs % (1000 * 60)) / 1000);
+          
+          timeUntilNextScan = {
+            days,
+            hours,
+            minutes,
+            seconds,
+            totalMs: diffMs,
+            isPast,
+          };
+        }
+
         setSubscription({
           ...sub,
           isTrialing: sub.status === 'trialing',
@@ -106,6 +160,11 @@ export function useSubscription(userId: number | null) {
           daysLeftInTrial,
           formattedPrice,
           nextBillingDate,
+          // Auto-scan fields (January 13th, 2026)
+          hasAutoScanAccess,
+          nextScanAt,
+          lastScanAt,
+          timeUntilNextScan,
         });
       } else {
         setSubscription(null);
@@ -242,6 +301,17 @@ export function useSubscription(userId: number | null) {
     daysLeftInTrial: subscription?.daysLeftInTrial ?? null,
     // Whether we've completed fetching for the current userId
     hasFetched,
+    
+    // ==========================================================================
+    // AUTO-SCAN QUICK ACCESS PROPERTIES - January 13th, 2026
+    // 
+    // These provide convenient access to auto-scan state without needing to
+    // access the full subscription object. Used by ScanCountdown component.
+    // ==========================================================================
+    hasAutoScanAccess: subscription?.hasAutoScanAccess ?? false,
+    nextScanAt: subscription?.nextScanAt ?? null,
+    lastScanAt: subscription?.lastScanAt ?? null,
+    timeUntilNextScan: subscription?.timeUntilNextScan ?? null,
   };
 }
 

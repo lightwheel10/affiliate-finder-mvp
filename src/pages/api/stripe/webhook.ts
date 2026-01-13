@@ -643,6 +643,52 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   } catch (creditError) {
     console.error(`[Webhook] Failed to reset credits for user ${dbUserId}:`, creditError);
   }
+
+  // ============================================================================
+  // AUTO-SCAN SCHEDULING - January 13th, 2026
+  // 
+  // When a user makes their first payment, we unlock the auto-scan feature:
+  // 1. Set first_payment_at to NOW() (only if not already set)
+  // 2. Set next_auto_scan_at to NOW() + 7 days
+  // 
+  // On subsequent payments (renewals), we don't reset the scan schedule -
+  // the scan continues on its 7-day cycle independent of billing cycles.
+  // 
+  // RULES:
+  // - first_payment_at is set ONLY ONCE (on first real payment, not trial)
+  // - next_auto_scan_at starts 7 days from first payment
+  // - Vercel Cron picks up users where next_auto_scan_at <= NOW()
+  // ============================================================================
+  try {
+    // Check if this is the user's first payment (first_payment_at not yet set)
+    const subscriptionCheck = await sql`
+      SELECT first_payment_at FROM subscriptions WHERE user_id = ${dbUserId}
+    `;
+    
+    if (subscriptionCheck.length > 0 && !subscriptionCheck[0].first_payment_at) {
+      // This is the user's FIRST payment - unlock auto-scan!
+      const now = new Date();
+      const nextScanAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+      
+      await sql`
+        UPDATE subscriptions
+        SET
+          first_payment_at = ${now.toISOString()},
+          next_auto_scan_at = ${nextScanAt.toISOString()},
+          updated_at = NOW()
+        WHERE user_id = ${dbUserId}
+      `;
+      
+      console.log(`[Webhook] ✅ AUTO-SCAN UNLOCKED for user ${dbUserId}`);
+      console.log(`[Webhook]    First payment at: ${now.toISOString()}`);
+      console.log(`[Webhook]    Next auto-scan at: ${nextScanAt.toISOString()}`);
+    } else if (subscriptionCheck.length > 0 && subscriptionCheck[0].first_payment_at) {
+      console.log(`[Webhook] User ${dbUserId} already has auto-scan unlocked (first_payment_at exists)`);
+    }
+  } catch (autoScanError) {
+    // Non-critical: Don't fail the webhook if auto-scan scheduling fails
+    console.error(`[Webhook] Failed to set auto-scan schedule for user ${dbUserId}:`, autoScanError);
+  }
 }
 
 /**

@@ -1104,6 +1104,19 @@ export const de: Dictionary = {
   },
 
   // =========================================================================
+  // SCAN COUNTDOWN - Auto-scan countdown timer in dashboard header
+  // Added: January 13th, 2026 - Auto-scan feature
+  // =========================================================================
+  scanCountdown: {
+    upgradeToUnlock: 'Upgrade um Auto-Scan freizuschalten',
+    noCredits: 'Keine Credits',
+    noCreditsTooltip: 'Keine Credits verfügbar. Upgrade für mehr.',
+    scanning: 'Scanne...',
+    scanningTooltip: 'Auto-Scan läuft...',
+    nextScanAt: 'Nächster Scan um',
+  },
+
+  // =========================================================================
   // PRICING MODAL - Plan selection and subscription management
   // Added: January 10th, 2026 - Priority 5: Shared Components
   // =========================================================================

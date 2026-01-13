@@ -33,7 +33,6 @@ import {
   X,
   ChevronRight,
   Star,
-  Play,
   Target,
   Radar
 } from 'lucide-react';
@@ -243,7 +242,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                 {t.landing.hero.subtitle}
               </p>
 
-              {/* CTA Buttons - NEO-BRUTALIST (January 9th, 2026) */}
+              {/* CTA Button - NEO-BRUTALIST (January 9th, 2026) */}
+              {/* January 13th, 2026: Removed "Get Demo" button as per request */}
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 <button 
                   onClick={onSignupClick}
@@ -251,12 +251,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                 >
                   {t.landing.hero.ctaPrimary}
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-                </button>
-                <button 
-                  className="w-full sm:w-auto px-6 py-3 bg-[#1A1D21] text-white text-sm font-black uppercase border-2 border-black hover:bg-[#333333] transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Play size={14} fill="currentColor" className="opacity-50" />
-                  {t.landing.hero.ctaSecondary}
                 </button>
               </div>
 

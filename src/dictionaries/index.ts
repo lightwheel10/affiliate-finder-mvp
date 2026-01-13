@@ -1129,6 +1129,19 @@ export interface Dictionary {
   };
 
   // =========================================================================
+  // SCAN COUNTDOWN - Auto-scan countdown timer in dashboard header
+  // Added: January 13th, 2026 - Auto-scan feature
+  // =========================================================================
+  scanCountdown: {
+    upgradeToUnlock: string;      // Tooltip for locked state
+    noCredits: string;            // Display text when no credits
+    noCreditsTooltip: string;     // Tooltip for no credits state
+    scanning: string;             // Display text when scan is in progress
+    scanningTooltip: string;      // Tooltip for scanning state
+    nextScanAt: string;           // Prefix for next scan date tooltip
+  };
+
+  // =========================================================================
   // PRICING MODAL - Plan selection and subscription management
   // Added: January 10th, 2026 - Priority 5: Shared Components
   // =========================================================================
