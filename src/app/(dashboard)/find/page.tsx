@@ -1021,6 +1021,7 @@ export default function FindNewPage() {
           </div>
 
           {/* Right: Advanced Filter */}
+          {/* January 13th, 2026: Pass onboarding data for filter options */}
           <div className="flex items-center gap-3">
             <FilterPanel
               affiliates={results}
@@ -1029,6 +1030,8 @@ export default function FindNewPage() {
               isOpen={isFilterPanelOpen}
               onClose={() => setIsFilterPanelOpen(false)}
               onOpen={() => setIsFilterPanelOpen(true)}
+              userCompetitors={user?.competitors || undefined}
+              userTopics={user?.topics || undefined}
             />
           </div>
         </div>

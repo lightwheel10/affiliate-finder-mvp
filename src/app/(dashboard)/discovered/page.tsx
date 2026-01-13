@@ -53,6 +53,7 @@ import {
 } from 'lucide-react';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { FilterPanel } from '../../components/FilterPanel';
+import { useNeonUser } from '../../hooks/useNeonUser';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
@@ -62,6 +63,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 export default function DiscoveredPage() {
   // Translation hook (January 9th, 2026)
   const { t } = useLanguage();
+  // User data for filter options (January 13th, 2026)
+  const { user } = useNeonUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -444,6 +447,7 @@ export default function DiscoveredPage() {
           </div>
 
           {/* Right: Advanced Filter */}
+          {/* January 13th, 2026: Pass onboarding data for filter options */}
           <div className="flex items-center gap-3">
             <FilterPanel
               affiliates={discoveredAffiliates}
@@ -452,6 +456,8 @@ export default function DiscoveredPage() {
               isOpen={isFilterPanelOpen}
               onClose={() => setIsFilterPanelOpen(false)}
               onOpen={() => setIsFilterPanelOpen(true)}
+              userCompetitors={user?.competitors || undefined}
+              userTopics={user?.topics || undefined}
             />
           </div>
         </div>

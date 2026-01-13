@@ -46,16 +46,36 @@ interface FilterPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onOpen: () => void;
+  /** User's onboarding competitors - always shown in filter dropdown (January 13th, 2026) */
+  userCompetitors?: string[];
+  /** User's onboarding topics - always shown in filter dropdown (January 13th, 2026) */
+  userTopics?: string[];
 }
 
+// -----------------------------------------------------------------------------
 // Helper to extract unique values from affiliates
-function extractFilterOptions(affiliates: ResultItem[]): {
+// Updated January 13th, 2026: Now merges onboarding data with search results
+// -----------------------------------------------------------------------------
+function extractFilterOptions(
+  affiliates: ResultItem[],
+  userCompetitors?: string[],
+  userTopics?: string[]
+): {
   competitors: string[];
   topics: string[];
 } {
   const competitors = new Set<string>();
   const topics = new Set<string>();
 
+  // Add onboarding data first (always available in filter)
+  if (userCompetitors) {
+    userCompetitors.forEach(c => competitors.add(c));
+  }
+  if (userTopics) {
+    userTopics.forEach(t => topics.add(t));
+  }
+
+  // Add data from search results
   affiliates.forEach(item => {
     if (item.discoveryMethod) {
       if (item.discoveryMethod.type === 'competitor') {
@@ -415,6 +435,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   isOpen,
   onClose,
   onOpen,
+  userCompetitors,
+  userTopics,
 }) => {
   // i18n translation hook (January 10th, 2026)
   const { t } = useLanguage();
@@ -422,8 +444,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   // Track which dropdown is currently open
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   
-  // Extract filter options from data
-  const filterOptions = useMemo(() => extractFilterOptions(affiliates), [affiliates]);
+  // Extract filter options from data + onboarding (January 13th, 2026)
+  const filterOptions = useMemo(
+    () => extractFilterOptions(affiliates, userCompetitors, userTopics),
+    [affiliates, userCompetitors, userTopics]
+  );
   
   // Count active filters
   const activeFilterCount = countActiveFilters(activeFilters);
