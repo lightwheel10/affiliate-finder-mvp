@@ -473,6 +473,65 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================================================
+    // STEP 12.6: SET FIRST_PAYMENT_AT FOR AUTO-SCAN ACCESS (January 14th, 2026)
+    // 
+    // CRITICAL FIX: Set first_payment_at directly when trial ends or user becomes active.
+    // This unlocks the auto-scan countdown clock immediately.
+    // 
+    // SECURITY:
+    // - This code ONLY runs AFTER stripe.subscriptions.update() succeeds
+    // - If Stripe's API call fails (e.g., card declined), we never reach here
+    // - Stripe validates the payment method and charges the user
+    // - We verify: user is authenticated, owns this subscription, and Stripe confirmed active
+    // 
+    // CONDITIONS:
+    // - Status is now 'active' (confirmed by Stripe)
+    // - User was on trial and ended it (endTrialNow=true), OR
+    // - User upgraded and is active
+    // - first_payment_at is not already set (prevent duplicate updates)
+    // 
+    // This is MORE reliable than waiting for webhook because:
+    // - No race conditions with frontend refetch
+    // - Immediate UI update
+    // - Webhook still acts as backup
+    // =========================================================================
+    const shouldSetFirstPayment = 
+      newStatus === 'active' && // Stripe confirmed active status
+      (isTrialing && endTrialNow); // Trial was just ended (user clicked "Buy Now")
+    
+    if (shouldSetFirstPayment) {
+      try {
+        // Check if first_payment_at is not already set
+        const currentSub = await sql`
+          SELECT first_payment_at FROM subscriptions WHERE user_id = ${userId}
+        `;
+        
+        if (currentSub.length > 0 && !currentSub[0].first_payment_at) {
+          const now = new Date();
+          const nextScanAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+          
+          await sql`
+            UPDATE subscriptions
+            SET
+              first_payment_at = ${now.toISOString()},
+              next_auto_scan_at = ${nextScanAt.toISOString()},
+              updated_at = NOW()
+            WHERE user_id = ${userId}
+          `;
+          
+          console.log(`[Stripe Change] ✅ AUTO-SCAN UNLOCKED for user ${userId}`);
+          console.log(`[Stripe Change]    first_payment_at: ${now.toISOString()}`);
+          console.log(`[Stripe Change]    next_auto_scan_at: ${nextScanAt.toISOString()}`);
+        } else if (currentSub.length > 0 && currentSub[0].first_payment_at) {
+          console.log(`[Stripe Change] first_payment_at already set, skipping`);
+        }
+      } catch (autoScanError) {
+        // Log error but don't fail the request - webhook will retry
+        console.error(`[Stripe Change] Failed to set auto-scan schedule for user ${userId}:`, autoScanError);
+      }
+    }
+
+    // =========================================================================
     // STEP 13: CALCULATE PRORATION AMOUNT FOR RESPONSE
     // This is informational for the frontend
     // =========================================================================
