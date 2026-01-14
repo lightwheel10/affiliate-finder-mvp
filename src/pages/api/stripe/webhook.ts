@@ -149,19 +149,17 @@ export default async function handler(
       });
     }
 
-    console.log(`[Webhook] ✅ Verified event: ${event.type} (${event.id})`);
-    console.log(`[Webhook] Event created: ${new Date((event.created || 0) * 1000).toISOString()}`);
+    console.log(`[Webhook] Received event: ${event.type} (${event.id})`);
 
     // =========================================================================
     // IDEMPOTENCY CHECK
     // =========================================================================
     if (isEventProcessed(event.id)) {
-      console.log(`[Webhook] ⚠️ Skipping already processed event: ${event.id}`);
+      console.log(`[Webhook] Skipping duplicate event: ${event.id}`);
       return res.status(200).json({ received: true, skipped: true });
     }
 
     markEventProcessed(event.id);
-    console.log(`[Webhook] Processing event: ${event.type}`);
 
     // =========================================================================
     // HANDLE SPECIFIC EVENTS
@@ -480,10 +478,6 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
  * subscription was an object, causing credits to never reset after payment.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  console.log(`[Webhook] ========== INVOICE.PAID EVENT ==========`);
-  console.log(`[Webhook] Invoice ID: ${invoice.id}`);
-  console.log(`[Webhook] Timestamp: ${new Date().toISOString()}`);
-  
   // ==========================================================================
   // SAFELY EXTRACT INVOICE DATA
   // Handle both string and object formats for customer and subscription
@@ -493,12 +487,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // The Stripe SDK types may not reflect all properties returned by the webhook
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const invoiceObj = invoice as any;
-  
-  // DEBUG: Log the raw invoice structure
-  console.log(`[Webhook] Raw invoice.customer:`, JSON.stringify(invoiceObj.customer, null, 2));
-  console.log(`[Webhook] Raw invoice.subscription:`, JSON.stringify(invoiceObj.subscription, null, 2));
-  console.log(`[Webhook] Raw invoice.amount_paid:`, invoiceObj.amount_paid);
-  console.log(`[Webhook] Raw invoice.billing_reason:`, invoiceObj.billing_reason);
   
   // Extract customer ID (can be string or Customer object)
   let customerId: string | null = null;
@@ -545,24 +533,19 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // Get amount safely
   const amountPaid = typeof invoiceObj.amount_paid === 'number' ? invoiceObj.amount_paid : 0;
   
-  console.log(`[Webhook] ========== EXTRACTED DATA ==========`);
-  console.log(`[Webhook] Customer ID: ${customerId}`);
-  console.log(`[Webhook] Subscription ID: ${subscriptionId}`);
-  console.log(`[Webhook] Amount Paid: ${amountPaid} (cents)`);
-  console.log(`[Webhook] =====================================`);
+  console.log(`[Webhook] Invoice paid: ${invoice.id}, amount: ${amountPaid}, customer: ${customerId}`);
 
   // ==========================================================================
   // VALIDATE CUSTOMER ID
   // ==========================================================================
   if (!customerId) {
-    console.error(`[Webhook] ❌ Invoice ${invoice.id} has no customer ID - cannot process`);
+    console.error(`[Webhook] Invoice ${invoice.id} has no customer ID - cannot process`);
     return;
   }
 
   // ==========================================================================
   // FIND USER BY CUSTOMER ID
   // ==========================================================================
-  console.log(`[Webhook] Looking up user by stripe_customer_id: ${customerId}`);
   const users = await sql`
     SELECT u.id, u.email, u.plan, s.stripe_subscription_id, s.status, s.first_payment_at
     FROM users u
@@ -571,22 +554,13 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   `;
 
   if (users.length === 0) {
-    console.error(`[Webhook] ❌ No user found for customer: ${customerId}`);
+    console.error(`[Webhook] No user found for customer: ${customerId}`);
     return;
   }
 
   const dbUserId = users[0].id;
   const userPlan = users[0].plan;
   const dbSubscriptionId = users[0].stripe_subscription_id;
-  
-  console.log(`[Webhook] ========== USER FOUND ==========`);
-  console.log(`[Webhook] DB User ID: ${dbUserId}`);
-  console.log(`[Webhook] Email: ${users[0].email}`);
-  console.log(`[Webhook] Current Plan: ${userPlan}`);
-  console.log(`[Webhook] DB Subscription ID: ${dbSubscriptionId}`);
-  console.log(`[Webhook] Current Status: ${users[0].status}`);
-  console.log(`[Webhook] Current first_payment_at: ${users[0].first_payment_at}`);
-  console.log(`[Webhook] ==================================`);
 
   // ==========================================================================
   // FALLBACK: If invoice doesn't have subscription ID, use the one from DB
@@ -605,20 +579,13 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // 2. Reset credits (trial credits are initialized by handleSubscriptionUpdate)
   // ==========================================================================
   if (amountPaid === 0) {
-    console.log(`[Webhook] ⚠️ SKIPPING $0 TRIAL INVOICE`);
-    console.log(`[Webhook] -> Status will NOT be changed to 'active'`);
-    console.log(`[Webhook] -> first_payment_at will NOT be set`);
-    console.log(`[Webhook] -> The clock will remain LOCKED until a real payment is made`);
-    console.log(`[Webhook] ========== END INVOICE.PAID (SKIPPED) ==========`);
+    console.log(`[Webhook] Skipping $0 trial invoice - no status change`);
     return;
   }
-  
-  console.log(`[Webhook] ✅ REAL PAYMENT DETECTED (amount > $0) - Processing...`);
 
   // ==========================================================================
   // UPDATE SUBSCRIPTION STATUS (only for actual payments)
   // ==========================================================================
-  console.log(`[Webhook] Updating subscription status to 'active'...`);
   await sql`
     UPDATE subscriptions
     SET
@@ -635,7 +602,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     WHERE id = ${dbUserId}
   `;
 
-  console.log(`[Webhook] ✅ Status updated to 'active' for user ${dbUserId}`);
+  console.log(`[Webhook] Payment successful for user ${dbUserId}`);
 
   try {
     let periodStart = new Date();
@@ -680,6 +647,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   // ============================================================================
   // AUTO-SCAN SCHEDULING - January 13th, 2026
+  // Updated: January 14th, 2026 - Cleaned up debug logging
   // 
   // When a user makes their first payment, we unlock the auto-scan feature:
   // 1. Set first_payment_at to NOW() (only if not already set)
@@ -688,36 +656,18 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // On subsequent payments (renewals), we don't reset the scan schedule -
   // the scan continues on its 7-day cycle independent of billing cycles.
   // 
-  // RULES:
-  // - first_payment_at is set ONLY ONCE (on first real payment, not trial)
-  // - next_auto_scan_at starts 7 days from first payment
-  // - Vercel Cron picks up users where next_auto_scan_at <= NOW()
+  // NOTE: first_payment_at may already be set by change-subscription route
+  // when user clicks "Buy Now". This webhook acts as a backup.
   // ============================================================================
-  console.log(`[Webhook] ========== AUTO-SCAN SCHEDULING DEBUG ==========`);
-  console.log(`[Webhook] User ID: ${dbUserId}`);
-  console.log(`[Webhook] Invoice amount paid: ${amountPaid}`);
-  
   try {
-    // Check if this is the user's first payment (first_payment_at not yet set)
-    console.log(`[Webhook] Checking if first_payment_at is already set...`);
     const subscriptionCheck = await sql`
-      SELECT first_payment_at, status, next_auto_scan_at FROM subscriptions WHERE user_id = ${dbUserId}
+      SELECT first_payment_at FROM subscriptions WHERE user_id = ${dbUserId}
     `;
-    
-    console.log(`[Webhook] Current subscription state:`, subscriptionCheck.length > 0 ? {
-      first_payment_at: subscriptionCheck[0].first_payment_at,
-      status: subscriptionCheck[0].status,
-      next_auto_scan_at: subscriptionCheck[0].next_auto_scan_at,
-    } : 'NO SUBSCRIPTION FOUND');
     
     if (subscriptionCheck.length > 0 && !subscriptionCheck[0].first_payment_at) {
       // This is the user's FIRST payment - unlock auto-scan!
-      console.log(`[Webhook] ⚡ FIRST PAYMENT DETECTED - Unlocking auto-scan!`);
       const now = new Date();
       const nextScanAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-      
-      console.log(`[Webhook] Setting first_payment_at to: ${now.toISOString()}`);
-      console.log(`[Webhook] Setting next_auto_scan_at to: ${nextScanAt.toISOString()}`);
       
       await sql`
         UPDATE subscriptions
@@ -728,30 +678,12 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         WHERE user_id = ${dbUserId}
       `;
       
-      // Verify the update
-      const verifyUpdate = await sql`
-        SELECT first_payment_at, next_auto_scan_at, status FROM subscriptions WHERE user_id = ${dbUserId}
-      `;
-      console.log(`[Webhook] ✅ AUTO-SCAN UNLOCKED for user ${dbUserId}`);
-      console.log(`[Webhook] Verified update:`, verifyUpdate.length > 0 ? {
-        first_payment_at: verifyUpdate[0].first_payment_at,
-        next_auto_scan_at: verifyUpdate[0].next_auto_scan_at,
-        status: verifyUpdate[0].status,
-      } : 'VERIFICATION FAILED');
-    } else if (subscriptionCheck.length > 0 && subscriptionCheck[0].first_payment_at) {
-      console.log(`[Webhook] User ${dbUserId} already has auto-scan unlocked`);
-      console.log(`[Webhook]    Existing first_payment_at: ${subscriptionCheck[0].first_payment_at}`);
-    } else {
-      console.log(`[Webhook] ⚠️ No subscription record found for user ${dbUserId}`);
+      console.log(`[Webhook] Auto-scan unlocked for user ${dbUserId}`);
     }
   } catch (autoScanError) {
     // Non-critical: Don't fail the webhook if auto-scan scheduling fails
-    console.error(`[Webhook] ❌ Failed to set auto-scan schedule for user ${dbUserId}:`, autoScanError);
+    console.error(`[Webhook] Failed to set auto-scan schedule for user ${dbUserId}:`, autoScanError);
   }
-  
-  console.log(`[Webhook] ========== END AUTO-SCAN SCHEDULING ==========`);
-  console.log(`[Webhook] ✅ INVOICE.PAID PROCESSING COMPLETE for user ${dbUserId}`);
-  console.log(`[Webhook] =================================================`);
 }
 
 /**

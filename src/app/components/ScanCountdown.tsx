@@ -80,32 +80,6 @@ export function ScanCountdown() {
     isEnabled: creditsEnabled,
   } = useCredits();
 
-  // ==========================================================================
-  // DEBUG LOGGING - January 14th, 2026
-  // Track why the clock might be locked
-  // ==========================================================================
-  useEffect(() => {
-    console.log('[ScanCountdown] ========== DEBUG STATE ==========');
-    console.log('[ScanCountdown] userId:', userId);
-    console.log('[ScanCountdown] subscriptionLoading:', subscriptionLoading);
-    console.log('[ScanCountdown] creditsLoading:', creditsLoading);
-    console.log('[ScanCountdown] subscription:', subscription ? {
-      status: subscription.status,
-      plan: subscription.plan,
-      first_payment_at: subscription.first_payment_at,
-      next_auto_scan_at: subscription.next_auto_scan_at,
-      last_auto_scan_at: subscription.last_auto_scan_at,
-      isTrialing: subscription.isTrialing,
-      isActive: subscription.isActive,
-    } : null);
-    console.log('[ScanCountdown] hasAutoScanAccess:', hasAutoScanAccess);
-    console.log('[ScanCountdown] nextScanAt:', nextScanAt);
-    console.log('[ScanCountdown] credits:', credits ? {
-      topicSearches: credits.topicSearches,
-    } : null);
-    console.log('[ScanCountdown] creditsEnabled:', creditsEnabled);
-    console.log('[ScanCountdown] ================================');
-  }, [userId, subscription, subscriptionLoading, creditsLoading, hasAutoScanAccess, nextScanAt, credits, creditsEnabled]);
   
   // ==========================================================================
   // LIVE COUNTDOWN STATE
@@ -153,22 +127,16 @@ export function ScanCountdown() {
   const getScanState = (): ScanState => {
     // Still loading data
     if (subscriptionLoading || creditsLoading) {
-      console.log('[ScanCountdown] State: LOADING (subscriptionLoading:', subscriptionLoading, 'creditsLoading:', creditsLoading, ')');
       return 'loading';
     }
     
     // Not paid (trialing or no subscription)
     if (!hasAutoScanAccess) {
-      console.log('[ScanCountdown] State: LOCKED - hasAutoScanAccess is false');
-      console.log('[ScanCountdown] -> subscription.first_payment_at:', subscription?.first_payment_at);
-      console.log('[ScanCountdown] -> subscription.status:', subscription?.status);
-      console.log('[ScanCountdown] -> Both must be truthy for hasAutoScanAccess=true');
       return 'locked';
     }
     
     // Paid but scan is overdue (cron will pick it up soon)
     if (countdown?.isPast) {
-      console.log('[ScanCountdown] State: SCANNING (countdown isPast)');
       return 'scanning';
     }
     
@@ -176,33 +144,33 @@ export function ScanCountdown() {
     if (creditsEnabled && credits) {
       const topicCredits = credits.topicSearches;
       if (!topicCredits.unlimited && topicCredits.remaining <= 0) {
-        console.log('[ScanCountdown] State: NO_CREDITS');
         return 'no_credits';
       }
     }
     
     // Paid with credits - show countdown
-    console.log('[ScanCountdown] State: ACTIVE - showing countdown');
     return 'active';
   };
   
   const scanState = getScanState();
-  console.log('[ScanCountdown] Final scanState:', scanState);
   
   // ==========================================================================
   // FORMAT COUNTDOWN FOR DISPLAY
+  // Updated: January 14th, 2026 - Now shows days, hours, AND minutes
   // ==========================================================================
   const formatCountdown = (): string => {
     if (!countdown) return '--';
     
     const { days, hours, minutes } = countdown;
     
-    // If more than 1 day, show days and hours
+    // Always show days, hours, and minutes for complete visibility
+    // Examples: "6d 23h 45m", "0d 5h 30m", "0d 0h 15m"
     if (days > 0) {
-      return `${days}d ${hours}h`;
+      return `${days}d ${hours}h ${minutes}m`;
     }
     
     // If less than 1 day, show hours and minutes
+    // Examples: "5h 30m", "0h 15m"
     return `${hours}h ${minutes}m`;
   };
   

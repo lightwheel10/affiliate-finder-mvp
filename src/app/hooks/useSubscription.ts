@@ -63,10 +63,7 @@ export function useSubscription(userId: number | null) {
 
   // Fetch subscription data
   const fetchSubscription = useCallback(async () => {
-    console.log('[useSubscription] fetchSubscription called, userId:', userId);
-    
     if (!userId) {
-      console.log('[useSubscription] No userId, resetting state');
       setSubscription(null);
       setIsLoading(false);
       setHasFetched(false); // Reset when no userId
@@ -78,26 +75,15 @@ export function useSubscription(userId: number | null) {
     setError(null);
 
     try {
-      console.log('[useSubscription] Fetching from /api/subscriptions?userId=' + userId);
       const res = await fetch(`/api/subscriptions?userId=${userId}`);
       const data = await res.json();
-      
-      console.log('[useSubscription] API Response:', JSON.stringify(data, null, 2));
 
       if (data.error) {
-        console.error('[useSubscription] API returned error:', data.error);
         setError(data.error);
         setSubscription(null);
       } else if (data.subscription) {
         // Compute additional fields
         const sub = data.subscription as DbSubscription;
-        console.log('[useSubscription] Raw subscription from DB:', {
-          status: sub.status,
-          plan: sub.plan,
-          first_payment_at: sub.first_payment_at,
-          next_auto_scan_at: sub.next_auto_scan_at,
-          last_auto_scan_at: sub.last_auto_scan_at,
-        });
         const now = new Date();
         const trialEnd = sub.trial_ends_at ? new Date(sub.trial_ends_at) : null;
         
@@ -132,6 +118,7 @@ export function useSubscription(userId: number | null) {
 
         // ======================================================================
         // AUTO-SCAN FIELDS COMPUTATION - January 13th, 2026
+        // Updated: January 14th, 2026 - Removed debug logging
         // 
         // Compute countdown and access state for the ScanCountdown component.
         // 
@@ -141,14 +128,6 @@ export function useSubscription(userId: number | null) {
         // - Countdown shows time until next_auto_scan_at
         // ======================================================================
         const hasAutoScanAccess = !!(sub.first_payment_at && sub.status === 'active');
-        
-        // DEBUG: Log the computation
-        console.log('[useSubscription] Computing hasAutoScanAccess:');
-        console.log('[useSubscription]   -> first_payment_at:', sub.first_payment_at);
-        console.log('[useSubscription]   -> status:', sub.status);
-        console.log('[useSubscription]   -> first_payment_at truthy:', !!sub.first_payment_at);
-        console.log('[useSubscription]   -> status === "active":', sub.status === 'active');
-        console.log('[useSubscription]   -> RESULT hasAutoScanAccess:', hasAutoScanAccess);
         const nextScanAt = sub.next_auto_scan_at ? new Date(sub.next_auto_scan_at) : null;
         const lastScanAt = sub.last_auto_scan_at ? new Date(sub.last_auto_scan_at) : null;
         
@@ -174,7 +153,7 @@ export function useSubscription(userId: number | null) {
           };
         }
 
-        const computedSubscription = {
+        setSubscription({
           ...sub,
           isTrialing: sub.status === 'trialing',
           isActive: sub.status === 'active' || sub.status === 'trialing',
@@ -187,30 +166,17 @@ export function useSubscription(userId: number | null) {
           nextScanAt,
           lastScanAt,
           timeUntilNextScan,
-        };
-        
-        console.log('[useSubscription] Final computed subscription:', {
-          status: computedSubscription.status,
-          isTrialing: computedSubscription.isTrialing,
-          isActive: computedSubscription.isActive,
-          hasAutoScanAccess: computedSubscription.hasAutoScanAccess,
-          first_payment_at: computedSubscription.first_payment_at,
-          next_auto_scan_at: computedSubscription.next_auto_scan_at,
         });
-        
-        setSubscription(computedSubscription);
       } else {
-        console.log('[useSubscription] No subscription in response');
         setSubscription(null);
       }
     } catch (err) {
-      console.error('[useSubscription] Error fetching subscription:', err);
+      console.error('Error fetching subscription:', err);
       setError('Failed to fetch subscription');
       setSubscription(null);
     } finally {
       setIsLoading(false);
       setHasFetched(true); // Mark that we've completed fetching
-      console.log('[useSubscription] Fetch complete');
     }
   }, [userId]);
 

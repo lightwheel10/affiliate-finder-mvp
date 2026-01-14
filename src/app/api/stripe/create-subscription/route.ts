@@ -352,28 +352,7 @@ export async function POST(request: NextRequest) {
       WHERE id = ${userId}
     `;
 
-    console.log(`[Stripe] Updated database for user ${userId} with subscription ${subscription.id}`);
-    
-    // ==========================================================================
-    // DEBUG: Log the subscription state after creation
-    // ==========================================================================
-    const verifySubscription = await sql`
-      SELECT id, user_id, status, plan, first_payment_at, next_auto_scan_at, trial_ends_at
-      FROM subscriptions WHERE user_id = ${userId}
-    `;
-    console.log(`[Stripe] ========== SUBSCRIPTION CREATED DEBUG ==========`);
-    console.log(`[Stripe] User ID: ${userId}`);
-    console.log(`[Stripe] Stripe subscription status: ${subscription.status}`);
-    console.log(`[Stripe] DB subscription state:`, verifySubscription.length > 0 ? {
-      status: verifySubscription[0].status,
-      plan: verifySubscription[0].plan,
-      first_payment_at: verifySubscription[0].first_payment_at,
-      next_auto_scan_at: verifySubscription[0].next_auto_scan_at,
-      trial_ends_at: verifySubscription[0].trial_ends_at,
-    } : 'NOT FOUND');
-    console.log(`[Stripe] NOTE: first_payment_at is NULL because this is a TRIAL subscription`);
-    console.log(`[Stripe] NOTE: first_payment_at will be set when invoice.paid webhook fires (after trial or immediate payment)`);
-    console.log(`[Stripe] ===================================================`);
+    console.log(`[Stripe] Subscription created for user ${userId}: ${subscription.id} (${subscription.status})`);
 
     // ==========================================================================
     // RETURN SUCCESS RESPONSE

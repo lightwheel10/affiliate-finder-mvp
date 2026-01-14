@@ -48,9 +48,6 @@ interface ChangeSubscriptionBody {
 }
 
 export async function POST(request: NextRequest) {
-  console.log(`[Stripe Change] ========== CHANGE SUBSCRIPTION REQUEST ==========`);
-  console.log(`[Stripe Change] Timestamp: ${new Date().toISOString()}`);
-  
   try {
     // =========================================================================
     // STEP 1: AUTHENTICATION
@@ -310,10 +307,7 @@ export async function POST(request: NextRequest) {
     if (isTrialing && endTrialNow) {
       // User wants to end trial and start paying immediately
       updateParams.trial_end = 'now';
-      console.log(`[Stripe Change] ⚡ ENDING TRIAL IMMEDIATELY as requested`);
-      console.log(`[Stripe Change] -> This will trigger an immediate invoice`);
-      console.log(`[Stripe Change] -> Stripe will fire 'invoice.paid' webhook`);
-      console.log(`[Stripe Change] -> Webhook should set first_payment_at and unlock clock`);
+      console.log(`[Stripe Change] Ending trial immediately for user ${userId}`);
     }
 
     // Cancel any pending cancellation if user is changing plans
@@ -410,21 +404,6 @@ export async function POST(request: NextRequest) {
     `;
 
     console.log(`[Stripe Change] Database updated for user ${userId}`);
-    
-    // DEBUG: Log the current state after update (but before credits reset)
-    const checkSub = await sql`
-      SELECT status, plan, first_payment_at, next_auto_scan_at FROM subscriptions WHERE user_id = ${userId}
-    `;
-    console.log(`[Stripe Change] ========== POST-UPDATE STATE ==========`);
-    console.log(`[Stripe Change] Current DB state:`, checkSub.length > 0 ? {
-      status: checkSub[0].status,
-      plan: checkSub[0].plan,
-      first_payment_at: checkSub[0].first_payment_at,
-      next_auto_scan_at: checkSub[0].next_auto_scan_at,
-    } : 'NOT FOUND');
-    console.log(`[Stripe Change] NOTE: first_payment_at is set by invoice.paid webhook, NOT this endpoint`);
-    console.log(`[Stripe Change] NOTE: If trial was ended (endTrialNow=true), Stripe will fire invoice.paid shortly`);
-    console.log(`[Stripe Change] =======================================`);
 
     // =========================================================================
     // STEP 12.5: RESET CREDITS IMMEDIATELY FOR UPGRADES AND TRIAL ENDINGS
@@ -552,8 +531,7 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     // STEP 14: RETURN SUCCESS RESPONSE
     // =========================================================================
-    console.log(`[Stripe Change] ✅ SUCCESS - Subscription changed for user ${userId}`);
-    console.log(`[Stripe Change] ========== END CHANGE SUBSCRIPTION ==========`);
+    console.log(`[Stripe Change] Subscription changed successfully for user ${userId}: ${current_plan}/${current_interval} → ${newPlan}/${newBillingInterval}`);
     
     return NextResponse.json({
       success: true,
