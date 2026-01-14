@@ -8,6 +8,7 @@
  * Created: December 2025
  * Updated: January 8th, 2026
  * i18n Migration: January 10th, 2026 - Priority 5: Shared Components
+ * Credits Refresh Fix: January 14th, 2026 - Dispatch 'credits-updated' event
  *
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
@@ -267,10 +268,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       // Success!
       console.log('[PricingModal] Plan changed successfully:', data);
       
-      // Dispatch custom event to notify ALL useSubscription instances to refetch
-      // This ensures Sidebar, Settings, and any other component stays in sync
-      // Added December 2025
+      // =========================================================================
+      // DISPATCH EVENTS TO REFRESH UI STATE
+      // 
+      // We dispatch two events to ensure all hooks refetch their data:
+      // 
+      // 1. 'subscription-updated' - Listened by useSubscription hook
+      //    - Refreshes plan, status, billing interval in Sidebar & Settings
+      //    - Added December 2025
+      // 
+      // 2. 'credits-updated' - Listened by useCredits hook
+      //    - Refreshes credit balances after plan change
+      //    - For upgrades: Backend resets credits to new plan limits immediately
+      //    - For downgrades: Credits stay same (change takes effect at period end)
+      //    - Added January 14th, 2026 - Fix for credits not updating after upgrade
+      // =========================================================================
       window.dispatchEvent(new CustomEvent('subscription-updated'));
+      window.dispatchEvent(new CustomEvent('credits-updated'));
       
       // Call success callback to refresh data (for the local component)
       if (onSuccess) {

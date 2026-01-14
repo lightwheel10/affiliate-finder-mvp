@@ -126,6 +126,10 @@ export function useSubscription(userId: number | null) {
         // - hasAutoScanAccess = true only if first_payment_at is set (user paid)
         // - If trialing or canceled, auto-scan is locked
         // - Countdown shows time until next_auto_scan_at
+        // 
+        // NOTE: Local dev on non-UTC machines may show incorrect countdown.
+        // See comment in /api/subscriptions/route.ts for details.
+        // Production (Vercel) is not affected.
         // ======================================================================
         const hasAutoScanAccess = !!(sub.first_payment_at && sub.status === 'active');
         const nextScanAt = sub.next_auto_scan_at ? new Date(sub.next_auto_scan_at) : null;

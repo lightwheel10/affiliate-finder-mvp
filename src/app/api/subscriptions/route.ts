@@ -67,6 +67,20 @@ export async function GET(request: NextRequest) {
 
     // ==========================================================================
     // FETCH SUBSCRIPTION
+    // 
+    // KNOWN LOCAL DEV ISSUE (January 14th, 2026):
+    // Timestamp fields (first_payment_at, next_auto_scan_at) may display 
+    // incorrectly in LOCAL development if your machine is not in UTC timezone.
+    // 
+    // Root cause: The Neon serverless driver interprets TIMESTAMP columns 
+    // using the local machine's timezone. On Vercel (UTC), this works correctly.
+    // On a local PC in IST (UTC+5:30), timestamps appear 5.5 hours behind.
+    // 
+    // PRODUCTION IS NOT AFFECTED - Vercel servers run in UTC.
+    // This only affects local development countdown display.
+    // 
+    // To fix locally, you could use: SET timezone = 'UTC' or format timestamps
+    // explicitly as UTC in the SQL query. Not implemented since prod works fine.
     // ==========================================================================
     const subscriptions = await sql`
       SELECT * FROM subscriptions WHERE user_id = ${userIdNum}
