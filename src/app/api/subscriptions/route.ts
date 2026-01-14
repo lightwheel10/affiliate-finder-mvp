@@ -20,13 +20,17 @@ import { stackServerApp } from '@/stack/server';
 // =============================================================================
 
 export async function GET(request: NextRequest) {
+  console.log('[API /api/subscriptions] ========== REQUEST ==========');
+  
   try {
     // ==========================================================================
     // AUTHENTICATION CHECK
     // ==========================================================================
     const authUser = await stackServerApp.getUser();
+    console.log('[API /api/subscriptions] Auth user:', authUser?.primaryEmail || 'NOT AUTHENTICATED');
     
     if (!authUser) {
+      console.log('[API /api/subscriptions] Returning 401 - Unauthorized');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -35,6 +39,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    console.log('[API /api/subscriptions] Requested userId:', userId);
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -54,11 +59,12 @@ export async function GET(request: NextRequest) {
     `;
 
     if (users.length === 0) {
+      console.log('[API /api/subscriptions] User not found in DB');
       return NextResponse.json({ subscription: null });
     }
 
     if (authUser.primaryEmail !== users[0].email) {
-      console.error(`[Subscriptions] Authorization failed: ${authUser.primaryEmail} tried to access subscription for user ${userIdNum}`);
+      console.error(`[API /api/subscriptions] Authorization failed: ${authUser.primaryEmail} tried to access subscription for user ${userIdNum}`);
       return NextResponse.json(
         { error: 'Not authorized to access this resource' },
         { status: 403 }
@@ -68,17 +74,35 @@ export async function GET(request: NextRequest) {
     // ==========================================================================
     // FETCH SUBSCRIPTION
     // ==========================================================================
+    console.log('[API /api/subscriptions] Querying subscriptions table for user_id:', userIdNum);
     const subscriptions = await sql`
       SELECT * FROM subscriptions WHERE user_id = ${userIdNum}
     `;
 
     if (subscriptions.length === 0) {
+      console.log('[API /api/subscriptions] No subscription found for user');
       return NextResponse.json({ subscription: null });
     }
 
-    return NextResponse.json({ subscription: subscriptions[0] as DbSubscription });
+    const sub = subscriptions[0] as DbSubscription;
+    
+    // DEBUG: Log all important fields
+    console.log('[API /api/subscriptions] ========== SUBSCRIPTION DATA ==========');
+    console.log('[API /api/subscriptions] id:', sub.id);
+    console.log('[API /api/subscriptions] user_id:', sub.user_id);
+    console.log('[API /api/subscriptions] status:', sub.status);
+    console.log('[API /api/subscriptions] plan:', sub.plan);
+    console.log('[API /api/subscriptions] first_payment_at:', sub.first_payment_at);
+    console.log('[API /api/subscriptions] next_auto_scan_at:', sub.next_auto_scan_at);
+    console.log('[API /api/subscriptions] last_auto_scan_at:', sub.last_auto_scan_at);
+    console.log('[API /api/subscriptions] stripe_subscription_id:', sub.stripe_subscription_id);
+    console.log('[API /api/subscriptions] trial_ends_at:', sub.trial_ends_at);
+    console.log('[API /api/subscriptions] cancel_at_period_end:', sub.cancel_at_period_end);
+    console.log('[API /api/subscriptions] ========================================');
+
+    return NextResponse.json({ subscription: sub });
   } catch (error) {
-    console.error('Error fetching subscription:', error);
+    console.error('[API /api/subscriptions] Error fetching subscription:', error);
     return NextResponse.json({ error: 'Failed to fetch subscription' }, { status: 500 });
   }
 }
