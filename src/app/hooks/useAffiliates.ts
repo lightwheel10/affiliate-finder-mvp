@@ -448,6 +448,96 @@ export function useSavedAffiliates() {
 
     const affiliateId = affiliate.id;
 
+    // ==========================================================================
+    // SOCIAL MEDIA BIO EMAIL CHECK - January 14, 2026
+    // 
+    // PURPOSE:
+    // For social media affiliates (TikTok, Instagram, YouTube), we skip the paid
+    // Lusha/Apollo enrichment entirely. Instead, we use the email extracted from
+    // the creator's public bio during the initial search.
+    // 
+    // WHY THIS MATTERS:
+    // 1. Lusha/Apollo cannot find emails for social creators (no company domain)
+    // 2. Calling them wastes credits and always returns "not_found"
+    // 3. Bio emails are the ONLY realistic source for social media contacts
+    // 4. Bio emails are already extracted in apify.ts (extractEmailFromText)
+    // 
+    // FLOW:
+    // - Social affiliate WITH bio email → status 'found', return email (FREE)
+    // - Social affiliate WITHOUT bio email → status 'not_found' (FREE)
+    // - Web affiliate → continue to Lusha/Apollo (PAID, existing flow)
+    // 
+    // COST SAVINGS:
+    // This prevents wasting 1 credit per social affiliate email lookup.
+    // ==========================================================================
+    const socialPlatforms = ['youtube', 'tiktok', 'instagram'];
+    const isSocialAffiliate = socialPlatforms.some(
+      platform => affiliate.source.toLowerCase().includes(platform)
+    );
+
+    if (isSocialAffiliate) {
+      // Check if we already have an email from bio extraction
+      const bioEmail = affiliate.email;
+      const emailStatus = bioEmail ? 'found' : 'not_found';
+
+      // Optimistic update - set final status immediately (no 'searching' flash)
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).map((a: any) =>
+            a.id === affiliateId
+              ? {
+                  ...a,
+                  email: bioEmail || a.email,
+                  email_status: emailStatus,
+                  email_searched_at: new Date().toISOString(),
+                  email_provider: 'bio_extraction',
+                  // For bio emails, we don't have multiple contacts like Lusha
+                  email_results: bioEmail ? {
+                    emails: [bioEmail],
+                    contacts: [],
+                    provider: 'bio_extraction',
+                  } : undefined,
+                }
+              : a
+          )
+        }),
+        { revalidate: false }
+      );
+
+      // Persist to database via PATCH endpoint (no credits consumed)
+      try {
+        await fetch('/api/affiliates/saved', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            affiliateId,
+            userId,
+            emailStatus,
+            email: bioEmail,
+            provider: 'bio_extraction',
+          }),
+        });
+      } catch (err) {
+        console.error('Error updating email status for social affiliate:', err);
+      }
+
+      // Return result in same format as enrichment API for consistency
+      return {
+        email: bioEmail || null,
+        emails: bioEmail ? [bioEmail] : [],
+        status: emailStatus,
+        provider: 'bio_extraction',
+        // January 14, 2026: Mark as bio extraction so UI can show appropriate message
+        source: 'bio',
+      };
+    }
+    // ==========================================================================
+    // END SOCIAL MEDIA BIO EMAIL CHECK
+    // ==========================================================================
+
+    // For Web affiliates, continue with existing Lusha/Apollo enrichment flow
+
     // Optimistic update - set status to searching (January 3rd, 2026: uses SWR mutate)
     mutate(
       (currentData: any) => ({
@@ -462,6 +552,7 @@ export function useSavedAffiliates() {
     try {
       // ==========================================================================
       // EXTRACT ALL AVAILABLE DATA FROM DIFFERENT SOURCES
+      // (Web affiliates only - social affiliates are handled above)
       // ==========================================================================
       
       // Determine the best domain to search
@@ -763,8 +854,78 @@ export function useSavedAffiliates() {
       });
 
       try {
-        // Use the existing findEmail function logic but inline it here
-        // to avoid recursive hook calls and allow better progress tracking
+        // ========================================================================
+        // SOCIAL MEDIA BIO EMAIL CHECK - January 14, 2026
+        // 
+        // Same logic as findEmail() function. For social media affiliates, we
+        // skip the paid Lusha/Apollo API and use the bio email if available.
+        // This prevents wasting credits on social profiles where enrichment
+        // services cannot find emails anyway.
+        // ========================================================================
+        const socialPlatforms = ['youtube', 'tiktok', 'instagram'];
+        const isSocialAffiliate = socialPlatforms.some(
+          platform => affiliate.source.toLowerCase().includes(platform)
+        );
+
+        if (isSocialAffiliate) {
+          // For social affiliates, check if bio email already exists
+          // Note: affiliates with existing emails are already filtered out above,
+          // so if we get here, the social affiliate has NO bio email → not_found
+          const emailStatus = affiliate.email ? 'found' : 'not_found';
+          
+          // Update status via PATCH (no credits consumed)
+          await fetch('/api/affiliates/saved', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              affiliateId: affiliate.id,
+              userId,
+              emailStatus,
+              email: affiliate.email,
+              provider: 'bio_extraction',
+            }),
+          });
+
+          // Update local cache
+          mutate(
+            (currentData: any) => ({
+              ...currentData,
+              affiliates: (currentData?.affiliates || []).map((a: any) =>
+                a.id === affiliate.id
+                  ? {
+                      ...a,
+                      email_status: emailStatus,
+                      email_searched_at: new Date().toISOString(),
+                      email_provider: 'bio_extraction',
+                    }
+                  : a
+              )
+            }),
+            { revalidate: false }
+          );
+
+          // Count result
+          if (emailStatus === 'found') {
+            foundCount++;
+          } else {
+            notFoundCount++;
+          }
+
+          // Report progress
+          onProgress?.({
+            current: i + 1,
+            total: affiliatesToSearch.length,
+            currentAffiliate: affiliate,
+            status: emailStatus,
+          });
+
+          continue; // Skip to next affiliate, no API call needed
+        }
+        // ========================================================================
+        // END SOCIAL MEDIA BIO EMAIL CHECK
+        // ========================================================================
+
+        // For Web affiliates, continue with existing Lusha/Apollo enrichment flow
         const searchDomain = extractSearchDomain(affiliate);
         const personName = affiliate.personName 
           || affiliate.instagramFullName 

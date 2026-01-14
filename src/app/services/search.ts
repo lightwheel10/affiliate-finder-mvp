@@ -51,6 +51,24 @@ export interface SearchResult {
   personName?: string;
   
   // ==========================================================================
+  // Email extracted from bio/profile (Added January 14, 2026)
+  // 
+  // This field stores email addresses extracted from social media bios using
+  // regex pattern matching.
+  // 
+  // IMPLEMENTED FOR:
+  // - TikTok: author.signature field (January 14, 2026)
+  // - Instagram: biography field (January 14, 2026)
+  // 
+  // WHY: Many creators include their business email in their bio for collabs.
+  // This provides FREE email discovery without needing paid enrichment (Lusha).
+  // 
+  // The email is extracted during search using extractEmailFromText() in apify.ts
+  // and flows through to the database via the existing email column.
+  // ==========================================================================
+  email?: string;
+  
+  // ==========================================================================
   // YouTube-specific fields (added to fix data pipeline)
   // These fields are populated by searchYouTubeApify() in apify.ts
   // ==========================================================================

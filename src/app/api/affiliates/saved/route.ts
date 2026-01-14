@@ -189,3 +189,89 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
+// =============================================================================
+// PATCH /api/affiliates/saved - Update email status for a saved affiliate
+// 
+// Added: January 14, 2026
+// 
+// PURPOSE:
+// This endpoint updates the email discovery status for social media affiliates
+// (TikTok, Instagram, YouTube) WITHOUT calling the paid Lusha/Apollo enrichment.
+// 
+// WHY THIS EXISTS:
+// For social media affiliates, we extract emails directly from their public bios
+// during the initial search (see apify.ts extractEmailFromText function).
+// When user clicks "Find Email", we check if a bio email already exists:
+// - If YES: Update status to 'found' using THIS endpoint (FREE, no API cost)
+// - If NO: Update status to 'not_found' using THIS endpoint (FREE, no API cost)
+// 
+// For Web results, we still use the /api/enrich/email endpoint with Lusha/Apollo.
+// 
+// COST SAVINGS:
+// This prevents wasting Lusha credits on social media profiles where the
+// enrichment service cannot find emails anyway (no company domain to search).
+// 
+// Request body:
+// - affiliateId: number (required) - The saved_affiliates.id to update
+// - userId: number (required) - For authorization check
+// - emailStatus: 'found' | 'not_found' (required) - New status
+// - email?: string (optional) - The bio email if found
+// - provider?: string (optional) - Source of email (default: 'bio_extraction')
+// 
+// Returns:
+// - success: boolean
+// - email?: string (if found)
+// - status: 'found' | 'not_found'
+// =============================================================================
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { 
+      affiliateId, 
+      userId, 
+      emailStatus, 
+      email,
+      provider = 'bio_extraction' 
+    } = body;
+
+    // Validate required fields
+    if (!affiliateId || !userId) {
+      return NextResponse.json(
+        { error: 'affiliateId and userId are required' }, 
+        { status: 400 }
+      );
+    }
+
+    if (!emailStatus || !['found', 'not_found'].includes(emailStatus)) {
+      return NextResponse.json(
+        { error: 'emailStatus must be "found" or "not_found"' }, 
+        { status: 400 }
+      );
+    }
+
+    // Update the affiliate's email status in database
+    // NOTE: We do NOT consume any credits here - bio emails are free
+    await sql`
+      UPDATE saved_affiliates 
+      SET 
+        email_status = ${emailStatus},
+        email_searched_at = NOW(),
+        email_provider = ${provider}
+      WHERE id = ${affiliateId} AND user_id = ${userId}
+    `;
+
+    return NextResponse.json({ 
+      success: true,
+      email: email || null,
+      status: emailStatus,
+      provider: provider,
+    });
+  } catch (error) {
+    console.error('Error updating email status:', error);
+    return NextResponse.json(
+      { error: 'Failed to update email status' }, 
+      { status: 500 }
+    );
+  }
+}
+

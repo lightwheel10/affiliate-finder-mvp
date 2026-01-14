@@ -57,6 +57,60 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
+// =============================================================================
+// EMAIL EXTRACTION FROM BIO TEXT - Added January 14, 2026
+// =============================================================================
+// 
+// PURPOSE:
+// Many social media creators include their business email in their bio for
+// collaboration inquiries. This function extracts those emails using regex
+// pattern matching, providing immediate contact info without paid enrichment.
+// 
+// HOW IT WORKS:
+// Uses a standard email regex pattern that matches text@domain.extension format.
+// The pattern works regardless of:
+//   - Bio length or format
+//   - Position of email in text
+//   - Surrounding emojis, text, or special characters
+//   - Language of the bio
+// 
+// EXAMPLES FROM REAL TIKTOK BIOS:
+//   "💌ashisatthegym.biz@gmail.com" → ashisatthegym.biz@gmail.com
+//   "📧: kayymrose@gmail.com"       → kayymrose@gmail.com  
+//   "Business: Jordan@company.com" → Jordan@company.com
+// 
+// RETURNS:
+//   - First email found (string) if one exists
+//   - undefined if no email found
+// 
+// NOTE: Only returns the FIRST email if multiple are present. This is
+// intentional as the first email is typically the primary contact.
+// =============================================================================
+
+/**
+ * Extract the first email address from a text string (e.g., bio, description)
+ * 
+ * @param text - The text to search for an email (bio, signature, description)
+ * @returns The first email found, or undefined if none found
+ * 
+ * @example
+ * extractEmailFromText("Contact: hello@example.com") // → "hello@example.com"
+ * extractEmailFromText("No email here 🌴")           // → undefined
+ */
+function extractEmailFromText(text: string | undefined | null): string | undefined {
+  if (!text) return undefined;
+  
+  // Standard email regex pattern
+  // Matches: local-part@domain.tld
+  // Examples: user@example.com, my.name+tag@sub.domain.co.uk
+  const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  
+  const matches = text.match(EMAIL_REGEX);
+  
+  // Return first match or undefined
+  return matches && matches.length > 0 ? matches[0] : undefined;
+}
+
 // ============================================================================
 // YOUTUBE SCRAPER
 // ============================================================================
@@ -263,6 +317,24 @@ export async function searchInstagramApify(
       // Extract first (most recent) post stats from latestPosts array
       const firstPost = item.latestPosts?.[0];
 
+      // ========================================================================
+      // INSTAGRAM BIO EMAIL EXTRACTION - January 14, 2026
+      // 
+      // Extract email addresses from Instagram biography field using regex.
+      // Many creators include their business email in their bio for collabs.
+      // 
+      // Examples of emails found in real Instagram bios:
+      //   "photographer ——— inquiries: robertjunilkim@gmail.com"
+      //   "NYC Photographer: Inquiries JuanPatinoPhoto@gmail.com"
+      // 
+      // This provides FREE email discovery without needing paid enrichment
+      // services like Lusha or Apollo.
+      // 
+      // The extracted email flows through:
+      //   Apify → SearchResult.email → ResultItem.email → Database
+      // ========================================================================
+      const bioEmail = extractEmailFromText(item.biography);
+
       return {
         title: item.fullName || `@${item.username}` || '',
         link: item.url || `https://www.instagram.com/${item.username}`,
@@ -274,6 +346,9 @@ export async function searchInstagramApify(
         position: index + 1,
         searchQuery: keyword,
         personName: item.fullName || item.username,
+        
+        // January 14, 2026: Email extracted from Instagram bio
+        email: bioEmail,
         
         // Instagram-specific fields - these are now properly passed through the pipeline
         // and will be saved to the database columns: instagram_username, instagram_followers, etc.
@@ -394,6 +469,23 @@ export async function searchTikTokApify(
     return results.map((item, index): SearchResult => {
       const author = item.authorMeta;
       
+      // ========================================================================
+      // EMAIL EXTRACTION FROM BIO - Added January 14, 2026
+      // 
+      // Many TikTok creators include their business email in their bio (signature)
+      // for collaboration inquiries. We extract it here using regex so it's
+      // available immediately in search results without needing paid enrichment.
+      // 
+      // Examples of emails found in real TikTok bios:
+      //   "💌ashisatthegym.biz@gmail.com"
+      //   "📧: kayymrose@gmail.com"
+      //   "Business inquiries: Jordan@company.com"
+      // 
+      // The extracted email is stored in the `email` field which flows through
+      // to the database and is displayed in the UI.
+      // ========================================================================
+      const bioEmail = extractEmailFromText(author?.signature);
+      
       // Build snippet from video text and author stats
       const stats = [];
       if (item.playCount) stats.push(`${formatNumber(item.playCount)} views`);
@@ -428,6 +520,12 @@ export async function searchTikTokApify(
         position: index + 1,
         searchQuery: keyword,
         personName: author?.nickName || author?.name,
+        
+        // ======================================================================
+        // Email extracted from TikTok bio - Added January 14, 2026
+        // This provides immediate contact info without paid enrichment services
+        // ======================================================================
+        email: bioEmail,
         
         // TikTok-specific fields - these are now properly passed through the pipeline
         // and will be saved to the database columns: tiktok_username, tiktok_followers, etc.
