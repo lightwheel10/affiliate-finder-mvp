@@ -249,11 +249,14 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Update the affiliate's email status in database
+    // Update the affiliate's email AND status in database
     // NOTE: We do NOT consume any credits here - bio emails are free
+    // CRITICAL FIX January 14, 2026: Must persist email to database!
+    // Without this, email only shows via optimistic update and is lost on refresh.
     await sql`
       UPDATE saved_affiliates 
       SET 
+        email = COALESCE(${email || null}, email),
         email_status = ${emailStatus},
         email_searched_at = NOW(),
         email_provider = ${provider}
@@ -274,4 +277,3 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
-
