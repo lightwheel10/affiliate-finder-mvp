@@ -139,24 +139,24 @@ export default function Home() {
         } : undefined}
         onComplete={async () => {
           // ==========================================================================
-          // ONBOARDING COMPLETION CALLBACK - January 3rd, 2026
+          // ONBOARDING COMPLETION CALLBACK - January 15th, 2026
           // 
-          // After card verification completes successfully, we:
+          // After payment and affiliate pre-fetch complete:
           // 1. Refetch user data to update cache with is_onboarded: true
-          // 2. Navigate directly to /find (dashboard)
+          // 2. Navigate to /discovered (not /find!)
           // 
-          // BUG FIX: Previously we showed LoadingOnboardingScreen ("Setting up 
-          // your workspace!") for 2 seconds before navigating. This was the
-          // OLD loading screen that caused a confusing double-loading UX:
-          //   LoadingOnboardingScreen → AuthLoadingScreen → Dashboard
+          // WHY /discovered INSTEAD OF /find:
+          // During onboarding, we pre-fetch affiliate results and save them to
+          // discovered_affiliates table. The user should land on the /discovered
+          // page where they can see their results immediately.
           // 
-          // THE FIX: Skip LoadingOnboardingScreen entirely. Just refetch and
-          // navigate. The AuthLoadingScreen will show briefly during navigation
-          // (via loading.tsx), giving users a single, clean loading experience:
-          //   AuthLoadingScreen → Dashboard
+          // If we sent them to /find, they'd see an empty search form and think
+          // "ok, we found nothing" - which is confusing since we just searched.
+          // 
+          // Updated: January 15th, 2026 - Changed from /find to /discovered
           // ==========================================================================
           await refetch();
-          router.replace('/find');
+          router.replace('/discovered');
         }}
       />
     );

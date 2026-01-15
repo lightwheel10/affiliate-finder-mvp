@@ -311,10 +311,11 @@ export const en: Dictionary = {
       emptyState: 'Enter competitor domains above (e.g., competitor.com)',
     },
     // Step 4: Topics
+    // Max topics reduced from 10 to 5 - January 15th, 2026
     step4: {
       title: 'What topics do you cover?',
       inputPlaceholder: 'e.g. best CRMs, skincare...',
-      count: '{count}/10 added',
+      count: '{count}/5 added',
       suggestionsTitle: 'Suggestions for you:',
       yourTopics: 'Your topics:',
       emptyState: 'Enter topics you cover above (e.g., "best CRMs", "skincare routines")',
@@ -833,6 +834,36 @@ export const en: Dictionary = {
     title: 'Setting up your workspace!',
     subtitle: 'Just a moment while we prepare your dashboard...',
     description: 'Your affiliate discovery tools are being configured.',
+  },
+
+  // =========================================================================
+  // FINDING AFFILIATES SCREEN - January 15th, 2026
+  // 
+  // Shown during onboarding AFTER payment succeeds while we pre-fetch
+  // affiliate results so user sees results immediately on dashboard.
+  // =========================================================================
+  // =========================================================================
+  // FINDING AFFILIATES SCREEN - January 15th, 2026
+  // 
+  // Simplified version - just shows "Thank you! Preparing dashboard..."
+  // Shown after payment succeeds while we pre-fetch affiliate results.
+  // =========================================================================
+  findingAffiliates: {
+    thankYou: 'Thank You!',
+    preparingDashboard: 'Preparing your dashboard...',
+    pleaseWait: 'Please wait a moment',
+    // Legacy fields kept for backwards compatibility
+    title: 'Finding Your Affiliates',
+    subtitle: 'Discovering partners for {brand}',
+    timeEstimate: 'This usually takes 20-30 seconds',
+    steps: {
+      step1Label: 'Searching for affiliates',
+      step1Desc: 'Scanning across {count} topics you selected',
+      step2Label: 'Analyzing results',
+      step2Desc: 'Identifying potential partners',
+      step3Label: 'Preparing your dashboard',
+      step3Desc: 'Organizing results for you',
+    },
   },
 
   // =========================================================================

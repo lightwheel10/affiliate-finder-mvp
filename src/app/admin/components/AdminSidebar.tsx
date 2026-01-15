@@ -16,6 +16,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Sidebar updated to use bold borders, high contrast, and brand accents.
+// Polish pass (tighter type + consistent shadows) - January 15th, 2026
+
 const navItems = [
   {
     label: 'Overview',
@@ -67,23 +71,23 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="w-56 h-screen bg-[#1A1D21] border-r border-[#2E3338] flex flex-col fixed left-0 top-0 z-50">
+    <aside className="w-56 h-screen bg-white border-r-4 border-black flex flex-col fixed left-0 top-0 z-50">
       {/* Header */}
-      <div className="h-16 flex items-center px-5 border-b border-[#2E3338]">
+      <div className="h-16 flex items-center px-5 border-b-4 border-black">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[#D4E815]/10">
-            <Shield className="w-5 h-5 text-[#D4E815]" />
+          <div className="p-2 border-2 border-black bg-[#D4E815]">
+            <Shield className="w-5 h-5 text-black" />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-white">Admin Console</h1>
-            <p className="text-[10px] text-slate-500">CrewCast Studio</p>
+            <h1 className="text-sm font-black text-black uppercase">Admin Console</h1>
+            <p className="text-[10px] text-black/60 uppercase tracking-wide">CrewCast Studio</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-1">
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-3">
+        <p className="text-[10px] font-black text-black/60 uppercase tracking-widest mb-3 px-3">
           Analytics
         </p>
         {navItems.map((item) => {
@@ -95,10 +99,10 @@ export function AdminSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                'flex items-center gap-3 px-3 py-2.5 border-2 border-transparent text-[12px] font-bold uppercase tracking-wide transition-all',
                 isActive
-                  ? 'bg-[#D4E815]/10 text-[#D4E815]'
-                  : 'text-slate-400 hover:bg-[#23272B] hover:text-white'
+                  ? 'bg-[#D4E815] text-black border-black shadow-[2px_2px_0px_0px_#111827]'
+                  : 'text-black/70 hover:bg-black hover:text-white hover:border-black'
               )}
             >
               <Icon className="w-4 h-4" />
@@ -109,14 +113,14 @@ export function AdminSidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-[#2E3338]">
+      <div className="p-3 border-t-4 border-black">
         {/* Quick Stats */}
-        <div className="mb-3 p-3 rounded-lg bg-[#23272B]">
+        <div className="mb-3 p-3 border-2 border-black bg-white shadow-[2px_2px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-3.5 h-3.5 text-[#D4E815]" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Quick Stats</span>
+            <TrendingUp className="w-3.5 h-3.5 text-black" />
+            <span className="text-[10px] font-black text-black/70 uppercase">Quick Stats</span>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-black/60">
             View platform analytics and user metrics
           </p>
         </div>
@@ -125,7 +129,7 @@ export function AdminSidebar() {
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all disabled:opacity-50"
+          className="w-full flex items-center gap-3 px-3 py-2.5 border-2 border-black text-sm font-bold uppercase text-black hover:bg-black hover:text-white transition-all disabled:opacity-50"
         >
           <LogOut className="w-4 h-4" />
           {isLoggingOut ? 'Signing out...' : 'Sign Out'}

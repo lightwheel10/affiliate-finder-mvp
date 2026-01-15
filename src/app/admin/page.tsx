@@ -16,6 +16,11 @@ import {
 import { StatCard } from './components/StatCard';
 import { CostChart } from './components/CostChart';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
+
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Dashboard updated to match the bold, high-contrast visual system.
+// Polish pass (lighter shadows + calmer hovers) - January 15th, 2026
 
 interface TriggeredAlert {
   id: number;
@@ -53,9 +58,12 @@ export default function AdminDashboardPage() {
   const [triggeredAlerts, setTriggeredAlerts] = useState<TriggeredAlert[]>([]);
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
 
+  // Refresh animation (Admin) - January 15th, 2026
   const fetchStats = async () => {
+    setIsRefreshing(true);
     try {
       const [statsRes, alertsRes] = await Promise.all([
         fetch('/api/admin/stats'),
@@ -88,6 +96,7 @@ export default function AdminDashboardPage() {
       console.error(err);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -110,13 +119,13 @@ export default function AdminDashboardPage() {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-48 bg-[#23272B] rounded-lg" />
+          <div className="h-8 w-48 bg-black/10 border-2 border-black" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-32 bg-[#23272B] rounded-xl" />
+              <div key={i} className="h-32 bg-black/10 border-2 border-black" />
             ))}
           </div>
-          <div className="h-80 bg-[#23272B] rounded-xl" />
+          <div className="h-80 bg-black/10 border-2 border-black" />
         </div>
       </div>
     );
@@ -125,11 +134,11 @@ export default function AdminDashboardPage() {
   if (error) {
     return (
       <div className="p-8">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
-          <p className="text-red-400">{error}</p>
+        <div className="bg-red-100 border-4 border-black p-6 text-center shadow-[3px_3px_0px_0px_#111827]">
+          <p className="text-black font-bold uppercase">{error}</p>
           <button
             onClick={fetchStats}
-            className="mt-4 px-4 py-2 bg-[#23272B] rounded-lg text-sm text-white hover:bg-[#2E3338] transition-colors"
+            className="mt-4 px-4 py-2 bg-white border-2 border-black text-sm font-bold uppercase text-black hover:bg-black hover:text-white transition-colors"
           >
             Try Again
           </button>
@@ -146,15 +155,15 @@ export default function AdminDashboardPage() {
           {visibleAlerts.map((alert) => (
             <div
               key={alert.id}
-              className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+              className="flex items-center justify-between p-4 bg-red-100 border-4 border-black shadow-[3px_3px_0px_0px_#111827]"
             >
               <div className="flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <AlertTriangle className="w-5 h-5 text-black" />
                 <div>
-                  <p className="text-sm font-medium text-red-400">
+                  <p className="text-sm font-bold uppercase text-black">
                     {formatAlertType(alert.alert_type)} Cost Threshold Exceeded
                   </p>
-                  <p className="text-xs text-red-400/70">
+                  <p className="text-xs text-black/70">
                     Current: ${Number(alert.currentCost).toFixed(2)} / Limit: ${Number(alert.threshold).toFixed(2)} ({alert.percentUsed.toFixed(0)}%)
                   </p>
                 </div>
@@ -162,13 +171,13 @@ export default function AdminDashboardPage() {
               <div className="flex items-center gap-2">
                 <Link
                   href="/admin/settings"
-                  className="px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                  className="px-3 py-1.5 text-xs font-bold uppercase text-black border-2 border-black hover:bg-black hover:text-white transition-colors"
                 >
                   Manage Alerts
                 </Link>
                 <button
                   onClick={() => setDismissedAlerts(prev => [...prev, alert.id])}
-                  className="p-1.5 text-red-400/50 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                  className="p-1.5 text-black border-2 border-black hover:bg-black hover:text-white transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -181,16 +190,16 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard Overview</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-3xl font-black uppercase text-black">Dashboard Overview</h1>
+          <p className="text-sm font-medium text-black/70 mt-1">
             Platform analytics and usage statistics
           </p>
         </div>
         <button
           onClick={fetchStats}
-          className="flex items-center gap-2 px-4 py-2 bg-[#23272B] rounded-lg text-sm text-slate-400 hover:text-white hover:bg-[#2E3338] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-black text-sm font-bold uppercase text-black hover:bg-black hover:text-white transition-colors"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           Refresh
         </button>
       </div>
@@ -233,22 +242,22 @@ export default function AdminDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Cost Trend Chart */}
-        <div className="lg:col-span-2 bg-[#23272B] rounded-xl border border-[#2E3338] p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">
+        <div className="lg:col-span-2 bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]">
+          <h2 className="text-lg font-black uppercase text-black mb-4">
             API Cost Trend (Last 30 Days)
           </h2>
           {costTrend.length > 0 ? (
             <CostChart data={costTrend} />
           ) : (
-            <div className="h-[300px] flex items-center justify-center text-slate-500">
+            <div className="h-[300px] flex items-center justify-center text-black/60 font-bold uppercase">
               No data available
             </div>
           )}
         </div>
 
         {/* Service Breakdown */}
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">
+        <div className="bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]">
+          <h2 className="text-lg font-black uppercase text-black mb-4">
             Cost by Service
           </h2>
           {serviceBreakdown.length > 0 ? (
@@ -256,27 +265,27 @@ export default function AdminDashboardPage() {
               {serviceBreakdown.map((item) => (
                 <div 
                   key={item.service}
-                  className="flex items-center justify-between p-3 bg-[#1A1D21] rounded-lg"
+                  className="flex items-center justify-between p-3 border-2 border-black"
                 >
                   <div className="flex items-center gap-3">
-                    <Server className="w-4 h-4 text-slate-500" />
+                    <Server className="w-4 h-4 text-black" />
                     <div>
-                      <p className="text-sm font-medium text-white">
+                      <p className="text-sm font-bold uppercase text-black">
                         {formatServiceName(item.service)}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-black/60">
                         {item.calls.toLocaleString()} calls
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm font-semibold text-[#D4E815]">
+                  <p className="text-sm font-black text-black">
                     ${Number(item.cost || 0).toFixed(2)}
                   </p>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center text-slate-500">
+            <div className="h-48 flex items-center justify-center text-black/60 font-bold uppercase">
               No data available
             </div>
           )}
@@ -284,38 +293,38 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Quick Links</h2>
+      <div className="bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]">
+        <h2 className="text-lg font-black uppercase text-black mb-4">Quick Links</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <a
             href="/admin/users"
-            className="flex items-center gap-3 p-4 bg-[#1A1D21] rounded-lg hover:bg-[#2E3338] transition-colors group"
+            className="flex items-center gap-3 p-4 border-2 border-black hover:bg-[#D4E815]/60 transition-colors group"
           >
-            <Users className="w-5 h-5 text-slate-400 group-hover:text-[#D4E815]" />
+            <Users className="w-5 h-5 text-black" />
             <div>
-              <p className="text-sm font-medium text-white">User Management</p>
-              <p className="text-xs text-slate-500">View and manage users</p>
+              <p className="text-sm font-bold uppercase text-black">User Management</p>
+              <p className="text-xs text-black/60">View and manage users</p>
             </div>
           </a>
           <a
             href="/admin/costs"
-            className="flex items-center gap-3 p-4 bg-[#1A1D21] rounded-lg hover:bg-[#2E3338] transition-colors group"
+            className="flex items-center gap-3 p-4 border-2 border-black hover:bg-[#D4E815]/60 transition-colors group"
           >
-            <DollarSign className="w-5 h-5 text-slate-400 group-hover:text-[#D4E815]" />
+            <DollarSign className="w-5 h-5 text-black" />
             <div>
-              <p className="text-sm font-medium text-white">Cost Analysis</p>
-              <p className="text-xs text-slate-500">Detailed cost breakdown</p>
+              <p className="text-sm font-bold uppercase text-black">Cost Analysis</p>
+              <p className="text-xs text-black/60">Detailed cost breakdown</p>
             </div>
           </a>
           <a
             href="/"
             target="_blank"
-            className="flex items-center gap-3 p-4 bg-[#1A1D21] rounded-lg hover:bg-[#2E3338] transition-colors group"
+            className="flex items-center gap-3 p-4 border-2 border-black hover:bg-[#D4E815]/60 transition-colors group"
           >
-            <Activity className="w-5 h-5 text-slate-400 group-hover:text-[#D4E815]" />
+            <Activity className="w-5 h-5 text-black" />
             <div>
-              <p className="text-sm font-medium text-white">Main App</p>
-              <p className="text-xs text-slate-500">Open CrewCast Studio</p>
+              <p className="text-sm font-bold uppercase text-black">Main App</p>
+              <p className="text-xs text-black/60">Open CrewCast Studio</p>
             </div>
           </a>
         </div>

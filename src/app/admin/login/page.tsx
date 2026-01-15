@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, User, AlertCircle, Loader2 } from 'lucide-react';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Login screen updated to match admin section design system.
+// Polish pass (softer shadows + tighter type) - January 15th, 2026
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -41,41 +45,41 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1A1D21] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#FDFDFD] flex items-center justify-center p-4">
       <div className="relative w-full max-w-sm">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#D4E815]/10 mb-4">
-            <Lock className="w-8 h-8 text-[#D4E815]" />
+          <div className="inline-flex items-center justify-center w-16 h-16 border-4 border-black bg-[#D4E815] mb-4 shadow-[3px_3px_0px_0px_#111827]">
+            <Lock className="w-8 h-8 text-black" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Admin Console</h1>
-          <p className="text-sm text-slate-400 mt-1">CrewCast Studio</p>
+          <h1 className="text-2xl font-black uppercase text-black">Admin Console</h1>
+          <p className="text-sm text-black/60 mt-1 uppercase tracking-wide">CrewCast Studio</p>
         </div>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6 space-y-4">
+          <div className="bg-white border-4 border-black p-6 space-y-4 shadow-[3px_3px_0px_0px_#111827]">
             {/* Error Message */}
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="flex items-center gap-2 p-3 border-2 border-black bg-red-100 text-black text-sm font-bold uppercase">
+                <AlertCircle className="w-4 h-4 shrink-0 text-black" />
                 {error}
               </div>
             )}
 
             {/* Username Field */}
             <div>
-              <label htmlFor="username" className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label htmlFor="username" className="block text-xs font-bold uppercase text-black/70 mb-1.5">
                 Username
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
                 <input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#1A1D21] border border-[#2E3338] rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#D4E815]/50 focus:border-[#D4E815] transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-black text-black text-sm placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black transition-all"
                   placeholder="Enter username"
                   required
                   autoComplete="username"
@@ -85,17 +89,17 @@ export default function AdminLoginPage() {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label htmlFor="password" className="block text-xs font-bold uppercase text-black/70 mb-1.5">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#1A1D21] border border-[#2E3338] rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#D4E815]/50 focus:border-[#D4E815] transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-black text-black text-sm placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black transition-all"
                   placeholder="Enter password"
                   required
                   autoComplete="current-password"
@@ -107,7 +111,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 bg-[#D4E815] hover:bg-[#c5d913] text-[#1A1D21] font-semibold text-sm rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-[#D4E815] border-2 border-black text-black font-bold uppercase text-sm hover:bg-black hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -120,7 +124,7 @@ export default function AdminLoginPage() {
             </button>
           </div>
 
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-black/60 uppercase tracking-wide">
             Protected admin area. Unauthorized access is prohibited.
           </p>
         </form>

@@ -844,6 +844,28 @@ export interface Dictionary {
   };
 
   // =========================================================================
+  // FINDING AFFILIATES SCREEN - January 15th, 2026
+  // =========================================================================
+  // Finding Affiliates Screen - January 15th, 2026 (simplified)
+  findingAffiliates: {
+    thankYou: string;
+    preparingDashboard: string;
+    pleaseWait: string;
+    // Legacy fields
+    title: string;
+    subtitle: string;
+    timeEstimate: string;
+    steps: {
+      step1Label: string;
+      step1Desc: string;
+      step2Label: string;
+      step2Desc: string;
+      step3Label: string;
+      step3Desc: string;
+    };
+  };
+
+  // =========================================================================
   // LANDING PAGE GRAPHICS - Decorative animations in BentoGrid
   // Added: January 10th, 2026 - Remaining Components
   // =========================================================================

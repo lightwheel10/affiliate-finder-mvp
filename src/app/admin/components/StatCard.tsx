@@ -3,6 +3,10 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Stat cards updated to bold borders, hard shadows, and high-contrast text.
+// Polish pass (tighter hierarchy + spacing) - January 15th, 2026
+
 interface StatCardProps {
   title: string;
   value: string | number;
@@ -17,16 +21,16 @@ interface StatCardProps {
 
 const variantStyles = {
   default: {
-    icon: 'bg-slate-500/10 text-slate-400',
+    icon: 'bg-white text-black border-2 border-black',
   },
   success: {
-    icon: 'bg-green-500/10 text-green-400',
+    icon: 'bg-white text-black border-2 border-black',
   },
   warning: {
-    icon: 'bg-yellow-500/10 text-yellow-400',
+    icon: 'bg-[#D4E815] text-black border-2 border-black',
   },
   primary: {
-    icon: 'bg-[#D4E815]/10 text-[#D4E815]',
+    icon: 'bg-[#D4E815] text-black border-2 border-black',
   },
 };
 
@@ -41,17 +45,17 @@ export function StatCard({
   const styles = variantStyles[variant];
 
   return (
-    <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-5 hover:border-[#3E4348] transition-colors">
+    <div className="bg-white border-4 border-black p-5 shadow-[3px_3px_0px_0px_#111827]">
       <div className="flex items-start justify-between mb-3">
-        <div className={cn('p-2.5 rounded-lg', styles.icon)}>
+        <div className={cn('p-2', styles.icon)}>
           <Icon className="w-5 h-5" />
         </div>
         {trend && (
           <div className={cn(
-            'text-xs font-medium px-2 py-1 rounded-md',
+            'text-xs font-bold uppercase px-2 py-1 border-2 border-black',
             trend.value >= 0 
-              ? 'bg-green-500/10 text-green-400' 
-              : 'bg-red-500/10 text-red-400'
+              ? 'bg-[#D4E815] text-black' 
+              : 'bg-white text-black'
           )}>
             {trend.value >= 0 ? '+' : ''}{trend.value}% {trend.label}
           </div>
@@ -59,14 +63,14 @@ export function StatCard({
       </div>
       
       <div>
-        <p className="text-2xl font-bold text-white mb-0.5">
+        <p className="text-2xl font-black text-black mb-0.5">
           {typeof value === 'number' 
             ? value.toLocaleString() 
             : value}
         </p>
-        <p className="text-sm text-slate-400">{title}</p>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-black/70">{title}</p>
         {subtitle && (
-          <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
+          <p className="text-[11px] text-black/60 mt-1">{subtitle}</p>
         )}
       </div>
     </div>

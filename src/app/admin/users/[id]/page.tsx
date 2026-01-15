@@ -18,6 +18,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// User detail page updated to match high-contrast admin design.
+// Polish pass (table striping + softer shadows) - January 15th, 2026
+
 interface UserDetail {
   id: number;
   email: string;
@@ -127,11 +131,11 @@ export default function UserDetailPage() {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-32 bg-[#23272B] rounded-lg" />
-          <div className="h-40 bg-[#23272B] rounded-xl" />
+          <div className="h-8 w-32 bg-black/10 border-2 border-black" />
+          <div className="h-40 bg-black/10 border-2 border-black" />
           <div className="grid grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-24 bg-[#23272B] rounded-xl" />
+              <div key={i} className="h-24 bg-black/10 border-2 border-black" />
             ))}
           </div>
         </div>
@@ -144,13 +148,13 @@ export default function UserDetailPage() {
       <div className="p-8">
         <button
           onClick={() => router.push('/admin/users')}
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-6"
+          className="flex items-center gap-2 text-sm font-bold uppercase text-black hover:bg-black hover:text-white border-2 border-black px-3 py-1 mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Users
         </button>
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
-          <p className="text-red-400">{error || 'User not found'}</p>
+        <div className="bg-red-100 border-4 border-black p-6 text-center shadow-[4px_4px_0px_0px_#111827]">
+          <p className="text-black font-bold uppercase">{error || 'User not found'}</p>
         </div>
       </div>
     );
@@ -164,50 +168,50 @@ export default function UserDetailPage() {
       {/* Back Button */}
       <button
         onClick={() => router.push('/admin/users')}
-        className="flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-6"
+        className="flex items-center gap-2 text-sm font-bold uppercase text-black hover:bg-black hover:text-white border-2 border-black px-3 py-1 mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Users
       </button>
 
       {/* User Header */}
-      <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6 mb-6">
+      <div className="bg-white border-4 border-black p-6 mb-6 shadow-[3px_3px_0px_0px_#111827]">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-xl bg-[#D4E815]/10 flex items-center justify-center">
-              <User className="w-8 h-8 text-[#D4E815]" />
+            <div className="w-16 h-16 border-2 border-black bg-[#D4E815] flex items-center justify-center">
+              <User className="w-8 h-8 text-black" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">{user.name || 'Unnamed User'}</h1>
-              <p className="text-sm text-slate-400 flex items-center gap-2 mt-1">
+              <h1 className="text-xl font-black uppercase text-black">{user.name || 'Unnamed User'}</h1>
+              <p className="text-sm text-black/70 flex items-center gap-2 mt-1">
                 <Mail className="w-4 h-4" />
                 {user.email}
               </p>
               <div className="flex items-center gap-3 mt-2">
                 <span className={cn(
-                  'px-2 py-1 rounded-md text-xs font-medium',
-                  user.plan === 'business' ? 'bg-purple-500/10 text-purple-400' :
-                  user.plan === 'pro' ? 'bg-blue-500/10 text-blue-400' :
-                  'bg-slate-500/10 text-slate-400'
+                  'px-2 py-1 border-2 border-black text-xs font-bold uppercase text-black',
+                  user.plan === 'business' ? 'bg-purple-200' :
+                  user.plan === 'pro' ? 'bg-blue-200' :
+                  'bg-white'
                 )}>
                   {user.plan?.charAt(0).toUpperCase() + user.plan?.slice(1) || 'Free'}
                 </span>
                 {user.is_trial_period && (
-                  <span className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-yellow-500/10 text-yellow-400">
-                    <Clock className="w-3 h-3" />
+                  <span className="flex items-center gap-1 px-2 py-1 border-2 border-black text-xs font-bold uppercase bg-[#D4E815] text-black">
+                    <Clock className="w-3 h-3 text-black" />
                     Trial
                   </span>
                 )}
                 {user.subscription_status === 'active' && !user.is_trial_period && (
-                  <span className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-green-500/10 text-green-400">
-                    <CheckCircle className="w-3 h-3" />
+                  <span className="flex items-center gap-1 px-2 py-1 border-2 border-black text-xs font-bold uppercase bg-green-200 text-black">
+                    <CheckCircle className="w-3 h-3 text-black" />
                     Active
                   </span>
                 )}
               </div>
             </div>
           </div>
-          <div className="text-right text-sm text-slate-400">
+          <div className="text-right text-sm text-black/70">
             <p className="flex items-center gap-2 justify-end">
               <Calendar className="w-4 h-4" />
               Joined {new Date(user.created_at).toLocaleDateString()}
@@ -225,40 +229,40 @@ export default function UserDetailPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {/* Credits */}
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-4">
+        <div className="bg-white border-4 border-black p-4 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-2">
-            <Search className="w-4 h-4 text-[#D4E815]" />
-            <span className="text-xs font-medium text-slate-400">Topic Searches</span>
+            <Search className="w-4 h-4 text-black" />
+            <span className="text-xs font-bold uppercase text-black/70">Topic Searches</span>
           </div>
-          <p className="text-lg font-bold text-white">
+          <p className="text-lg font-black text-black">
             {user.topic_search_credits_used || 0} / {user.topic_search_credits_total || 0}
           </p>
         </div>
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-4">
+        <div className="bg-white border-4 border-black p-4 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-2">
-            <Mail className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-medium text-slate-400">Email Credits</span>
+            <Mail className="w-4 h-4 text-black" />
+            <span className="text-xs font-bold uppercase text-black/70">Email Credits</span>
           </div>
-          <p className="text-lg font-bold text-white">
+          <p className="text-lg font-black text-black">
             {user.email_credits_used || 0} / {user.email_credits_total || 0}
           </p>
         </div>
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-4">
+        <div className="bg-white border-4 border-black p-4 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-2">
-            <Zap className="w-4 h-4 text-purple-400" />
-            <span className="text-xs font-medium text-slate-400">AI Credits</span>
+            <Zap className="w-4 h-4 text-black" />
+            <span className="text-xs font-bold uppercase text-black/70">AI Credits</span>
           </div>
-          <p className="text-lg font-bold text-white">
+          <p className="text-lg font-black text-black">
             {user.ai_credits_used || 0} / {user.ai_credits_total || 0}
           </p>
         </div>
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-4">
+        <div className="bg-white border-4 border-black p-4 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-4 h-4 text-green-400" />
-            <span className="text-xs font-medium text-slate-400">Monthly Cost</span>
+            <DollarSign className="w-4 h-4 text-black" />
+            <span className="text-xs font-bold uppercase text-black/70">Monthly Cost</span>
           </div>
-          <p className="text-lg font-bold text-[#D4E815]">${totalCost.toFixed(2)}</p>
-          <p className="text-xs text-slate-500">{totalCalls} API calls</p>
+          <p className="text-lg font-black text-black">${totalCost.toFixed(2)}</p>
+          <p className="text-xs text-black/60">{totalCalls} API calls</p>
         </div>
       </div>
 
@@ -269,10 +273,10 @@ export default function UserDetailPage() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+              'px-4 py-2 border-2 border-black text-sm font-bold uppercase transition-colors',
               activeTab === tab
-                ? 'bg-[#D4E815]/10 text-[#D4E815]'
-                : 'text-slate-400 hover:bg-[#23272B] hover:text-white'
+                ? 'bg-[#D4E815] text-black'
+                : 'bg-white text-black/70 hover:bg-black hover:text-white'
             )}
           >
             {tab === 'overview' && 'Overview'}
@@ -283,36 +287,36 @@ export default function UserDetailPage() {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-[#23272B] rounded-xl border border-[#2E3338]">
+      <div className="bg-white border-4 border-black shadow-[3px_3px_0px_0px_#111827]">
         {activeTab === 'overview' && (
           <div className="p-6">
-            <h3 className="text-sm font-semibold text-white mb-4">Cost by Service (This Month)</h3>
+            <h3 className="text-sm font-black uppercase text-black mb-4">Cost by Service (This Month)</h3>
             {costBreakdown.length > 0 ? (
               <div className="space-y-3">
                 {costBreakdown.map((item) => (
                   <div 
                     key={item.service}
-                    className="flex items-center justify-between p-3 bg-[#1A1D21] rounded-lg"
+                    className="flex items-center justify-between p-3 border-2 border-black"
                   >
                     <div className="flex items-center gap-3">
-                      <Server className="w-4 h-4 text-slate-500" />
+                      <Server className="w-4 h-4 text-black" />
                       <div>
-                        <p className="text-sm font-medium text-white">
+                        <p className="text-sm font-bold uppercase text-black">
                           {formatServiceName(item.service)}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-black/60">
                           {item.calls.toLocaleString()} calls
                         </p>
                       </div>
                     </div>
-                    <p className="text-sm font-semibold text-[#D4E815]">
+                    <p className="text-sm font-bold text-black">
                       ${Number(item.cost || 0).toFixed(4)}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-slate-500 text-center py-8">No API usage this month</p>
+              <p className="text-black/60 font-bold uppercase text-center py-8">No API usage this month</p>
             )}
           </div>
         )}
@@ -321,42 +325,42 @@ export default function UserDetailPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#2E3338]">
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Service</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Query</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Status</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Results</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Cost</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Date</th>
+                <tr className="border-b-4 border-black bg-black/5">
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Service</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Query</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Status</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Results</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Cost</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Date</th>
                 </tr>
               </thead>
               <tbody>
                 {apiCalls.slice(0, 50).map((call) => (
-                  <tr key={call.id} className="border-b border-[#2E3338] last:border-0">
+                  <tr key={call.id} className="border-b-2 border-black last:border-0 odd:bg-black/5 hover:bg-[#D4E815]/60">
                     <td className="px-4 py-3">
-                      <span className="text-sm text-white">{formatServiceName(call.service)}</span>
+                      <span className="text-sm font-bold text-black">{formatServiceName(call.service)}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-slate-400 max-w-[200px] truncate block">
+                      <span className="text-sm text-black/70 max-w-[200px] truncate block">
                         {call.keyword || call.domain || '-'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={cn(
-                        'px-2 py-1 rounded-md text-xs font-medium',
-                        call.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                        'px-2 py-1 border-2 border-black text-xs font-bold uppercase text-black',
+                        call.status === 'success' ? 'bg-green-200' : 'bg-red-200'
                       )}>
                         {call.status}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-slate-400">{call.results_count}</span>
+                      <span className="text-sm text-black/70">{call.results_count}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-[#D4E815]">${Number(call.estimated_cost || 0).toFixed(4)}</span>
+                      <span className="text-sm font-bold text-black">${Number(call.estimated_cost || 0).toFixed(4)}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-slate-400">
+                      <span className="text-sm text-black/70">
                         {new Date(call.created_at).toLocaleString()}
                       </span>
                     </td>
@@ -365,7 +369,7 @@ export default function UserDetailPage() {
               </tbody>
             </table>
             {apiCalls.length === 0 && (
-              <p className="text-slate-500 text-center py-8">No API calls recorded</p>
+              <p className="text-black/60 font-bold uppercase text-center py-8">No API calls recorded</p>
             )}
           </div>
         )}
@@ -374,39 +378,39 @@ export default function UserDetailPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#2E3338]">
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Keyword</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Sources</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Results</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Cost</th>
-                  <th className="text-left text-xs font-semibold text-slate-400 uppercase px-4 py-3">Date</th>
+                <tr className="border-b-4 border-black bg-black/5">
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Keyword</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Sources</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Results</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Cost</th>
+                  <th className="text-left text-xs font-black uppercase text-black px-4 py-3">Date</th>
                 </tr>
               </thead>
               <tbody>
                 {searches.map((search) => (
-                  <tr key={search.id} className="border-b border-[#2E3338] last:border-0">
+                  <tr key={search.id} className="border-b-2 border-black last:border-0 odd:bg-black/5 hover:bg-[#D4E815]/60">
                     <td className="px-4 py-3">
-                      <span className="text-sm text-white">{search.keyword}</span>
+                      <span className="text-sm font-bold text-black">{search.keyword}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {search.sources?.map((source) => (
-                          <span key={source} className="px-1.5 py-0.5 rounded text-xs bg-slate-500/10 text-slate-400">
+                          <span key={source} className="px-1.5 py-0.5 border-2 border-black text-xs font-bold uppercase bg-white text-black">
                             {source}
                           </span>
                         ))}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-slate-400">{search.results_count}</span>
+                      <span className="text-sm text-black/70">{search.results_count}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-[#D4E815]">
+                      <span className="text-sm font-bold text-black">
                         ${Number(search.total_cost || 0).toFixed(4)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-slate-400">
+                      <span className="text-sm text-black/70">
                         {new Date(search.searched_at).toLocaleString()}
                       </span>
                     </td>
@@ -415,7 +419,7 @@ export default function UserDetailPage() {
               </tbody>
             </table>
             {searches.length === 0 && (
-              <p className="text-slate-500 text-center py-8">No searches recorded</p>
+              <p className="text-black/60 font-bold uppercase text-center py-8">No searches recorded</p>
             )}
           </div>
         )}

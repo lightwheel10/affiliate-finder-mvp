@@ -29,6 +29,11 @@ import {
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import { ExportButton } from '../components/ExportButton';
+import { AdminSelect } from '../components/AdminSelect';
+
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Cost analysis page updated for bold borders and high contrast.
+// Polish pass (softer shadows + calmer hover) - January 15th, 2026
 
 interface ServiceBreakdown {
   service: string;
@@ -76,11 +81,14 @@ export default function AdminCostsPage() {
   const [statusBreakdown, setStatusBreakdown] = useState<StatusBreakdown[]>([]);
   const [totalStats, setTotalStats] = useState<TotalStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [timeRange, setTimeRange] = useState('30');
 
+  // Refresh animation (Admin) - January 15th, 2026
   const fetchCosts = async () => {
     setIsLoading(true);
+    setIsRefreshing(true);
     try {
       const res = await fetch(`/api/admin/costs?range=${timeRange}`);
       
@@ -105,6 +113,7 @@ export default function AdminCostsPage() {
       console.error(err);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -129,15 +138,15 @@ export default function AdminCostsPage() {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-48 bg-[#23272B] rounded-lg" />
+          <div className="h-8 w-48 bg-black/10 border-2 border-black" />
           <div className="grid grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-[#23272B] rounded-xl" />
+              <div key={i} className="h-24 bg-black/10 border-2 border-black" />
             ))}
           </div>
           <div className="grid grid-cols-2 gap-6">
-            <div className="h-80 bg-[#23272B] rounded-xl" />
-            <div className="h-80 bg-[#23272B] rounded-xl" />
+            <div className="h-80 bg-black/10 border-2 border-black" />
+            <div className="h-80 bg-black/10 border-2 border-black" />
           </div>
         </div>
       </div>
@@ -149,21 +158,24 @@ export default function AdminCostsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Cost Analysis</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-3xl font-black uppercase text-black">Cost Analysis</h1>
+          <p className="text-sm text-black/70 mt-1">
             API usage costs and breakdown
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <select
+          {/* Standard admin dropdown styling (matches main app pattern) - Jan 15, 2026 */}
+          <AdminSelect
+            ariaLabel="Cost range"
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 bg-[#23272B] border border-[#2E3338] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#D4E815]/50"
-          >
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-          </select>
+            onChange={setTimeRange}
+            className="min-w-[180px]"
+            options={[
+              { value: '7', label: 'Last 7 days' },
+              { value: '30', label: 'Last 30 days' },
+              { value: '90', label: 'Last 90 days' },
+            ]}
+          />
           <ExportButton 
             endpoint="/api/admin/costs" 
             filename="costs" 
@@ -171,78 +183,78 @@ export default function AdminCostsPage() {
           />
           <button
             onClick={fetchCosts}
-            className="flex items-center gap-2 px-4 py-2 bg-[#23272B] rounded-lg text-sm text-slate-400 hover:text-white hover:bg-[#2E3338] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-black text-sm font-bold uppercase text-black hover:bg-black hover:text-white transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
             Refresh
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+        <div className="mb-6 p-4 bg-red-100 border-4 border-black text-black text-sm font-bold uppercase shadow-[4px_4px_0px_0px_#111827]">
           {error}
         </div>
       )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-5">
+        <div className="bg-white border-4 border-black p-5 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2.5 rounded-lg bg-[#D4E815]/10">
-              <DollarSign className="w-5 h-5 text-[#D4E815]" />
+            <div className="p-2 border-2 border-black bg-[#D4E815]">
+              <DollarSign className="w-5 h-5 text-black" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-2xl font-black text-black">
             ${(totalStats?.total_cost || 0).toFixed(2)}
           </p>
-          <p className="text-sm text-slate-400">Total Cost</p>
+          <p className="text-sm font-bold uppercase text-black/70">Total Cost</p>
         </div>
 
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-5">
+        <div className="bg-white border-4 border-black p-5 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2.5 rounded-lg bg-blue-500/10">
-              <Activity className="w-5 h-5 text-blue-400" />
+            <div className="p-2 border-2 border-black bg-white">
+              <Activity className="w-5 h-5 text-black" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-2xl font-black text-black">
             {(totalStats?.total_calls || 0).toLocaleString()}
           </p>
-          <p className="text-sm text-slate-400">API Calls</p>
+          <p className="text-sm font-bold uppercase text-black/70">API Calls</p>
         </div>
 
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-5">
+        <div className="bg-white border-4 border-black p-5 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2.5 rounded-lg bg-purple-500/10">
-              <Users className="w-5 h-5 text-purple-400" />
+            <div className="p-2 border-2 border-black bg-white">
+              <Users className="w-5 h-5 text-black" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-2xl font-black text-black">
             {totalStats?.unique_users || 0}
           </p>
-          <p className="text-sm text-slate-400">Active Users</p>
+          <p className="text-sm font-bold uppercase text-black/70">Active Users</p>
         </div>
 
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-5">
+        <div className="bg-white border-4 border-black p-5 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2.5 rounded-lg bg-green-500/10">
-              <Clock className="w-5 h-5 text-green-400" />
+            <div className="p-2 border-2 border-black bg-white">
+              <Clock className="w-5 h-5 text-black" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-2xl font-black text-black">
             {((totalStats?.avg_duration || 0) / 1000).toFixed(1)}s
           </p>
-          <p className="text-sm text-slate-400">Avg Response Time</p>
+          <p className="text-sm font-bold uppercase text-black/70">Avg Response Time</p>
         </div>
       </div>
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Cost Trend */}
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6">
+        <div className="bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-[#D4E815]" />
-            <h2 className="text-lg font-semibold text-white">Daily Cost Trend</h2>
+            <TrendingUp className="w-5 h-5 text-black" />
+            <h2 className="text-lg font-black uppercase text-black">Daily Cost Trend</h2>
           </div>
           {formattedDailyCosts.length > 0 ? (
             <div className="h-[280px]">
@@ -250,32 +262,32 @@ export default function AdminCostsPage() {
                 <AreaChart data={formattedDailyCosts}>
                   <defs>
                     <linearGradient id="colorCost2" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#D4E815" stopOpacity={0.3} />
+                      <stop offset="5%" stopColor="#D4E815" stopOpacity={0.35} />
                       <stop offset="95%" stopColor="#D4E815" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2E3338" vertical={false} />
-                  <XAxis dataKey="date" stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#111827" vertical={false} />
+                  <XAxis dataKey="date" stroke="#111827" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#111827" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#23272B', border: '1px solid #2E3338', borderRadius: '8px', fontSize: '12px' }}
-                    labelStyle={{ color: '#9CA3AF' }}
+                    contentStyle={{ backgroundColor: '#FFFFFF', border: '2px solid #111827', borderRadius: '0px', fontSize: '12px' }}
+                    labelStyle={{ color: '#111827' }}
                     formatter={(value: number) => [`$${Number(value || 0).toFixed(4)}`, 'Cost']}
                   />
-                  <Area type="monotone" dataKey="cost" stroke="#D4E815" strokeWidth={2} fillOpacity={1} fill="url(#colorCost2)" />
+                  <Area type="monotone" dataKey="cost" stroke="#111827" strokeWidth={2} fillOpacity={1} fill="url(#colorCost2)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-[280px] flex items-center justify-center text-slate-500">No data</div>
+            <div className="h-[280px] flex items-center justify-center text-black/60 font-bold uppercase">No data</div>
           )}
         </div>
 
         {/* Cost by Service Pie */}
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6">
+        <div className="bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-5 h-5 text-[#D4E815]" />
-            <h2 className="text-lg font-semibold text-white">Cost by Service</h2>
+            <BarChart3 className="w-5 h-5 text-black" />
+            <h2 className="text-lg font-black uppercase text-black">Cost by Service</h2>
           </div>
           {pieData.length > 0 ? (
             <div className="h-[280px]">
@@ -295,18 +307,18 @@ export default function AdminCostsPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#23272B', border: '1px solid #2E3338', borderRadius: '8px', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#FFFFFF', border: '2px solid #111827', borderRadius: '0px', fontSize: '12px' }}
                     formatter={(value: number) => [`$${Number(value || 0).toFixed(4)}`, 'Cost']}
                   />
                   <Legend
                     wrapperStyle={{ fontSize: '11px' }}
-                    formatter={(value) => <span style={{ color: '#9CA3AF' }}>{value}</span>}
+                    formatter={(value) => <span style={{ color: '#111827' }}>{value}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-[280px] flex items-center justify-center text-slate-500">No data</div>
+            <div className="h-[280px] flex items-center justify-center text-black/60 font-bold uppercase">No data</div>
           )}
         </div>
       </div>
@@ -314,33 +326,33 @@ export default function AdminCostsPage() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Service Breakdown Table */}
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6">
+        <div className="bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-4">
-            <Server className="w-5 h-5 text-[#D4E815]" />
-            <h2 className="text-lg font-semibold text-white">Service Breakdown</h2>
+            <Server className="w-5 h-5 text-black" />
+            <h2 className="text-lg font-black uppercase text-black">Service Breakdown</h2>
           </div>
           <div className="space-y-2">
             {serviceBreakdown.map((item, index) => (
-              <div key={item.service} className="flex items-center justify-between p-3 bg-[#1A1D21] rounded-lg">
+              <div key={item.service} className="flex items-center justify-between p-3 border-2 border-black">
                 <div className="flex items-center gap-3">
                   <div 
-                    className="w-3 h-3 rounded-full" 
+                    className="w-3 h-3" 
                     style={{ backgroundColor: COLORS[index % COLORS.length] }} 
                   />
                   <div>
-                    <p className="text-sm font-medium text-white">{formatServiceName(item.service)}</p>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <p className="text-sm font-bold uppercase text-black">{formatServiceName(item.service)}</p>
+                    <div className="flex items-center gap-2 text-xs text-black/60">
                       <span>{item.calls.toLocaleString()} calls</span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3 text-green-400" />
+                        <CheckCircle className="w-3 h-3 text-black" />
                         {item.success_count}
                       </span>
                       {item.error_count > 0 && (
                         <>
                           <span>•</span>
                           <span className="flex items-center gap-1">
-                            <XCircle className="w-3 h-3 text-red-400" />
+                            <XCircle className="w-3 h-3 text-black" />
                             {item.error_count}
                           </span>
                         </>
@@ -348,69 +360,69 @@ export default function AdminCostsPage() {
                     </div>
                   </div>
                 </div>
-                <p className="text-sm font-semibold text-[#D4E815]">${Number(item.cost || 0).toFixed(2)}</p>
+                <p className="text-sm font-bold text-black">${Number(item.cost || 0).toFixed(2)}</p>
               </div>
             ))}
             {serviceBreakdown.length === 0 && (
-              <p className="text-slate-500 text-center py-4">No data</p>
+              <p className="text-black/60 font-bold uppercase text-center py-4">No data</p>
             )}
           </div>
         </div>
 
         {/* Top Users */}
-        <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6">
+        <div className="bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="w-5 h-5 text-[#D4E815]" />
-            <h2 className="text-lg font-semibold text-white">Top Users by Cost</h2>
+            <Users className="w-5 h-5 text-black" />
+            <h2 className="text-lg font-black uppercase text-black">Top Users by Cost</h2>
           </div>
           <div className="space-y-2">
             {topUsers.map((user, index) => (
               <div 
                 key={user.id} 
-                className="flex items-center justify-between p-3 bg-[#1A1D21] rounded-lg cursor-pointer hover:bg-[#2E3338] transition-colors"
+                className="flex items-center justify-between p-3 border-2 border-black cursor-pointer hover:bg-[#D4E815] transition-colors"
                 onClick={() => router.push(`/admin/users/${user.id}`)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#D4E815]/10 flex items-center justify-center text-xs font-bold text-[#D4E815]">
+                  <div className="w-6 h-6 border-2 border-black bg-[#D4E815] flex items-center justify-center text-xs font-bold text-black">
                     {index + 1}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">{user.name || 'Unnamed'}</p>
-                    <p className="text-xs text-slate-500">{user.email}</p>
+                    <p className="text-sm font-bold text-black">{user.name || 'Unnamed'}</p>
+                    <p className="text-xs text-black/60">{user.email}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-[#D4E815]">${Number(user.total_cost || 0).toFixed(2)}</p>
-                  <p className="text-xs text-slate-500">{user.total_calls} calls</p>
+                  <p className="text-sm font-bold text-black">${Number(user.total_cost || 0).toFixed(2)}</p>
+                  <p className="text-xs text-black/60">{user.total_calls} calls</p>
                 </div>
               </div>
             ))}
             {topUsers.length === 0 && (
-              <p className="text-slate-500 text-center py-4">No data</p>
+              <p className="text-black/60 font-bold uppercase text-center py-4">No data</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Status Breakdown */}
-      <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">API Call Status</h2>
+      <div className="bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]">
+        <h2 className="text-lg font-black uppercase text-black mb-4">API Call Status</h2>
         <div className="flex items-center gap-6">
           {statusBreakdown.map((item) => (
             <div key={item.status} className="flex items-center gap-2">
               <div className={cn(
-                'w-3 h-3 rounded-full',
+                'w-3 h-3 border border-black',
                 item.status === 'success' ? 'bg-green-400' :
                 item.status === 'error' ? 'bg-red-400' :
                 item.status === 'timeout' ? 'bg-yellow-400' :
                 'bg-slate-400'
               )} />
-              <span className="text-sm text-slate-400 capitalize">{item.status}:</span>
-              <span className="text-sm font-medium text-white">{item.count.toLocaleString()}</span>
+              <span className="text-sm text-black/70 font-bold uppercase capitalize">{item.status}:</span>
+              <span className="text-sm font-bold text-black">{item.count.toLocaleString()}</span>
             </div>
           ))}
           {statusBreakdown.length === 0 && (
-            <p className="text-slate-500">No data</p>
+            <p className="text-black/60 font-bold uppercase">No data</p>
           )}
         </div>
       </div>

@@ -4,6 +4,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Date picker restyled to match high-contrast admin design.
+// Polish pass (consistent controls + softer dropdown shadow) - January 15th, 2026
+
 export interface DateRange {
   startDate: string;
   endDate: string;
@@ -16,6 +20,7 @@ interface DateRangePickerProps {
   showCompare?: boolean;
   compareValue?: DateRange | null;
   onCompareChange?: (range: DateRange | null) => void;
+  dropdownWidthClassName?: string;
 }
 
 const PRESETS: { label: string; getValue: () => DateRange }[] = [
@@ -82,7 +87,8 @@ export function DateRangePicker({
   onChange, 
   showCompare = false,
   compareValue,
-  onCompareChange 
+  onCompareChange,
+  dropdownWidthClassName = 'w-80'
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [customStart, setCustomStart] = useState(value.startDate);
@@ -148,28 +154,28 @@ export function DateRangePicker({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-[#23272B] border border-[#2E3338] rounded-lg text-sm text-white hover:bg-[#2E3338] transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-black text-sm font-bold uppercase text-black hover:bg-[#D4E815] transition-colors"
       >
-        <Calendar className="w-4 h-4 text-slate-400" />
+        <Calendar className="w-4 h-4 text-black" />
         <span>{formatDisplay()}</span>
-        <ChevronDown className={cn('w-4 h-4 text-slate-400 transition-transform', isOpen && 'rotate-180')} />
+        <ChevronDown className={cn('w-4 h-4 text-black transition-transform', isOpen && 'rotate-180')} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-[#23272B] border border-[#2E3338] rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className={`absolute right-0 top-full mt-2 ${dropdownWidthClassName} bg-white border-2 border-black shadow-[3px_3px_0px_0px_#111827] z-50 overflow-hidden`}>
           {/* Presets */}
-          <div className="p-2 border-b border-[#2E3338]">
-            <p className="text-xs font-medium text-slate-500 uppercase px-2 mb-2">Quick Select</p>
+          <div className="p-2 border-b-2 border-black">
+            <p className="text-xs font-bold text-black/70 uppercase px-2 mb-2">Quick Select</p>
             <div className="grid grid-cols-2 gap-1">
               {PRESETS.map((preset) => (
                 <button
                   key={preset.label}
                   onClick={() => handlePresetClick(preset)}
                   className={cn(
-                    'px-3 py-2 text-sm rounded-lg text-left transition-colors',
+                    'px-3 py-2 text-sm font-bold uppercase text-left border-2 border-transparent transition-colors',
                     value.label === preset.label
-                      ? 'bg-[#D4E815]/10 text-[#D4E815]'
-                      : 'text-slate-400 hover:bg-[#2E3338] hover:text-white'
+                      ? 'bg-[#D4E815] text-black border-black'
+                      : 'text-black/70 hover:bg-black hover:text-white hover:border-black'
                   )}
                 >
                   {preset.label}
@@ -179,27 +185,27 @@ export function DateRangePicker({
           </div>
 
           {/* Custom Range */}
-          <div className="p-3 border-b border-[#2E3338]">
-            <p className="text-xs font-medium text-slate-500 uppercase mb-2">Custom Range</p>
+          <div className="p-3 border-b-2 border-black">
+            <p className="text-xs font-bold text-black/70 uppercase mb-2">Custom Range</p>
             <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="flex-1 px-3 py-2 bg-[#1A1D21] border border-[#2E3338] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#D4E815]/50"
+                className="flex-1 px-3 py-2 bg-white border-2 border-black text-sm text-black focus:outline-none focus:ring-2 focus:ring-black"
               />
-              <span className="text-slate-500">to</span>
+              <span className="text-black/60 font-bold uppercase text-xs">to</span>
               <input
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="flex-1 px-3 py-2 bg-[#1A1D21] border border-[#2E3338] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#D4E815]/50"
+                className="flex-1 px-3 py-2 bg-white border-2 border-black text-sm text-black focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>
             <button
               onClick={handleCustomApply}
               disabled={!customStart || !customEnd || customStart > customEnd}
-              className="w-full mt-2 py-2 bg-[#D4E815] text-[#1A1D21] text-sm font-medium rounded-lg hover:bg-[#c5d913] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-2 bg-[#D4E815] text-black text-sm font-bold uppercase border-2 border-black hover:bg-black hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Apply
             </button>
@@ -209,24 +215,24 @@ export function DateRangePicker({
           {showCompare && (
             <div className="p-3">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-slate-400">Compare to previous period</span>
+                <span className="text-sm font-bold uppercase text-black/70">Compare to previous period</span>
                 <div
                   onClick={handleCompareToggle}
                   className={cn(
-                    'w-10 h-5 rounded-full transition-colors relative',
-                    isComparing ? 'bg-[#D4E815]' : 'bg-[#2E3338]'
+                    'w-10 h-5 border-2 border-black transition-colors relative',
+                    isComparing ? 'bg-[#D4E815]' : 'bg-white'
                   )}
                 >
                   <div
                     className={cn(
-                      'w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform',
+                      'w-4 h-4 bg-black absolute top-0.5 transition-transform',
                       isComparing ? 'translate-x-5' : 'translate-x-0.5'
                     )}
                   />
                 </div>
               </label>
               {isComparing && compareValue && (
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-black/60 mt-2">
                   Comparing to: {compareValue.startDate} - {compareValue.endDate}
                 </p>
               )}

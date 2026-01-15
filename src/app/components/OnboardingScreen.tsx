@@ -56,6 +56,7 @@ import { cn } from '@/lib/utils';
 import { StripeProvider } from './StripeProvider';
 import { Step7CardForm } from './Step7CardForm';
 import { AnalyzingScreen } from './AnalyzingScreen';
+import { FindingAffiliatesScreen } from './FindingAffiliatesScreen';
 import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
 // =============================================================================
 // i18n TRANSLATIONS (January 9th, 2026)
@@ -282,6 +283,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const [cardholderName, setCardholderName] = useState('');
   const [isCardReady, setIsCardReady] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
+
+  // ==========================================================================
+  // FINDING AFFILIATES STATE - January 15th, 2026
+  // 
+  // After payment succeeds and onboarding data is saved, we pre-fetch
+  // affiliate results so the user sees results immediately on dashboard.
+  // 
+  // This state controls the FindingAffiliatesScreen display:
+  // - false: Normal flow, show card entry form
+  // - true: Payment complete, searching for affiliates, show loading screen
+  // 
+  // The user MUST wait until this completes before being redirected.
+  // ==========================================================================
+  const [isFindingAffiliates, setIsFindingAffiliates] = useState(false);
   
   // Discount Code
   const [discountCode, setDiscountCode] = useState('');
@@ -822,7 +837,69 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         throw new Error(onboardingError.error || 'Failed to save your profile information. Please try again.');
       }
 
-      // Success - both subscription and onboarding data saved successfully!
+      // ======================================================================
+      // PRE-FETCH AFFILIATES - January 15th, 2026
+      // 
+      // CRITICAL FEATURE: After payment succeeds and onboarding data is saved,
+      // we pre-fetch affiliate results so the user sees results immediately
+      // when they land on the dashboard.
+      // 
+      // FLOW:
+      // 1. Payment succeeded ✓
+      // 2. Onboarding data saved ✓
+      // 3. If user has topics → search for affiliates NOW
+      // 4. Show FindingAffiliatesScreen while searching
+      // 5. WAIT for search to complete (no timeout escape!)
+      // 6. Then call onComplete() to redirect to dashboard
+      // 
+      // WHY NO TIMEOUT:
+      // - Client explicitly requested user sees results on first login
+      // - Better UX to wait 30 seconds than land on empty dashboard
+      // - API has its own internal timeout (5 minutes max)
+      // 
+      // PAID CLIENT PROJECT - This feature MUST work correctly!
+      // ======================================================================
+      if (topics.length > 0) {
+        console.log('[Onboarding] Topics found, pre-fetching affiliates...');
+        console.log('[Onboarding] Topics:', topics.join(', '));
+        
+        // Show the FindingAffiliatesScreen
+        setIsFindingAffiliates(true);
+        
+        try {
+          // Call the onboarding scout API and WAIT for it to complete
+          const scoutRes = await fetch('/api/scout/onboarding', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              topics,
+              competitors,
+            }),
+          });
+
+          const scoutData = await scoutRes.json();
+          
+          if (scoutRes.ok && scoutData.success) {
+            console.log('[Onboarding] Pre-fetch complete!');
+            console.log('[Onboarding] Results saved:', scoutData.totalResults);
+            console.log('[Onboarding] Topics searched:', scoutData.topicsSearched);
+          } else {
+            // Log error but don't fail - user can still proceed
+            console.error('[Onboarding] Pre-fetch failed:', scoutData.error);
+          }
+        } catch (scoutError) {
+          // Log error but don't fail - user can still proceed
+          console.error('[Onboarding] Pre-fetch error:', scoutError);
+        }
+        
+        // Hide the FindingAffiliatesScreen
+        setIsFindingAffiliates(false);
+      } else {
+        console.log('[Onboarding] No topics selected, skipping pre-fetch');
+      }
+
+      // Success - subscription, onboarding data, and affiliates all ready!
       onComplete();
 
     } catch (error) {
@@ -856,11 +933,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     setCompetitorInput('');
   };
 
+  // MAX_TOPICS_LIMIT - January 15th, 2026
+  // Reduced from 10 to 5 to limit topic selection during onboarding
+  const MAX_TOPICS_LIMIT = 5;
+
   const toggleTopic = (topic: string) => {
     if (topics.includes(topic)) {
       setTopics(topics.filter(t => t !== topic));
     } else {
-      if (topics.length >= 10) return;
+      if (topics.length >= MAX_TOPICS_LIMIT) return;
       setTopics([...topics, topic]);
     }
   };
@@ -871,7 +952,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
        setTopicInput('');
        return;
     }
-    if (topics.length >= 10) return;
+    // Uses MAX_TOPICS_LIMIT constant defined above - January 15th, 2026
+    if (topics.length >= MAX_TOPICS_LIMIT) return;
     
     setTopics([...topics, topicInput.trim()]);
     setTopicInput('');
@@ -902,6 +984,26 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       brandName={brand}
       error={suggestionError}
       onSkip={handleSkipSuggestions}
+    />
+  );
+
+  // ==========================================================================
+  // FINDING AFFILIATES SCREEN RENDER - January 15th, 2026
+  // 
+  // Shows the FindingAffiliatesScreen component while pre-fetching
+  // affiliate results after payment succeeds.
+  // 
+  // This screen displays:
+  // - Animated progress through 3 steps
+  // - Brand name personalization
+  // - Time estimate message
+  // 
+  // User MUST wait for this to complete - no skip button.
+  // ==========================================================================
+  const renderFindingAffiliatesScreen = () => (
+    <FindingAffiliatesScreen
+      topicsCount={topics.length}
+      brandName={brand}
     />
   );
 
@@ -1536,10 +1638,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               placeholder={t.onboarding.step4.inputPlaceholder}
               className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
             />
+            {/* Add button disabled when MAX_TOPICS_LIMIT reached - January 15th, 2026 */}
             <button 
               type="button"
               onClick={addCustomTopic}
-              disabled={!topicInput.trim() || topics.length >= 10}
+              disabled={!topicInput.trim() || topics.length >= MAX_TOPICS_LIMIT}
               className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] border-2 border-black dark:border-gray-600 hover:bg-yellow-400 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
             >
               <Plus size={16} />
@@ -1570,6 +1673,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             </p>
             
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
+              {/* AI suggestions - limited to MAX_TOPICS_LIMIT selections - January 15th, 2026 */}
               {suggestedTopics
                 .filter(t => !topics.includes(t.keyword))
                 .slice(0, 10)
@@ -1578,10 +1682,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     key={t.keyword}
                     type="button"
                     onClick={() => toggleTopic(t.keyword)}
-                    disabled={topics.length >= 10}
+                    disabled={topics.length >= MAX_TOPICS_LIMIT}
                     className={cn(
                       "flex items-center gap-1 px-2.5 py-1 border-2 text-[11px] transition-all",
-                      topics.length >= 10
+                      topics.length >= MAX_TOPICS_LIMIT
                         ? "border-gray-200 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
                         : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10 hover:text-gray-900 dark:hover:text-white"
                     )}
@@ -1948,26 +2052,38 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
              January 3rd, 2026: Added isAnalyzing state to show AnalyzingScreen
              between Step 1 and Step 2 while fetching AI suggestions.
            */}
-           <div className={cn(
-             "flex-1 pr-1",
-             (step >= 3 && step <= 5) ? "overflow-y-auto scrollbar-hide" : "overflow-visible"
-           )}>
-             {/* Show AnalyzingScreen when fetching AI suggestions */}
-             {isAnalyzing && renderAnalyzingScreen()}
-             
-             {/* Regular step content (hidden during analysis) */}
-             {!isAnalyzing && step === 1 && renderStep1()}
-             {!isAnalyzing && step === 2 && renderStep2()}
-             {!isAnalyzing && step === 3 && renderStep3()}
-             {!isAnalyzing && step === 4 && renderStep4()}
-             {!isAnalyzing && step === 5 && renderStep5()}
-             {!isAnalyzing && step === 6 && renderStep6()}
-             {!isAnalyzing && step === 7 && renderStep7()}
-           </div>
+          <div className={cn(
+            "flex-1 pr-1",
+            (step >= 3 && step <= 5) ? "overflow-y-auto scrollbar-hide" : "overflow-visible"
+          )}>
+            {/* Show AnalyzingScreen when fetching AI suggestions */}
+            {isAnalyzing && renderAnalyzingScreen()}
+            
+            {/* ================================================================
+                FINDING AFFILIATES SCREEN - January 15th, 2026
+                
+                Show FindingAffiliatesScreen when pre-fetching affiliates
+                after payment succeeds. This replaces the Step 7 card form
+                while the search is running.
+                
+                User MUST wait for this to complete before redirect.
+                ================================================================ */}
+            {isFindingAffiliates && renderFindingAffiliatesScreen()}
+            
+            {/* Regular step content (hidden during analysis or finding affiliates) */}
+            {!isAnalyzing && !isFindingAffiliates && step === 1 && renderStep1()}
+            {!isAnalyzing && !isFindingAffiliates && step === 2 && renderStep2()}
+            {!isAnalyzing && !isFindingAffiliates && step === 3 && renderStep3()}
+            {!isAnalyzing && !isFindingAffiliates && step === 4 && renderStep4()}
+            {!isAnalyzing && !isFindingAffiliates && step === 5 && renderStep5()}
+            {!isAnalyzing && !isFindingAffiliates && step === 6 && renderStep6()}
+            {!isAnalyzing && !isFindingAffiliates && step === 7 && renderStep7()}
+          </div>
 
-           {/* Submit Button - Hidden on Step 7 (Stripe) and during AI analysis */}
+           {/* Submit Button - Hidden on Step 7 (Stripe), during AI analysis, or finding affiliates */}
           {/* January 3rd, 2026: Also hide button during isAnalyzing state */}
-          {step !== 7 && !isAnalyzing && (
+          {/* January 15th, 2026: Also hide button during isFindingAffiliates state */}
+          {step !== 7 && !isAnalyzing && !isFindingAffiliates && (
             <div className="pt-5 mt-auto shrink-0">
               {(() => {
                 // =============================================================

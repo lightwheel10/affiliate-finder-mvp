@@ -10,6 +10,10 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Chart colors adjusted for high-contrast light theme.
+// Polish pass (lighter gridlines, consistent tooltip) - January 15th, 2026
+
 interface CostChartProps {
   data: Array<{
     date: string;
@@ -38,24 +42,25 @@ export function CostChart({ data }: CostChartProps) {
         >
           <defs>
             <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#D4E815" stopOpacity={0.3} />
+              <stop offset="5%" stopColor="#D4E815" stopOpacity={0.35} />
               <stop offset="95%" stopColor="#D4E815" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid 
             strokeDasharray="3 3" 
-            stroke="#2E3338" 
+            stroke="#111827"
+            strokeOpacity={0.2}
             vertical={false}
           />
           <XAxis 
             dataKey="date" 
-            stroke="#6B7280"
+            stroke="#111827"
             fontSize={11}
             tickLine={false}
             axisLine={false}
           />
           <YAxis 
-            stroke="#6B7280"
+            stroke="#111827"
             fontSize={11}
             tickLine={false}
             axisLine={false}
@@ -63,19 +68,19 @@ export function CostChart({ data }: CostChartProps) {
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#23272B',
-              border: '1px solid #2E3338',
-              borderRadius: '8px',
+              backgroundColor: '#FFFFFF',
+              border: '2px solid #111827',
+              borderRadius: '0px',
               fontSize: '12px',
             }}
-            labelStyle={{ color: '#9CA3AF' }}
-            itemStyle={{ color: '#D4E815' }}
+            labelStyle={{ color: '#111827' }}
+            itemStyle={{ color: '#111827' }}
             formatter={(value: number) => [`$${Number(value || 0).toFixed(4)}`, 'Cost']}
           />
           <Area
             type="monotone"
             dataKey="cost"
-            stroke="#D4E815"
+            stroke="#111827"
             strokeWidth={2}
             fillOpacity={1}
             fill="url(#colorCost)"

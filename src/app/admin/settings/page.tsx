@@ -22,6 +22,10 @@ import {
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Settings page updated to match bold borders and high-contrast styling.
+// Polish pass (softer shadows + cleaner spacing) - January 15th, 2026
+
 interface Alert {
   id: number;
   alert_type: string;
@@ -153,10 +157,10 @@ export default function AdminSettingsPage() {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-48 bg-[#23272B] rounded-lg" />
+          <div className="h-8 w-48 bg-black/10 border-2 border-black" />
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-32 bg-[#23272B] rounded-xl" />
+              <div key={i} className="h-32 bg-black/10 border-2 border-black" />
             ))}
           </div>
         </div>
@@ -168,8 +172,8 @@ export default function AdminSettingsPage() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-3xl font-black uppercase text-black">Settings</h1>
+        <p className="text-sm text-black/70 mt-1">
           Manage cost alerts and thresholds
         </p>
       </div>
@@ -177,17 +181,17 @@ export default function AdminSettingsPage() {
       {/* Current Costs Summary */}
       {currentCosts && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-4">
-            <p className="text-xs text-slate-400 mb-1">Today&apos;s Cost</p>
-            <p className="text-xl font-bold text-white">${Number(currentCosts.daily_cost || 0).toFixed(2)}</p>
+          <div className="bg-white border-4 border-black p-4 shadow-[3px_3px_0px_0px_#111827]">
+            <p className="text-xs font-bold uppercase text-black/70 mb-1">Today&apos;s Cost</p>
+            <p className="text-xl font-black text-black">${Number(currentCosts.daily_cost || 0).toFixed(2)}</p>
           </div>
-          <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-4">
-            <p className="text-xs text-slate-400 mb-1">This Week&apos;s Cost</p>
-            <p className="text-xl font-bold text-white">${Number(currentCosts.weekly_cost || 0).toFixed(2)}</p>
+          <div className="bg-white border-4 border-black p-4 shadow-[3px_3px_0px_0px_#111827]">
+            <p className="text-xs font-bold uppercase text-black/70 mb-1">This Week&apos;s Cost</p>
+            <p className="text-xl font-black text-black">${Number(currentCosts.weekly_cost || 0).toFixed(2)}</p>
           </div>
-          <div className="bg-[#23272B] rounded-xl border border-[#2E3338] p-4">
-            <p className="text-xs text-slate-400 mb-1">This Month&apos;s Cost</p>
-            <p className="text-xl font-bold text-white">${Number(currentCosts.monthly_cost || 0).toFixed(2)}</p>
+          <div className="bg-white border-4 border-black p-4 shadow-[3px_3px_0px_0px_#111827]">
+            <p className="text-xs font-bold uppercase text-black/70 mb-1">This Month&apos;s Cost</p>
+            <p className="text-xl font-black text-black">${Number(currentCosts.monthly_cost || 0).toFixed(2)}</p>
           </div>
         </div>
       )}
@@ -195,8 +199,8 @@ export default function AdminSettingsPage() {
       {/* Alert Settings */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-4">
-          <Bell className="w-5 h-5 text-[#D4E815]" />
-          <h2 className="text-lg font-semibold text-white">Cost Alerts</h2>
+          <Bell className="w-5 h-5 text-black" />
+          <h2 className="text-lg font-black uppercase text-black">Cost Alerts</h2>
         </div>
 
         {ALERT_TYPES.map(({ key, label, description }) => {
@@ -210,29 +214,29 @@ export default function AdminSettingsPage() {
             <div
               key={key}
               className={cn(
-                'bg-[#23272B] rounded-xl border p-6',
-                isTriggered && threshold > 0 ? 'border-red-500/50' : 'border-[#2E3338]'
+                'bg-white border-4 border-black p-6 shadow-[3px_3px_0px_0px_#111827]',
+                isTriggered && threshold > 0 ? 'bg-red-100' : 'bg-white'
               )}
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-white">{label}</h3>
+                    <h3 className="text-sm font-black uppercase text-black">{label}</h3>
                     {alertStatus && (
                       <span className={cn(
-                        'px-2 py-0.5 rounded text-xs font-medium',
-                        alertStatus.is_active ? 'bg-green-500/10 text-green-400' : 'bg-slate-500/10 text-slate-400'
+                        'px-2 py-0.5 border-2 border-black text-xs font-bold uppercase',
+                        alertStatus.is_active ? 'bg-[#D4E815] text-black' : 'bg-white text-black'
                       )}>
                         {alertStatus.is_active ? 'Active' : 'Disabled'}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">{description}</p>
+                  <p className="text-xs text-black/60 mt-1">{description}</p>
                 </div>
                 {isTriggered && threshold > 0 && (
-                  <div className="flex items-center gap-1 text-red-400">
+                  <div className="flex items-center gap-1 text-black">
                     <AlertTriangle className="w-4 h-4" />
-                    <span className="text-xs font-medium">Threshold Exceeded</span>
+                    <span className="text-xs font-bold uppercase">Threshold Exceeded</span>
                   </div>
                 )}
               </div>
@@ -241,23 +245,23 @@ export default function AdminSettingsPage() {
               {threshold > 0 && (
                 <div className="mb-4">
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-slate-400">
+                    <span className="text-black/70 font-bold uppercase">
                       ${Number(currentCost).toFixed(2)} / ${threshold.toFixed(2)}
                     </span>
                     <span className={cn(
-                      'font-medium',
-                      percentUsed >= 100 ? 'text-red-400' : 
-                      percentUsed >= 80 ? 'text-yellow-400' : 'text-green-400'
+                      'font-bold',
+                      percentUsed >= 100 ? 'text-black' : 
+                      percentUsed >= 80 ? 'text-black' : 'text-black'
                     )}>
                       {percentUsed.toFixed(0)}%
                     </span>
                   </div>
-                  <div className="h-2 bg-[#1A1D21] rounded-full overflow-hidden">
+                  <div className="h-2 bg-black/10 border-2 border-black overflow-hidden">
                     <div
                       className={cn(
-                        'h-full rounded-full transition-all',
-                        percentUsed >= 100 ? 'bg-red-500' : 
-                        percentUsed >= 80 ? 'bg-yellow-500' : 'bg-[#D4E815]'
+                        'h-full transition-all',
+                        percentUsed >= 100 ? 'bg-black' : 
+                        percentUsed >= 80 ? 'bg-black' : 'bg-[#D4E815]'
                       )}
                       style={{ width: `${Math.min(percentUsed, 100)}%` }}
                     />
@@ -269,7 +273,7 @@ export default function AdminSettingsPage() {
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
                     <input
                       type="number"
                       step="0.01"
@@ -277,34 +281,34 @@ export default function AdminSettingsPage() {
                       value={thresholds[key]}
                       onChange={(e) => setThresholds(prev => ({ ...prev, [key]: e.target.value }))}
                       placeholder="Set threshold..."
-                      className="w-full pl-10 pr-4 py-2 bg-[#1A1D21] border border-[#2E3338] rounded-lg text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#D4E815]/50"
+                      className="w-full pl-10 pr-4 py-2 bg-white border-2 border-black text-sm text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-black"
                     />
                   </div>
                 </div>
                 
-                {/* Active toggle */}
+                {/* Active control (checkbox for clearer state) - January 15th, 2026 */}
+                {/* Keep fixed width so Active/Inactive doesn't shift layout - Jan 15, 2026 */}
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-slate-400">Active</span>
-                  <div
-                    onClick={() => setActiveStates(prev => ({ ...prev, [key]: !prev[key] }))}
+                  <input
+                    type="checkbox"
+                    checked={activeStates[key]}
+                    onChange={() => setActiveStates(prev => ({ ...prev, [key]: !prev[key] }))}
+                    className="h-4 w-4 appearance-none border-2 border-black bg-white checked:bg-[#D4E815] checked:shadow-[2px_2px_0px_0px_#111827] transition-colors"
+                  />
+                  <span
                     className={cn(
-                      'w-10 h-5 rounded-full transition-colors relative cursor-pointer',
-                      activeStates[key] ? 'bg-[#D4E815]' : 'bg-[#2E3338]'
+                      'text-xs font-bold uppercase inline-flex w-16 justify-start',
+                      activeStates[key] ? 'text-black' : 'text-black/50'
                     )}
                   >
-                    <div
-                      className={cn(
-                        'w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform',
-                        activeStates[key] ? 'translate-x-5' : 'translate-x-0.5'
-                      )}
-                    />
-                  </div>
+                    {activeStates[key] ? 'Active' : 'Inactive'}
+                  </span>
                 </label>
 
                 <button
                   onClick={() => handleSave(key)}
                   disabled={savingType === key}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#D4E815] text-[#1A1D21] text-sm font-medium rounded-lg hover:bg-[#c5d913] transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#D4E815] border-2 border-black text-black text-sm font-bold uppercase hover:bg-black hover:text-white transition-colors disabled:opacity-50"
                 >
                   {savingType === key ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -317,7 +321,7 @@ export default function AdminSettingsPage() {
                 {alertStatus && (
                   <button
                     onClick={() => handleDelete(key)}
-                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                    className="p-2 border-2 border-black text-black hover:bg-black hover:text-white transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -325,7 +329,7 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* Email notification note */}
-              <p className="text-xs text-slate-500 mt-3">
+              <p className="text-xs text-black/60 mt-3">
                 {/* TODO: Email notifications coming soon */}
                 Alerts are displayed on the dashboard when thresholds are exceeded.
               </p>

@@ -13,6 +13,10 @@ import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { Download, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Export button restyled for the high-contrast admin theme.
+// Polish pass (consistent weight + spacing) - January 15th, 2026
+
 interface ExportButtonProps {
   endpoint: string;
   filename: string;
@@ -67,7 +71,7 @@ export function ExportButton({ endpoint, filename, params = {} }: ExportButtonPr
     <button
       onClick={handleExport}
       disabled={isExporting}
-      className="flex items-center gap-2 px-4 py-2 bg-[#23272B] rounded-lg text-sm text-slate-400 hover:text-white hover:bg-[#2E3338] transition-colors disabled:opacity-50"
+      className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-black text-sm font-bold uppercase text-black hover:bg-black hover:text-white transition-colors disabled:opacity-50"
     >
       {isExporting ? (
         <Loader2 className="w-4 h-4 animate-spin" />

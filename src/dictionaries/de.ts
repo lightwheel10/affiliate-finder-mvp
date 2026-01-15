@@ -311,10 +311,11 @@ export const de: Dictionary = {
       emptyState: 'Geben Sie oben Wettbewerber-Domains ein (z.B. wettbewerber.de)',
     },
     // Step 4: Topics
+    // Max topics reduced from 10 to 5 - January 15th, 2026
     step4: {
       title: 'Welche Themen behandeln Sie?',
       inputPlaceholder: 'z.B. beste CRMs, Hautpflege...',
-      count: '{count}/10 hinzugefügt',
+      count: '{count}/5 hinzugefügt',
       suggestionsTitle: 'Vorschläge für Sie:',
       yourTopics: 'Ihre Themen:',
       emptyState: 'Geben Sie oben Themen ein (z.B. "beste CRMs", "Hautpflege-Routinen")',
@@ -833,6 +834,36 @@ export const de: Dictionary = {
     title: 'Ihr Arbeitsbereich wird eingerichtet!',
     subtitle: 'Einen Moment, während wir Ihr Dashboard vorbereiten...',
     description: 'Ihre Affiliate-Discovery-Tools werden konfiguriert.',
+  },
+
+  // =========================================================================
+  // FINDING AFFILIATES SCREEN - January 15th, 2026
+  // 
+  // Shown during onboarding AFTER payment succeeds while we pre-fetch
+  // affiliate results so user sees results immediately on dashboard.
+  // =========================================================================
+  // =========================================================================
+  // FINDING AFFILIATES SCREEN - January 15th, 2026
+  // 
+  // Simplified version - just shows "Thank you! Preparing dashboard..."
+  // Shown after payment succeeds while we pre-fetch affiliate results.
+  // =========================================================================
+  findingAffiliates: {
+    thankYou: 'Vielen Dank!',
+    preparingDashboard: 'Ihr Dashboard wird vorbereitet...',
+    pleaseWait: 'Bitte warten Sie einen Moment',
+    // Legacy fields kept for backwards compatibility
+    title: 'Affiliates werden gesucht',
+    subtitle: 'Partner für {brand} werden entdeckt',
+    timeEstimate: 'Dies dauert normalerweise 20-30 Sekunden',
+    steps: {
+      step1Label: 'Affiliates suchen',
+      step1Desc: 'Durchsuche {count} ausgewählte Themen',
+      step2Label: 'Ergebnisse analysieren',
+      step2Desc: 'Potenzielle Partner identifizieren',
+      step3Label: 'Dashboard vorbereiten',
+      step3Desc: 'Ergebnisse für Sie organisieren',
+    },
   },
 
   // =========================================================================

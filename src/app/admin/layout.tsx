@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import { jwtVerify } from 'jose';
 import { AdminSidebar } from './components/AdminSidebar';
 
+// Admin UI refresh (neo-brutalist, light-only) - January 15th, 2026
+// Aligns admin section visuals with the updated product design language.
+
 // Get secret as Uint8Array for jose
 function getJwtSecret(): Uint8Array {
   const secret = process.env.ADMIN_JWT_SECRET;
@@ -52,12 +55,11 @@ export default async function AdminLayout({
   const isAuthenticated = await verifyAdminSession();
 
   return (
-    <div className="dark">
-      <div className="min-h-screen bg-[#1A1D21] text-white">
+    <div className="min-h-screen bg-[#FDFDFD] text-[#111827]">
         {isAuthenticated ? (
           <div className="flex">
             <AdminSidebar />
-            <main className="flex-1 ml-56 min-h-screen">
+            <main className="flex-1 ml-56 min-h-screen bg-[#FDFDFD]">
               {children}
             </main>
           </div>
@@ -65,7 +67,6 @@ export default async function AdminLayout({
           // For login page or unauthenticated state
           <>{children}</>
         )}
-      </div>
     </div>
   );
 }

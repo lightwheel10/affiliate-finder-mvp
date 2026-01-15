@@ -306,13 +306,20 @@ export async function searchInstagramApify(
     // ==========================================================================
     return results.map((item, index): SearchResult => {
       // Build snippet from bio and stats
+      // FIX: January 15th, 2026 - Ensure snippet is never empty to avoid NOT NULL violation
+      // The database column 'snippet' has a NOT NULL constraint, and empty strings
+      // were being converted to null in the INSERT statement (using || null).
       const stats = [];
       if (item.followersCount) stats.push(`${formatNumber(item.followersCount)} followers`);
       if (item.postsCount) stats.push(`${formatNumber(item.postsCount)} posts`);
-      const snippet = [
+      const snippetParts = [
         item.biography?.substring(0, 200),
         stats.length > 0 ? `📊 ${stats.join(' • ')}` : null,
-      ].filter(Boolean).join('\n');
+      ].filter(Boolean);
+      // Provide fallback if no bio or stats available
+      const snippet = snippetParts.length > 0 
+        ? snippetParts.join('\n') 
+        : `Instagram profile: @${item.username || 'unknown'}`;
 
       // Extract first (most recent) post stats from latestPosts array
       const firstPost = item.latestPosts?.[0];
@@ -487,15 +494,20 @@ export async function searchTikTokApify(
       const bioEmail = extractEmailFromText(author?.signature);
       
       // Build snippet from video text and author stats
+      // FIX: January 15th, 2026 - Ensure snippet is never empty to avoid NOT NULL violation
       const stats = [];
       if (item.playCount) stats.push(`${formatNumber(item.playCount)} views`);
       if (item.diggCount) stats.push(`${formatNumber(item.diggCount)} likes`);
       if (author?.fans) stats.push(`${formatNumber(author.fans)} followers`);
       
-      const snippet = [
+      const snippetParts = [
         item.text?.substring(0, 200),
         stats.length > 0 ? `📊 ${stats.join(' • ')}` : null,
-      ].filter(Boolean).join('\n');
+      ].filter(Boolean);
+      // Provide fallback if no text or stats available
+      const snippet = snippetParts.length > 0 
+        ? snippetParts.join('\n') 
+        : `TikTok video by @${author?.name || 'unknown'}`;
 
       // Create a channel-like object for TikTok creator (kept for backward compatibility)
       const channel: YouTubeChannelInfo | undefined = author ? {
