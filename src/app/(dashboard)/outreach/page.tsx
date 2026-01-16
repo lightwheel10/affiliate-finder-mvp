@@ -51,7 +51,8 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications via Sonner
+// Removed: import { toast } from 'sonner'; 
+// January 17, 2026: Now using custom neo-brutalist toast component (see showToast function)
 import { ScanCountdown } from '../../components/ScanCountdown';
 import { CreditsDisplay } from '../../components/CreditsDisplay';
 import { useSavedAffiliates } from '../../hooks/useAffiliates';
@@ -81,6 +82,8 @@ import {
   ChevronRight,
   Clock,  // Added January 6th, 2026 for neo-brutalist header
   CheckCircle2,  // Added January 16, 2026 for verified badge
+  Pencil,  // Added January 16, 2026 for edit message functionality
+  Save,  // Added January 16, 2026 for save edited message
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -135,10 +138,10 @@ interface ContactPickerState {
 // =============================================================================
 // OUTREACH PAGE - January 3rd, 2026
 // 
-// NOTIFICATION SYSTEM UPDATE (January 5th, 2026):
-// Removed custom ErrorNotification interface and local notification state.
-// Now uses global Sonner toast system - just call toast.error(), toast.success(), etc.
-// See src/app/layout.tsx for Toaster configuration.
+// NOTIFICATION SYSTEM UPDATE (January 17, 2026):
+// Now uses custom neo-brutalist toast component to match the rest of the app.
+// Call showToast('success'|'error'|'warning'|'info', title, message?) to show toasts.
+// See the customToast state and JSX at the bottom of this component.
 // 
 // Layout now handles: AuthGuard, ErrorBoundary, and Sidebar.
 // This component only renders the header and main content area.
@@ -199,13 +202,53 @@ export default function OutreachPage() {
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
   
   // =========================================================================
-  // NOTE (January 5th, 2026): Removed local notification state.
-  // Now using global Sonner toast system. Just import { toast } from 'sonner'
-  // and call toast.error(), toast.warning(), toast.info(), toast.success()
+  // NOTE (January 17, 2026): Using custom neo-brutalist toast component.
+  // Call showToast('success'|'error'|'warning'|'info', title, message?)
+  // See customToast state above and JSX at bottom of component.
   // =========================================================================
   
   const [copiedId, setCopiedId] = useState<string | null>(null); // Now stores "affiliateId:email" or "affiliateId"
   const [viewingMessageId, setViewingMessageId] = useState<string | null>(null); // Now stores "affiliateId:email" or "affiliateId"
+  
+  // =========================================================================
+  // MULTI-MESSAGE PAGINATION STATE (January 16, 2026)
+  // Tracks which message is currently visible in the multi-message carousel
+  // =========================================================================
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  
+  // =========================================================================
+  // MESSAGE EDITING STATE (January 16, 2026)
+  // 
+  // Allows users to edit AI-generated messages and save their changes.
+  // - editingMessageKey: The message key currently being edited (null = not editing)
+  // - editedMessageText: The current text in the edit textarea
+  // - isSavingEdit: Loading state while saving to database
+  // =========================================================================
+  const [editingMessageKey, setEditingMessageKey] = useState<string | null>(null);
+  const [editedMessageText, setEditedMessageText] = useState('');
+  
+  // =========================================================================
+  // CUSTOM TOAST STATE (January 17, 2026)
+  // 
+  // Neo-brutalist toast notifications to match the rest of the app.
+  // This replaces Sonner toast calls with custom styled toasts.
+  // Types: 'success' | 'error' | 'warning' | 'info'
+  // =========================================================================
+  const [customToast, setCustomToast] = useState<{
+    show: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message?: string;
+  } | null>(null);
+  
+  // Helper function to show custom toast
+  const showToast = (type: 'success' | 'error' | 'warning' | 'info', title: string, message?: string) => {
+    setCustomToast({ show: true, type, title, message });
+    setTimeout(() => {
+      setCustomToast(prev => prev ? { ...prev, show: false } : null);
+    }, 4000);
+  };
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const { savedAffiliates, isLoading: loading } = useSavedAffiliates();
   
@@ -265,18 +308,17 @@ export default function OutreachPage() {
   }, [savedAffiliates]);
   
   // =========================================================================
-  // NOTIFICATION HELPERS (January 5th, 2026)
+  // NOTIFICATION HELPERS (Updated January 17, 2026)
   // 
-  // REMOVED: addNotification() and removeNotification() functions.
-  // NOW USING: Global Sonner toast system.
+  // NOW USING: Custom neo-brutalist toast component (showToast function above).
   // 
   // To show notifications anywhere in this component:
-  //   toast.error('Error message');     // Red error toast
-  //   toast.warning('Warning message'); // Yellow warning toast
-  //   toast.info('Info message');       // Blue info toast
-  //   toast.success('Success message'); // Green success toast
+  //   showToast('success', 'Title');           // Green success toast
+  //   showToast('error', 'Title', 'Details');  // Red error toast
+  //   showToast('warning', 'Title');           // Yellow warning toast
+  //   showToast('info', 'Title');              // Blue info toast
   // 
-  // Sonner handles auto-dismiss (4s), positioning, and close button automatically.
+  // Custom toast auto-dismisses after 4s, positioned at bottom-right.
   // =========================================================================
 
   // ==========================================================================
@@ -613,7 +655,7 @@ export default function OutreachPage() {
         
         // Show success notification
         // i18n: January 10th, 2026
-        toast.success(t.toasts.success.emailGenerated);
+        showToast('success', t.toasts.success.emailGenerated);
 
         // =====================================================================
         // CREDITS REFRESH - January 4th, 2026
@@ -637,11 +679,11 @@ export default function OutreachPage() {
         // January 5th, 2026: Using global Sonner toast instead of local notification
         // i18n: January 10th, 2026
         if (response.status === 402) {
-          toast.warning(t.toasts.warning.insufficientAICredits);
+          showToast('warning', t.toasts.warning.insufficientAICredits);
         } else if (data.error?.includes('webhook not configured')) {
-          toast.error(t.toasts.error.aiServiceNotConfigured);
+          showToast('error', t.toasts.error.aiServiceNotConfigured);
         } else {
-          toast.error(data.error || t.toasts.error.aiGenerationFailed);
+          showToast('error', data.error || t.toasts.error.aiGenerationFailed);
         }
       }
     } catch (error) {
@@ -652,7 +694,7 @@ export default function OutreachPage() {
       // =====================================================================
       console.error('Error generating message:', error);
       setFailedIds(prev => new Set(prev).add(messageKey));
-      toast.error(t.toasts.error.aiConnectionFailed);
+      showToast('error', t.toasts.error.aiConnectionFailed);
     } finally {
       // Remove from generating set (hides spinner)
       setGeneratingIds(prev => {
@@ -802,14 +844,14 @@ export default function OutreachPage() {
     // i18n: January 10th, 2026
     if (failCount === 0 && successCount > 0) {
       // All succeeded
-      toast.success(`${t.toasts.success.bulkEmailsGenerated} ${successCount} ${successCount !== 1 ? t.dashboard.outreach.emails : t.dashboard.outreach.email}!`);
+      showToast('success', `${successCount} ${successCount !== 1 ? t.dashboard.outreach.emails : t.dashboard.outreach.email} generated!`, t.toasts.success.bulkEmailsGenerated);
     } else if (failCount > 0) {
       // Some or all failed
       const message = `${t.toasts.error.bulkGenerationFailed} ${successCount} ${t.toasts.warning.partialBulkFailure} ${total}. ${failCount} ${t.dashboard.outreach.failedRetry}`;
       if (failCount === total) {
-        toast.error(message);
+        showToast('error', message);
       } else {
-        toast.warning(message);
+        showToast('warning', message);
       }
     }
   };
@@ -828,7 +870,82 @@ export default function OutreachPage() {
       
       // January 5th, 2026: Show success toast
       // i18n: January 10th, 2026
-      toast.success(t.toasts.success.messageCopied);
+      showToast('success', t.toasts.success.messageCopied);
+    }
+  };
+
+  // =========================================================================
+  // START EDITING MESSAGE (January 16, 2026)
+  // 
+  // Enters edit mode for a specific message. Copies the current message
+  // text into the edit textarea.
+  // =========================================================================
+  const handleStartEdit = (messageKey: string) => {
+    const message = generatedMessages.get(messageKey);
+    if (message) {
+      setEditingMessageKey(messageKey);
+      setEditedMessageText(message);
+    }
+  };
+
+  // =========================================================================
+  // CANCEL EDITING (January 16, 2026)
+  // =========================================================================
+  const handleCancelEdit = () => {
+    setEditingMessageKey(null);
+    setEditedMessageText('');
+  };
+
+  // =========================================================================
+  // SAVE EDITED MESSAGE (January 16, 2026)
+  // 
+  // Saves the edited message to the database and updates local state.
+  // Uses PATCH /api/ai/outreach to persist the changes.
+  // =========================================================================
+  // January 17, 2026: Updated to use i18n translations for toast messages
+  const handleSaveEdit = async (affiliateId: number, contactEmail: string | null) => {
+    if (!editedMessageText.trim()) {
+      showToast('error', t.toasts.error.messageEmpty);
+      return;
+    }
+
+    setIsSavingEdit(true);
+
+    try {
+      const response = await fetch('/api/ai/outreach', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          affiliateId,
+          contactEmail: contactEmail || 'primary',
+          message: editedMessageText,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Update local state with the edited message
+        const messageKey = editingMessageKey!;
+        setGeneratedMessages(prev => {
+          const next = new Map(prev);
+          next.set(messageKey, editedMessageText);
+          return next;
+        });
+
+        // Exit edit mode
+        setEditingMessageKey(null);
+        setEditedMessageText('');
+        
+        showToast('success', t.toasts.success.messageSaved);
+      } else {
+        showToast('error', data.error || t.toasts.error.messageSaveFailed);
+      }
+    } catch (error) {
+      console.error('Error saving edited message:', error);
+      showToast('error', t.toasts.error.messageSaveFailed);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -936,24 +1053,26 @@ export default function OutreachPage() {
           <div className="flex items-center gap-3">
             {selectedAffiliates.size > 0 && (
               <>
+                {/* January 17, 2026: Using i18n translations for selection actions */}
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
                   <Check size={12} />
-                  {selectedAffiliates.size} SELECTED
+                  {selectedAffiliates.size} {t.dashboard.outreach.selected.toUpperCase()}
                 </div>
                 <button
                   onClick={handleSelectAll}
                   className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
                 >
-                  Deselect All
+                  {t.dashboard.outreach.deselectAll}
                 </button>
               </>
             )}
+            {/* January 17, 2026: Using i18n translation */}
             {selectedAffiliates.size === 0 && filteredResults.length > 0 && (
               <button
                 onClick={handleSelectAll}
                 className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
               >
-                Select All
+                {t.dashboard.outreach.selectAll}
               </button>
             )}
             {/* ================================================================
@@ -969,6 +1088,7 @@ export default function OutreachPage() {
                   : "bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-200 dark:border-gray-700 cursor-not-allowed"
               )}
             >
+              {/* January 17, 2026: Using i18n translations */}
               {bulkProgress ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
@@ -977,12 +1097,12 @@ export default function OutreachPage() {
               ) : generatingIds.size > 0 ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Generating...
+                  {t.dashboard.outreach.generating}
                 </>
               ) : (
                 <>
                   <Wand2 size={14} />
-                  Generate ({selectedAffiliates.size})
+                  {t.dashboard.outreach.generate} ({selectedAffiliates.size})
                 </>
               )}
             </button>
@@ -1004,7 +1124,8 @@ export default function OutreachPage() {
               />
             </div>
             <div className="col-span-2">{t.dashboard.table.affiliate}</div>
-            <div className="col-span-2">Creator</div>
+            {/* January 17, 2026: Using i18n translation */}
+            <div className="col-span-2">{t.dashboard.table.creator}</div>
             <div className="col-span-3">{t.dashboard.table.discoveryMethod}</div>
             <div className="col-span-2">{t.dashboard.table.email}</div>
             <div className="col-span-2 text-right">{t.dashboard.table.message}</div>
@@ -1020,7 +1141,8 @@ export default function OutreachPage() {
                 <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
                 <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <p className="text-gray-500 text-sm mt-4 font-medium">Loading your affiliates...</p>
+              {/* January 17, 2026: Using i18n translation */}
+              <p className="text-gray-500 text-sm mt-4 font-medium">{t.dashboard.outreach.loading}</p>
             </div>
           )}
           
@@ -1039,17 +1161,17 @@ export default function OutreachPage() {
             </div>
           )}
           
-          {/* No Results State - Neo-brutalist (Updated January 16, 2026) */}
+          {/* No Results State - Neo-brutalist (Updated January 17, 2026: i18n) */}
           {!loading && affiliatesWithEmail.length > 0 && filteredResults.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
                 <Search size={24} className="text-gray-300" />
               </div>
               <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
-                No Results Found
+                {t.dashboard.outreach.noResults.title}
               </h3>
               <p className="text-gray-500 text-sm max-w-xs">
-                Try adjusting your search or filter to find affiliates.
+                {t.dashboard.outreach.noResults.subtitle}
               </p>
             </div>
           )}
@@ -1102,10 +1224,18 @@ export default function OutreachPage() {
                   </div>
 
                   {/* Affiliate Info - col-span-2 (reduced January 16, 2026 to give Discovery Method more space) */}
+                  {/* January 17, 2026: Show favicon for Web results using Google's favicon service */}
                   <div className="col-span-2 flex items-center gap-2 min-w-0">
                     <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center shrink-0 overflow-hidden">
                       {item.thumbnail ? (
                         <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
+                      ) : item.source === 'Web' && item.domain ? (
+                        /* Web results: Show favicon from Google's service */
+                        <img 
+                          src={`https://www.google.com/s2/favicons?domain=${item.domain}&sz=32`} 
+                          alt={item.domain}
+                          className="w-6 h-6"
+                        />
                       ) : (
                         getSourceIcon(item.source)
                       )}
@@ -1211,9 +1341,10 @@ export default function OutreachPage() {
                         )}
                       </div>
                     ) : (
+                      /* January 17, 2026: Using i18n translation */
                       <span className="inline-flex items-center gap-1 text-gray-400">
                         <Mail size={10} />
-                        None
+                        {t.dashboard.saved.emailStatus.none}
                       </span>
                     )}
                   </div>
@@ -1229,6 +1360,7 @@ export default function OutreachPage() {
                       5. default → Yellow "Generate" button
                       ============================================================ */}
                   <div className="col-span-2 flex justify-end">
+                    {/* January 17, 2026: All button labels now use i18n translations */}
                     {isGenerating ? (
                       // GENERATING STATE: Show spinner
                       <button
@@ -1236,16 +1368,19 @@ export default function OutreachPage() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-300 dark:border-gray-600 cursor-not-allowed"
                       >
                         <Loader2 size={12} className="animate-spin" />
-                        Generating...
+                        {t.dashboard.outreach.generating}
                       </button>
                     ) : hasMessage ? (
                       // SUCCESS STATE: Show "View Message" button
                       <button
-                        onClick={() => setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey)}
+                        onClick={() => {
+                          setCurrentMessageIndex(0); // Reset to first message
+                          setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey);
+                        }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
                         <MessageSquare size={12} />
-                        {messageCount > 1 ? `${messageCount} Msgs` : 'View'}
+                        {messageCount > 1 ? `${messageCount} ${t.dashboard.outreach.messages}` : t.dashboard.outreach.viewMessage}
                       </button>
                     ) : hasFailed ? (
                       // FAILED STATE: Show red "Failed - Retry" button
@@ -1254,7 +1389,7 @@ export default function OutreachPage() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
                         <AlertTriangle size={12} />
-                        Retry
+                        {t.dashboard.outreach.retry}
                       </button>
                     ) : hasMultipleContacts ? (
                       // MULTI-CONTACT STATE: Show "Select Contacts" button
@@ -1263,7 +1398,7 @@ export default function OutreachPage() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
                         <Users size={12} />
-                        {multipleContacts!.length} Contacts
+                        {multipleContacts!.length} {t.dashboard.outreach.contacts}
                       </button>
                     ) : (
                       // DEFAULT STATE: Show yellow "Generate" button
@@ -1272,7 +1407,7 @@ export default function OutreachPage() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                       >
                         <Wand2 size={12} />
-                        Generate
+                        {t.dashboard.outreach.generate}
                       </button>
                     )}
                   </div>
@@ -1320,27 +1455,19 @@ export default function OutreachPage() {
               onClick={() => setViewingMessageId(null)}
             >
               <div 
-                className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-2xl w-full max-h-[80vh] overflow-hidden"
+                className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Modal Header - NEO-BRUTALIST */}
-                <div className="px-6 py-4 border-b-4 border-black dark:border-white flex items-center justify-between bg-[#ffbf23]">
+                {/* Modal Header - NEO-BRUTALIST (January 17, 2026: i18n translations) */}
+                <div className="px-6 py-4 border-b-4 border-black dark:border-white flex items-center justify-between bg-[#ffbf23] shrink-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center">
-                      {getSourceIcon(affiliate?.source || 'Web')}
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-black uppercase">{affiliate?.title}</h3>
-                      <p className="text-xs text-black/70 flex items-center gap-1 font-medium">
-                        <Globe size={10} />
-                        {affiliate?.domain}
-                        {isMultiMessageView && (
-                          <span className="ml-2 px-2 py-0.5 bg-black text-white text-[10px] font-black uppercase">
-                            {allMessages.length} Messages
-                          </span>
-                        )}
-                      </p>
-                    </div>
+                    <Sparkles size={20} className="text-black" />
+                    <h3 className="text-base font-black text-black uppercase">{t.dashboard.outreach.messageViewer.title}</h3>
+                    {isMultiMessageView && (
+                      <span className="px-2 py-0.5 bg-black text-white text-[10px] font-black uppercase">
+                        {allMessages.length} {t.dashboard.outreach.messagesLabel}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => setViewingMessageId(null)}
@@ -1350,247 +1477,364 @@ export default function OutreachPage() {
                   </button>
                 </div>
 
-                {/* Modal Body - NEO-BRUTALIST */}
-                <div className="p-6 overflow-y-auto max-h-[calc(80vh-130px)] bg-white dark:bg-[#0a0a0a]">
+                {/* Modal Body - NEO-BRUTALIST (Fixed January 16, 2026: Use flex-1 to ensure footer is visible) */}
+                <div className="p-6 overflow-y-auto flex-1 bg-white dark:bg-[#0a0a0a]">
                   {/* =====================================================================
-                      MULTI-MESSAGE LIST VIEW - NEO-BRUTALIST (Updated January 6th, 2026)
+                      MULTI-MESSAGE CAROUSEL VIEW - NEO-BRUTALIST (January 16, 2026)
+                      
+                      Shows one message at a time with numbered pagination buttons.
+                      User clicks 1, 2, 3... to navigate between messages.
                       ===================================================================== */}
-                  {isMultiMessageView ? (
-                    <div className="space-y-4">
-                      {allMessages.map((msg, index) => {
-                        const msgKey = getMessageKey(affiliateId, msg.email);
-                        const msgCopied = copiedId === msgKey;
-                        const msgRegenerating = generatingIds.has(msgKey);
-                        
-                        return (
-                          <div key={msgKey} className="border-2 border-black dark:border-gray-600 overflow-hidden">
-                            {/* Message Header with Email */}
-                            <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b-2 border-black dark:border-gray-600 flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Mail size={12} className="text-emerald-600" />
-                                <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{msg.email || 'Primary Contact'}</span>
-                              </div>
-                              <span className="text-xs font-black uppercase text-gray-400">#{index + 1}</span>
-                            </div>
-                            
-                            {/* Message Content */}
-                            <div className="p-4 bg-white dark:bg-[#0f0f0f]">
-                              <div className="bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 max-h-[200px] overflow-y-auto font-mono">
-                                {msg.message}
-                              </div>
-                              
-                              {/* Per-Message Actions - NEO-BRUTALIST */}
-                              <div className="flex items-center justify-end gap-2 mt-3">
-                                <button
-                                  onClick={() => {
-                                    if (affiliate) {
-                                      const email = msg.email;
-                                      if (email) {
-                                        const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
-                                          c.emails?.includes(email)
-                                        );
-                                        
-                                        if (contactFromArray) {
-                                          handleGenerateForContact(affiliate, {
-                                            email: email,
-                                            firstName: contactFromArray.firstName,
-                                            lastName: contactFromArray.lastName,
-                                            title: contactFromArray.title,
-                                          });
-                                        } else {
-                                          handleGenerateForContact(affiliate, {
-                                            email: email,
-                                            firstName: affiliate.emailResults?.firstName,
-                                            lastName: affiliate.emailResults?.lastName,
-                                            title: affiliate.emailResults?.title,
-                                          });
-                                        }
-                                      } else {
-                                        handleGenerateForContact(affiliate);
-                                      }
-                                    }
-                                  }}
-                                  disabled={msgRegenerating}
-                                  className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase transition-all border-2",
-                                    msgRegenerating
-                                      ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-                                      : "bg-white text-black border-black hover:bg-gray-100"
-                                  )}
-                                >
-                                  <RefreshCw size={12} className={msgRegenerating ? "animate-spin" : ""} />
-                                  {msgRegenerating ? '...' : 'Redo'}
-                                </button>
-                                <button
-                                  onClick={() => handleCopyMessage(msgKey)}
-                                  className={cn(
-                                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase transition-all border-2 border-black",
-                                    msgCopied
-                                      ? "bg-emerald-500 text-white"
-                                      : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
-                                  )}
-                                >
-                                  {msgCopied ? (
-                                    <>
-                                      <Check size={12} />
-                                      Done!
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Copy size={12} />
-                                      Copy
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
+                  {isMultiMessageView ? (() => {
+                    // Ensure currentMessageIndex is within bounds
+                    const safeIndex = Math.min(currentMessageIndex, allMessages.length - 1);
+                    const currentMsg = allMessages[safeIndex];
+                    if (!currentMsg) return null;
+                    
+                    const msgKey = getMessageKey(affiliateId, currentMsg.email);
+                    const msgCopied = copiedId === msgKey;
+                    const msgRegenerating = generatingIds.has(msgKey);
+                    
+                    return (
+                      <div>
+                        {/* =============================================================
+                            PAGINATION NUMBERS - Click to navigate between messages
+                            ============================================================= */}
+                        {allMessages.length > 1 && (
+                          <div className="flex items-center justify-center gap-2 mb-4">
+                            {allMessages.map((_, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setCurrentMessageIndex(idx)}
+                                className={cn(
+                                  "w-8 h-8 text-sm font-black border-2 transition-all",
+                                  idx === safeIndex
+                                    ? "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000]"
+                                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white"
+                                )}
+                              >
+                                {idx + 1}
+                              </button>
+                            ))}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    /* =====================================================================
-                       SINGLE MESSAGE VIEW - NEO-BRUTALIST (Updated January 6th, 2026)
-                       ===================================================================== */
-                    <>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Sparkles size={14} className="text-[#ffbf23]" />
-                        <span className="text-sm font-black uppercase text-gray-800 dark:text-gray-200">AI Generated Message</span>
-                        {contactEmail && (
-                          <span className="text-xs text-black bg-[#ffbf23] px-2 py-0.5 font-bold border border-black">
-                            to {contactEmail}
-                          </span>
                         )}
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-900 p-5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 font-mono">
-                        {message}
-                      </div>
-
-                      {/* Affiliate Details - NEO-BRUTALIST */}
-                      {affiliate && (
-                        <div className="mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-                          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Affiliate Details</h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            {affiliate.personName && (
-                              <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
-                                <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Contact Name</p>
-                                <p className="text-sm font-black text-gray-900 dark:text-white">{affiliate.personName}</p>
-                              </div>
-                            )}
-                            {(contactEmail || affiliate.email) && (
-                              <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
-                                <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Email</p>
-                                <p className="text-sm font-black text-gray-900 dark:text-white truncate">{contactEmail || affiliate.email}</p>
-                              </div>
-                            )}
-                            <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
-                              <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Platform</p>
-                              <div className="flex items-center gap-1.5">
-                                {getSourceIcon(affiliate.source)}
-                                <p className="text-sm font-black text-gray-900 dark:text-white">{affiliate.source}</p>
-                              </div>
+                        
+                        {/* Current Message Card */}
+                        <div className="border-2 border-black dark:border-gray-600 overflow-hidden">
+                          {/* Message Header with Email */}
+                          <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b-2 border-black dark:border-gray-600 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Mail size={14} className="text-emerald-600" />
+                              {/* January 17, 2026: Using i18n translation */}
+                              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                                {currentMsg.email || t.dashboard.outreach.messageViewer.primaryContact}
+                              </span>
                             </div>
-                            {affiliate.keyword && (
-                              <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
-                                <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Keyword</p>
-                                <p className="text-sm font-black text-gray-900 dark:text-white">{affiliate.keyword}</p>
-                              </div>
+                            <span className="px-2 py-1 bg-black text-white text-[10px] font-black uppercase">
+                              {safeIndex + 1} / {allMessages.length}
+                            </span>
+                          </div>
+                          
+                          {/* Message Content - January 16, 2026: Added edit mode support */}
+                          <div className="p-4 bg-white dark:bg-[#0f0f0f]">
+                            {editingMessageKey === msgKey ? (
+                              /* =========================================================
+                                 EDIT MODE - January 16, 2026
+                                 Shows textarea for editing the message with save/cancel
+                                 ========================================================= */
+                              <>
+                                {/* January 17, 2026: Using i18n translations for edit mode */}
+                                <textarea
+                                  value={editedMessageText}
+                                  onChange={(e) => setEditedMessageText(e.target.value)}
+                                  className="w-full bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed border-2 border-[#ffbf23] dark:border-[#ffbf23] min-h-[250px] max-h-[350px] overflow-y-auto font-mono focus:outline-none resize-none"
+                                  placeholder={t.dashboard.outreach.messageViewer.editPlaceholder}
+                                  autoFocus
+                                />
+                                
+                                {/* Edit Mode Actions */}
+                                <div className="flex items-center justify-end gap-2 mt-4">
+                                  <button
+                                    onClick={handleCancelEdit}
+                                    disabled={isSavingEdit}
+                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-gray-600 border-gray-300 hover:border-black hover:text-black"
+                                  >
+                                    <X size={12} />
+                                    {t.dashboard.outreach.messageViewer.cancel}
+                                  </button>
+                                  <button
+                                    onClick={() => handleSaveEdit(affiliateId, currentMsg.email)}
+                                    disabled={isSavingEdit || !editedMessageText.trim()}
+                                    className={cn(
+                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
+                                      isSavingEdit
+                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                        : "bg-emerald-500 text-white shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                    )}
+                                  >
+                                    {isSavingEdit ? (
+                                      <>
+                                        <Loader2 size={12} className="animate-spin" />
+                                        {t.dashboard.outreach.messageViewer.saving}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Save size={12} />
+                                        {t.dashboard.outreach.messageViewer.save}
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              /* =========================================================
+                                 VIEW MODE - Shows the message with action buttons
+                                 ========================================================= */
+                              <>
+                                <div className="bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 min-h-[200px] max-h-[300px] overflow-y-auto font-mono">
+                                  {currentMsg.message}
+                                </div>
+                                
+                                {/* Per-Message Actions - NEO-BRUTALIST (Updated January 16, 2026: Added Edit button) */}
+                                <div className="flex items-center justify-end gap-2 mt-4">
+                                  <button
+                                    onClick={() => {
+                                      if (affiliate) {
+                                        const email = currentMsg.email;
+                                        if (email) {
+                                          const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
+                                            c.emails?.includes(email)
+                                          );
+                                          
+                                          if (contactFromArray) {
+                                            handleGenerateForContact(affiliate, {
+                                              email: email,
+                                              firstName: contactFromArray.firstName,
+                                              lastName: contactFromArray.lastName,
+                                              title: contactFromArray.title,
+                                            });
+                                          } else {
+                                            handleGenerateForContact(affiliate, {
+                                              email: email,
+                                              firstName: affiliate.emailResults?.firstName,
+                                              lastName: affiliate.emailResults?.lastName,
+                                              title: affiliate.emailResults?.title,
+                                            });
+                                          }
+                                        } else {
+                                          handleGenerateForContact(affiliate);
+                                        }
+                                      }
+                                    }}
+                                    disabled={msgRegenerating}
+                                    className={cn(
+                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2",
+                                      msgRegenerating
+                                        ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
+                                        : "bg-white text-black border-black hover:bg-gray-100"
+                                    )}
+                                  >
+                                    {/* January 17, 2026: Using i18n translations */}
+                                    <RefreshCw size={12} className={msgRegenerating ? "animate-spin" : ""} />
+                                    {msgRegenerating ? t.dashboard.outreach.messageViewer.regenerating : t.dashboard.outreach.messageViewer.redo}
+                                  </button>
+                                  <button
+                                    onClick={() => handleStartEdit(msgKey)}
+                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-black border-black hover:bg-gray-100"
+                                  >
+                                    <Pencil size={12} />
+                                    {t.dashboard.outreach.messageViewer.edit}
+                                  </button>
+                                  <button
+                                    onClick={() => handleCopyMessage(msgKey)}
+                                    className={cn(
+                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
+                                      msgCopied
+                                        ? "bg-emerald-500 text-white"
+                                        : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                    )}
+                                  >
+                                    {msgCopied ? (
+                                      <>
+                                        <Check size={14} />
+                                        {t.dashboard.outreach.messageViewer.copied}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy size={14} />
+                                        {t.dashboard.outreach.messageViewer.copy}
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </>
                             )}
                           </div>
                         </div>
-                      )}
-                    </>
+                      </div>
+                    );
+                  })() : (
+                    /* =====================================================================
+                       SINGLE MESSAGE VIEW - NEO-BRUTALIST (January 17, 2026)
+                       Redesigned to match carousel view structure - same card layout
+                       with email header, message content, and inline action buttons
+                       ===================================================================== */
+                    <div className="border-2 border-black dark:border-gray-600 overflow-hidden">
+                      {/* Message Header with Email - matches carousel view (January 17, 2026: i18n) */}
+                      <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b-2 border-black dark:border-gray-600 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Mail size={14} className="text-emerald-600" />
+                          <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                            {contactEmail || affiliate?.email || t.dashboard.outreach.messageViewer.primaryContact}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Message Content - View or Edit Mode (January 17, 2026) */}
+                      <div className="p-4 bg-white dark:bg-[#0f0f0f]">
+                        {editingMessageKey === viewingMessageId ? (
+                          /* =========================================================
+                             EDIT MODE - Shows textarea for editing with save/cancel
+                             (January 17, 2026: Using i18n translations)
+                             ========================================================= */
+                          <>
+                            <textarea
+                              value={editedMessageText}
+                              onChange={(e) => setEditedMessageText(e.target.value)}
+                              className="w-full bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed border-2 border-[#ffbf23] dark:border-[#ffbf23] min-h-[250px] max-h-[350px] overflow-y-auto font-mono focus:outline-none resize-none"
+                              placeholder={t.dashboard.outreach.messageViewer.editPlaceholder}
+                              autoFocus
+                            />
+                            
+                            {/* Edit Mode Actions */}
+                            <div className="flex items-center justify-end gap-2 mt-4">
+                              {/* January 17, 2026: Using i18n translations */}
+                              <button
+                                onClick={handleCancelEdit}
+                                disabled={isSavingEdit}
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-gray-600 border-gray-300 hover:border-black hover:text-black"
+                              >
+                                <X size={12} />
+                                {t.dashboard.outreach.messageViewer.cancel}
+                              </button>
+                              <button
+                                onClick={() => handleSaveEdit(affiliateId, contactEmail)}
+                                disabled={isSavingEdit || !editedMessageText.trim()}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
+                                  isSavingEdit
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-emerald-500 text-white shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                )}
+                              >
+                                {isSavingEdit ? (
+                                  <>
+                                    <Loader2 size={12} className="animate-spin" />
+                                    {t.dashboard.outreach.messageViewer.saving}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Save size={12} />
+                                    {t.dashboard.outreach.messageViewer.save}
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          /* =========================================================
+                             VIEW MODE - Shows message with inline action buttons
+                             ========================================================= */
+                          <>
+                            <div className="bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 min-h-[200px] max-h-[300px] overflow-y-auto font-mono">
+                              {message}
+                            </div>
+                            
+                            {/* Action Buttons - Inline like carousel view (January 17, 2026) */}
+                            <div className="flex items-center justify-end gap-2 mt-4">
+                              <button
+                                onClick={() => {
+                                  if (affiliate) {
+                                    if (contactEmail) {
+                                      const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
+                                        c.emails?.includes(contactEmail)
+                                      );
+                                      
+                                      if (contactFromArray) {
+                                        handleGenerateForContact(affiliate, {
+                                          email: contactEmail,
+                                          firstName: contactFromArray.firstName,
+                                          lastName: contactFromArray.lastName,
+                                          title: contactFromArray.title,
+                                        });
+                                      } else {
+                                        handleGenerateForContact(affiliate, {
+                                          email: contactEmail,
+                                          firstName: affiliate.emailResults?.firstName,
+                                          lastName: affiliate.emailResults?.lastName,
+                                          title: affiliate.emailResults?.title,
+                                        });
+                                      }
+                                    } else {
+                                      handleGenerateForContact(affiliate);
+                                    }
+                                  }
+                                }}
+                                disabled={isRegenerating}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2",
+                                  isRegenerating
+                                    ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
+                                    : "bg-white text-black border-black hover:bg-gray-100"
+                                )}
+                              >
+                                {/* January 17, 2026: Using i18n translations */}
+                                <RefreshCw size={12} className={isRegenerating ? "animate-spin" : ""} />
+                                {isRegenerating ? t.dashboard.outreach.messageViewer.regenerating : t.dashboard.outreach.messageViewer.redo}
+                              </button>
+                              <button
+                                onClick={() => handleStartEdit(viewingMessageId)}
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-black border-black hover:bg-gray-100"
+                              >
+                                <Pencil size={12} />
+                                {t.dashboard.outreach.messageViewer.edit}
+                              </button>
+                              <button
+                                onClick={() => handleCopyMessage(viewingMessageId)}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
+                                  isCopied
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                )}
+                              >
+                                {/* January 17, 2026: Using i18n translations */}
+                                {isCopied ? (
+                                  <>
+                                    <Check size={14} />
+                                    {t.dashboard.outreach.messageViewer.copied}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy size={14} />
+                                    {t.dashboard.outreach.messageViewer.copy}
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* Modal Footer - NEO-BRUTALIST - Only show for single message view */}
-                {!isMultiMessageView && (
-                  <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex items-center justify-between">
-                    <button
-                      onClick={() => setViewingMessageId(null)}
-                      className="px-4 py-2 text-sm font-black uppercase text-gray-600 hover:text-black dark:hover:text-white transition-colors"
-                    >
-                      Close
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          if (affiliate) {
-                            if (contactEmail) {
-                              const contactFromArray = affiliate.emailResults?.contacts?.find(c => 
-                                c.emails?.includes(contactEmail)
-                              );
-                              
-                              if (contactFromArray) {
-                                handleGenerateForContact(affiliate, {
-                                  email: contactEmail,
-                                  firstName: contactFromArray.firstName,
-                                  lastName: contactFromArray.lastName,
-                                  title: contactFromArray.title,
-                                });
-                              } else {
-                                handleGenerateForContact(affiliate, {
-                                  email: contactEmail,
-                                  firstName: affiliate.emailResults?.firstName,
-                                  lastName: affiliate.emailResults?.lastName,
-                                  title: affiliate.emailResults?.title,
-                                });
-                              }
-                            } else {
-                              handleGenerateForContact(affiliate);
-                            }
-                          }
-                        }}
-                        disabled={isRegenerating}
-                        className={cn(
-                          "flex items-center gap-2 px-4 py-2 text-sm font-black uppercase transition-all border-2",
-                          isRegenerating
-                            ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-                            : "bg-white text-black border-black hover:bg-gray-100"
-                        )}
-                      >
-                        <RefreshCw size={14} className={isRegenerating ? "animate-spin" : ""} />
-                        {isRegenerating ? '...' : 'Redo'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleCopyMessage(viewingMessageId);
-                          setTimeout(() => setViewingMessageId(null), 1500);
-                        }}
-                        className={cn(
-                          "flex items-center gap-2 px-4 py-2 text-sm font-black uppercase transition-all border-2 border-black",
-                          isCopied
-                            ? "bg-emerald-500 text-white"
-                            : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
-                        )}
-                      >
-                        {isCopied ? (
-                          <>
-                            <Check size={14} />
-                            Done!
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={14} />
-                            Copy
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Simple Close Footer for Multi-Message View - NEO-BRUTALIST */}
-                {isMultiMessageView && (
-                  <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-                    <button
-                      onClick={() => setViewingMessageId(null)}
-                      className="px-6 py-2 text-sm font-black uppercase text-black bg-white border-2 border-black hover:bg-gray-100 transition-colors"
-                    >
-                      Close
-                    </button>
-                  </div>
-                )}
+                {/* =============================================================================
+                    FOOTER REMOVED - January 17, 2026
+                    
+                    Both single and multi-message views now have action buttons inline
+                    with the message content. No footer needed - close via X in header.
+                    ============================================================================= */}
               </div>
             </div>
           );
@@ -1627,8 +1871,9 @@ export default function OutreachPage() {
                     <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center">
                       <Users size={20} className="text-black" />
                     </div>
+                    {/* January 17, 2026: Using i18n translations */}
                     <div>
-                      <h3 className="text-base font-black text-black uppercase">Select Contacts</h3>
+                      <h3 className="text-base font-black text-black uppercase">{t.dashboard.outreach.contactPicker.title}</h3>
                       <p className="text-xs text-black/70 font-medium">
                         {contactPicker.affiliate.domain}
                       </p>
@@ -1643,18 +1888,19 @@ export default function OutreachPage() {
                 </div>
               </div>
 
-              {/* Contact List - NEO-BRUTALIST */}
+              {/* Contact List - NEO-BRUTALIST (January 17, 2026: i18n) */}
               <div className="p-4 overflow-y-auto max-h-[50vh] bg-white dark:bg-[#0a0a0a]">
                 <p className="text-xs text-gray-500 mb-3 font-medium">
-                  Select which contacts you&apos;d like to generate personalized emails for:
+                  {t.dashboard.outreach.contactPicker.subtitle}
                 </p>
                 
                 <div className="space-y-2">
                   {contactPicker.contacts.map((contact) => {
                     const isSelected = contactPicker.selectedContacts.has(contact.email);
+                    // January 17, 2026: Using i18n translation for unknown name
                     const displayName = contact.fullName || 
                       [contact.firstName, contact.lastName].filter(Boolean).join(' ') || 
-                      'Unknown';
+                      t.dashboard.outreach.contactPicker.unknownName;
                     const hasExistingMessage = generatedMessages.has(
                       getMessageKey(contactPicker.affiliateId!, contact.email)
                     );
@@ -1682,9 +1928,10 @@ export default function OutreachPage() {
                             <p className="text-sm font-black text-gray-900 dark:text-white truncate">
                               {displayName}
                             </p>
+                            {/* January 17, 2026: Using i18n translation */}
                             {hasExistingMessage && (
                               <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase border border-black">
-                                Done
+                                {t.dashboard.outreach.contactPicker.alreadyGenerated}
                               </span>
                             )}
                           </div>
@@ -1713,30 +1960,30 @@ export default function OutreachPage() {
               {/* Modal Footer - NEO-BRUTALIST */}
               <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900">
                 <div className="flex items-center justify-between">
-                  {/* Credit cost indicator */}
+                  {/* Credit cost indicator - January 17, 2026: i18n translations */}
                   <div className="text-xs">
                     {contactPicker.selectedContacts.size > 0 ? (
                       <span className="flex items-center gap-1.5">
                         <Sparkles size={12} className="text-[#ffbf23]" />
                         <span className="text-gray-600 dark:text-gray-400 font-medium">
-                          Uses{' '}
+                          {t.dashboard.outreach.contactPicker.creditsUsed}{' '}
                           <span className="font-black text-black dark:text-white">
-                            {contactPicker.selectedContacts.size} credit{contactPicker.selectedContacts.size !== 1 ? 's' : ''}
+                            {contactPicker.selectedContacts.size} {contactPicker.selectedContacts.size !== 1 ? t.dashboard.outreach.contactPicker.credits : t.dashboard.outreach.contactPicker.credit}
                           </span>
                         </span>
                       </span>
                     ) : (
-                      <span className="text-gray-400 font-medium">Select contacts</span>
+                      <span className="text-gray-400 font-medium">{t.dashboard.outreach.contactPicker.selectContacts}</span>
                     )}
                   </div>
                   
-                  {/* Action buttons - NEO-BRUTALIST */}
+                  {/* Action buttons - NEO-BRUTALIST (January 17, 2026: i18n) */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setContactPicker(prev => ({ ...prev, isOpen: false }))}
                       className="px-3 py-1.5 text-xs font-black uppercase text-gray-600 hover:text-black transition-colors"
                     >
-                      Cancel
+                      {t.dashboard.outreach.contactPicker.cancel}
                     </button>
                     <button
                       onClick={handleGenerateForSelectedContacts}
@@ -1749,7 +1996,7 @@ export default function OutreachPage() {
                       )}
                     >
                       <Wand2 size={12} />
-                      Generate {contactPicker.selectedContacts.size > 0 
+                      {t.dashboard.outreach.generate} {contactPicker.selectedContacts.size > 0 
                         ? `(${contactPicker.selectedContacts.size})`
                         : ''
                       }
@@ -1761,26 +2008,62 @@ export default function OutreachPage() {
           </div>
         )}
 
-        {/* ================================================================
-            NOTIFICATIONS (January 5th, 2026)
-            
-            REMOVED: Custom toast notification UI.
-            NOW USING: Global Sonner Toaster (configured in src/app/layout.tsx).
-            
-            Sonner automatically renders toasts at bottom-right with:
-            - richColors (green=success, red=error, yellow=warning, blue=info)
-            - Close button on each toast
-            - 4 second auto-dismiss
-            - Smooth animations
-            
-            To trigger toasts, just call:
-              import { toast } from 'sonner';
-              toast.success('Success!');
-              toast.error('Error!');
-              toast.warning('Warning!');
-              toast.info('Info');
-            ================================================================ */}
       </div>
+
+      {/* =============================================================================
+          CUSTOM TOAST NOTIFICATION - NEO-BRUTALIST DESIGN (January 17, 2026)
+          
+          Matches the toast design used in find/page.tsx and discovered/page.tsx.
+          Shows success/error/warning/info toasts with:
+          - Sharp corners, 2px black border
+          - Neo-brutalist shadow (4px 4px 0px 0px #000)
+          - Icon box on left with color based on type
+          - Title in uppercase font-black
+          - Optional subtitle message
+          - Close button on right
+          - 4 second auto-dismiss
+          ============================================================================= */}
+      {customToast?.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+            <div className="flex items-start gap-3">
+              {/* Icon Box - Color based on type */}
+              <div className={cn(
+                "w-10 h-10 border-2 border-black flex items-center justify-center shrink-0",
+                customToast.type === 'success' && "bg-emerald-500",
+                customToast.type === 'error' && "bg-red-500",
+                customToast.type === 'warning' && "bg-amber-400",
+                customToast.type === 'info' && "bg-blue-500"
+              )}>
+                {customToast.type === 'success' && <Check size={20} className="text-white" />}
+                {customToast.type === 'error' && <X size={20} className="text-white" />}
+                {customToast.type === 'warning' && <AlertTriangle size={20} className="text-black" />}
+                {customToast.type === 'info' && <Sparkles size={20} className="text-white" />}
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                  {customToast.title}
+                </h4>
+                {customToast.message && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                    {customToast.message}
+                  </p>
+                )}
+              </div>
+              
+              {/* Close Button */}
+              <button
+                onClick={() => setCustomToast(prev => prev ? { ...prev, show: false } : null)}
+                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -334,6 +334,47 @@ export const de: Dictionary = {
       selected: 'Ausgewählt',
       selectPlan: 'Plan auswählen',
       included: 'Enthalten:',
+      // January 17, 2026: Added pricing plan translations
+      plans: {
+        pro: {
+          name: 'Pro',
+          description: 'Perfekt für Einzelgründer & kleine Teams am Anfang ihrer Affiliate-Reise.',
+          features: [
+            '500 neue Affiliates / Monat finden',
+            '150 verifizierte E-Mail-Credits / Monat',
+            '1 Markenprojekt',
+            'Grundlegende Suchfilter',
+            'E-Mail-Support',
+            'CSV-Export',
+          ],
+        },
+        business: {
+          name: 'Business',
+          description: 'Für wachsende Marken, die ihr Outreach-Volumen skalieren müssen.',
+          features: [
+            'Unbegrenzt Affiliates finden',
+            '500 verifizierte E-Mail-Credits / Monat',
+            '5 Markenprojekte',
+            'Erweiterte Wettbewerber-Analyse',
+            'Prioritäts-Chat-Support',
+            'API-Zugang',
+            'Team-Zusammenarbeit (5 Plätze)',
+          ],
+        },
+        enterprise: {
+          name: 'Enterprise',
+          description: 'Maßgeschneiderte Lösungen für große Organisationen mit spezifischen Anforderungen.',
+          priceLabel: 'Individuell',
+          features: [
+            'Alles unbegrenzt',
+            'Dedizierter Account Manager',
+            'Kundenspezifisches KI-Modell-Training',
+            'SSO & Erweiterte Sicherheit',
+            'Premium-Onboarding',
+            'Individuelle Rechnungsstellung',
+          ],
+        },
+      },
     },
     // Step 6: Affiliate Types
     step6: {
@@ -434,6 +475,7 @@ export const de: Dictionary = {
       email: 'E-Mail',
       message: 'Nachricht',
       action: 'Aktion',
+      creator: 'Creator',  // January 17, 2026: Added for outreach page table header
     },
     find: {
       pageTitle: 'Neu suchen',
@@ -445,6 +487,29 @@ export const de: Dictionary = {
         scanning: 'Das Web wird nach Affiliates durchsucht...',
         subtitle: 'Suche auf YouTube, Instagram, TikTok und Websites',
         badge: 'Scan wird gestartet',
+        // January 17, 2026: Added dynamic loading messages
+        fromYouTube: 'von YouTube',
+        fromInstagram: 'von Instagram',
+        fromTikTok: 'von TikTok',
+        fromWebsites: 'von Websites',
+        analyzing: 'Ergebnisse werden analysiert...',
+        found: 'gefunden',
+        progressTitles: {
+          title1: 'Tolle Funde kommen rein!',
+          title2: 'Potenzielle Partner werden entdeckt...',
+          title3: 'Ihre Affiliate-Liste wird erstellt...',
+          title4: 'Versteckte Perlen werden aufgedeckt...',
+        },
+      },
+      // January 17, 2026: Added toast messages for save/delete feedback
+      toasts: {
+        affiliatesSaved: 'Affiliate(s) gespeichert!',
+        noNewAffiliatesSaved: 'Keine neuen Affiliates gespeichert',
+        addedToPipeline: 'Erfolgreich zur Pipeline hinzugefügt.',
+        alreadyInPipeline: 'bereits in Pipeline (übersprungen)',
+        affiliateDeleted: 'Affiliate gelöscht',
+        affiliatesDeleted: 'Affiliates gelöscht',
+        removedFromDiscovered: 'Erfolgreich aus Entdeckte-Liste entfernt.',
       },
       modal: {
         title: 'Affiliates finden',
@@ -522,9 +587,22 @@ export const de: Dictionary = {
         found: 'Gefunden',
         errors: 'Fehler',
       },
+      // January 17, 2026: Added toast translations
+      toasts: {
+        affiliateRemoved: 'Affiliate entfernt',
+        affiliatesRemoved: 'Affiliates entfernt',
+        removedFromPipeline: 'Erfolgreich aus Ihrer Pipeline entfernt.',
+      },
     },
+    // =========================================================================
+    // OUTREACH PAGE TRANSLATIONS
+    // Updated: January 17, 2026 - Added comprehensive i18n support
+    // =========================================================================
     outreach: {
       pageTitle: 'Kontaktaufnahme',
+      // Loading state
+      loading: 'Affiliates werden geladen...',
+      // Empty & No Results states
       emptyState: {
         title: 'Beginnen Sie mit dem Aufbau von Verbindungen',
         subtitle: 'Speichern Sie Affiliates, um KI-gestützte Outreach-Nachrichten zu generieren.',
@@ -533,15 +611,22 @@ export const de: Dictionary = {
         title: 'Keine Ergebnisse gefunden',
         subtitle: 'Versuchen Sie, Ihre Suche oder den Filter anzupassen.',
       },
+      // Selection actions (January 17, 2026)
+      selected: 'Ausgewählt',
+      selectAll: 'Alle auswählen',
+      deselectAll: 'Auswahl aufheben',
+      // Row action buttons
       generate: 'Generieren',
       generating: 'Generierung...',
       viewMessage: 'Ansehen',
       messages: 'Nachr.',
+      messagesLabel: 'Nachrichten',  // For modal badge
       failed: 'Fehlgeschlagen',
       retry: 'Erneut',
       selectContacts: 'Kontakte auswählen',
       contacts: 'Kontakte',
       bulkGenerate: 'Generieren',
+      // Contact Picker Modal (January 17, 2026: Comprehensive translations)
       contactPicker: {
         title: 'Kontakte auswählen',
         subtitle: 'Wählen Sie die Kontakte aus, für die Sie personalisierte E-Mails generieren möchten:',
@@ -550,19 +635,31 @@ export const de: Dictionary = {
         credits: 'Credits',
         selectContacts: 'Kontakte auswählen',
         alreadyGenerated: 'Fertig',
+        unknownName: 'Unbekannt',
+        cancel: 'Abbrechen',
       },
+      // Message Viewer Modal (January 17, 2026: Added edit mode translations)
       messageViewer: {
         title: 'KI-generierte Nachricht',
         to: 'an',
+        primaryContact: 'Hauptkontakt',
         affiliateDetails: 'Affiliate-Details',
         contactName: 'Kontaktname',
         platform: 'Plattform',
         keyword: 'Keyword',
+        // Action buttons
         redo: 'Neu erstellen',
+        regenerating: 'Neu generieren...',
+        edit: 'Bearbeiten',
+        editPlaceholder: 'Bearbeiten Sie Ihre Nachricht...',
+        save: 'Speichern',
+        saving: 'Speichern...',
+        cancel: 'Abbrechen',
         copy: 'Kopieren',
+        copied: 'Kopiert!',
         done: 'Fertig!',
       },
-      // Additional strings for toast notifications (January 10th, 2026)
+      // Toast notifications (January 10th, 2026)
       email: 'E-Mail',
       emails: 'E-Mails',
       failedRetry: 'fehlgeschlagen - klicken Sie auf "Erneut versuchen".',
@@ -587,12 +684,31 @@ export const de: Dictionary = {
           description: 'Schützen Sie Ihr Konto',
         },
       },
+      // =======================================================================
+      // PROFILE SECTION - Updated January 17, 2026
+      // Added all missing profile form translations
+      // =======================================================================
       profile: {
         photoTitle: 'Profilfoto',
         photoDescription: 'Aktualisieren Sie Ihr Profilbild in den Kontoeinstellungen.',
         fullName: 'Vollständiger Name',
         emailAddress: 'E-Mail-Adresse',
         editProfile: 'Profil bearbeiten',
+        // January 17, 2026: Added missing profile translations
+        targetMarket: 'Zielmarkt',
+        country: 'Land',
+        language: 'Sprache',
+        selectCountry: 'Land auswählen',
+        selectLanguage: 'Sprache auswählen',
+        notSet: 'Nicht festgelegt',
+        emailCannotChange: 'E-Mail kann hier nicht geändert werden.',
+        enterYourName: 'Geben Sie Ihren Namen ein',
+        nameCannotBeEmpty: 'Name darf nicht leer sein',
+        failedToSave: 'Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.',
+        failedToUpdateDatabase: 'Datenbank konnte nicht aktualisiert werden',
+        saveChanges: 'Änderungen speichern',
+        saving: 'Speichern...',
+        cancel: 'Abbrechen',
       },
       plan: {
         currentPlan: 'Aktueller Plan',
@@ -642,7 +758,16 @@ export const de: Dictionary = {
           draft: 'Entwurf',
           void: 'Storniert',
           uncollectible: 'Uneinbringlich',
+          unknown: 'Unbekannt',
         },
+        // January 17, 2026: Added missing plan translations
+        noPlan: 'Kein Plan',
+        card: 'Karte',
+        dayLeftInTrial: 'Tag in Testversion übrig',
+        viewInvoice: 'Rechnung anzeigen',
+        downloadPdf: 'PDF herunterladen',
+        retry: 'Erneut versuchen',
+        subscriptionWillRemainActive: 'Ihr Abonnement bleibt bis zum Ende Ihres aktuellen Abrechnungszeitraums aktiv. Sie können es jederzeit vorher fortsetzen.',
         cancelSubscription: {
           title: 'Abonnement kündigen',
           subtitle: 'Wenn Sie kündigen, haben Sie bis zum Ende Ihres aktuellen Abrechnungszeitraums weiterhin Zugang zu Ihrem Plan.',
@@ -691,13 +816,65 @@ export const de: Dictionary = {
           },
         },
       },
+      // =======================================================================
+      // SECURITY SECTION - Updated January 17, 2026
+      // Added password modal and delete account modal translations
+      // =======================================================================
       security: {
         passwordSecurity: 'Passwort & Sicherheit',
-        manageSecuritySettings: 'Sicherheitseinstellungen verwalten',
+        securityDescription: 'Ändern Sie Ihr Passwort, um Ihr Konto zu schützen.',
+        changePassword: 'Passwort ändern',
         dangerZone: 'Gefahrenzone',
         dangerZoneWarning: 'Sobald Sie Ihr Konto löschen, gibt es kein Zurück. Bitte seien Sie sich sicher.',
         deleteAccount: 'Konto löschen',
+        // Password Modal
+        passwordModal: {
+          title: 'Passwort ändern',
+          currentPassword: 'Aktuelles Passwort',
+          newPassword: 'Neues Passwort',
+          confirmPassword: 'Neues Passwort bestätigen',
+          currentPlaceholder: 'Aktuelles Passwort eingeben',
+          newPlaceholder: 'Neues Passwort eingeben (min. 8 Zeichen)',
+          confirmPlaceholder: 'Neues Passwort bestätigen',
+          success: 'Passwort erfolgreich geändert!',
+          // Validation errors
+          allFieldsRequired: 'Alle Felder sind erforderlich',
+          minLength: 'Neues Passwort muss mindestens 8 Zeichen lang sein',
+          passwordsDontMatch: 'Neue Passwörter stimmen nicht überein',
+          mustBeDifferent: 'Neues Passwort muss sich vom aktuellen unterscheiden',
+          incorrectPassword: 'Aktuelles Passwort ist falsch',
+          requirementsNotMet: 'Passwort erfüllt nicht die Anforderungen',
+          genericError: 'Passwort konnte nicht geändert werden. Bitte erneut versuchen.',
+          // Buttons
+          cancel: 'Abbrechen',
+          save: 'Passwort speichern',
+          saving: 'Speichern...',
+        },
+        // Delete Account Modal
+        deleteModal: {
+          title: 'Konto löschen',
+          warning: 'Diese Aktion kann nicht rückgängig gemacht werden',
+          warningDetail: 'Ihr Konto und alle zugehörigen Daten werden dauerhaft gelöscht.',
+          willBeDeleted: 'Folgendes wird dauerhaft gelöscht:',
+          items: {
+            subscription: 'Ihr Abonnement (sofort gekündigt)',
+            savedAffiliates: 'Alle gespeicherten Affiliates',
+            discoveredAffiliates: 'Alle entdeckten Affiliates',
+            searchHistory: 'Gesamter Suchverlauf',
+            account: 'Ihr Konto und Anmeldedaten',
+          },
+          typeToConfirm: 'Geben Sie DELETE zur Bestätigung ein',
+          confirmError: 'Bitte geben Sie DELETE zur Bestätigung ein',
+          userIdError: 'Benutzer-ID nicht gefunden. Bitte aktualisieren und erneut versuchen.',
+          genericError: 'Konto konnte nicht gelöscht werden. Bitte erneut versuchen oder Support kontaktieren.',
+          // Buttons
+          cancel: 'Abbrechen',
+          delete: 'Endgültig löschen',
+          deleting: 'Wird gelöscht...',
+        },
       },
+      // January 17, 2026: Added account section label
+      accountLabel: 'Konto',
     },
   },
 
@@ -782,6 +959,7 @@ export const de: Dictionary = {
       cardAdded: 'Zahlungsmethode hinzugefügt!',
       subscriptionCancelled: 'Abonnement gekündigt',
       subscriptionResumed: 'Abonnement fortgesetzt!',
+      messageSaved: 'Nachricht gespeichert!',  // January 17, 2026: Added for edit message feature
     },
     error: {
       genericError: 'Etwas ist schief gelaufen. Bitte versuchen Sie es erneut.',
@@ -796,6 +974,8 @@ export const de: Dictionary = {
       bulkGenerationFailed: 'Generierung fehlgeschlagen für',
       exportFailed: 'Export fehlgeschlagen',
       paymentFailed: 'Zahlung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      messageSaveFailed: 'Nachricht konnte nicht gespeichert werden',  // January 17, 2026: Added for edit message feature
+      messageEmpty: 'Nachricht darf nicht leer sein',  // January 17, 2026: Added for edit message validation
     },
     warning: {
       insufficientCredits: 'Unzureichende Such-Credits. Bitte upgraden Sie Ihren Plan.',

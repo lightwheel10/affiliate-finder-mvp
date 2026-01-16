@@ -551,26 +551,27 @@ export default function FindNewPage() {
   }, [results, hasSearched]);
 
   // Generate dynamic loading message based on which platforms have returned results
+  // January 17, 2026: Updated with i18n translations
   const loadingMessage = useMemo(() => {
     if (results.length === 0) {
       return {
-        title: "Scanning the web for affiliates...",
-        subtitle: "Searching YouTube, Instagram, TikTok & websites",
-        badge: "Starting scan"
+        title: t.dashboard.find.loading.scanning,
+        subtitle: t.dashboard.find.loading.subtitle,
+        badge: t.dashboard.find.loading.badge
       };
     }
     
     const platformResults: string[] = [];
-    if (counts.YouTube > 0) platformResults.push(`${counts.YouTube} from YouTube`);
-    if (counts.Instagram > 0) platformResults.push(`${counts.Instagram} from Instagram`);
-    if (counts.TikTok > 0) platformResults.push(`${counts.TikTok} from TikTok`);
-    if (counts.Web > 0) platformResults.push(`${counts.Web} from websites`);
+    if (counts.YouTube > 0) platformResults.push(`${counts.YouTube} ${t.dashboard.find.loading.fromYouTube}`);
+    if (counts.Instagram > 0) platformResults.push(`${counts.Instagram} ${t.dashboard.find.loading.fromInstagram}`);
+    if (counts.TikTok > 0) platformResults.push(`${counts.TikTok} ${t.dashboard.find.loading.fromTikTok}`);
+    if (counts.Web > 0) platformResults.push(`${counts.Web} ${t.dashboard.find.loading.fromWebsites}`);
     
     const titles = [
-      "Great finds coming in!",
-      "Discovering potential partners...",
-      "Building your affiliate list...",
-      "Uncovering hidden gems...",
+      t.dashboard.find.loading.progressTitles.title1,
+      t.dashboard.find.loading.progressTitles.title2,
+      t.dashboard.find.loading.progressTitles.title3,
+      t.dashboard.find.loading.progressTitles.title4,
     ];
     const titleIndex = Math.min(Math.floor(results.length / 10), titles.length - 1);
     
@@ -578,10 +579,10 @@ export default function FindNewPage() {
       title: titles[titleIndex],
       subtitle: platformResults.length > 0 
         ? platformResults.join(" • ") 
-        : "Analyzing results...",
-      badge: `${results.length} found`
+        : t.dashboard.find.loading.analyzing,
+      badge: `${results.length} ${t.dashboard.find.loading.found}`
     };
-  }, [results.length, counts]);
+  }, [results.length, counts, t]);
 
   // Filter tabs data with real counts
   const filterTabs = [
@@ -1590,6 +1591,7 @@ export default function FindNewPage() {
           BULK SAVE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
           Updated: January 16, 2026
           ============================================================================= */}
+      {/* January 17, 2026: Updated with i18n translations */}
       {bulkSaveResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
@@ -1600,15 +1602,15 @@ export default function FindNewPage() {
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {bulkSaveResult.savedCount > 0 
-                    ? `${bulkSaveResult.savedCount} affiliate${bulkSaveResult.savedCount !== 1 ? 's' : ''} saved!`
-                    : 'No new affiliates saved'
+                    ? `${bulkSaveResult.savedCount} ${t.dashboard.find.toasts.affiliatesSaved}`
+                    : t.dashboard.find.toasts.noNewAffiliatesSaved
                   }
                 </h4>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                  {bulkSaveResult.savedCount > 0 && 'Successfully added to your pipeline.'}
+                  {bulkSaveResult.savedCount > 0 && t.dashboard.find.toasts.addedToPipeline}
                   {bulkSaveResult.duplicateCount > 0 && (
                     <span className="block text-amber-600 font-bold mt-1">
-                      {bulkSaveResult.duplicateCount} already in pipeline (skipped)
+                      {bulkSaveResult.duplicateCount} {t.dashboard.find.toasts.alreadyInPipeline}
                     </span>
                   )}
                 </p>
@@ -1628,6 +1630,7 @@ export default function FindNewPage() {
           DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
           Updated: January 16, 2026
           ============================================================================= */}
+      {/* January 17, 2026: Updated with i18n translations */}
       {deleteResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
@@ -1638,12 +1641,12 @@ export default function FindNewPage() {
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {deleteResult.count === 1 
-                    ? 'Affiliate deleted'
-                    : `${deleteResult.count} affiliates deleted`
+                    ? t.dashboard.find.toasts.affiliateDeleted
+                    : `${deleteResult.count} ${t.dashboard.find.toasts.affiliatesDeleted}`
                   }
                 </h4>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                  Successfully removed from discovered list.
+                  {t.dashboard.find.toasts.removedFromDiscovered}
                 </p>
               </div>
               <button

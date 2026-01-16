@@ -124,7 +124,7 @@ export default function SettingsPage() {
             {/* Left Panel - Navigation - NEO-BRUTALIST */}
             <div className="w-full md:w-64 shrink-0">
               <div className="sticky top-24 space-y-1">
-                <h3 className="px-3 text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Account</h3>
+                <h3 className="px-3 text-xs font-black text-gray-400 uppercase tracking-widest mb-3">{t.dashboard.settings.accountLabel}</h3>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -214,25 +214,26 @@ export default function SettingsPage() {
         />
       )}
 
-      {/* Cancel Plan Confirmation Modal - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* Cancel Plan Confirmation Modal - NEO-BRUTALIST (Updated January 8th, 2026)
+          January 17, 2026: Added i18n translations */}
       <Modal
         isOpen={isCancelModalOpen}
         onClose={() => setIsCancelModalOpen(false)}
-        title={subscription?.cancel_at_period_end ? "Resume Subscription" : "Cancel Subscription"}
+        title={subscription?.cancel_at_period_end ? t.dashboard.settings.plan.cancelModal.resumeTitle : t.dashboard.settings.plan.cancelModal.cancelTitle}
         width="max-w-md"
       >
         <div className="space-y-4">
           {subscription?.cancel_at_period_end ? (
             <>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Would you like to resume your subscription? Your plan will continue as normal and you'll be billed at the next billing cycle.
+                {t.dashboard.settings.plan.cancelModal.resumeMessage}
               </p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   onClick={() => setIsCancelModalOpen(false)}
                   className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase"
                 >
-                  Keep Canceled
+                  {t.dashboard.settings.plan.cancelModal.keepCanceled}
                 </button>
                 <button
                   onClick={async () => {
@@ -250,7 +251,7 @@ export default function SettingsPage() {
                   ) : (
                     <Check size={14} />
                   )}
-                  Resume Subscription
+                  {t.dashboard.settings.plan.cancelModal.confirmResume}
                 </button>
               </div>
             </>
@@ -260,22 +261,22 @@ export default function SettingsPage() {
                 <div className="flex items-start gap-3">
                   <XCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-black text-red-800 dark:text-red-300">Are you sure you want to cancel?</p>
+                    <p className="text-sm font-black text-red-800 dark:text-red-300">{t.dashboard.settings.plan.cancelModal.cancelWarning}</p>
                     <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                      You'll lose access to premium features at the end of your current billing period.
+                      {t.dashboard.settings.plan.cancelModal.cancelMessage}
                     </p>
                   </div>
                 </div>
               </div>
               <p className="text-xs text-gray-500">
-                Your subscription will remain active until the end of your current billing period. You can resume anytime before then.
+                {t.dashboard.settings.plan.subscriptionWillRemainActive}
               </p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   onClick={() => setIsCancelModalOpen(false)}
                   className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase"
                 >
-                  Keep Subscription
+                  {t.dashboard.settings.plan.cancelModal.keepSubscription}
                 </button>
                 <button
                   onClick={async () => {
@@ -293,7 +294,7 @@ export default function SettingsPage() {
                   ) : (
                     <XCircle size={14} />
                   )}
-                  Cancel Subscription
+                  {t.dashboard.settings.plan.cancelModal.confirmCancel}
                 </button>
               </div>
             </>
@@ -372,6 +373,9 @@ const LANGUAGES = [
 ];
 
 function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, onProfileUpdated }: ProfileSettingsProps) {
+  // January 17, 2026: Added i18n support
+  const { t } = useLanguage();
+  
   const userName = user?.displayName || 'User';
   const userEmail = user?.primaryEmail || '';
   
@@ -415,9 +419,10 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
   }, [isEditing, userName, currentCountry, currentLanguage]);
 
   // Handle save - update Stack Auth and Neon DB (January 13th, 2026)
+  // January 17, 2026: Updated with i18n translations
   const handleSave = async () => {
     if (!editName.trim()) {
-      setSaveError('Name cannot be empty');
+      setSaveError(t.dashboard.settings.profile.nameCannotBeEmpty);
       return;
     }
 
@@ -444,7 +449,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
         });
 
         if (!res.ok) {
-          throw new Error('Failed to update database');
+          throw new Error(t.dashboard.settings.profile.failedToUpdateDatabase);
         }
       }
 
@@ -453,7 +458,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
       onProfileUpdated?.();
     } catch (err) {
       console.error('Error updating profile:', err);
-      setSaveError('Failed to save. Please try again.');
+      setSaveError(t.dashboard.settings.profile.failedToSave);
     } finally {
       setIsSaving(false);
     }
@@ -482,17 +487,18 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
   
   return (
     <div className="space-y-6">
-      {/* User Info - Name & Email (January 13th, 2026) */}
+      {/* User Info - Name & Email (January 13th, 2026)
+          January 17, 2026: Updated with i18n translations */}
       <div className="grid grid-cols-1 gap-6">
         <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Full Name</label>
+          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.fullName}</label>
           {isEditing ? (
             <input
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-[#ffbf23] text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23]"
-              placeholder="Enter your name"
+              placeholder={t.dashboard.settings.profile.enterYourName}
               disabled={isSaving}
               autoFocus
             />
@@ -507,28 +513,29 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Email Address</label>
+          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.emailAddress}</label>
           <div className="relative">
             <Mail className="absolute left-3 top-3 text-gray-400" size={16} />
             <div className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium">
               {userEmail}
             </div>
           </div>
-          <p className="text-xs text-gray-400">Email cannot be changed here.</p>
+          <p className="text-xs text-gray-400">{t.dashboard.settings.profile.emailCannotChange}</p>
         </div>
       </div>
 
-      {/* Country & Language Section - January 13th, 2026 */}
+      {/* Country & Language Section - January 13th, 2026
+          January 17, 2026: Updated with i18n translations */}
       <div className="pt-4 border-t-2 border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-2 mb-4">
           <Globe size={16} className="text-gray-500" />
-          <h4 className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Target Market</h4>
+          <h4 className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.targetMarket}</h4>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Country Dropdown - January 13th, 2026 */}
           <div className="space-y-1.5 relative" ref={countryDropdownRef}>
-            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Country</label>
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.country}</label>
             {isEditing ? (
               <>
                 <button
@@ -550,7 +557,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
                       <span className="text-gray-900 dark:text-white">{editCountry}</span>
                     </span>
                   ) : (
-                    <span className="text-gray-400">Select country</span>
+                    <span className="text-gray-400">{t.dashboard.settings.profile.selectCountry}</span>
                   )}
                   <ChevronDown size={14} className={cn("text-gray-400 transition-transform", isCountryOpen && "rotate-180")} />
                 </button>
@@ -595,7 +602,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
                     <span>{currentCountry}</span>
                   </>
                 ) : (
-                  <span className="text-gray-400">Not set</span>
+                  <span className="text-gray-400">{t.dashboard.settings.profile.notSet}</span>
                 )}
               </div>
             )}
@@ -603,7 +610,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
 
           {/* Language Dropdown - January 13th, 2026 */}
           <div className="space-y-1.5 relative" ref={languageDropdownRef}>
-            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">Language</label>
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.language}</label>
             {isEditing ? (
               <>
                 <button
@@ -623,7 +630,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
                       <span className="text-gray-900 dark:text-white">{editLanguage}</span>
                     </span>
                   ) : (
-                    <span className="text-gray-400">Select language</span>
+                    <span className="text-gray-400">{t.dashboard.settings.profile.selectLanguage}</span>
                   )}
                   <ChevronDown size={14} className={cn("text-gray-400 transition-transform", isLanguageOpen && "rotate-180")} />
                 </button>
@@ -664,7 +671,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
                     <span>{currentLanguage}</span>
                   </>
                 ) : (
-                  <span className="text-gray-400">Not set</span>
+                  <span className="text-gray-400">{t.dashboard.settings.profile.notSet}</span>
                 )}
               </div>
             )}
@@ -672,7 +679,8 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
         </div>
       </div>
 
-      {/* Action Buttons - NEO-BRUTALIST (Updated January 13th, 2026) */}
+      {/* Action Buttons - NEO-BRUTALIST (Updated January 13th, 2026)
+          January 17, 2026: Updated with i18n translations */}
       <div className="pt-4 border-t-2 border-gray-200 dark:border-gray-700 flex justify-end gap-3">
         {isEditing ? (
           <>
@@ -681,7 +689,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
               disabled={isSaving}
               className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
             >
-              Cancel
+              {t.dashboard.settings.profile.cancel}
             </button>
             <button 
               onClick={handleSave}
@@ -691,12 +699,12 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
               {isSaving ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Saving...
+                  {t.dashboard.settings.profile.saving}
                 </>
               ) : (
                 <>
                   <Check size={14} />
-                  Save Changes
+                  {t.dashboard.settings.profile.saveChanges}
                 </>
               )}
             </button>
@@ -706,7 +714,7 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
             onClick={() => setIsEditing(true)}
             className="px-5 py-2.5 bg-[#ffbf23] text-black text-sm font-black uppercase tracking-wide border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
           >
-            Edit Profile
+            {t.dashboard.settings.profile.editProfile}
           </button>
         )}
       </div>
@@ -744,6 +752,9 @@ interface Invoice {
 }
 
 function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, onUpgrade, onAddCard, onCancelPlan, userId }: PlanSettingsProps) {
+  // January 17, 2026: Added i18n support
+  const { t } = useLanguage();
+  
   // =========================================================================
   // INVOICE STATE & FETCHING
   // Added December 2025 to display invoice history from Stripe
@@ -797,20 +808,21 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
   };
 
   // Get status badge styling for invoices - NEO-BRUTALIST (Updated January 8th, 2026)
+  // January 17, 2026: Updated with i18n translations
   const getInvoiceStatusBadge = (status: string | null) => {
     switch (status) {
       case 'paid':
-        return { label: 'PAID', bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.paid.toUpperCase(), bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
       case 'open':
-        return { label: 'OPEN', bg: 'bg-blue-500', text: 'text-white', border: 'border-black' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.open.toUpperCase(), bg: 'bg-blue-500', text: 'text-white', border: 'border-black' };
       case 'draft':
-        return { label: 'DRAFT', bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-400' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.draft.toUpperCase(), bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-400' };
       case 'void':
-        return { label: 'VOID', bg: 'bg-red-500', text: 'text-white', border: 'border-black' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.void.toUpperCase(), bg: 'bg-red-500', text: 'text-white', border: 'border-black' };
       case 'uncollectible':
-        return { label: 'UNCOLLECTIBLE', bg: 'bg-orange-500', text: 'text-white', border: 'border-black' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.uncollectible.toUpperCase(), bg: 'bg-orange-500', text: 'text-white', border: 'border-black' };
       default:
-        return { label: status?.toUpperCase() || 'UNKNOWN', bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-400' };
+        return { label: status?.toUpperCase() || t.dashboard.settings.plan.invoiceStatus.unknown.toUpperCase(), bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-400' };
     }
   };
 
@@ -823,28 +835,30 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
   }
 
   // Format plan name for display
+  // January 17, 2026: Updated with i18n translations
   const getPlanDisplayName = (plan: string) => {
     const names: Record<string, string> = {
-      'free_trial': 'Free Trial',
-      'pro': 'Pro',
-      'business': 'Business',
-      'enterprise': 'Enterprise',
+      'free_trial': t.dashboard.settings.plan.freeTrial,
+      'pro': t.dashboard.settings.plan.pro,
+      'business': t.dashboard.settings.plan.growth, // 'business' plan displays as 'Growth'
+      'enterprise': t.dashboard.settings.plan.enterprise,
     };
     return names[plan] || plan;
   };
 
   // Get status badge color - NEO-BRUTALIST (Updated January 8th, 2026)
+  // January 17, 2026: Updated with i18n translations
   const getStatusBadge = () => {
     if (subscription?.cancel_at_period_end) {
-      return { label: 'CANCELLED', bg: 'bg-orange-500', text: 'text-white', border: 'border-black' };
+      return { label: t.dashboard.settings.plan.cancelled.toUpperCase(), bg: 'bg-orange-500', text: 'text-white', border: 'border-black' };
     }
     if (isTrialing) {
-      return { label: 'TRIAL', bg: 'bg-blue-500', text: 'text-white', border: 'border-black' };
+      return { label: t.dashboard.settings.plan.trial.toUpperCase(), bg: 'bg-blue-500', text: 'text-white', border: 'border-black' };
     }
     if (subscription?.status === 'active') {
-      return { label: 'ACTIVE', bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
+      return { label: t.dashboard.settings.plan.active.toUpperCase(), bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
     }
-    return { label: 'ACTIVE', bg: 'bg-[#ffbf23]', text: 'text-black', border: 'border-black' };
+    return { label: t.dashboard.settings.plan.active.toUpperCase(), bg: 'bg-[#ffbf23]', text: 'text-black', border: 'border-black' };
   };
 
   const statusBadge = getStatusBadge();
@@ -860,7 +874,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
-                {subscription ? getPlanDisplayName(subscription.plan) : 'No Plan'}
+                {subscription ? getPlanDisplayName(subscription.plan) : t.dashboard.settings.plan.noPlan}
               </span>
               {subscription && (
                 <span className={cn(
@@ -872,38 +886,41 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
               )}
             </div>
             
-            {/* Trial info */}
+            {/* Trial info - January 17, 2026: Updated with i18n */}
             {isTrialing && daysLeftInTrial !== null && (
               <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-400 font-bold">
                 <Clock size={12} />
                 <span>
                   {daysLeftInTrial === 0 
-                    ? 'Trial ends today' 
-                    : `${daysLeftInTrial} day${daysLeftInTrial !== 1 ? 's' : ''} left in trial`
+                    ? t.dashboard.settings.plan.trialEndsToday
+                    : daysLeftInTrial === 1
+                      ? `1 ${t.dashboard.settings.plan.dayLeftInTrial}`
+                      : `${daysLeftInTrial} ${t.dashboard.settings.plan.daysLeft}`
                   }
                 </span>
               </div>
             )}
 
-            {/* Billing info */}
+            {/* Billing info - January 17, 2026: Updated with i18n */}
             {subscription && !isTrialing && subscription.nextBillingDate && (
               <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 font-medium">
                 <Calendar size={12} />
-                <span>Next billing: {subscription.nextBillingDate}</span>
+                <span>{t.dashboard.settings.plan.nextBilling}: {subscription.nextBillingDate}</span>
               </div>
             )}
 
-            {/* Price */}
+            {/* Price - January 17, 2026: Updated with i18n */}
             {subscription && subscription.formattedPrice && (
               <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                 {subscription.formattedPrice}
-                {subscription.billing_interval === 'annual' && ' (billed annually)'}
+                {subscription.billing_interval === 'annual' && ` (${t.dashboard.settings.plan.billedAnnually})`}
               </p>
             )}
           </div>
           
           {/* Upgrade/Manage button - NEO-BRUTALIST */}
-          {/* Updated January 8th, 2026 - contextual button text with neo-brutalist styling */}
+          {/* Updated January 8th, 2026 - contextual button text with neo-brutalist styling
+              January 17, 2026: Updated with i18n */}
           {(!subscription || subscription.plan !== 'enterprise') && (
             <button 
               onClick={onUpgrade}
@@ -911,30 +928,32 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
             >
               <Zap size={14} />
               {!subscription 
-                ? 'Choose Plan' 
+                ? t.dashboard.settings.plan.choosePlan
                 : isTrialing 
-                  ? 'Upgrade Plan' 
-                  : 'Manage Plan'
+                  ? t.dashboard.settings.plan.upgradePlan
+                  : t.dashboard.settings.plan.managePlan
               }
             </button>
           )}
         </div>
 
-        {/* Trial warning - NEO-BRUTALIST */}
+        {/* Trial warning - NEO-BRUTALIST
+            January 17, 2026: Updated with i18n */}
         {isTrialing && daysLeftInTrial !== null && daysLeftInTrial <= 1 && (
           <div className="flex items-start gap-2 p-3 bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500">
             <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
             <div className="text-xs text-amber-800 dark:text-amber-300">
-              <p className="font-black">Your trial is ending soon</p>
-              <p className="text-amber-700 dark:text-amber-400">Add a payment method to continue using all features.</p>
+              <p className="font-black">{t.dashboard.settings.plan.trialEndingSoon.title}</p>
+              <p className="text-amber-700 dark:text-amber-400">{t.dashboard.settings.plan.trialEndingSoon.subtitle}</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Payment Method - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* Payment Method - NEO-BRUTALIST (Updated January 8th, 2026)
+          January 17, 2026: Updated with i18n */}
       <div>
-        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Payment Method</h3>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">{t.dashboard.settings.plan.paymentMethod}</h3>
         {subscription?.card_last4 ? (
           <div className="p-4 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -943,11 +962,11 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
               </div>
               <div>
                 <p className="text-sm font-bold text-gray-900 dark:text-white">
-                  {subscription.card_brand || 'Card'} •••• {subscription.card_last4}
+                  {subscription.card_brand || t.dashboard.settings.plan.card} •••• {subscription.card_last4}
                 </p>
                 {subscription.card_exp_month && subscription.card_exp_year && (
                   <p className="text-xs text-gray-500">
-                    Expires {String(subscription.card_exp_month).padStart(2, '0')}/{String(subscription.card_exp_year).slice(-2)}
+                    {t.dashboard.settings.plan.expires} {String(subscription.card_exp_month).padStart(2, '0')}/{String(subscription.card_exp_year).slice(-2)}
                   </p>
                 )}
               </div>
@@ -956,7 +975,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
               onClick={onAddCard}
               className="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white uppercase"
             >
-              Update
+              {t.dashboard.settings.plan.updatePaymentMethod}
             </button>
           </div>
         ) : (
@@ -964,11 +983,11 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mx-auto mb-3">
               <CreditCard size={20} className="text-gray-400" />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 font-bold mb-1">No payment method added</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-bold mb-1">{t.dashboard.settings.plan.noPaymentMethod.title}</p>
             <p className="text-xs text-gray-500 mb-4">
               {isTrialing 
-                ? 'Add a card to continue using all features after your trial ends.'
-                : 'Add a payment method to upgrade your plan.'
+                ? t.dashboard.settings.plan.noPaymentMethod.trialSubtitle
+                : t.dashboard.settings.plan.noPaymentMethod.defaultSubtitle
               }
             </p>
             <button 
@@ -976,21 +995,22 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
               <Plus size={14} />
-              Add Payment Method
+              {t.dashboard.settings.plan.addPaymentMethod}
             </button>
           </div>
         )}
       </div>
 
-      {/* Invoices - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* Invoices - NEO-BRUTALIST (Updated January 8th, 2026)
+          January 17, 2026: Updated with i18n */}
       <div>
-        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Invoice History</h3>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">{t.dashboard.settings.plan.invoiceHistory}</h3>
         
         {/* Loading State */}
         {invoicesLoading && (
           <div className="p-8 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center">
             <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-            <span className="ml-2 text-sm text-gray-500 font-medium">Loading invoices...</span>
+            <span className="ml-2 text-sm text-gray-500 font-medium">{t.dashboard.settings.plan.loadingInvoices}</span>
           </div>
         )}
 
@@ -1003,7 +1023,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
               onClick={fetchInvoices}
               className="ml-auto text-xs font-bold text-red-600 hover:text-red-800 uppercase"
             >
-              Retry
+              {t.dashboard.settings.plan.retry}
             </button>
           </div>
         )}
@@ -1014,23 +1034,24 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
             <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mx-auto mb-3">
               <FileText size={20} className="text-gray-400" />
             </div>
-            <p className="text-sm text-gray-500 font-bold">No invoices yet</p>
+            <p className="text-sm text-gray-500 font-bold">{t.dashboard.settings.plan.noInvoicesYet.title}</p>
             <p className="text-xs text-gray-400 mt-1">
-              Invoices will appear here after your first billing cycle
+              {t.dashboard.settings.plan.noInvoicesYet.subtitle}
             </p>
           </div>
         )}
 
-        {/* Invoice List - NEO-BRUTALIST */}
+        {/* Invoice List - NEO-BRUTALIST
+            January 17, 2026: Updated with i18n */}
         {!invoicesLoading && !invoicesError && invoices.length > 0 && (
           <div className="border-2 border-black dark:border-gray-600 overflow-hidden">
             {/* Table Header */}
             <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 border-b-2 border-black dark:border-gray-600 grid grid-cols-12 gap-4 text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">
-              <div className="col-span-3">Invoice</div>
-              <div className="col-span-3">Date</div>
-              <div className="col-span-2">Amount</div>
-              <div className="col-span-2">Status</div>
-              <div className="col-span-2 text-right">Actions</div>
+              <div className="col-span-3">{t.dashboard.settings.plan.invoiceColumns.invoice}</div>
+              <div className="col-span-3">{t.dashboard.settings.plan.invoiceColumns.date}</div>
+              <div className="col-span-2">{t.dashboard.settings.plan.invoiceColumns.amount}</div>
+              <div className="col-span-2">{t.dashboard.settings.plan.invoiceColumns.status}</div>
+              <div className="col-span-2 text-right">{t.dashboard.settings.plan.invoiceColumns.actions}</div>
             </div>
             
             {/* Invoice Rows */}
@@ -1044,7 +1065,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
                   {/* Invoice Number & Description */}
                   <div className="col-span-3">
                     <p className="text-sm font-bold text-gray-900 dark:text-white">
-                      {invoice.number || 'Draft'}
+                      {invoice.number || t.dashboard.settings.plan.invoiceStatus.draft}
                     </p>
                     {invoice.description && (
                       <p className="text-xs text-gray-500 truncate" title={invoice.description}>
@@ -1085,7 +1106,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        title="View invoice"
+                        title={t.dashboard.settings.plan.viewInvoice}
                       >
                         <ExternalLink size={14} />
                       </a>
@@ -1096,7 +1117,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        title="Download PDF"
+                        title={t.dashboard.settings.plan.downloadPdf}
                       >
                         <Download size={14} />
                       </a>
@@ -1109,39 +1130,40 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
         )}
       </div>
 
-      {/* Cancel Plan Section - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* Cancel Plan Section - NEO-BRUTALIST (Updated January 8th, 2026)
+          January 17, 2026: Updated with i18n */}
       {subscription && subscription.status !== 'canceled' && !subscription.cancel_at_period_end && (
         <div className="pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-black text-gray-900 dark:text-white mb-2 uppercase tracking-wide">Cancel Subscription</h3>
+          <h3 className="text-sm font-black text-gray-900 dark:text-white mb-2 uppercase tracking-wide">{t.dashboard.settings.plan.cancelSubscription.title}</h3>
           <p className="text-xs text-gray-500 mb-4">
-            If you cancel, you'll still have access to your plan until the end of your current billing period.
+            {t.dashboard.settings.plan.cancelSubscription.subtitle}
           </p>
           <button 
             onClick={onCancelPlan}
             className="px-4 py-2 text-xs font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-500 border-2 border-red-400 hover:border-red-600 transition-all uppercase"
           >
-            Cancel Plan
+            {t.dashboard.settings.plan.cancelSubscription.button}
           </button>
         </div>
       )}
 
-      {/* Cancellation pending notice - NEO-BRUTALIST */}
+      {/* Cancellation pending notice - NEO-BRUTALIST
+          January 17, 2026: Updated with i18n */}
       {subscription?.cancel_at_period_end && (
         <div className="pt-6 border-t-2 border-gray-200 dark:border-gray-700">
           <div className="p-4 bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500">
             <div className="flex items-start gap-3">
               <AlertTriangle size={16} className="text-orange-600 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-black text-orange-800 dark:text-orange-300 uppercase">Subscription Canceling</h4>
+                <h4 className="text-sm font-black text-orange-800 dark:text-orange-300 uppercase">{t.dashboard.settings.plan.cancellationPending.title}</h4>
                 <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-                  Your plan will be canceled at the end of the current billing period. 
-                  You'll continue to have access until then.
+                  {t.dashboard.settings.plan.cancellationPending.subtitle}
                 </p>
                 <button 
                   onClick={onCancelPlan}
                   className="mt-3 px-3 py-1.5 text-xs font-bold text-orange-700 hover:text-white bg-white hover:bg-orange-500 border-2 border-orange-400 hover:border-orange-600 transition-all uppercase"
                 >
-                  Resume Subscription
+                  {t.dashboard.settings.plan.cancellationPending.resumeButton}
                 </button>
               </div>
             </div>
@@ -1159,18 +1181,32 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
 // - Sharp-edged notification rows
 // - Bold checkboxes with yellow accent
 // - Bold typography
+// 
+// January 17, 2026: Added i18n support
 // =============================================================================
 function NotificationSettings() {
+  // January 17, 2026: Added i18n support
+  const { t } = useLanguage();
+  
+  // Email notification options with translations
+  const emailOptions = [
+    { id: 'emailMatches', label: t.dashboard.settings.notifications.options.newMatches.label, desc: t.dashboard.settings.notifications.options.newMatches.description },
+    { id: 'emailReports', label: t.dashboard.settings.notifications.options.weeklyReport.label, desc: t.dashboard.settings.notifications.options.weeklyReport.description },
+    { id: 'emailUpdates', label: t.dashboard.settings.notifications.options.productUpdates.label, desc: t.dashboard.settings.notifications.options.productUpdates.description }
+  ];
+  
+  // App notification options with translations
+  const appOptions = [
+    { id: 'appReplies', label: t.dashboard.settings.notifications.options.successfulReplies.label, desc: t.dashboard.settings.notifications.options.successfulReplies.description },
+    { id: 'appReminders', label: t.dashboard.settings.notifications.options.taskReminders.label, desc: t.dashboard.settings.notifications.options.taskReminders.description }
+  ];
+  
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">Email Notifications</h3>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.settings.notifications.emailNotifications}</h3>
         
-        {[
-          { id: 'emailMatches', label: 'New affiliate matches found', desc: 'Get notified when we find new high-potential affiliates.' },
-          { id: 'emailReports', label: 'Weekly performance report', desc: 'Summary of your campaign performance and outreach stats.' },
-          { id: 'emailUpdates', label: 'Product updates', desc: 'News about new features and improvements.' }
-        ].map((item) => (
+        {emailOptions.map((item) => (
           <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors -mx-3 border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700">
             <div className="relative flex items-center mt-0.5">
               <input 
@@ -1190,11 +1226,8 @@ function NotificationSettings() {
       <div className="h-0.5 bg-gray-200 dark:bg-gray-700" />
 
       <div className="space-y-4">
-        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">App Notifications</h3>
-        {[
-          { id: 'appReplies', label: 'Successful outreach replies', desc: 'Notify me when an affiliate replies to my email.' },
-          { id: 'appReminders', label: 'Task reminders', desc: 'Remind me about follow-ups and scheduled tasks.' }
-        ].map((item) => (
+        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.settings.notifications.appNotifications}</h3>
+        {appOptions.map((item) => (
           <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors -mx-3 border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700">
              <div className="relative flex items-center mt-0.5">
               <input 
@@ -1235,6 +1268,9 @@ interface SecuritySettingsProps {
 }
 
 function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
+  // January 17, 2026: Added i18n support
+  const { t } = useLanguage();
+  
   // January 13th, 2026: State for password change modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   
@@ -1288,25 +1324,26 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
   };
 
   // January 13th, 2026: Handle password change using Stack Auth's user.updatePassword()
+  // January 17, 2026: Updated with i18n translations
   const handleChangePassword = async () => {
     // Validation
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError('All fields are required');
+      setPasswordError(t.dashboard.settings.security.passwordModal.allFieldsRequired);
       return;
     }
 
     if (newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters');
+      setPasswordError(t.dashboard.settings.security.passwordModal.minLength);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match');
+      setPasswordError(t.dashboard.settings.security.passwordModal.passwordsDontMatch);
       return;
     }
 
     if (currentPassword === newPassword) {
-      setPasswordError('New password must be different from current password');
+      setPasswordError(t.dashboard.settings.security.passwordModal.mustBeDifferent);
       return;
     }
 
@@ -1322,7 +1359,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
 
       // Check for errors (Stack Auth returns error object on failure)
       if (result && result.status === 'error') {
-        throw new Error(result.error?.message || 'Failed to update password');
+        throw new Error(result.error?.message || t.dashboard.settings.security.passwordModal.genericError);
       }
 
       // Success
@@ -1334,11 +1371,11 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
       console.error('Error changing password:', err);
       // Handle specific Stack Auth errors
       if (err.message?.includes('PasswordConfirmationMismatch') || err.message?.includes('incorrect')) {
-        setPasswordError('Current password is incorrect');
+        setPasswordError(t.dashboard.settings.security.passwordModal.incorrectPassword);
       } else if (err.message?.includes('PasswordRequirementsNotMet')) {
-        setPasswordError('Password does not meet requirements');
+        setPasswordError(t.dashboard.settings.security.passwordModal.requirementsNotMet);
       } else {
-        setPasswordError(err.message || 'Failed to change password. Please try again.');
+        setPasswordError(err.message || t.dashboard.settings.security.passwordModal.genericError);
       }
     } finally {
       setIsChangingPassword(false);
@@ -1354,14 +1391,15 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
   // 3. Deletes user from Stack Auth
   // 4. Signs out and redirects to home
   // ==========================================================================
+  // January 17, 2026: Updated with i18n translations
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') {
-      setDeleteError('Please type DELETE to confirm');
+      setDeleteError(t.dashboard.settings.security.deleteModal.confirmError);
       return;
     }
 
     if (!neonUserId) {
-      setDeleteError('User ID not found. Please refresh and try again.');
+      setDeleteError(t.dashboard.settings.security.deleteModal.userIdError);
       return;
     }
 
@@ -1381,7 +1419,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        throw new Error(data.error || 'Failed to delete account');
+        throw new Error(data.error || t.dashboard.settings.security.deleteModal.genericError);
       }
 
       // Success - redirect to home page
@@ -1389,17 +1427,18 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
       window.location.href = '/';
     } catch (err: any) {
       console.error('Error deleting account:', err);
-      setDeleteError(err.message || 'Failed to delete account. Please try again or contact support.');
+      setDeleteError(err.message || t.dashboard.settings.security.deleteModal.genericError);
       setIsDeleting(false);
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* January 17, 2026: Updated with i18n translations */}
       <div className="space-y-4">
-        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">Password & Security</h3>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.settings.security.passwordSecurity}</h3>
         <p className="text-sm text-gray-500">
-          Change your password to keep your account secure.
+          {t.dashboard.settings.security.securityDescription}
         </p>
         <div className="pt-2">
           {/* January 13th, 2026: Opens password change modal */}
@@ -1407,7 +1446,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
             onClick={() => setIsPasswordModalOpen(true)}
             className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors uppercase"
           >
-            Change Password
+            {t.dashboard.settings.security.changePassword}
           </button>
         </div>
       </div>
@@ -1417,18 +1456,19 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
       {/* ================================================================= */}
       {/* DANGER ZONE - January 13th, 2026                                  */}
       {/* Delete Account button opens confirmation modal                    */}
+      {/* January 17, 2026: Updated with i18n translations                  */}
       {/* ================================================================= */}
       <div className="space-y-4">
-        <h3 className="text-sm font-black text-red-600 uppercase tracking-wide">Danger Zone</h3>
+        <h3 className="text-sm font-black text-red-600 uppercase tracking-wide">{t.dashboard.settings.security.dangerZone}</h3>
         <p className="text-xs text-gray-500">
-          Once you delete your account, there is no going back. Please be certain.
+          {t.dashboard.settings.security.dangerZoneWarning}
         </p>
         <button 
           onClick={() => setIsDeleteModalOpen(true)}
           className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-2 border-red-400 text-sm font-bold hover:bg-red-500 hover:text-white hover:border-red-600 transition-all uppercase flex items-center gap-2"
         >
           <Trash2 size={14} />
-          Delete Account
+          {t.dashboard.settings.security.deleteAccount}
         </button>
       </div>
 
@@ -1436,11 +1476,12 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
       {/* PASSWORD CHANGE MODAL - January 13th, 2026                          */}
       {/* Simple form: Current Password -> New Password -> Confirm            */}
       {/* Uses Stack Auth's user.updatePassword() method                       */}
+      {/* January 17, 2026: Updated with i18n translations                    */}
       {/* =================================================================== */}
       <Modal
         isOpen={isPasswordModalOpen}
         onClose={handleClosePasswordModal}
-        title="Change Password"
+        title={t.dashboard.settings.security.passwordModal.title}
         width="max-w-md"
       >
         <div className="space-y-4">
@@ -1448,7 +1489,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
           {passwordSuccess && (
             <div className="p-3 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center gap-2">
               <Check size={16} className="text-green-600" />
-              <span className="text-sm font-bold text-green-700 dark:text-green-400">Password changed successfully!</span>
+              <span className="text-sm font-bold text-green-700 dark:text-green-400">{t.dashboard.settings.security.passwordModal.success}</span>
             </div>
           )}
 
@@ -1463,7 +1504,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
           {/* Current Password */}
           <div className="space-y-1.5">
             <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Current Password
+              {t.dashboard.settings.security.passwordModal.currentPassword}
             </label>
             <div className="relative">
               <input
@@ -1472,7 +1513,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 disabled={isChangingPassword || passwordSuccess}
                 className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
-                placeholder="Enter current password"
+                placeholder={t.dashboard.settings.security.passwordModal.currentPlaceholder}
               />
               <button
                 type="button"
@@ -1487,7 +1528,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
           {/* New Password */}
           <div className="space-y-1.5">
             <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              New Password
+              {t.dashboard.settings.security.passwordModal.newPassword}
             </label>
             <div className="relative">
               <input
@@ -1496,7 +1537,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={isChangingPassword || passwordSuccess}
                 className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
-                placeholder="Enter new password (min 8 characters)"
+                placeholder={t.dashboard.settings.security.passwordModal.newPlaceholder}
               />
               <button
                 type="button"
@@ -1511,7 +1552,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
           {/* Confirm New Password */}
           <div className="space-y-1.5">
             <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Confirm New Password
+              {t.dashboard.settings.security.passwordModal.confirmPassword}
             </label>
             <div className="relative">
               <input
@@ -1520,7 +1561,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isChangingPassword || passwordSuccess}
                 className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
-                placeholder="Confirm new password"
+                placeholder={t.dashboard.settings.security.passwordModal.confirmPlaceholder}
               />
               <button
                 type="button"
@@ -1539,7 +1580,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
               disabled={isChangingPassword}
               className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
             >
-              Cancel
+              {t.dashboard.settings.security.passwordModal.cancel}
             </button>
             <button
               onClick={handleChangePassword}
@@ -1549,12 +1590,12 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
               {isChangingPassword ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Saving...
+                  {t.dashboard.settings.security.passwordModal.saving}
                 </>
               ) : (
                 <>
                   <Check size={14} />
-                  Save Password
+                  {t.dashboard.settings.security.passwordModal.save}
                 </>
               )}
             </button>
@@ -1564,20 +1605,13 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
 
       {/* =================================================================== */}
       {/* DELETE ACCOUNT CONFIRMATION MODAL - January 13th, 2026              */}
-      {/*                                                                     */}
+      {/* January 17, 2026: Updated with i18n translations                    */}
       {/* WARNING: This action is IRREVERSIBLE!                               */}
-      {/* - Cancels Stripe subscription immediately                            */}
-      {/* - Deletes all saved/discovered affiliates                           */}
-      {/* - Deletes all search history and API logs                           */}
-      {/* - Deletes user account from database                                */}
-      {/* - Deletes authentication from Stack Auth                            */}
-      {/*                                                                     */}
-      {/* User must type "DELETE" to confirm                                  */}
       {/* =================================================================== */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}
-        title="Delete Account"
+        title={t.dashboard.settings.security.deleteModal.title}
         width="max-w-md"
       >
         <div className="space-y-4">
@@ -1587,10 +1621,10 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
               <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-black text-red-800 dark:text-red-300 uppercase">
-                  This action cannot be undone
+                  {t.dashboard.settings.security.deleteModal.warning}
                 </p>
                 <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                  Your account and all associated data will be permanently deleted.
+                  {t.dashboard.settings.security.deleteModal.warningDetail}
                 </p>
               </div>
             </div>
@@ -1599,14 +1633,14 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
           {/* What will be deleted */}
           <div className="space-y-2">
             <p className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">
-              The following will be permanently deleted:
+              {t.dashboard.settings.security.deleteModal.willBeDeleted}
             </p>
             <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 pl-4">
-              <li>• Your subscription (canceled immediately)</li>
-              <li>• All saved affiliates</li>
-              <li>• All discovered affiliates</li>
-              <li>• All search history</li>
-              <li>• Your account and login credentials</li>
+              <li>• {t.dashboard.settings.security.deleteModal.items.subscription}</li>
+              <li>• {t.dashboard.settings.security.deleteModal.items.savedAffiliates}</li>
+              <li>• {t.dashboard.settings.security.deleteModal.items.discoveredAffiliates}</li>
+              <li>• {t.dashboard.settings.security.deleteModal.items.searchHistory}</li>
+              <li>• {t.dashboard.settings.security.deleteModal.items.account}</li>
             </ul>
           </div>
 
@@ -1621,7 +1655,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
           {/* Confirmation Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              Type DELETE to confirm
+              {t.dashboard.settings.security.deleteModal.typeToConfirm}
             </label>
             <input
               type="text"
@@ -1641,7 +1675,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
               disabled={isDeleting}
               className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
             >
-              Cancel
+              {t.dashboard.settings.security.deleteModal.cancel}
             </button>
             <button
               onClick={handleDeleteAccount}
@@ -1651,12 +1685,12 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
               {isDeleting ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Deleting...
+                  {t.dashboard.settings.security.deleteModal.deleting}
                 </>
               ) : (
                 <>
                   <Trash2 size={14} />
-                  Delete Forever
+                  {t.dashboard.settings.security.deleteModal.delete}
                 </>
               )}
             </button>

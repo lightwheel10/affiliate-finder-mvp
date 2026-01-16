@@ -334,6 +334,47 @@ export const en: Dictionary = {
       selected: 'Selected',
       selectPlan: 'Select Plan',
       included: 'Included:',
+      // January 17, 2026: Added pricing plan translations
+      plans: {
+        pro: {
+          name: 'Pro',
+          description: 'Perfect for solo founders & small teams starting their affiliate journey.',
+          features: [
+            'Find 500 new affiliates / month',
+            '150 Verified email credits / month',
+            '1 Brand Project',
+            'Basic Search Filters',
+            'Email Support',
+            'Export to CSV',
+          ],
+        },
+        business: {
+          name: 'Business',
+          description: 'For growing brands that need to scale their outreach volume.',
+          features: [
+            'Find Unlimited affiliates',
+            '500 Verified email credits / month',
+            '5 Brand Projects',
+            'Advanced Competitor Analysis',
+            'Priority Chat Support',
+            'API Access',
+            'Team Collaboration (5 seats)',
+          ],
+        },
+        enterprise: {
+          name: 'Enterprise',
+          description: 'Custom solutions for large organizations with specific needs.',
+          priceLabel: 'Custom',
+          features: [
+            'Unlimited everything',
+            'Dedicated Account Manager',
+            'Custom AI Model Training',
+            'SSO & Advanced Security',
+            'White-glove Onboarding',
+            'Custom Invoicing',
+          ],
+        },
+      },
     },
     // Step 6: Affiliate Types
     step6: {
@@ -434,6 +475,7 @@ export const en: Dictionary = {
       email: 'Email',
       message: 'Message',
       action: 'Action',
+      creator: 'Creator',  // January 17, 2026: Added for outreach page table header
     },
     find: {
       pageTitle: 'Find New',
@@ -445,6 +487,29 @@ export const en: Dictionary = {
         scanning: 'Scanning the web for affiliates...',
         subtitle: 'Searching YouTube, Instagram, TikTok & websites',
         badge: 'Starting scan',
+        // January 17, 2026: Added dynamic loading messages
+        fromYouTube: 'from YouTube',
+        fromInstagram: 'from Instagram',
+        fromTikTok: 'from TikTok',
+        fromWebsites: 'from websites',
+        analyzing: 'Analyzing results...',
+        found: 'found',
+        progressTitles: {
+          title1: 'Great finds coming in!',
+          title2: 'Discovering potential partners...',
+          title3: 'Building your affiliate list...',
+          title4: 'Uncovering hidden gems...',
+        },
+      },
+      // January 17, 2026: Added toast messages for save/delete feedback
+      toasts: {
+        affiliatesSaved: 'affiliate(s) saved!',
+        noNewAffiliatesSaved: 'No new affiliates saved',
+        addedToPipeline: 'Successfully added to your pipeline.',
+        alreadyInPipeline: 'already in pipeline (skipped)',
+        affiliateDeleted: 'Affiliate deleted',
+        affiliatesDeleted: 'affiliates deleted',
+        removedFromDiscovered: 'Successfully removed from discovered list.',
       },
       modal: {
         title: 'Find Affiliates',
@@ -522,9 +587,22 @@ export const en: Dictionary = {
         found: 'Found',
         errors: 'errors',
       },
+      // January 17, 2026: Added toast translations
+      toasts: {
+        affiliateRemoved: 'Affiliate removed',
+        affiliatesRemoved: 'affiliates removed',
+        removedFromPipeline: 'Successfully removed from your pipeline.',
+      },
     },
+    // =========================================================================
+    // OUTREACH PAGE TRANSLATIONS
+    // Updated: January 17, 2026 - Added comprehensive i18n support
+    // =========================================================================
     outreach: {
       pageTitle: 'Outreach',
+      // Loading state
+      loading: 'Loading your affiliates...',
+      // Empty & No Results states
       emptyState: {
         title: 'Start Building Connections',
         subtitle: 'Save affiliates to generate AI-powered outreach messages.',
@@ -533,15 +611,22 @@ export const en: Dictionary = {
         title: 'No Results Found',
         subtitle: 'Try adjusting your search or filter to find affiliates.',
       },
+      // Selection actions (January 17, 2026)
+      selected: 'Selected',
+      selectAll: 'Select All',
+      deselectAll: 'Deselect All',
+      // Row action buttons
       generate: 'Generate',
       generating: 'Generating...',
       viewMessage: 'View',
       messages: 'Msgs',
+      messagesLabel: 'Messages',  // For modal badge
       failed: 'Failed',
       retry: 'Retry',
       selectContacts: 'Select Contacts',
       contacts: 'Contacts',
       bulkGenerate: 'Generate',
+      // Contact Picker Modal (January 17, 2026: Comprehensive translations)
       contactPicker: {
         title: 'Select Contacts',
         subtitle: "Select which contacts you'd like to generate personalized emails for:",
@@ -550,19 +635,31 @@ export const en: Dictionary = {
         credits: 'credits',
         selectContacts: 'Select contacts',
         alreadyGenerated: 'Done',
+        unknownName: 'Unknown',
+        cancel: 'Cancel',
       },
+      // Message Viewer Modal (January 17, 2026: Added edit mode translations)
       messageViewer: {
         title: 'AI Generated Message',
         to: 'to',
+        primaryContact: 'Primary Contact',
         affiliateDetails: 'Affiliate Details',
         contactName: 'Contact Name',
         platform: 'Platform',
         keyword: 'Keyword',
+        // Action buttons
         redo: 'Redo',
+        regenerating: 'Regenerating...',
+        edit: 'Edit',
+        editPlaceholder: 'Edit your message...',
+        save: 'Save',
+        saving: 'Saving...',
+        cancel: 'Cancel',
         copy: 'Copy',
+        copied: 'Copied!',
         done: 'Done!',
       },
-      // Additional strings for toast notifications (January 10th, 2026)
+      // Toast notifications (January 10th, 2026)
       email: 'email',
       emails: 'emails',
       failedRetry: 'failed - click "Retry" to try again.',
@@ -587,12 +684,31 @@ export const en: Dictionary = {
           description: 'Protect your account',
         },
       },
+      // =======================================================================
+      // PROFILE SECTION - Updated January 17, 2026
+      // Added all missing profile form translations
+      // =======================================================================
       profile: {
         photoTitle: 'Profile Photo',
         photoDescription: 'Update your profile picture in account settings.',
         fullName: 'Full Name',
         emailAddress: 'Email Address',
         editProfile: 'Edit Profile',
+        // January 17, 2026: Added missing profile translations
+        targetMarket: 'Target Market',
+        country: 'Country',
+        language: 'Language',
+        selectCountry: 'Select country',
+        selectLanguage: 'Select language',
+        notSet: 'Not set',
+        emailCannotChange: 'Email cannot be changed here.',
+        enterYourName: 'Enter your name',
+        nameCannotBeEmpty: 'Name cannot be empty',
+        failedToSave: 'Failed to save. Please try again.',
+        failedToUpdateDatabase: 'Failed to update database',
+        saveChanges: 'Save Changes',
+        saving: 'Saving...',
+        cancel: 'Cancel',
       },
       plan: {
         currentPlan: 'Current Plan',
@@ -642,7 +758,16 @@ export const en: Dictionary = {
           draft: 'Draft',
           void: 'Void',
           uncollectible: 'Uncollectible',
+          unknown: 'Unknown',
         },
+        // January 17, 2026: Added missing plan translations
+        noPlan: 'No Plan',
+        card: 'Card',
+        dayLeftInTrial: 'day left in trial',
+        viewInvoice: 'View invoice',
+        downloadPdf: 'Download PDF',
+        retry: 'Retry',
+        subscriptionWillRemainActive: 'Your subscription will remain active until the end of your current billing period. You can resume anytime before then.',
         cancelSubscription: {
           title: 'Cancel Subscription',
           subtitle: "If you cancel, you'll still have access to your plan until the end of your current billing period.",
@@ -691,13 +816,65 @@ export const en: Dictionary = {
           },
         },
       },
+      // =======================================================================
+      // SECURITY SECTION - Updated January 17, 2026
+      // Added password modal and delete account modal translations
+      // =======================================================================
       security: {
         passwordSecurity: 'Password & Security',
-        manageSecuritySettings: 'Manage Security Settings',
+        securityDescription: 'Change your password to keep your account secure.',
+        changePassword: 'Change Password',
         dangerZone: 'Danger Zone',
         dangerZoneWarning: 'Once you delete your account, there is no going back. Please be certain.',
         deleteAccount: 'Delete Account',
+        // Password Modal
+        passwordModal: {
+          title: 'Change Password',
+          currentPassword: 'Current Password',
+          newPassword: 'New Password',
+          confirmPassword: 'Confirm New Password',
+          currentPlaceholder: 'Enter current password',
+          newPlaceholder: 'Enter new password (min 8 characters)',
+          confirmPlaceholder: 'Confirm new password',
+          success: 'Password changed successfully!',
+          // Validation errors
+          allFieldsRequired: 'All fields are required',
+          minLength: 'New password must be at least 8 characters',
+          passwordsDontMatch: 'New passwords do not match',
+          mustBeDifferent: 'New password must be different from current password',
+          incorrectPassword: 'Current password is incorrect',
+          requirementsNotMet: 'Password does not meet requirements',
+          genericError: 'Failed to change password. Please try again.',
+          // Buttons
+          cancel: 'Cancel',
+          save: 'Save Password',
+          saving: 'Saving...',
+        },
+        // Delete Account Modal
+        deleteModal: {
+          title: 'Delete Account',
+          warning: 'This action cannot be undone',
+          warningDetail: 'Your account and all associated data will be permanently deleted.',
+          willBeDeleted: 'The following will be permanently deleted:',
+          items: {
+            subscription: 'Your subscription (canceled immediately)',
+            savedAffiliates: 'All saved affiliates',
+            discoveredAffiliates: 'All discovered affiliates',
+            searchHistory: 'All search history',
+            account: 'Your account and login credentials',
+          },
+          typeToConfirm: 'Type DELETE to confirm',
+          confirmError: 'Please type DELETE to confirm',
+          userIdError: 'User ID not found. Please refresh and try again.',
+          genericError: 'Failed to delete account. Please try again or contact support.',
+          // Buttons
+          cancel: 'Cancel',
+          delete: 'Delete Forever',
+          deleting: 'Deleting...',
+        },
       },
+      // January 17, 2026: Added account section label
+      accountLabel: 'Account',
     },
   },
 
@@ -782,6 +959,7 @@ export const en: Dictionary = {
       cardAdded: 'Payment method added!',
       subscriptionCancelled: 'Subscription cancelled',
       subscriptionResumed: 'Subscription resumed!',
+      messageSaved: 'Message saved!',  // January 17, 2026: Added for edit message feature
     },
     error: {
       genericError: 'Something went wrong. Please try again.',
@@ -796,6 +974,8 @@ export const en: Dictionary = {
       bulkGenerationFailed: 'Failed to generate',
       exportFailed: 'Failed to export data',
       paymentFailed: 'Payment failed. Please try again.',
+      messageSaveFailed: 'Failed to save message',  // January 17, 2026: Added for edit message feature
+      messageEmpty: 'Message cannot be empty',  // January 17, 2026: Added for edit message validation
     },
     warning: {
       insufficientCredits: 'Insufficient search credits. Please upgrade your plan.',

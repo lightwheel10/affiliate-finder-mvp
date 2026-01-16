@@ -335,6 +335,25 @@ export interface Dictionary {
       selected: string;
       selectPlan: string;
       included: string;
+      // January 17, 2026: Added pricing plan translations
+      plans: {
+        pro: {
+          name: string;
+          description: string;
+          features: string[];
+        };
+        business: {
+          name: string;
+          description: string;
+          features: string[];
+        };
+        enterprise: {
+          name: string;
+          description: string;
+          priceLabel: string;
+          features: string[];
+        };
+      };
     };
     // Step 6: Affiliate Types (displayed as Step 5 in UI)
     step6: {
@@ -436,6 +455,7 @@ export interface Dictionary {
       email: string;
       message: string;
       action: string;
+      creator: string;  // January 17, 2026: Added for outreach page table header
     };
     // Find New page
     find: {
@@ -448,6 +468,29 @@ export interface Dictionary {
         scanning: string;
         subtitle: string;
         badge: string;
+        // January 17, 2026: Added dynamic loading messages
+        fromYouTube: string;
+        fromInstagram: string;
+        fromTikTok: string;
+        fromWebsites: string;
+        analyzing: string;
+        found: string;
+        progressTitles: {
+          title1: string;
+          title2: string;
+          title3: string;
+          title4: string;
+        };
+      };
+      // January 17, 2026: Added toast messages for save/delete feedback
+      toasts: {
+        affiliatesSaved: string;
+        noNewAffiliatesSaved: string;
+        addedToPipeline: string;
+        alreadyInPipeline: string;
+        affiliateDeleted: string;
+        affiliatesDeleted: string;
+        removedFromDiscovered: string;
       };
       modal: {
         title: string;
@@ -527,10 +570,19 @@ export interface Dictionary {
         found: string;
         errors: string;
       };
+      // January 17, 2026: Added toast translations
+      toasts: {
+        affiliateRemoved: string;
+        affiliatesRemoved: string;
+        removedFromPipeline: string;
+      };
     };
-    // Outreach page
+    // =========================================================================
+    // Outreach page (Updated January 17, 2026: Comprehensive i18n support)
+    // =========================================================================
     outreach: {
       pageTitle: string;
+      loading: string;  // January 17, 2026
       emptyState: {
         title: string;
         subtitle: string;
@@ -539,15 +591,22 @@ export interface Dictionary {
         title: string;
         subtitle: string;
       };
+      // Selection actions (January 17, 2026)
+      selected: string;
+      selectAll: string;
+      deselectAll: string;
+      // Row action buttons
       generate: string;
       generating: string;
       viewMessage: string;
       messages: string;
+      messagesLabel: string;  // January 17, 2026
       failed: string;
       retry: string;
       selectContacts: string;
       contacts: string;
       bulkGenerate: string;
+      // Contact Picker Modal (January 17, 2026: Added unknownName, cancel)
       contactPicker: {
         title: string;
         subtitle: string;
@@ -556,19 +615,30 @@ export interface Dictionary {
         credits: string;
         selectContacts: string;
         alreadyGenerated: string;
+        unknownName: string;
+        cancel: string;
       };
+      // Message Viewer Modal (January 17, 2026: Added edit mode translations)
       messageViewer: {
         title: string;
         to: string;
+        primaryContact: string;
         affiliateDetails: string;
         contactName: string;
         platform: string;
         keyword: string;
         redo: string;
+        regenerating: string;
+        edit: string;
+        editPlaceholder: string;
+        save: string;
+        saving: string;
+        cancel: string;
         copy: string;
+        copied: string;
         done: string;
       };
-      // Additional strings for toast notifications (January 10th, 2026)
+      // Toast notifications
       email: string;
       emails: string;
       failedRetry: string;
@@ -594,12 +664,30 @@ export interface Dictionary {
           description: string;
         };
       };
+      // =======================================================================
+      // PROFILE SECTION - Updated January 17, 2026
+      // =======================================================================
       profile: {
         photoTitle: string;
         photoDescription: string;
         fullName: string;
         emailAddress: string;
         editProfile: string;
+        // January 17, 2026: Added missing profile translations
+        targetMarket: string;
+        country: string;
+        language: string;
+        selectCountry: string;
+        selectLanguage: string;
+        notSet: string;
+        emailCannotChange: string;
+        enterYourName: string;
+        nameCannotBeEmpty: string;
+        failedToSave: string;
+        failedToUpdateDatabase: string;
+        saveChanges: string;
+        saving: string;
+        cancel: string;
       };
       plan: {
         currentPlan: string;
@@ -649,7 +737,16 @@ export interface Dictionary {
           draft: string;
           void: string;
           uncollectible: string;
+          unknown: string;
         };
+        // January 17, 2026: Added missing plan translations
+        noPlan: string;
+        card: string;
+        dayLeftInTrial: string;
+        viewInvoice: string;
+        downloadPdf: string;
+        retry: string;
+        subscriptionWillRemainActive: string;
         cancelSubscription: {
           title: string;
           subtitle: string;
@@ -698,13 +795,61 @@ export interface Dictionary {
           };
         };
       };
+      // =======================================================================
+      // SECURITY SECTION - Updated January 17, 2026
+      // =======================================================================
       security: {
         passwordSecurity: string;
-        manageSecuritySettings: string;
+        securityDescription: string;
+        changePassword: string;
         dangerZone: string;
         dangerZoneWarning: string;
         deleteAccount: string;
+        // Password Modal
+        passwordModal: {
+          title: string;
+          currentPassword: string;
+          newPassword: string;
+          confirmPassword: string;
+          currentPlaceholder: string;
+          newPlaceholder: string;
+          confirmPlaceholder: string;
+          success: string;
+          allFieldsRequired: string;
+          minLength: string;
+          passwordsDontMatch: string;
+          mustBeDifferent: string;
+          incorrectPassword: string;
+          requirementsNotMet: string;
+          genericError: string;
+          cancel: string;
+          save: string;
+          saving: string;
+        };
+        // Delete Account Modal
+        deleteModal: {
+          title: string;
+          warning: string;
+          warningDetail: string;
+          willBeDeleted: string;
+          items: {
+            subscription: string;
+            savedAffiliates: string;
+            discoveredAffiliates: string;
+            searchHistory: string;
+            account: string;
+          };
+          typeToConfirm: string;
+          confirmError: string;
+          userIdError: string;
+          genericError: string;
+          cancel: string;
+          delete: string;
+          deleting: string;
+        };
       };
+      // January 17, 2026: Added account section label
+      accountLabel: string;
     };
   };
 
@@ -789,6 +934,7 @@ export interface Dictionary {
       cardAdded: string;
       subscriptionCancelled: string;
       subscriptionResumed: string;
+      messageSaved: string;  // January 17, 2026: Added for edit message feature
     };
     error: {
       genericError: string;
@@ -803,6 +949,8 @@ export interface Dictionary {
       bulkGenerationFailed: string;      // "Failed to generate {failed} of {total} emails"
       exportFailed: string;
       paymentFailed: string;
+      messageSaveFailed: string;  // January 17, 2026: Added for edit message feature
+      messageEmpty: string;  // January 17, 2026: Added for edit message validation
     };
     warning: {
       insufficientCredits: string;       // Search credits

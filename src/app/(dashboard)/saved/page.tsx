@@ -784,6 +784,7 @@ export default function SavedPage() {
           DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
           Updated: January 16, 2026
           ============================================================================= */}
+      {/* January 17, 2026: Updated with i18n translations */}
       {deleteResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
@@ -794,12 +795,12 @@ export default function SavedPage() {
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {deleteResult.count === 1 
-                    ? 'Affiliate removed'
-                    : `${deleteResult.count} affiliates removed`
+                    ? t.dashboard.saved.toasts.affiliateRemoved
+                    : `${deleteResult.count} ${t.dashboard.saved.toasts.affiliatesRemoved}`
                   }
                 </h4>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                  Successfully removed from your pipeline.
+                  {t.dashboard.saved.toasts.removedFromPipeline}
                 </p>
               </div>
               <button

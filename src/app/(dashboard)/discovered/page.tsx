@@ -623,6 +623,7 @@ export default function DiscoveredPage() {
           BULK SAVE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
           Updated: January 16, 2026
           ============================================================================= */}
+      {/* January 17, 2026: Updated with i18n translations */}
       {bulkSaveResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
@@ -633,15 +634,15 @@ export default function DiscoveredPage() {
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {bulkSaveResult.savedCount > 0 
-                    ? `${bulkSaveResult.savedCount} affiliate${bulkSaveResult.savedCount !== 1 ? 's' : ''} saved!`
-                    : 'No new affiliates saved'
+                    ? `${bulkSaveResult.savedCount} ${t.dashboard.find.toasts.affiliatesSaved}`
+                    : t.dashboard.find.toasts.noNewAffiliatesSaved
                   }
                 </h4>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                  {bulkSaveResult.savedCount > 0 && 'Successfully added to your pipeline.'}
+                  {bulkSaveResult.savedCount > 0 && t.dashboard.find.toasts.addedToPipeline}
                   {bulkSaveResult.duplicateCount > 0 && (
                     <span className="block text-amber-600 font-bold mt-1">
-                      {bulkSaveResult.duplicateCount} already in pipeline (skipped)
+                      {bulkSaveResult.duplicateCount} {t.dashboard.find.toasts.alreadyInPipeline}
                     </span>
                   )}
                 </p>
@@ -661,6 +662,7 @@ export default function DiscoveredPage() {
           DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
           Updated: January 16, 2026
           ============================================================================= */}
+      {/* January 17, 2026: Updated with i18n translations */}
       {deleteResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
@@ -671,12 +673,12 @@ export default function DiscoveredPage() {
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {deleteResult.count === 1 
-                    ? 'Affiliate deleted'
-                    : `${deleteResult.count} affiliates deleted`
+                    ? t.dashboard.find.toasts.affiliateDeleted
+                    : `${deleteResult.count} ${t.dashboard.find.toasts.affiliatesDeleted}`
                   }
                 </h4>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                  Successfully removed from discovered list.
+                  {t.dashboard.find.toasts.removedFromDiscovered}
                 </p>
               </div>
               <button

@@ -389,6 +389,125 @@ export async function POST(request: NextRequest) {
 }
 
 // =============================================================================
+// PATCH - Update/Save edited outreach message (January 16, 2026)
+// 
+// PURPOSE:
+// Allows users to edit AI-generated messages and save their changes.
+// This is useful when the AI generates a good base email but the user
+// wants to make manual tweaks before sending.
+//
+// Request body:
+// - affiliateId: number (required) - The saved_affiliates.id
+// - contactEmail: string (required) - The contact's email (key for JSONB)
+// - message: string (required) - The edited message text
+// - subject: string (optional) - The edited subject line
+//
+// Returns:
+// - success: boolean
+// - message: string (the saved message)
+// =============================================================================
+export async function PATCH(request: NextRequest) {
+  try {
+    // =========================================================================
+    // STEP 1: AUTHENTICATION
+    // =========================================================================
+    const authUser = await stackServerApp.getUser();
+    
+    if (!authUser) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in.' },
+        { status: 401 }
+      );
+    }
+
+    // =========================================================================
+    // STEP 2: PARSE REQUEST BODY
+    // =========================================================================
+    const body = await request.json();
+    const { affiliateId, contactEmail, message, subject } = body;
+
+    if (!affiliateId || !message) {
+      return NextResponse.json(
+        { error: 'affiliateId and message are required' },
+        { status: 400 }
+      );
+    }
+
+    // =========================================================================
+    // STEP 3: GET USER ID FROM DATABASE
+    // =========================================================================
+    const users = await sql`
+      SELECT id FROM users WHERE email = ${authUser.primaryEmail}
+    `;
+
+    if (users.length === 0) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = users[0].id as number;
+
+    // =========================================================================
+    // STEP 4: VERIFY AFFILIATE BELONGS TO USER
+    // =========================================================================
+    const affiliates = await sql`
+      SELECT id FROM saved_affiliates 
+      WHERE id = ${affiliateId} AND user_id = ${userId}
+    `;
+
+    if (affiliates.length === 0) {
+      return NextResponse.json(
+        { error: 'Affiliate not found' },
+        { status: 404 }
+      );
+    }
+
+    // =========================================================================
+    // STEP 5: UPDATE THE MESSAGE IN DATABASE
+    // 
+    // Updates both the legacy single message field AND the JSONB multi-contact
+    // field. The email key defaults to 'primary' if no contactEmail provided.
+    // =========================================================================
+    const emailKey = contactEmail || 'primary';
+    const messageEntry = {
+      message,
+      subject: subject || null,
+      generatedAt: new Date().toISOString(),
+    };
+
+    await sql`
+      UPDATE saved_affiliates
+      SET 
+        ai_generated_message = ${message},
+        ai_generated_subject = ${subject || null},
+        ai_generated_at = NOW(),
+        ai_generated_messages = COALESCE(ai_generated_messages, '{}'::jsonb) || ${JSON.stringify({ [emailKey]: messageEntry })}::jsonb
+      WHERE id = ${affiliateId} AND user_id = ${userId}
+    `;
+
+    console.log(`[AI Outreach] ✏️ Saved edited message for affiliate ${affiliateId}, contact: ${emailKey}`);
+
+    return NextResponse.json({
+      success: true,
+      message,
+      subject: subject || null,
+      affiliateId,
+      contactEmail: emailKey,
+    });
+
+  } catch (error: unknown) {
+    console.error('[AI Outreach] Error saving edited message:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json(
+      { error: 'Failed to save message', details: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+// =============================================================================
 // GET - Check webhook configuration status
 // =============================================================================
 

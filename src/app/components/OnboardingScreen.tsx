@@ -80,56 +80,13 @@ interface SuggestedTopic {
 }
 
 // Pricing plans data - matching PricingModal exactly
+// January 17, 2026: Plan details (name, description, features) are now translated
+// and accessed via t.onboarding.step5.plans in the render function
 const PRICING_PLANS = [
-  {
-    id: 'pro',
-    name: 'Pro',
-    description: 'Perfect for solo founders & small teams starting their affiliate journey.',
-    monthlyPrice: 99,
-    annualPrice: 79,
-    features: [
-      'Find 500 new affiliates / month',
-      '150 Verified email credits / month',
-      '1 Brand Project',
-      'Basic Search Filters',
-      'Email Support',
-      'Export to CSV'
-    ],
-    popular: false,
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    description: 'For growing brands that need to scale their outreach volume.',
-    monthlyPrice: 249,
-    annualPrice: 199,
-    features: [
-      'Find Unlimited affiliates',
-      '500 Verified email credits / month',
-      '5 Brand Projects',
-      'Advanced Competitor Analysis',
-      'Priority Chat Support',
-      'API Access',
-      'Team Collaboration (5 seats)'
-    ],
-    popular: true,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    description: 'Custom solutions for large organizations with specific needs.',
-    priceLabel: 'Custom',
-    features: [
-      'Unlimited everything',
-      'Dedicated Account Manager',
-      'Custom AI Model Training',
-      'SSO & Advanced Security',
-      'White-glove Onboarding',
-      'Custom Invoicing'
-    ],
-    popular: false,
-  },
-];
+  { id: 'pro', monthlyPrice: 99, annualPrice: 79, popular: false },
+  { id: 'business', monthlyPrice: 249, annualPrice: 199, popular: true },
+  { id: 'enterprise', priceLabel: 'Custom', popular: false },
+] as const;
 
 // =============================================================================
 // DOMAIN VALIDATION HELPER (January 3rd, 2026)
@@ -1852,13 +1809,21 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         </div>
       </div>
 
-      {/* Pricing Grid - 3 columns */}
+      {/* Pricing Grid - 3 columns
+          January 17, 2026: Updated to use translated plan details */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {PRICING_PLANS.map((plan) => {
           const price = billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
           const isSelected = selectedPlan === plan.id;
           const isPopular = plan.popular;
           const isEnterprise = plan.id === 'enterprise';
+          
+          // Get translated plan details - January 17, 2026
+          const planTranslations = t.onboarding.step5.plans[plan.id as keyof typeof t.onboarding.step5.plans];
+          const planName = planTranslations.name;
+          const planDescription = planTranslations.description;
+          const planFeatures = planTranslations.features;
+          const planPriceLabel = isEnterprise ? (planTranslations as { priceLabel?: string }).priceLabel : undefined;
 
   return (
             <button
@@ -1887,15 +1852,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               <div className="p-3 flex-1 flex flex-col">
                 <div className="mb-2">
                   <h3 className={cn("text-sm font-bold", isPopular ? "text-[#1A1D21]" : "text-slate-900")}>
-                    {plan.name}
+                    {planName}
                   </h3>
-                  <p className="text-[10px] text-slate-500 leading-snug line-clamp-2">{plan.description}</p>
+                  <p className="text-[10px] text-slate-500 leading-snug line-clamp-2">{planDescription}</p>
                 </div>
 
                 <div className="mb-2">
                   <div className="flex items-baseline gap-0.5">
-                    {plan.priceLabel ? (
-                      <span className="text-xl font-bold text-slate-900">{plan.priceLabel}</span>
+                    {planPriceLabel ? (
+                      <span className="text-xl font-bold text-slate-900">{planPriceLabel}</span>
                     ) : (
                       <>
                         <span className="text-xl font-bold text-slate-900">{CURRENCY_SYMBOL}{price}</span>
@@ -1903,7 +1868,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       </>
                     )}
                   </div>
-                  {!plan.priceLabel && billingInterval === 'annual' && (
+                  {!planPriceLabel && billingInterval === 'annual' && (
                     <p className="text-[9px] text-[#1A1D21] font-medium">{t.onboarding.step5.billedAnnually.replace('{amount}', `${CURRENCY_SYMBOL}${price! * 12}`)}</p>
                   )}
                 </div>
@@ -1931,7 +1896,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
                 <div className="space-y-1 flex-1">
                   <p className="text-[9px] font-bold text-slate-900 uppercase tracking-wider mb-1">{t.onboarding.step5.included}</p>
-                  {plan.features.slice(0, 5).map((feature, idx) => (
+                  {planFeatures.slice(0, 5).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-1.5">
                       <div className={cn(
                         "mt-0.5 w-3 h-3 rounded-full flex items-center justify-center shrink-0",

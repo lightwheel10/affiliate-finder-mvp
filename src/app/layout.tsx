@@ -150,13 +150,35 @@ export default function RootLayout({
               toast.warning('Warning message');
               toast.info('Info message');
             ===================================================================== */}
+          {/* =====================================================================
+              TOASTER - NEO-BRUTALIST DESIGN (Updated January 17, 2026)
+              
+              Customized to match the app's neo-brutalist aesthetic:
+              - Sharp corners (no rounded borders)
+              - Bold 2px black borders
+              - Brand yellow (#ffbf23) for success
+              - Font-weight 700 for bold text
+              - Neo-brutalist shadow effect
+              ===================================================================== */}
           <Toaster 
             position="bottom-right"
-            richColors
             duration={4000}
             visibleToasts={1}
             toastOptions={{
               className: 'z-[100]',
+              style: {
+                borderRadius: '0',
+                border: '2px solid black',
+                boxShadow: '4px 4px 0px 0px #000',
+                fontWeight: 700,
+                fontFamily: 'Inter, sans-serif',
+              },
+              classNames: {
+                success: 'bg-[#ffbf23] text-black border-black',
+                error: 'bg-red-500 text-white border-black',
+                warning: 'bg-amber-400 text-black border-black',
+                info: 'bg-blue-500 text-white border-black',
+              },
             }}
           />
         </LanguageProvider>
