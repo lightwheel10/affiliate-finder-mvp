@@ -478,6 +478,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
   // ==========================================================================
   // AI SUGGESTIONS FETCHER (January 3rd, 2026)
+  // Updated: January 17th, 2026
   // 
   // Calls /api/suggestions/generate to get AI-powered suggestions.
   // This endpoint:
@@ -488,8 +489,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // 
   // The AnalyzingScreen component shows progress during this process.
   // If the API fails, user can still proceed with manual entry.
+  // 
+  // January 17th, 2026 UPDATE:
+  // - Added targetCountry and targetLanguage parameters
+  // - These are now passed to the API so AI can:
+  //   1. Find competitors relevant to the target country/market
+  //   2. Generate topics/keywords in the target language
+  // - This function is now called AFTER Step 2 (not Step 1) so we have
+  //   country and language info available
   // ==========================================================================
-  const fetchAISuggestions = async (brandUrl: string): Promise<boolean> => {
+  const fetchAISuggestions = async (
+    brandUrl: string,
+    country: string,
+    language: string
+  ): Promise<boolean> => {
     setIsAnalyzing(true);
     setAnalyzingStep(1); // Start at step 1: Analyzing website
     setSuggestionError(null);
@@ -519,10 +532,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       step3Timer = setTimeout(() => setAnalyzingStep(3), 5500);
       
       // Make the actual API call
+      // January 17th, 2026: Now includes country and language for localized suggestions
       const response = await fetch('/api/suggestions/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brandUrl }),
+        body: JSON.stringify({ 
+          brandUrl,
+          targetCountry: country,
+          targetLanguage: language,
+        }),
       });
       
       const data = await response.json();
@@ -541,6 +559,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         competitors: data.competitors?.length || 0,
         topics: data.topics?.length || 0,
         industry: data.industry,
+        country,
+        language,
       });
       
       return true;
@@ -558,14 +578,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
   // ==========================================================================
   // SKIP AI SUGGESTIONS (January 3rd, 2026)
+  // Updated: January 17th, 2026
   // 
   // Called when user clicks "Continue & Enter Manually" on error screen.
-  // Allows user to proceed to Step 2 without AI suggestions.
+  // Allows user to proceed without AI suggestions.
+  // 
+  // January 17th, 2026 UPDATE:
+  // - Changed destination from Step 2 to Step 3
+  // - Since AI suggestions are now triggered after Step 2 (country/language),
+  //   skipping should go directly to Step 3 (competitors manual entry)
   // ==========================================================================
   const handleSkipSuggestions = () => {
     setIsAnalyzing(false);
     setSuggestionError(null);
-    setStep(2);
+    setStep(3); // January 17th, 2026: Changed from 2 to 3 (skip to competitors)
   };
 
   // Helper to save progress to database
@@ -590,42 +616,69 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       if (!name || !role || !brand) return;
       
       // =======================================================================
-      // DOMAIN VALIDATION + AI SUGGESTIONS (January 3rd, 2026)
+      // DOMAIN VALIDATION ONLY (Updated January 17th, 2026)
       // 
       // Flow after Step 1:
       // 1. Validate domain format (regex) - already done on input change
       // 2. Validate domain reachability (HEAD request)
-      // 3. Show AnalyzingScreen with animated progress
-      // 4. Fetch AI suggestions (Firecrawl + OpenAI)
-      // 5. Store suggestions in state for Steps 3 & 4
-      // 6. Proceed to Step 2
+      // 3. Save progress and proceed to Step 2
       // 
-      // If AI suggestions fail, user can still proceed with manual entry.
+      // NOTE: AI suggestions are now triggered AFTER Step 2 (not here)
+      // This allows us to use country + language for localized suggestions.
+      // See step === 2 block below for AI suggestion logic.
       // =======================================================================
       const isValid = await validateBrandDomain();
       if (!isValid) {
         return; // Don't proceed if domain validation failed
       }
       
-      // Save step 1 data
+      // Save step 1 data and proceed to Step 2
       await saveProgress(2, { name, role, brand });
+      setStep(2);
+      
+    } else if (step === 2) {
+      if (!targetCountry || !targetLanguage) return;
+      
+      // =======================================================================
+      // AI SUGGESTIONS TRIGGER (Moved here January 17th, 2026)
+      // 
+      // PREVIOUS BEHAVIOR (before January 17th):
+      // - AI suggestions were fetched after Step 1, before country/language
+      // - This meant topics were always in English (no language context)
+      // - Competitors were global, not market-specific
+      // 
+      // NEW BEHAVIOR (January 17th, 2026):
+      // - AI suggestions are now fetched AFTER Step 2
+      // - We pass country + language to the API
+      // - Competitors are market-relevant (based on target country)
+      // - Topics/keywords are in the user's target language
+      // 
+      // Flow:
+      // 1. User selects country + language in Step 2
+      // 2. User clicks Continue
+      // 3. Save progress
+      // 4. Show AnalyzingScreen with animated progress
+      // 5. Fetch AI suggestions with country + language context
+      // 6. Proceed to Step 3 (Competitors)
+      // 
+      // If AI suggestions fail, user can still proceed with manual entry.
+      // =======================================================================
+      
+      // Save step 2 data first
+      await saveProgress(3, { targetCountry, targetLanguage });
       
       // Start AI analysis (shows AnalyzingScreen)
-      const suggestionsSuccess = await fetchAISuggestions(brand);
+      // Now with country + language for localized suggestions
+      const suggestionsSuccess = await fetchAISuggestions(brand, targetCountry, targetLanguage);
       
       if (suggestionsSuccess) {
-        // AI suggestions fetched successfully - proceed to Step 2
+        // AI suggestions fetched successfully - proceed to Step 3
         setIsAnalyzing(false);
-        setStep(2);
+        setStep(3);
       }
       // If failed, AnalyzingScreen shows error with "Continue Manually" button
       // User clicks that button -> handleSkipSuggestions() is called
       
-    } else if (step === 2) {
-      if (!targetCountry || !targetLanguage) return;
-      // Save step 2 data and move to step 3
-      await saveProgress(3, { targetCountry, targetLanguage });
-      setStep(3);
     } else if (step === 3) {
       // Save step 3 data and move to step 4
       await saveProgress(4, { competitors });
@@ -1435,7 +1488,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               {t.onboarding.step3.suggestionsTitle}
             </p>
             
-            <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
+            {/* =================================================================
+              January 17th, 2026: Changed from grid-cols-3 to grid-cols-2
+              
+              REASON: Competitor domains were getting cut off (truncated) 
+              because 3-column layout didn't provide enough width.
+              
+              CHANGES:
+              - grid-cols-3 → grid-cols-2 (more width per card)
+              - Removed 'truncate' from domain text (line below name)
+              - Domain now wraps if needed, showing full URL
+              ================================================================= */}
+            <div className="grid grid-cols-2 gap-1.5 max-h-[140px] overflow-y-auto scrollbar-hide">
               {suggestedCompetitors
                 .filter(comp => !competitors.includes(comp.domain))
                 .slice(0, 12)
@@ -1469,7 +1533,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate">{comp.name}</p>
-                      <p className="text-[9px] text-gray-400 truncate">{comp.domain}</p>
+                      {/* January 17th, 2026: Removed 'truncate' - show full domain */}
+                      <p className="text-[9px] text-gray-400 break-all">{comp.domain}</p>
                     </div>
                     <Plus size={12} className="text-gray-300 group-hover:text-[#ffbf23] transition-colors shrink-0" />
                   </button>
@@ -1479,11 +1544,12 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         )}
 
         {/* Selected Competitors - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* January 17th, 2026: Updated to grid-cols-2 and removed truncate for domain visibility */}
         {competitors.length > 0 && (
           <div className="space-y-2">
             <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">{t.onboarding.step3.yourCompetitors}</p>
             
-            <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto scrollbar-hide">
+            <div className="grid grid-cols-2 gap-1.5 max-h-[140px] overflow-y-auto scrollbar-hide">
               {competitors.map(comp => {
                 const suggestion = suggestedCompetitors.find(s => s.domain === comp);
                 const displayName = suggestion?.name || comp;
@@ -1512,7 +1578,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] font-bold text-gray-900 dark:text-white truncate">{displayName}</p>
-                      <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate">{comp}</p>
+                      {/* January 17th, 2026: Removed 'truncate' - show full domain */}
+                      <p className="text-[9px] text-gray-500 dark:text-gray-400 break-all">{comp}</p>
                     </div>
                     <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <X size={10} />

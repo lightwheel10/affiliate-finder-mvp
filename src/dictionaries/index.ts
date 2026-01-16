@@ -545,6 +545,8 @@ export interface Dictionary {
         title: string;
         subtitle: string;
       };
+      // January 17, 2026: Added loading message
+      loading: string;
     };
     // Saved (Pipeline) page
     saved: {
@@ -575,6 +577,14 @@ export interface Dictionary {
         affiliateRemoved: string;
         affiliatesRemoved: string;
         removedFromPipeline: string;
+        emailLookupFailed: string;
+        errors: string;
+        // Email lookup result messages
+        insufficientCredits: string;
+        emailsFound: string;
+        readyForOutreach: string;
+        found: string;
+        notFound: string;
       };
     };
     // =========================================================================

@@ -271,39 +271,41 @@ export default function SavedPage() {
       // NOTIFICATION BASED ON RESULTS - January 16, 2026
       // Neo-brutalist styled toasts
       // =========================================================================
+      // January 17, 2026: Updated with i18n translations
       if (results.creditError) {
         setEmailToast({
           type: 'warning',
-          title: 'Insufficient Credits',
+          title: t.dashboard.saved.toasts.insufficientCredits,
           subtitle: results.creditErrorMessage || t.toasts.warning.insufficientEmailCredits,
           show: true
         });
       } else if (results.foundCount > 0 && results.notFoundCount === 0 && results.errorCount === 0) {
         setEmailToast({
           type: 'success',
-          title: `${results.foundCount} email${results.foundCount !== 1 ? 's' : ''} found!`,
-          subtitle: 'Ready for outreach',
+          title: `${results.foundCount} ${t.dashboard.saved.toasts.emailsFound}`,
+          subtitle: t.dashboard.saved.toasts.readyForOutreach,
           show: true
         });
       } else if (results.foundCount > 0) {
         setEmailToast({
           type: 'info',
-          title: `${results.foundCount} found, ${results.notFoundCount} not found`,
-          subtitle: results.errorCount > 0 ? `${results.errorCount} errors` : undefined,
+          title: `${results.foundCount} ${t.dashboard.saved.toasts.found}, ${results.notFoundCount} ${t.dashboard.saved.toasts.notFound}`,
+          subtitle: results.errorCount > 0 ? `${results.errorCount} ${t.dashboard.saved.toasts.errors}` : undefined,
           show: true
         });
       } else if (results.notFoundCount > 0) {
         setEmailToast({
           type: 'warning',
-          title: `No emails found`,
+          title: t.toasts.warning.noEmailsFound,
           subtitle: `${results.notFoundCount} affiliate${results.notFoundCount !== 1 ? 's' : ''} checked`,
           show: true
         });
       } else if (results.errorCount > 0) {
+        // January 17, 2026: Updated with i18n translations
         setEmailToast({
           type: 'error',
-          title: 'Email lookup failed',
-          subtitle: `${results.errorCount} error${results.errorCount !== 1 ? 's' : ''}`,
+          title: t.dashboard.saved.toasts.emailLookupFailed,
+          subtitle: `${results.errorCount} ${t.dashboard.saved.toasts.errors}`,
           show: true
         });
       }
@@ -318,10 +320,11 @@ export default function SavedPage() {
       // =======================================================================
       // ERROR TOAST - January 16, 2026
       // Neo-brutalist styled toast
+      // January 17, 2026: Updated with i18n translations
       // =======================================================================
       setEmailToast({
         type: 'error',
-        title: 'Email lookup failed',
+        title: t.dashboard.saved.toasts.emailLookupFailed,
         subtitle: t.toasts.error.emailLookupFailed,
         show: true
       });

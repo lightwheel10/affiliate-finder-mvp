@@ -563,6 +563,8 @@ export const en: Dictionary = {
         title: 'No discovered affiliates',
         subtitle: 'Affiliates from your searches will appear here',
       },
+      // January 17, 2026: Added loading message
+      loading: 'Loading discovered affiliates...',
     },
     saved: {
       pageTitle: 'Saved Affiliates',
@@ -592,6 +594,14 @@ export const en: Dictionary = {
         affiliateRemoved: 'Affiliate removed',
         affiliatesRemoved: 'affiliates removed',
         removedFromPipeline: 'Successfully removed from your pipeline.',
+        emailLookupFailed: 'Email lookup failed',
+        errors: 'error(s)',
+        // Email lookup result messages
+        insufficientCredits: 'Insufficient Credits',
+        emailsFound: 'email(s) found!',
+        readyForOutreach: 'Ready for outreach',
+        found: 'found',
+        notFound: 'not found',
       },
     },
     // =========================================================================

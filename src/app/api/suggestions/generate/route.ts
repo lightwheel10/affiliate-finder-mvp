@@ -231,6 +231,7 @@ async function scrapeWebsite(url: string): Promise<{ content: string; title?: st
 
 // =============================================================================
 // HELPER: GENERATE SUGGESTIONS WITH OPENAI (January 3rd, 2026)
+// Updated: January 17th, 2026
 // 
 // Uses OpenAI's structured output feature for reliable JSON responses.
 // The Zod schema ensures type-safe parsing of AI output.
@@ -240,10 +241,19 @@ async function scrapeWebsite(url: string): Promise<{ content: string; title?: st
 // 2. Request exactly 10 topics
 // 3. Focus on REAL companies, not made-up ones
 // 4. Think about affiliate marketing context
+// 
+// January 17th, 2026 UPDATE:
+// - Added targetCountry and targetLanguage parameters
+// - Prompt now instructs AI to:
+//   1. Find competitors relevant to the target country/market
+//   2. Generate topics/keywords in the target language
+// - This fixes the issue where topics were always in English
 // =============================================================================
 async function generateWithAI(
   websiteContent: string, 
-  websiteUrl: string
+  websiteUrl: string,
+  targetCountry: string | null,
+  targetLanguage: string | null
 ): Promise<SuggestionsResponse | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   
@@ -259,6 +269,30 @@ async function generateWithAI(
     ? websiteContent.slice(0, MAX_CONTENT_LENGTH) + '\n\n[Content truncated for analysis...]'
     : websiteContent;
   
+  // ==========================================================================
+  // January 17th, 2026: Build dynamic prompt sections based on country/language
+  // 
+  // If country is provided:
+  // - Prioritize competitors operating in that market
+  // - Include local/regional competitors, not just global ones
+  // 
+  // If language is provided:
+  // - Generate topics/keywords in that language
+  // - This is crucial for non-English markets (German, French, etc.)
+  // ==========================================================================
+  const countryInstruction = targetCountry 
+    ? `\n   - IMPORTANT: Prioritize competitors operating in ${targetCountry}
+   - Include both international brands with presence in ${targetCountry} AND local/regional competitors
+   - For country-specific domains (e.g., .de, .fr, .co.uk), prefer those when targeting that market`
+    : '';
+  
+  const languageInstruction = targetLanguage
+    ? `\n   - CRITICAL: All topics/keywords MUST be in ${targetLanguage} language
+   - Think about how ${targetLanguage}-speaking content creators would search
+   - Use ${targetLanguage} terms, not English translations
+   - Example: For German, use "beste Matratze 2026" not "best mattress 2026"`
+    : '';
+  
   try {
     const completion = await client.chat.completions.parse({
       model: OPENAI_MODEL,
@@ -273,12 +307,12 @@ Your task is to analyze a website and identify:
    - Must be REAL, existing companies with working websites
    - Direct competitors offering similar products/services
    - Include a mix of large and smaller competitors
-   - Domain format: just the domain (e.g., "competitor.com"), no http/https/www
+   - Domain format: just the domain (e.g., "competitor.com"), no http/https/www${countryInstruction}
 
 2. TOPICS (exactly 10):
    - Keywords and topics that affiliate marketers and content creators would write about
    - Think: blog posts, YouTube reviews, comparison articles, "best X" listicles
-   - Should be relevant to discovering affiliates in this space
+   - Should be relevant to discovering affiliates in this space${languageInstruction}
 
 Be specific and practical. These suggestions will be used for affiliate marketing outreach.`
         },
@@ -286,7 +320,7 @@ Be specific and practical. These suggestions will be used for affiliate marketin
           role: 'user',
           content: `Analyze this website and provide competitor and topic suggestions.
 
-Website: ${websiteUrl}
+Website: ${websiteUrl}${targetCountry ? `\nTarget Market: ${targetCountry}` : ''}${targetLanguage ? `\nTarget Language: ${targetLanguage}` : ''}
 
 Content:
 ${truncatedContent}`
@@ -313,13 +347,21 @@ ${truncatedContent}`
 
 // =============================================================================
 // MAIN API HANDLER
+// Updated: January 17th, 2026
+// 
+// January 17th, 2026 UPDATE:
+// - Added targetCountry and targetLanguage parameters
+// - These are used to generate market-specific competitors and 
+//   language-specific topics/keywords
+// - Previously, topics were always in English regardless of user's market
 // =============================================================================
 export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   console.log('[suggestions/generate] Request received');
   
   try {
     const body = await request.json();
-    const { brandUrl } = body;
+    // January 17th, 2026: Now accepting targetCountry and targetLanguage
+    const { brandUrl, targetCountry, targetLanguage } = body;
     
     // Validate input
     if (!brandUrl || typeof brandUrl !== 'string') {
@@ -338,7 +380,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
       .replace(/^www\./, '')
       .split('/')[0];
     
+    // Log with country/language context (January 17th, 2026)
     console.log(`[suggestions/generate] Analyzing: ${normalizedUrl}`);
+    console.log(`[suggestions/generate] Target market: ${targetCountry || 'not specified'}, Language: ${targetLanguage || 'not specified'}`);
     
     // Step 1: Scrape the website
     console.log('[suggestions/generate] Step 1: Scraping website...');
@@ -355,8 +399,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
     console.log(`[suggestions/generate] Scraped ${scrapeResult.content.length} characters`);
     
     // Step 2: Generate suggestions with AI
+    // January 17th, 2026: Now passing country and language for localized suggestions
     console.log('[suggestions/generate] Step 2: Generating AI suggestions...');
-    const aiSuggestions = await generateWithAI(scrapeResult.content, normalizedUrl);
+    const aiSuggestions = await generateWithAI(
+      scrapeResult.content, 
+      normalizedUrl,
+      targetCountry || null,
+      targetLanguage || null
+    );
     
     if (!aiSuggestions) {
       return NextResponse.json({

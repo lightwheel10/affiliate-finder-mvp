@@ -559,7 +559,7 @@ export default function DiscoveredPage() {
                 <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
                 <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <p className="text-gray-500 text-sm mt-4 font-medium">Loading discovered affiliates...</p>
+              <p className="text-gray-500 text-sm mt-4 font-medium">{t.dashboard.discovered.loading}</p>
             </div>
           ) : filteredResults.length > 0 ? (
             filteredResults.map((item) => (
