@@ -452,11 +452,13 @@ export default function SavedPage() {
 
   // ==========================================================================
   // EMAIL FOUND COUNT - January 16, 2026
-  // Shows how many affiliates have emails found in the table header
+  // Shows how many affiliates have emails found in the current filtered view
+  // FIX: Now uses filteredResults instead of savedAffiliates so count updates
+  // when platform filter (YouTube/TikTok/etc.) changes
   // ==========================================================================
   const emailsFoundCount = useMemo(() => {
-    return savedAffiliates.filter(a => a.email || a.emailStatus === 'found').length;
-  }, [savedAffiliates]);
+    return filteredResults.filter(a => a.email || a.emailStatus === 'found').length;
+  }, [filteredResults]);
 
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
