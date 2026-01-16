@@ -10,7 +10,8 @@
  * Translation hook usage: const { t } = useLanguage();
  * =============================================================================
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User, BarChart2, TrendingUp, MapPin, Clock, MousePointer, FileText, ArrowUpRight } from 'lucide-react';
 import { Modal } from './Modal';
 import { ResultItem, YouTubeChannelInfo } from '../types';
@@ -156,6 +157,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);  // Added Dec 2025: View modal state
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  
+  // Fixed January 16, 2026: Portal state for View Modal to escape parent stacking context
+  // The View Modal was being cut off because fixed positioning was contained by scrollable parent
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
   
   // ============================================================================
   // SINGLE ITEM DELETE CONFIRMATION STATE (Added Dec 2025)
@@ -1734,9 +1742,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           ============================================================================ */}
       {/* View Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
       {/* Updated January 10th, 2026 - i18n migration */}
-      {isViewModalOpen && (
+      {/* Fixed January 16, 2026 - Using createPortal to render at document.body level */}
+      {/* This fixes the modal being cut off by parent scrollable containers */}
+      {isViewModalOpen && portalTarget && createPortal(
         <div 
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4"
           onClick={() => setIsViewModalOpen(false)}
         >
           <div 
@@ -1801,7 +1811,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        portalTarget
       )}
     </div>
   );

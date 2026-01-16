@@ -12,6 +12,7 @@
 import { ApifyClient } from 'apify-client';
 import { trackApiCall, API_COSTS } from './tracking';
 import { SearchResult, YouTubeChannelInfo, Platform } from './search';
+import { getLocationConfig } from './location';
 
 // =============================================================================
 // APIFY CLIENT INITIALIZATION - Updated 29th December 2025
@@ -167,11 +168,15 @@ interface ApifyYouTubeResult {
 /**
  * Search YouTube videos using Apify scraper
  * Returns rich data including subscriber counts and engagement metrics
+ * 
+ * @param targetCountry - Optional country from onboarding for localized results
+ *                        Added January 16, 2026
  */
 export async function searchYouTubeApify(
   keyword: string,
   userId?: number,
-  maxResults: number = 10
+  maxResults: number = 10,
+  targetCountry?: string | null
 ): Promise<SearchResult[]> {
   if (!client) {
     console.error('❌ Apify client not initialized');
@@ -179,11 +184,24 @@ export async function searchYouTubeApify(
   }
 
   const startTime = Date.now();
-  console.log(`🎬 Apify YouTube search: "${keyword}"`);
+  
+  // ==========================================================================
+  // LOCATION-BASED QUERY - January 16, 2026
+  // 
+  // Appends country shortName to search query for localized results.
+  // Example: "propolis" + Germany → "propolis Germany"
+  // Example: "organic skincare" + UK → "organic skincare UK"
+  // ==========================================================================
+  const locationConfig = getLocationConfig(targetCountry, null);
+  const searchQuery = locationConfig 
+    ? `${keyword} ${locationConfig.shortName}`
+    : keyword;
+
+  console.log(`🎬 Apify YouTube search: "${searchQuery}" (location: ${locationConfig?.shortName || 'global'})`);
 
   try {
     const run = await client.actor(ACTORS.youtube).call({
-      searchQueries: [keyword],
+      searchQueries: [searchQuery],
       maxResults,
       maxResultsShorts: 0,
       maxResultStreams: 0,
@@ -289,11 +307,15 @@ interface ApifyInstagramResult {
 /**
  * Search Instagram users/profiles using Apify scraper
  * Returns rich profile data including followers and recent posts
+ * 
+ * @param targetCountry - Optional country from onboarding for localized results
+ *                        Added January 16, 2026
  */
 export async function searchInstagramApify(
   keyword: string,
   userId?: number,
-  searchLimit: number = 10
+  searchLimit: number = 10,
+  targetCountry?: string | null
 ): Promise<SearchResult[]> {
   if (!client) {
     console.error('❌ Apify client not initialized');
@@ -304,11 +326,25 @@ export async function searchInstagramApify(
   
   // Sanitize keyword - Instagram rejects special characters like . in domains
   const sanitizedKeyword = sanitizeKeywordForSocialMedia(keyword);
-  console.log(`📸 Apify Instagram search: "${sanitizedKeyword}"`);
+  
+  // ==========================================================================
+  // LOCATION-BASED QUERY - January 16, 2026
+  // 
+  // Appends country shortName to search query for localized results.
+  // Instagram searches for USER PROFILES (searchType: 'user'), so adding
+  // country helps find local influencers/businesses.
+  // Example: "propolis" + Germany → "propolis Germany"
+  // ==========================================================================
+  const locationConfig = getLocationConfig(targetCountry, null);
+  const searchQuery = locationConfig 
+    ? `${sanitizedKeyword} ${locationConfig.shortName}`
+    : sanitizedKeyword;
+
+  console.log(`📸 Apify Instagram search: "${searchQuery}" (location: ${locationConfig?.shortName || 'global'})`);
 
   try {
     const run = await client.actor(ACTORS.instagram).call({
-      search: sanitizedKeyword,
+      search: searchQuery,
       searchType: 'user',
       searchLimit,
     });
@@ -461,11 +497,15 @@ interface ApifyTikTokResult {
 /**
  * Search TikTok videos using Apify scraper
  * Returns rich data including creator stats and video metrics
+ * 
+ * @param targetCountry - Optional country from onboarding for localized results
+ *                        Added January 16, 2026
  */
 export async function searchTikTokApify(
   keyword: string,
   userId?: number,
-  resultsPerPage: number = 10
+  resultsPerPage: number = 10,
+  targetCountry?: string | null
 ): Promise<SearchResult[]> {
   if (!client) {
     console.error('❌ Apify client not initialized');
@@ -476,11 +516,24 @@ export async function searchTikTokApify(
   
   // Sanitize keyword - TikTok may also reject special characters
   const sanitizedKeyword = sanitizeKeywordForSocialMedia(keyword);
-  console.log(`🎵 Apify TikTok search: "${sanitizedKeyword}"`);
+  
+  // ==========================================================================
+  // LOCATION-BASED QUERY - January 16, 2026
+  // 
+  // Appends country shortName to search query for localized results.
+  // Example: "propolis" + Germany → "propolis Germany"
+  // Example: "fitness" + UK → "fitness UK"
+  // ==========================================================================
+  const locationConfig = getLocationConfig(targetCountry, null);
+  const searchQuery = locationConfig 
+    ? `${sanitizedKeyword} ${locationConfig.shortName}`
+    : sanitizedKeyword;
+
+  console.log(`🎵 Apify TikTok search: "${searchQuery}" (location: ${locationConfig?.shortName || 'global'})`);
 
   try {
     const run = await client.actor(ACTORS.tiktok).call({
-      searchQueries: [sanitizedKeyword],
+      searchQueries: [searchQuery],
       resultsPerPage,
       maxProfilesPerQuery: resultsPerPage,
     });

@@ -94,12 +94,15 @@ export async function POST(req: Request) {
     // GET USER FROM DATABASE (December 2025)
     // Use authenticated email to get userId - never trust client-provided userId
     // 
-    // Updated January 16, 2026: Also fetch brand and competitors for filtering
+    // Updated January 16, 2026: Also fetch brand, competitors, and location for filtering
     // - brand: User's own website domain (to exclude from results)
     // - competitors: User's competitor domains (for reference)
+    // - target_country: User's target market country for localized results
+    // - target_language: User's target language for localized results
     // ==========================================================================
     const users = await sql`
-      SELECT id, brand, competitors FROM users WHERE email = ${authUser.primaryEmail}
+      SELECT id, brand, competitors, target_country, target_language 
+      FROM users WHERE email = ${authUser.primaryEmail}
     `;
 
     if (users.length === 0) {
@@ -115,19 +118,32 @@ export async function POST(req: Request) {
     const userCompetitors = users[0].competitors as string[] | null;
     
     // ==========================================================================
+    // LOCATION FIELDS - January 16, 2026
+    // 
+    // Extract target_country and target_language from user's onboarding settings
+    // These are used to filter search results by geographic region.
+    // ==========================================================================
+    const targetCountry = users[0].target_country as string | null;
+    const targetLanguage = users[0].target_language as string | null;
+    
+    // ==========================================================================
     // WEB SEARCH OPTIONS - January 16, 2026
     // 
     // Configure filtering to find affiliates, not shops:
     // - Exclude user's own domain (they don't need to find themselves)
     // - Pass competitors for reference (not excluded, but tracked)
+    // - Apply location filtering based on user's target market
     // ==========================================================================
     const webSearchOptions: WebSearchOptions = {
       userBrand: userBrand || undefined,
       competitors: userCompetitors || undefined,
       strictFiltering: true,
+      // Location filtering - January 16, 2026
+      targetCountry,
+      targetLanguage,
     };
     
-    console.log(`[Scout] User ${userId} - Brand: ${userBrand || 'not set'}, Competitors: ${userCompetitors?.length || 0}`);
+    console.log(`[Scout] User ${userId} - Brand: ${userBrand || 'not set'}, Competitors: ${userCompetitors?.length || 0}, Country: ${targetCountry || 'not set'}, Language: ${targetLanguage || 'not set'}`);
 
     // ==========================================================================
     // CREDIT CHECK (December 2025)
@@ -259,19 +275,24 @@ export async function POST(req: Request) {
           
           try {
             // Call the appropriate search function for each platform
+            // Location filtering added January 16, 2026 - passes targetCountry
+            // to social platforms for localized results
             switch (platform) {
               case 'YouTube':
-                results = await searchYouTubeApify(keyword, userId, 15);
+                // Pass targetCountry to append country to query (January 16, 2026)
+                results = await searchYouTubeApify(keyword, userId, 15, targetCountry);
                 totalCost += API_COSTS.apify_youtube * results.length;
                 break;
                 
               case 'Instagram':
-                results = await searchInstagramApify(keyword, userId, 15);
+                // Pass targetCountry to append country to query (January 16, 2026)
+                results = await searchInstagramApify(keyword, userId, 15, targetCountry);
                 totalCost += API_COSTS.apify_instagram * results.length;
                 break;
                 
               case 'TikTok':
-                results = await searchTikTokApify(keyword, userId, 15);
+                // Pass targetCountry to append country to query (January 16, 2026)
+                results = await searchTikTokApify(keyword, userId, 15, targetCountry);
                 totalCost += API_COSTS.apify_tiktok * results.length;
                 break;
                 
@@ -283,6 +304,7 @@ export async function POST(req: Request) {
                 // - E-commerce domains (Amazon, eBay, Walmart, etc.)
                 // - User's own domain (userBrand from onboarding)
                 // - Shop URL patterns (/product/, /cart/, etc.)
+                // - Location filtering via gl/hl params
                 // 
                 // The search query is also improved to target content creators
                 // (bloggers, reviewers) instead of shops.

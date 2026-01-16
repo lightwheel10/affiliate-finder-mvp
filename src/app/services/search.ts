@@ -11,6 +11,7 @@
  */
 
 import { searchYouTubeApify, searchInstagramApify, searchTikTokApify } from './apify';
+import { getLocationConfig } from './location';
 
 const SERPER_API_KEY = process.env.SERPER_API_KEY;
 
@@ -560,6 +561,17 @@ export interface WebSearchOptions {
   excludeDomains?: string[];
   /** Enable strict filtering (default: true) */
   strictFiltering?: boolean;
+  // ==========================================================================
+  // LOCATION FILTERING - January 16, 2026
+  // 
+  // Uses target_country and target_language from user's onboarding settings
+  // to filter search results by geographic region.
+  // - Serper: Uses gl/hl params for geo-targeted results
+  // ==========================================================================
+  /** Target country from onboarding (e.g., "Germany", "United Kingdom") */
+  targetCountry?: string | null;
+  /** Target language from onboarding (e.g., "German", "English") */
+  targetLanguage?: string | null;
 }
 
 /**
@@ -748,14 +760,34 @@ export async function searchWeb(
   console.log(`🔍 Web search (${isBrand ? 'BRAND' : 'NICHE'} mode): "${query}"`);
 
   // ==========================================================================
+  // LOCATION-BASED FILTERING - January 16, 2026
+  // 
+  // Uses gl (geolocation) and hl (language) params to get localized results.
+  // Example: Germany + German → gl: 'de', hl: 'de'
+  // Example: UK + English → gl: 'uk', hl: 'en'
+  // 
+  // This is based on the user's target_country and target_language from
+  // onboarding settings. The location utility maps country/language names
+  // to Serper API codes.
+  // ==========================================================================
+  const locationConfig = getLocationConfig(options.targetCountry, options.targetLanguage);
+  const serperLocationOptions = locationConfig 
+    ? { gl: locationConfig.countryCode, hl: locationConfig.languageCode }
+    : {};
+
+  if (locationConfig) {
+    console.log(`🌍 Location filter: ${options.targetCountry} (gl=${locationConfig.countryCode}, hl=${locationConfig.languageCode})`);
+  }
+
+  // ==========================================================================
   // PAGINATION - January 16, 2026
   // 
   // Fetch page 1 and page 2 in parallel to get 20 results instead of 10.
   // Each page costs 1 Serper credit (total: 2 credits for 20 results).
   // ==========================================================================
   const [page1, page2] = await Promise.all([
-    serperFetch(SERPER_ENDPOINTS.search, query),
-    serperFetch(SERPER_ENDPOINTS.search, query, { page: 2 }),
+    serperFetch(SERPER_ENDPOINTS.search, query, serperLocationOptions),
+    serperFetch(SERPER_ENDPOINTS.search, query, { page: 2, ...serperLocationOptions }),
   ]);
 
   if (page1.error && page2.error) {
