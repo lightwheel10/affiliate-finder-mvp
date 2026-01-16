@@ -133,12 +133,14 @@ export default function RootLayout({
         
         {/* =====================================================================
             GLOBAL TOAST CONTAINER (January 5th, 2026)
+            Updated: January 16, 2026 - Added visibleToasts={1} to show only one at a time
             
             Configuration:
             - position: bottom-right (consistent with previous Outreach page toasts)
             - richColors: true (styled success=green, error=red, warning=yellow, info=blue)
             - closeButton: removed (toasts auto-dismiss, no need for manual close)
             - duration: 4000ms (auto-dismiss after 4 seconds)
+            - visibleToasts: 1 (only show one toast at a time, new ones replace old)
             - toastOptions.className: ensures proper z-index above modals
             
             To trigger toasts from anywhere in the app:
@@ -152,6 +154,7 @@ export default function RootLayout({
             position="bottom-right"
             richColors
             duration={4000}
+            visibleToasts={1}
             toastOptions={{
               className: 'z-[100]',
             }}

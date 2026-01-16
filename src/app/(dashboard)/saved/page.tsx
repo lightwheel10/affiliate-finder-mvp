@@ -119,6 +119,17 @@ export default function SavedPage() {
   } | null>(null);
 
   // ============================================================================
+  // EMAIL RESULTS TOAST STATE - January 16, 2026
+  // Neo-brutalist toast for email lookup results
+  // ============================================================================
+  const [emailToast, setEmailToast] = useState<{
+    type: 'success' | 'info' | 'warning' | 'error';
+    title: string;
+    subtitle?: string;
+    show: boolean;
+  } | null>(null);
+
+  // ============================================================================
   // ADVANCED FILTER STATE (Added Dec 2025)
   // ============================================================================
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
@@ -181,17 +192,16 @@ export default function SavedPage() {
       });
       setIsDeleteModalOpen(false);
       
+      // =======================================================================
+      // SUCCESS STATE - January 16, 2026
+      // Sets state to show custom neo-brutalist toast JSX
+      // =======================================================================
       setDeleteResult({ count: deleteCount, show: true });
-      // January 5th, 2026: Added success toast for bulk delete
-      // i18n: January 10th, 2026
-      toast.success(`${t.dashboard.saved.deletedCount.replace('{count}', String(deleteCount))} ${t.toasts.success.affiliatesDeletedFromPipeline}`);
       setTimeout(() => {
         setDeleteResult(prev => prev ? { ...prev, show: false } : null);
       }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
-      // January 5th, 2026: Added error toast for bulk delete failure
-      // i18n: January 10th, 2026
       toast.error(t.toasts.error.deleteFailed);
     } finally {
       setIsBulkDeleting(false);
@@ -220,9 +230,16 @@ export default function SavedPage() {
           skippedCount: selectedAffiliates.length,
         },
       });
-      // January 5th, 2026: Added info toast when all already have emails
-      // i18n: January 10th, 2026
-      toast.info(t.toasts.info.allAlreadyHaveEmails);
+      // =======================================================================
+      // INFO TOAST - January 16, 2026
+      // Neo-brutalist styled toast
+      // =======================================================================
+      setEmailToast({
+        type: 'info',
+        title: t.toasts.info.allAlreadyHaveEmails,
+        show: true
+      });
+      setTimeout(() => setEmailToast(null), 4000);
       setTimeout(() => setBulkEmailProgress({ current: 0, total: 0, status: 'idle' }), 3000);
       return;
     }
@@ -251,26 +268,46 @@ export default function SavedPage() {
       });
       
       // =========================================================================
-      // NOTIFICATION BASED ON RESULTS (January 5th, 2026)
-      // Show appropriate toast based on email lookup results
-      // i18n: January 10th, 2026
+      // NOTIFICATION BASED ON RESULTS - January 16, 2026
+      // Neo-brutalist styled toasts
       // =========================================================================
       if (results.creditError) {
-        // Credit error - ran out of credits during lookup
-        toast.warning(results.creditErrorMessage || t.toasts.warning.insufficientEmailCredits);
+        setEmailToast({
+          type: 'warning',
+          title: 'Insufficient Credits',
+          subtitle: results.creditErrorMessage || t.toasts.warning.insufficientEmailCredits,
+          show: true
+        });
       } else if (results.foundCount > 0 && results.notFoundCount === 0 && results.errorCount === 0) {
-        // All found successfully
-        toast.success(`${results.foundCount} ${t.toasts.success.emailsFound}`);
+        setEmailToast({
+          type: 'success',
+          title: `${results.foundCount} email${results.foundCount !== 1 ? 's' : ''} found!`,
+          subtitle: 'Ready for outreach',
+          show: true
+        });
       } else if (results.foundCount > 0) {
-        // Mixed results
-        toast.info(`${t.dashboard.saved.emailResults.found} ${results.foundCount}, ${t.toasts.info.mixedEmailResults} ${results.notFoundCount}, ${t.dashboard.saved.emailResults.errors} ${results.errorCount}`);
+        setEmailToast({
+          type: 'info',
+          title: `${results.foundCount} found, ${results.notFoundCount} not found`,
+          subtitle: results.errorCount > 0 ? `${results.errorCount} errors` : undefined,
+          show: true
+        });
       } else if (results.notFoundCount > 0) {
-        // None found
-        toast.warning(`${t.toasts.warning.noEmailsFound} ${results.notFoundCount} ${results.notFoundCount !== 1 ? t.affiliateRow.badges.saved.toLowerCase() + 's' : t.affiliateRow.badges.saved.toLowerCase()}`);
+        setEmailToast({
+          type: 'warning',
+          title: `No emails found`,
+          subtitle: `${results.notFoundCount} affiliate${results.notFoundCount !== 1 ? 's' : ''} checked`,
+          show: true
+        });
       } else if (results.errorCount > 0) {
-        // All errors
-        toast.error(`${t.toasts.error.emailLookupFailedCount} ${results.errorCount} ${results.errorCount !== 1 ? t.affiliateRow.badges.saved.toLowerCase() + 's' : t.affiliateRow.badges.saved.toLowerCase()}`);
+        setEmailToast({
+          type: 'error',
+          title: 'Email lookup failed',
+          subtitle: `${results.errorCount} error${results.errorCount !== 1 ? 's' : ''}`,
+          show: true
+        });
       }
+      setTimeout(() => setEmailToast(null), 5000);
       
       setTimeout(() => {
         setBulkEmailProgress({ current: 0, total: 0, status: 'idle' });
@@ -278,9 +315,17 @@ export default function SavedPage() {
       
     } catch (err) {
       console.error('Bulk email finding failed:', err);
-      // January 5th, 2026: Show error toast for unexpected failures
-      // i18n: January 10th, 2026
-      toast.error(t.toasts.error.emailLookupFailed);
+      // =======================================================================
+      // ERROR TOAST - January 16, 2026
+      // Neo-brutalist styled toast
+      // =======================================================================
+      setEmailToast({
+        type: 'error',
+        title: 'Email lookup failed',
+        subtitle: t.toasts.error.emailLookupFailed,
+        show: true
+      });
+      setTimeout(() => setEmailToast(null), 4000);
     } finally {
       setIsBulkFindingEmails(false);
     }
@@ -733,28 +778,69 @@ export default function SavedPage() {
         itemType="affiliate"
       />
 
-      {/* Delete Feedback Toast */}
+      {/* =============================================================================
+          DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
+          Updated: January 16, 2026
+          ============================================================================= */}
       {deleteResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <Trash2 size={20} className="text-red-600" />
+              <div className="w-10 h-10 bg-red-500 border-2 border-black flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-slate-900">
+                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {deleteResult.count === 1 
                     ? 'Affiliate removed'
                     : `${deleteResult.count} affiliates removed`
                   }
                 </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                   Successfully removed from your pipeline.
                 </p>
               </div>
               <button
                 onClick={() => setDeleteResult(prev => prev ? { ...prev, show: false } : null)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =============================================================================
+          EMAIL RESULTS TOAST - NEO-BRUTALIST DESIGN
+          Updated: January 16, 2026
+          ============================================================================= */}
+      {emailToast?.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+            <div className="flex items-start gap-3">
+              <div className={cn(
+                "w-10 h-10 border-2 border-black flex items-center justify-center shrink-0",
+                emailToast.type === 'success' && "bg-emerald-500",
+                emailToast.type === 'error' && "bg-red-500",
+                emailToast.type === 'warning' && "bg-amber-500",
+                emailToast.type === 'info' && "bg-blue-500"
+              )}>
+                <Mail size={20} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                  {emailToast.title}
+                </h4>
+                {emailToast.subtitle && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                    {emailToast.subtitle}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setEmailToast(null)}
+                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
               >
                 <X size={16} />
               </button>

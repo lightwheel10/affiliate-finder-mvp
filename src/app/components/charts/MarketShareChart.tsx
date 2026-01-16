@@ -1,3 +1,13 @@
+/**
+ * =============================================================================
+ * MarketShareChart Component
+ * =============================================================================
+ * Updated: January 16, 2026
+ * 
+ * Changed all #D4E815 (lime green) references to #ffbf23 (brand yellow)
+ * for consistency with the neo-brutalist design system.
+ * =============================================================================
+ */
 'use client';
 
 import React from 'react';
@@ -12,13 +22,13 @@ interface MarketShareChartProps {
   data: MarketShareData[];
 }
 
-// Custom tooltip
+// Custom tooltip - Updated January 16, 2026: Changed #D4E815 to #ffbf23
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-[#1A1D21] text-white px-2.5 py-1.5 rounded-lg shadow-lg text-[10px]">
         <p className="font-medium">{label}</p>
-        <p className="text-[#D4E815] font-bold">{payload[0].value}%</p>
+        <p className="text-[#ffbf23] font-bold">{payload[0].value}%</p>
       </div>
     );
   }
@@ -50,19 +60,20 @@ export const MarketShareChart: React.FC<MarketShareChartProps> = ({ data }) => {
             width={32}
           />
           <Tooltip content={<CustomTooltip />} />
+          {/* Line colors - Updated January 16, 2026: Changed #D4E815 to #ffbf23 */}
           <Line
             type="monotone"
             dataKey="value"
-            stroke="#D4E815"
+            stroke="#ffbf23"
             strokeWidth={2}
             dot={{
-              fill: '#D4E815',
-              stroke: '#D4E815',
+              fill: '#ffbf23',
+              stroke: '#ffbf23',
               strokeWidth: 0,
               r: 3,
             }}
             activeDot={{
-              fill: '#D4E815',
+              fill: '#ffbf23',
               stroke: '#fff',
               strokeWidth: 2,
               r: 5,

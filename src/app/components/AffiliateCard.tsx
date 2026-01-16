@@ -156,14 +156,14 @@ export const AffiliateCard: React.FC<AffiliateCardProps> = ({
           <p className="text-[10px] text-slate-500 mt-1">{t.affiliateCard.recentGrowth}</p>
         </div>
         
-        {/* Sparkline */}
+        {/* Sparkline - Updated January 16, 2026: Changed #D4E815 to #ffbf23 */}
         <div className="w-20 h-8">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke="#D4E815"
+                stroke="#ffbf23"
                 strokeWidth={1.5}
                 dot={false}
               />
@@ -172,10 +172,10 @@ export const AffiliateCard: React.FC<AffiliateCardProps> = ({
         </div>
       </div>
 
-      {/* Add Profile Button - i18n January 10th, 2026 */}
+      {/* Add Profile Button - Updated January 16, 2026: Changed #D4E815 to #ffbf23 */}
       <button
         onClick={onAddProfile}
-        className="w-full py-2 bg-[#D4E815] text-[#1A1D21] text-xs font-semibold rounded-lg hover:bg-[#c5d913] transition-all"
+        className="w-full py-2 bg-[#ffbf23] text-black text-xs font-bold rounded-lg hover:bg-[#e5a920] transition-all"
       >
         {t.affiliateCard.addProfile}
       </button>

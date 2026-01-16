@@ -105,12 +105,13 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({
   }
 
   // Elements options for consistent styling and behavior
+  // Updated January 16, 2026: Changed #D4E815 to #ffbf23 for brand consistency
   const elementsOptions = {
     // Appearance customization to match app theme
     appearance: {
       theme: 'stripe' as const,
       variables: {
-        colorPrimary: '#D4E815',
+        colorPrimary: '#ffbf23',
         colorBackground: '#ffffff',
         colorText: '#1e293b',
         colorDanger: '#ef4444',
@@ -126,8 +127,8 @@ export const StripeProvider: React.FC<StripeProviderProps> = ({
           padding: '10px 12px',
         },
         '.Input:focus': {
-          border: '1px solid #D4E815',
-          boxShadow: '0 0 0 1px rgba(212, 232, 21, 0.2)',
+          border: '1px solid #ffbf23',
+          boxShadow: '0 0 0 1px rgba(255, 191, 35, 0.2)',
         },
         '.Input--invalid': {
           border: '1px solid #ef4444',

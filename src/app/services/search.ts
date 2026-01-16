@@ -500,7 +500,7 @@ async function serperFetch(endpoint: string, query: string, options: Record<stri
         },
         body: JSON.stringify({
           q: query,
-          num: 25, // Get 25 results per request
+          num: 10, // Serper rejects num=25 for complex queries with OR clauses
           ...options,
         }),
         signal: controller.signal,
@@ -747,14 +747,28 @@ export async function searchWeb(
 
   console.log(`🔍 Web search (${isBrand ? 'BRAND' : 'NICHE'} mode): "${query}"`);
 
-  const json = await serperFetch(SERPER_ENDPOINTS.search, query);
+  // ==========================================================================
+  // PAGINATION - January 16, 2026
+  // 
+  // Fetch page 1 and page 2 in parallel to get 20 results instead of 10.
+  // Each page costs 1 Serper credit (total: 2 credits for 20 results).
+  // ==========================================================================
+  const [page1, page2] = await Promise.all([
+    serperFetch(SERPER_ENDPOINTS.search, query),
+    serperFetch(SERPER_ENDPOINTS.search, query, { page: 2 }),
+  ]);
 
-  if (json.error) {
+  if (page1.error && page2.error) {
+    console.error('❌ Both Serper requests failed');
     return [];
   }
 
-  const organic = json.organic || [];
-  console.log(`🌐 Web results (raw):`, organic.length);
+  // Combine results from both pages
+  const organic1 = page1.organic || [];
+  const organic2 = page2.organic || [];
+  const organic = [...organic1, ...organic2];
+  
+  console.log(`🌐 Web results (raw): ${organic.length} (page1: ${organic1.length}, page2: ${organic2.length})`);
 
   // Transform to SearchResult format
   const results: SearchResult[] = organic.map((r: any, index: number) => {

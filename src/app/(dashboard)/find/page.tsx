@@ -778,24 +778,15 @@ export default function FindNewPage() {
       const affiliatesToSave = results.filter(r => visibleSelectedLinks.has(r.link));
       const result = await saveAffiliatesBulk(affiliatesToSave);
       
+      // =======================================================================
+      // SUCCESS STATE - January 16, 2026
+      // Sets state to show custom neo-brutalist toast JSX
+      // =======================================================================
       setBulkSaveResult({
         savedCount: result.savedCount,
         duplicateCount: result.duplicateCount,
         show: true
       });
-      
-      // =========================================================================
-      // TOAST NOTIFICATIONS (January 5th, 2026)
-      // Show success/info toast based on save results
-      // i18n: January 10th, 2026
-      // =========================================================================
-      if (result.savedCount > 0 && result.duplicateCount === 0) {
-        toast.success(`${t.dashboard.saved.savedCount.replace('{count}', String(result.savedCount))} ${t.toasts.success.affiliatesSaved}`);
-      } else if (result.savedCount > 0 && result.duplicateCount > 0) {
-        toast.success(`${t.dashboard.saved.savedCount.replace('{count}', String(result.savedCount))} (${result.duplicateCount} ${t.toasts.success.affiliatesSavedWithDuplicates})`);
-      } else if (result.duplicateCount > 0) {
-        toast.info(`${t.toasts.info.allAlreadyInPipeline.replace('{count}', String(result.duplicateCount))}`);
-      }
       
       setTimeout(() => {
         setBulkSaveResult(prev => prev ? { ...prev, show: false } : null);
@@ -840,17 +831,16 @@ export default function FindNewPage() {
       });
       setIsDeleteModalOpen(false);
       
+      // =======================================================================
+      // SUCCESS STATE - January 16, 2026
+      // Sets state to show custom neo-brutalist toast JSX
+      // =======================================================================
       setDeleteResult({ count: deleteCount, show: true });
-      // January 5th, 2026: Added success toast for bulk delete
-      // i18n: January 10th, 2026
-      toast.success(`${t.dashboard.saved.deletedCount.replace('{count}', String(deleteCount))}`);
       setTimeout(() => {
         setDeleteResult(prev => prev ? { ...prev, show: false } : null);
       }, 3000);
     } catch (err) {
       console.error('Bulk delete failed:', err);
-      // January 5th, 2026: Added error toast for bulk delete failure
-      // i18n: January 10th, 2026
       toast.error(t.toasts.error.deleteFailed);
     } finally {
       setIsBulkDeleting(false);
@@ -1042,55 +1032,64 @@ export default function FindNewPage() {
           To restore: See git history for this file
         */}
 
-        {/* ============================================================================
-            BULK ACTIONS BAR (Added Dec 2025)
-            ============================================================================ */}
+        {/* =============================================================================
+            BULK ACTIONS BAR - NEO-BRUTALIST DESIGN
+            Updated: January 16, 2026
+            
+            Matches the Saved page styling for design consistency across dashboard.
+            - Yellow (#ffbf23) accent color with black borders
+            - font-black uppercase text
+            - Neo-brutalist shadow-[2px_2px_0px_0px_#000] on buttons
+            ============================================================================= */}
         {visibleSelectedLinks.size > 0 && (() => {
           const alreadySavedCount = Array.from(visibleSelectedLinks).filter(link => isAffiliateSaved(link)).length;
           const newToSaveCount = visibleSelectedLinks.size - alreadySavedCount;
           const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
           
           return (
-          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
-            {/* Left: Selection info - Translated (January 9th, 2026) */}
+          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700">
+            {/* Left: Selection info - Neo-brutalist style */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#D4E815] flex items-center justify-center">
-                  <Check size={14} className="text-[#1A1D21]" />
+                {/* Checkbox icon - Neo-brutalist yellow square */}
+                <div className="w-6 h-6 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+                  <Check size={14} className="text-black" />
                 </div>
-                <span className="text-sm font-semibold text-slate-900">
+                <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {visibleSelectedLinks.size} {t.dashboard.find.bulkActions.selected}
                 </span>
                 {alreadySavedCount > 0 && (
-                  <span className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border-2 border-emerald-200 px-2 py-0.5">
                     {alreadySavedCount} {t.dashboard.find.bulkActions.alreadyInPipeline}
                   </span>
                 )}
               </div>
               
-              <div className="h-4 w-px bg-slate-200"></div>
+              <div className="h-4 w-0.5 bg-black dark:bg-gray-600"></div>
               <button
                 onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
-                className="text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                className="text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
               >
                 {allVisibleSelected ? t.dashboard.find.bulkActions.deselectAll : t.dashboard.find.bulkActions.selectAllVisible}
               </button>
             </div>
 
-            {/* Right: Action buttons - Translated (January 9th, 2026) */}
+            {/* Right: Action buttons - Neo-brutalist style */}
             <div className="flex items-center gap-2">
+              {/* Cancel button - Neo-brutalist outline */}
               <button
                 onClick={deselectAllVisible}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white transition-all"
               >
                 <X size={14} />
                 {t.common.cancel}
               </button>
 
+              {/* Delete button - Neo-brutalist red */}
               <button
                 onClick={handleBulkDelete}
                 disabled={isBulkDeleting}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500 hover:bg-red-600 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isBulkDeleting ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -1100,10 +1099,16 @@ export default function FindNewPage() {
                 {t.dashboard.find.bulkActions.deleteSelected}
               </button>
 
+              {/* Save button - Neo-brutalist yellow */}
               <button
                 onClick={handleBulkSave}
                 disabled={isBulkSaving || newToSaveCount === 0}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold bg-[#D4E815] hover:bg-[#c5d913] text-[#1A1D21] transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-black uppercase transition-all border-2",
+                  newToSaveCount === 0
+                    ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
+                    : "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
                 title={newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${t.dashboard.find.bulkActions.saveToPipeline} (${newToSaveCount})`}
               >
                 {isBulkSaving ? (
@@ -1153,18 +1158,24 @@ export default function FindNewPage() {
             <div>
               {loading ? (
                 <>
-                  {/* Loading progress indicator at top */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-[#D4E815]/10 border-b border-[#D4E815]/30">
-                    <div className="w-5 h-5 border-2 border-[#D4E815] border-t-transparent rounded-full animate-spin"></div>
+                  {/* =============================================================================
+                      LOADING PROGRESS INDICATOR - NEO-BRUTALIST DESIGN
+                      Updated: January 16, 2026
+                      
+                      Changed from #D4E815 (lime) to #ffbf23 (brand yellow)
+                      Matches neo-brutalist design system across dashboard
+                      ============================================================================= */}
+                  <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/10 border-b-2 border-[#ffbf23]/30">
+                    <div className="w-5 h-5 border-2 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-[#1A1D21]">
+                      <p className="text-sm font-black text-gray-900 dark:text-white uppercase">
                         {loadingMessage.title}
                       </p>
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         {loadingMessage.subtitle}
                       </p>
                     </div>
-                    <div className="text-xs font-semibold text-[#1A1D21] bg-[#D4E815]/20 px-2.5 py-1 rounded-full">
+                    <div className="text-xs font-black text-black bg-[#ffbf23] px-2.5 py-1 border-2 border-black">
                       {loadingMessage.badge}
                     </div>
                   </div>
@@ -1575,25 +1586,28 @@ export default function FindNewPage() {
         itemType="affiliate"
       />
 
-      {/* BULK SAVE FEEDBACK TOAST */}
+      {/* =============================================================================
+          BULK SAVE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
+          Updated: January 16, 2026
+          ============================================================================= */}
       {bulkSaveResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                <Check size={20} className="text-emerald-600" />
+              <div className="w-10 h-10 bg-emerald-500 border-2 border-black flex items-center justify-center shrink-0">
+                <Check size={20} className="text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-slate-900">
+                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {bulkSaveResult.savedCount > 0 
                     ? `${bulkSaveResult.savedCount} affiliate${bulkSaveResult.savedCount !== 1 ? 's' : ''} saved!`
                     : 'No new affiliates saved'
                   }
                 </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                   {bulkSaveResult.savedCount > 0 && 'Successfully added to your pipeline.'}
                   {bulkSaveResult.duplicateCount > 0 && (
-                    <span className="block text-amber-600 mt-1">
+                    <span className="block text-amber-600 font-bold mt-1">
                       {bulkSaveResult.duplicateCount} already in pipeline (skipped)
                     </span>
                   )}
@@ -1601,7 +1615,7 @@ export default function FindNewPage() {
               </div>
               <button
                 onClick={() => setBulkSaveResult(prev => prev ? { ...prev, show: false } : null)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
               >
                 <X size={16} />
               </button>
@@ -1610,28 +1624,31 @@ export default function FindNewPage() {
         </div>
       )}
 
-      {/* DELETE FEEDBACK TOAST */}
+      {/* =============================================================================
+          DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
+          Updated: January 16, 2026
+          ============================================================================= */}
       {deleteResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <Trash2 size={20} className="text-red-600" />
+              <div className="w-10 h-10 bg-red-500 border-2 border-black flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-slate-900">
+                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {deleteResult.count === 1 
                     ? 'Affiliate deleted'
                     : `${deleteResult.count} affiliates deleted`
                   }
                 </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                   Successfully removed from discovered list.
                 </p>
               </div>
               <button
                 onClick={() => setDeleteResult(prev => prev ? { ...prev, show: false } : null)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
               >
                 <X size={16} />
               </button>

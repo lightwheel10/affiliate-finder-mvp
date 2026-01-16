@@ -133,10 +133,13 @@ function CreditBadge({ icon, value, label, shortLabel, isPrimary = false, varian
     );
   }
   
-  // OLD DESIGN - Default variant
+  // ==========================================================================
+  // DEFAULT VARIANT - Updated January 16, 2026
+  // Changed from #D4E815 (lime) to #ffbf23 (brand yellow) for consistency
+  // ==========================================================================
   if (isPrimary) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#D4E815]/10 border border-[#D4E815]/30 rounded-lg">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23]/10 border border-[#ffbf23]/30 rounded-lg">
         {icon}
         <span className="font-semibold text-[#1A1D21]">{value} {label}</span>
       </div>

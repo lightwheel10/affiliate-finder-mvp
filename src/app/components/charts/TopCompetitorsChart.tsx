@@ -1,3 +1,13 @@
+/**
+ * =============================================================================
+ * TopCompetitorsChart Component
+ * =============================================================================
+ * Updated: January 16, 2026
+ * 
+ * Changed #D4E815 (lime green) to #ffbf23 (brand yellow)
+ * for consistency with the neo-brutalist design system.
+ * =============================================================================
+ */
 'use client';
 
 import React from 'react';
@@ -94,6 +104,7 @@ export const TopCompetitorsChart: React.FC<TopCompetitorsChartProps> = ({ data }
             ticks={[0, 10000, 20000, 30000, 40000]}
             width={32}
           />
+          {/* Bar colors - Updated January 16, 2026: Changed #D4E815 to #ffbf23 */}
           <Bar
             dataKey="value"
             radius={[4, 4, 0, 0]}
@@ -102,7 +113,7 @@ export const TopCompetitorsChart: React.FC<TopCompetitorsChartProps> = ({ data }
             {data.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={index < 2 ? '#D4E815' : '#E8E8E8'}
+                fill={index < 2 ? '#ffbf23' : '#E8E8E8'}
               />
             ))}
           </Bar>
