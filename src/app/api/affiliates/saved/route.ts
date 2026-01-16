@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbSavedAffiliate } from '@/lib/db';
+import { checkCredits, consumeCredits } from '@/lib/credits';
+
+// =============================================================================
+// CREDIT ENFORCEMENT CHECK - January 16, 2026
+// 
+// Check if credit enforcement is enabled via environment variable.
+// When enabled, email lookups (including bio extraction) consume credits.
+// =============================================================================
+function isCreditEnforcementEnabled(): boolean {
+  const flag = process.env.ENFORCE_CREDITS;
+  if (!flag) return false;
+  return flag.toLowerCase() === 'true' || flag === '1';
+}
 
 // GET /api/affiliates/saved?userId=xxx - Get all saved affiliates for a user
 export async function GET(request: NextRequest) {
@@ -193,6 +206,7 @@ export async function DELETE(request: NextRequest) {
 // PATCH /api/affiliates/saved - Update email status for a saved affiliate
 // 
 // Added: January 14, 2026
+// Updated: January 16, 2026 - Now consumes credits for bio emails (client request)
 // 
 // PURPOSE:
 // This endpoint updates the email discovery status for social media affiliates
@@ -202,14 +216,15 @@ export async function DELETE(request: NextRequest) {
 // For social media affiliates, we extract emails directly from their public bios
 // during the initial search (see apify.ts extractEmailFromText function).
 // When user clicks "Find Email", we check if a bio email already exists:
-// - If YES: Update status to 'found' using THIS endpoint (FREE, no API cost)
-// - If NO: Update status to 'not_found' using THIS endpoint (FREE, no API cost)
+// - If YES: Update status to 'found' using THIS endpoint (1 credit charged)
+// - If NO: Update status to 'not_found' using THIS endpoint (FREE, no charge)
+// 
+// CREDIT POLICY UPDATE - January 16, 2026:
+// Previously bio emails were free. Client decided to charge 1 credit for ALL
+// email discoveries, including bio-extracted emails from social media profiles.
+// This ensures consistent pricing across all email lookup methods.
 // 
 // For Web results, we still use the /api/enrich/email endpoint with Lusha/Apollo.
-// 
-// COST SAVINGS:
-// This prevents wasting Lusha credits on social media profiles where the
-// enrichment service cannot find emails anyway (no company domain to search).
 // 
 // Request body:
 // - affiliateId: number (required) - The saved_affiliates.id to update
@@ -222,6 +237,13 @@ export async function DELETE(request: NextRequest) {
 // - success: boolean
 // - email?: string (if found)
 // - status: 'found' | 'not_found'
+// - creditsConsumed?: boolean - Whether credits were deducted
+// - creditsRemaining?: number - Remaining email credits after deduction
+// 
+// Error Responses:
+// - 400: Missing required fields
+// - 402: Insufficient email credits (only when emailStatus === 'found')
+// - 500: Server error
 // =============================================================================
 export async function PATCH(request: NextRequest) {
   try {
@@ -249,8 +271,35 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // ==========================================================================
+    // CREDIT CHECK - January 16, 2026
+    // 
+    // If an email was found (bio extraction succeeded), we charge 1 credit.
+    // If no email found, no credit is consumed (user shouldn't pay for failure).
+    // ==========================================================================
+    const enforceCredits = isCreditEnforcementEnabled();
+    let creditsConsumed = false;
+    let creditsRemaining = 0;
+
+    if (enforceCredits && emailStatus === 'found') {
+      // Check if user has sufficient email credits
+      const creditCheck = await checkCredits(userId, 'email', 1);
+      
+      if (!creditCheck.allowed) {
+        console.log(`[PATCH /api/affiliates/saved] User ${userId} has insufficient email credits`);
+        return NextResponse.json(
+          { 
+            error: 'Insufficient email credits',
+            message: creditCheck.message || 'You need more email credits to find this email.',
+            remaining: creditCheck.remaining,
+            isUnlimited: creditCheck.isUnlimited,
+          }, 
+          { status: 402 }
+        );
+      }
+    }
+
     // Update the affiliate's email AND status in database
-    // NOTE: We do NOT consume any credits here - bio emails are free
     // CRITICAL FIX January 14, 2026: Must persist email to database!
     // Without this, email only shows via optimistic update and is lost on refresh.
     await sql`
@@ -263,11 +312,38 @@ export async function PATCH(request: NextRequest) {
       WHERE id = ${affiliateId} AND user_id = ${userId}
     `;
 
+    // ==========================================================================
+    // CREDIT CONSUMPTION - January 16, 2026
+    // 
+    // Consume 1 email credit AFTER successful database update.
+    // Only consume if email was found (not for 'not_found' status).
+    // ==========================================================================
+    if (enforceCredits && emailStatus === 'found') {
+      const consumeResult = await consumeCredits(
+        userId,
+        'email',
+        1,
+        affiliateId.toString(),
+        'bio_extraction'
+      );
+      
+      if (consumeResult.success) {
+        creditsConsumed = true;
+        creditsRemaining = consumeResult.newBalance;
+        console.log(`[PATCH /api/affiliates/saved] User ${userId}: Consumed 1 email credit for bio extraction. Remaining: ${creditsRemaining}`);
+      } else {
+        // This shouldn't happen since we checked above, but log it
+        console.error(`[PATCH /api/affiliates/saved] Failed to consume credit for user ${userId} after check passed`);
+      }
+    }
+
     return NextResponse.json({ 
       success: true,
       email: email || null,
       status: emailStatus,
       provider: provider,
+      creditsConsumed,
+      creditsRemaining,
     });
   } catch (error) {
     console.error('Error updating email status:', error);

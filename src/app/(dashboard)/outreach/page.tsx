@@ -80,12 +80,29 @@ import {
   Briefcase,
   ChevronRight,
   Clock,  // Added January 6th, 2026 for neo-brutalist header
+  CheckCircle2,  // Added January 16, 2026 for verified badge
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
+
+// =============================================================================
+// HELPER: FORMAT NUMBER - January 16, 2026
+// Formats large numbers for display (e.g., 1500 -> "1.5K", 1500000 -> "1.5M")
+// Used for follower counts in the Creator column
+// =============================================================================
+function formatNumber(num?: number): string {
+  if (!num) return '0';
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return num.toString();
+}
 
 // =============================================================================
 // TYPES FOR MULTI-CONTACT SUPPORT (December 25, 2025)
@@ -262,9 +279,20 @@ export default function OutreachPage() {
   // Sonner handles auto-dismiss (4s), positioning, and close button automatically.
   // =========================================================================
 
-  // Filter and Search Logic
+  // ==========================================================================
+  // AFFILIATES WITH EMAIL ONLY - January 16, 2026
+  // 
+  // Client requirement: Outreach page should only show affiliates for whom
+  // we have found an email. This filters out affiliates without emails since
+  // outreach is only possible when we have contact information.
+  // ==========================================================================
+  const affiliatesWithEmail = useMemo(() => {
+    return savedAffiliates.filter(item => item.email && item.email.trim() !== '');
+  }, [savedAffiliates]);
+
+  // Filter and Search Logic (now operates on affiliatesWithEmail)
   const filteredResults = useMemo(() => {
-    return savedAffiliates.filter(item => {
+    return affiliatesWithEmail.filter(item => {
       // Filter by Source
       if (activeFilter !== 'All' && item.source !== activeFilter) return false;
       
@@ -281,18 +309,18 @@ export default function OutreachPage() {
       
       return true;
     });
-  }, [savedAffiliates, activeFilter, searchQuery]);
+  }, [affiliatesWithEmail, activeFilter, searchQuery]);
 
-  // Calculate counts
+  // Calculate counts (only affiliates with email - January 16, 2026)
   const counts = useMemo(() => {
     return {
-      All: savedAffiliates.length,
-      Web: savedAffiliates.filter(r => r.source === 'Web').length,
-      YouTube: savedAffiliates.filter(r => r.source === 'YouTube').length,
-      Instagram: savedAffiliates.filter(r => r.source === 'Instagram').length,
-      TikTok: savedAffiliates.filter(r => r.source === 'TikTok').length,
+      All: affiliatesWithEmail.length,
+      Web: affiliatesWithEmail.filter(r => r.source === 'Web').length,
+      YouTube: affiliatesWithEmail.filter(r => r.source === 'YouTube').length,
+      Instagram: affiliatesWithEmail.filter(r => r.source === 'Instagram').length,
+      TikTok: affiliatesWithEmail.filter(r => r.source === 'TikTok').length,
     };
-  }, [savedAffiliates]);
+  }, [affiliatesWithEmail]);
 
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
@@ -965,7 +993,7 @@ export default function OutreachPage() {
             TABLE AREA - DashboardDemo.tsx EXACT STYLING (Outreach)
             ============================================================================= */}
         <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
-          {/* Table Header - Translated (January 9th, 2026) */}
+          {/* Table Header - Updated January 16, 2026: Adjusted columns for more Discovery Method space */}
           <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
             <div className="col-span-1 flex justify-center">
               <input
@@ -975,10 +1003,10 @@ export default function OutreachPage() {
                 className="accent-[#ffbf23] w-4 h-4"
               />
             </div>
-            <div className="col-span-3">{t.dashboard.table.affiliate}</div>
-            <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
-            <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
-            <div className="col-span-1">{t.dashboard.table.email}</div>
+            <div className="col-span-2">{t.dashboard.table.affiliate}</div>
+            <div className="col-span-2">Creator</div>
+            <div className="col-span-3">{t.dashboard.table.discoveryMethod}</div>
+            <div className="col-span-2">{t.dashboard.table.email}</div>
             <div className="col-span-2 text-right">{t.dashboard.table.message}</div>
           </div>
 
@@ -996,8 +1024,8 @@ export default function OutreachPage() {
             </div>
           )}
           
-          {/* Empty State - Translated (January 9th, 2026) */}
-          {!loading && savedAffiliates.length === 0 && (
+          {/* Empty State - Updated January 16, 2026: Only shows when no affiliates have emails */}
+          {!loading && affiliatesWithEmail.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
                 <MessageSquare size={24} className="text-gray-300" />
@@ -1011,8 +1039,8 @@ export default function OutreachPage() {
             </div>
           )}
           
-          {/* No Results State - Neo-brutalist */}
-          {!loading && savedAffiliates.length > 0 && filteredResults.length === 0 && (
+          {/* No Results State - Neo-brutalist (Updated January 16, 2026) */}
+          {!loading && affiliatesWithEmail.length > 0 && filteredResults.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
                 <Search size={24} className="text-gray-300" />
@@ -1073,8 +1101,8 @@ export default function OutreachPage() {
                     />
                   </div>
 
-                  {/* Affiliate Info - col-span-3 */}
-                  <div className="col-span-3 flex items-center gap-3 min-w-0">
+                  {/* Affiliate Info - col-span-2 (reduced January 16, 2026 to give Discovery Method more space) */}
+                  <div className="col-span-2 flex items-center gap-2 min-w-0">
                     <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center shrink-0 overflow-hidden">
                       {item.thumbnail ? (
                         <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
@@ -1091,30 +1119,93 @@ export default function OutreachPage() {
                     </div>
                   </div>
 
-                  {/* Relevant Content - col-span-3 */}
-                  <div className="col-span-3 text-xs text-gray-600 dark:text-gray-400 truncate">
-                    {item.snippet}
+                  {/* ================================================================
+                      CREATOR COLUMN - January 16, 2026
+                      
+                      Replaced "Relevant Content" (which duplicated title/snippet)
+                      with Creator info that's more useful for outreach.
+                      
+                      DESIGN: Matches AffiliateRow.tsx pattern (lines 1118-1148):
+                      - Row 1: Creator name with verified badge
+                      - Row 2: Followers in neo-brutalist yellow badge
+                      
+                      Priority for name (same as AffiliateRow):
+                      channel?.name || personName || domain
+                      
+                      Followers source:
+                      - YouTube/TikTok: channel.subscribers (pre-formatted)
+                      - Instagram: instagramFollowers (needs formatting)
+                      ================================================================ */}
+                  <div className="col-span-2 text-xs min-w-0">
+                    {(() => {
+                      // Creator name - same pattern as AffiliateRow line 1123
+                      const creatorName = item.channel?.name || item.personName || item.domain;
+                      const isVerified = item.channel?.verified || item.instagramIsVerified || item.tiktokIsVerified;
+                      const isSocialMedia = ['YouTube', 'TikTok', 'Instagram'].includes(item.source);
+                      
+                      // Get followers - Instagram needs special handling
+                      const followersDisplay = item.channel?.subscribers 
+                        || (item.instagramFollowers ? formatNumber(item.instagramFollowers) : null);
+
+                      return (
+                        <div className="flex flex-col gap-1">
+                          {/* Row 1: Creator name + verified badge */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-gray-900 dark:text-white truncate" title={creatorName}>
+                              {creatorName}
+                            </span>
+                            {isVerified && (
+                              <CheckCircle2 size={12} className="text-blue-500 fill-blue-500 shrink-0" />
+                            )}
+                          </div>
+                          
+                          {/* Row 2: Followers badge - Neo-brutalist style (matches AffiliateRow) */}
+                          {isSocialMedia && followersDisplay && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#ffbf23] text-black border-2 border-black w-fit">
+                              <Users size={10} />
+                              {followersDisplay}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  {/* Discovery Method - col-span-2 */}
-                  <div className="col-span-2 text-xs">
-                    {item.keyword && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-black border-2 border-black dark:border-gray-600 text-gray-800 dark:text-gray-200 font-bold truncate max-w-full">
-                        {item.keyword}
-                      </span>
+                  {/* Discovery Method - col-span-3 (Updated January 16, 2026: Fixed width, max 5 words) */}
+                  <div className="col-span-3 text-xs">
+                    {(item.discoveryMethod?.value || item.keyword) ? (
+                      (() => {
+                        const fullText = item.discoveryMethod?.value || item.keyword || '';
+                        // Limit to first 5 words for consistent badge size
+                        const words = fullText.split(' ');
+                        const truncatedText = words.length > 5 
+                          ? words.slice(0, 5).join(' ') + '...'
+                          : fullText;
+                        
+                        return (
+                          <span 
+                            className="inline-block px-2 py-1 bg-white dark:bg-black border-2 border-black dark:border-gray-600 text-gray-800 dark:text-gray-200 font-bold max-w-[180px] truncate"
+                            title={fullText}
+                          >
+                            {truncatedText}
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-gray-400 italic">—</span>
                     )}
                   </div>
 
-                  {/* Email - col-span-1 */}
-                  <div className="col-span-1 text-xs min-w-0">
+                  {/* Email - col-span-2 (Full email - January 16, 2026) */}
+                  <div className="col-span-2 text-xs min-w-0">
                     {item.email ? (
-                      <div className="flex items-center gap-1 min-w-0">
-                        <Mail size={10} className="text-emerald-600 shrink-0" />
-                        <span className="truncate text-gray-700 dark:text-gray-300 font-medium" title={item.email}>
-                          {item.email.split('@')[0]}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Mail size={12} className="text-emerald-600 shrink-0" />
+                        <span className="truncate text-gray-700 dark:text-gray-300 font-mono text-[11px]" title={item.email}>
+                          {item.email}
                         </span>
                         {item.emailResults?.emails && item.emailResults.emails.length > 1 && (
-                          <span className="shrink-0 text-[10px] text-emerald-600 font-bold">
+                          <span className="shrink-0 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded">
                             +{item.emailResults.emails.length - 1}
                           </span>
                         )}

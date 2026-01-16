@@ -70,6 +70,12 @@ export default function SavedPage() {
   const { user } = useNeonUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
+  
+  // ==========================================================================
+  // EMAIL FOUND FILTER - January 16, 2026
+  // When enabled, only shows affiliates with emails found
+  // ==========================================================================
+  const [showOnlyWithEmail, setShowOnlyWithEmail] = useState(false);
 
   // Hook for saved affiliates
   const { 
@@ -357,9 +363,17 @@ export default function SavedPage() {
         if (max !== undefined && contentCount > max) return false;
       }
 
+      // ==========================================================================
+      // EMAIL FOUND FILTER - January 16, 2026
+      // When showOnlyWithEmail is true, only show affiliates with emails
+      // ==========================================================================
+      if (showOnlyWithEmail) {
+        if (!item.email && item.emailStatus !== 'found') return false;
+      }
+
       return true;
     });
-  }, [savedAffiliates, activeFilter, searchQuery, advancedFilters]);
+  }, [savedAffiliates, activeFilter, searchQuery, advancedFilters, showOnlyWithEmail]);
 
   const visibleSelectedLinks = useMemo(() => {
     const visibleLinks = new Set(filteredResults.map(r => r.link));
@@ -389,6 +403,14 @@ export default function SavedPage() {
       Instagram: savedAffiliates.filter(r => r.source === 'Instagram').length,
       TikTok: savedAffiliates.filter(r => r.source === 'TikTok').length,
     };
+  }, [savedAffiliates]);
+
+  // ==========================================================================
+  // EMAIL FOUND COUNT - January 16, 2026
+  // Shows how many affiliates have emails found in the table header
+  // ==========================================================================
+  const emailsFoundCount = useMemo(() => {
+    return savedAffiliates.filter(a => a.email || a.emailStatus === 'found').length;
   }, [savedAffiliates]);
 
   const filterTabs = [
@@ -621,7 +643,28 @@ export default function SavedPage() {
             <div className="col-span-2">{t.dashboard.table.relevantContent}</div>
             <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
             <div className="col-span-1">{t.dashboard.table.status}</div>
-            <div className="col-span-1">{t.dashboard.table.email}</div>
+            {/* Email column with clickable filter - January 16, 2026 */}
+            <div className="col-span-1">
+              <button
+                onClick={() => setShowOnlyWithEmail(!showOnlyWithEmail)}
+                className={cn(
+                  "flex items-center gap-1 px-1.5 py-0.5 rounded transition-all cursor-pointer",
+                  showOnlyWithEmail 
+                    ? "bg-emerald-500 text-white" 
+                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                )}
+                title={showOnlyWithEmail ? "Show all affiliates" : `Show only affiliates with email (${emailsFoundCount})`}
+              >
+                <Mail size={10} className={showOnlyWithEmail ? "text-white" : "text-emerald-500"} />
+                <span>{t.dashboard.table.email}</span>
+                {/* Only show count when filter is active */}
+                {showOnlyWithEmail && emailsFoundCount > 0 && (
+                  <span className="px-1 py-0.5 text-[9px] font-black rounded bg-white/20 text-white">
+                    {emailsFoundCount}
+                  </span>
+                )}
+              </button>
+            </div>
             <div className="col-span-2 text-right">{t.dashboard.table.action}</div>
           </div>
 

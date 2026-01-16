@@ -1,4 +1,4 @@
-import { Platform, SearchResult, searchWeb } from '../../services/search';
+import { Platform, SearchResult, searchWeb, WebSearchOptions } from '../../services/search';
 import { analyzeContent } from '../../services/analysis';
 import { trackSearch, completeSearch, API_COSTS } from '../../services/tracking';
 import { 
@@ -93,9 +93,13 @@ export async function POST(req: Request) {
     // ==========================================================================
     // GET USER FROM DATABASE (December 2025)
     // Use authenticated email to get userId - never trust client-provided userId
+    // 
+    // Updated January 16, 2026: Also fetch brand and competitors for filtering
+    // - brand: User's own website domain (to exclude from results)
+    // - competitors: User's competitor domains (for reference)
     // ==========================================================================
     const users = await sql`
-      SELECT id FROM users WHERE email = ${authUser.primaryEmail}
+      SELECT id, brand, competitors FROM users WHERE email = ${authUser.primaryEmail}
     `;
 
     if (users.length === 0) {
@@ -107,6 +111,23 @@ export async function POST(req: Request) {
     }
 
     const userId = users[0].id as number;
+    const userBrand = users[0].brand as string | null;
+    const userCompetitors = users[0].competitors as string[] | null;
+    
+    // ==========================================================================
+    // WEB SEARCH OPTIONS - January 16, 2026
+    // 
+    // Configure filtering to find affiliates, not shops:
+    // - Exclude user's own domain (they don't need to find themselves)
+    // - Pass competitors for reference (not excluded, but tracked)
+    // ==========================================================================
+    const webSearchOptions: WebSearchOptions = {
+      userBrand: userBrand || undefined,
+      competitors: userCompetitors || undefined,
+      strictFiltering: true,
+    };
+    
+    console.log(`[Scout] User ${userId} - Brand: ${userBrand || 'not set'}, Competitors: ${userCompetitors?.length || 0}`);
 
     // ==========================================================================
     // CREDIT CHECK (December 2025)
@@ -255,7 +276,18 @@ export async function POST(req: Request) {
                 break;
                 
               case 'Web':
-                results = await searchWeb(keyword);
+                // =============================================================
+                // WEB SEARCH WITH AFFILIATE FILTERING - January 16, 2026
+                // 
+                // Pass webSearchOptions to filter out:
+                // - E-commerce domains (Amazon, eBay, Walmart, etc.)
+                // - User's own domain (userBrand from onboarding)
+                // - Shop URL patterns (/product/, /cart/, etc.)
+                // 
+                // The search query is also improved to target content creators
+                // (bloggers, reviewers) instead of shops.
+                // =============================================================
+                results = await searchWeb(keyword, webSearchOptions);
                 totalCost += API_COSTS.serper;
                 // Collect Web domains for SimilarWeb batch enrichment
                 results.forEach(r => {

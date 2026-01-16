@@ -46,6 +46,37 @@ const ACTORS = {
   similarweb: 'yOYYzj2J5K88boIVO',
 } as const;
 
+// =============================================================================
+// KEYWORD SANITIZATION FOR SOCIAL MEDIA - January 16, 2026
+// 
+// Instagram and TikTok search APIs reject keywords with special characters.
+// Instagram pattern: ^[^!?.,:;\-+=*&%$#@/\~^|<>()[\]{}"'`]+
+// 
+// For domain-like keywords (bedrop.de), we:
+// 1. Remove the TLD (.de, .com, etc.)
+// 2. Keep only alphanumeric characters and spaces
+// =============================================================================
+function sanitizeKeywordForSocialMedia(keyword: string): string {
+  // Remove protocol and www
+  let cleaned = keyword
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '');
+  
+  // Remove TLD (everything after the last dot if it looks like a domain)
+  if (/\.(com|de|co\.uk|net|org|io|shop|store|eu|at|ch|fr|es|it|nl|be|pl|se|no|dk|fi)$/i.test(cleaned)) {
+    cleaned = cleaned.replace(/\.[a-z]{2,}$/i, '');
+  }
+  
+  // Remove all special characters, keep only alphanumeric and spaces
+  cleaned = cleaned.replace(/[^a-zA-Z0-9\s]/g, ' ').trim();
+  
+  // Collapse multiple spaces
+  cleaned = cleaned.replace(/\s+/g, ' ');
+  
+  console.log(`🧹 Sanitized keyword for social media: "${keyword}" → "${cleaned}"`);
+  return cleaned;
+}
+
 // Helper to format numbers (e.g., 5700 -> "5.7K")
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -270,11 +301,14 @@ export async function searchInstagramApify(
   }
 
   const startTime = Date.now();
-  console.log(`📸 Apify Instagram search: "${keyword}"`);
+  
+  // Sanitize keyword - Instagram rejects special characters like . in domains
+  const sanitizedKeyword = sanitizeKeywordForSocialMedia(keyword);
+  console.log(`📸 Apify Instagram search: "${sanitizedKeyword}"`);
 
   try {
     const run = await client.actor(ACTORS.instagram).call({
-      search: keyword,
+      search: sanitizedKeyword,
       searchType: 'user',
       searchLimit,
     });
@@ -439,11 +473,14 @@ export async function searchTikTokApify(
   }
 
   const startTime = Date.now();
-  console.log(`🎵 Apify TikTok search: "${keyword}"`);
+  
+  // Sanitize keyword - TikTok may also reject special characters
+  const sanitizedKeyword = sanitizeKeywordForSocialMedia(keyword);
+  console.log(`🎵 Apify TikTok search: "${sanitizedKeyword}"`);
 
   try {
     const run = await client.actor(ACTORS.tiktok).call({
-      searchQueries: [keyword],
+      searchQueries: [sanitizedKeyword],
       resultsPerPage,
       maxProfilesPerQuery: resultsPerPage,
     });

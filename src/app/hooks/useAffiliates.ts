@@ -450,6 +450,7 @@ export function useSavedAffiliates() {
 
     // ==========================================================================
     // SOCIAL MEDIA BIO EMAIL CHECK - January 14, 2026
+    // Updated: January 16, 2026 - Now consumes credits for bio emails (client request)
     // 
     // PURPOSE:
     // For social media affiliates (TikTok, Instagram, YouTube), we skip the paid
@@ -462,13 +463,14 @@ export function useSavedAffiliates() {
     // 3. Bio emails are the ONLY realistic source for social media contacts
     // 4. Bio emails are already extracted in apify.ts (extractEmailFromText)
     // 
-    // FLOW:
-    // - Social affiliate WITH bio email → status 'found', return email (FREE)
+    // CREDIT POLICY UPDATE - January 16, 2026:
+    // Previously bio emails were free. Client decided to charge 1 credit for ALL
+    // email discoveries, including bio-extracted emails from social media profiles.
+    // - Social affiliate WITH bio email → status 'found', return email (1 CREDIT)
     // - Social affiliate WITHOUT bio email → status 'not_found' (FREE)
-    // - Web affiliate → continue to Lusha/Apollo (PAID, existing flow)
+    // - Web affiliate → continue to Lusha/Apollo (1 CREDIT, existing flow)
     // 
-    // COST SAVINGS:
-    // This prevents wasting 1 credit per social affiliate email lookup.
+    // This ensures consistent pricing across all email lookup methods.
     // ==========================================================================
     const socialPlatforms = ['youtube', 'tiktok', 'instagram'];
     const isSocialAffiliate = socialPlatforms.some(
@@ -480,34 +482,16 @@ export function useSavedAffiliates() {
       const bioEmail = affiliate.email;
       const emailStatus = bioEmail ? 'found' : 'not_found';
 
-      // Optimistic update - set final status immediately (no 'searching' flash)
-      mutate(
-        (currentData: any) => ({
-          ...currentData,
-          affiliates: (currentData?.affiliates || []).map((a: any) =>
-            a.id === affiliateId
-              ? {
-                  ...a,
-                  email: bioEmail || a.email,
-                  email_status: emailStatus,
-                  email_searched_at: new Date().toISOString(),
-                  email_provider: 'bio_extraction',
-                  // For bio emails, we don't have multiple contacts like Lusha
-                  email_results: bioEmail ? {
-                    emails: [bioEmail],
-                    contacts: [],
-                    provider: 'bio_extraction',
-                  } : undefined,
-                }
-              : a
-          )
-        }),
-        { revalidate: false }
-      );
-
-      // Persist to database via PATCH endpoint (no credits consumed)
+      // ========================================================================
+      // CALL API FIRST - January 16, 2026
+      // 
+      // We call the PATCH endpoint BEFORE optimistic update to:
+      // 1. Check if user has sufficient credits (for 'found' status)
+      // 2. Handle 402 errors gracefully
+      // 3. Only update UI if API succeeds
+      // ========================================================================
       try {
-        await fetch('/api/affiliates/saved', {
+        const res = await fetch('/api/affiliates/saved', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -518,19 +502,95 @@ export function useSavedAffiliates() {
             provider: 'bio_extraction',
           }),
         });
-      } catch (err) {
-        console.error('Error updating email status for social affiliate:', err);
-      }
 
-      // Return result in same format as enrichment API for consistency
-      return {
-        email: bioEmail || null,
-        emails: bioEmail ? [bioEmail] : [],
-        status: emailStatus,
-        provider: 'bio_extraction',
-        // January 14, 2026: Mark as bio extraction so UI can show appropriate message
-        source: 'bio',
-      };
+        const data = await res.json();
+
+        // ======================================================================
+        // CREDIT ERROR HANDLING - January 16, 2026
+        // 
+        // When user has 0 email credits, API returns 402 (Payment Required).
+        // Return the error data so UI can display appropriate message.
+        // ======================================================================
+        if (res.status === 402) {
+          console.log('[findEmail] Insufficient credits for bio email extraction');
+          return {
+            ...data,
+            status: 'credit_error' as const,
+            creditError: true,
+            message: data.message || 'You need more email credits to find this email.',
+          };
+        }
+
+        // Check for other API errors
+        if (!res.ok) {
+          console.error('[findEmail] API error:', data.error);
+          return {
+            email: null,
+            emails: [],
+            status: 'error' as const,
+            error: data.error || 'Failed to find email',
+          };
+        }
+
+        // ======================================================================
+        // SUCCESS - Update UI cache after API confirms
+        // ======================================================================
+        mutate(
+          (currentData: any) => ({
+            ...currentData,
+            affiliates: (currentData?.affiliates || []).map((a: any) =>
+              a.id === affiliateId
+                ? {
+                    ...a,
+                    email: bioEmail || a.email,
+                    email_status: emailStatus,
+                    email_searched_at: new Date().toISOString(),
+                    email_provider: 'bio_extraction',
+                    // For bio emails, we don't have multiple contacts like Lusha
+                    email_results: bioEmail ? {
+                      emails: [bioEmail],
+                      contacts: [],
+                      provider: 'bio_extraction',
+                    } : undefined,
+                  }
+                : a
+            )
+          }),
+          { revalidate: false }
+        );
+
+        // ======================================================================
+        // TRIGGER CREDITS REFRESH - January 16, 2026
+        // 
+        // If credits were consumed, trigger a refresh of the credits cache
+        // so the UI shows updated credit balance.
+        // ======================================================================
+        if (data.creditsConsumed) {
+          // Trigger SWR revalidation for credits
+          globalMutate((key: string) => typeof key === 'string' && key.includes('/api/user/credits'));
+        }
+
+        // Return result in same format as enrichment API for consistency
+        return {
+          email: bioEmail || null,
+          emails: bioEmail ? [bioEmail] : [],
+          status: emailStatus,
+          provider: 'bio_extraction',
+          // January 14, 2026: Mark as bio extraction so UI can show appropriate message
+          source: 'bio',
+          // January 16, 2026: Include credit consumption info
+          creditsConsumed: data.creditsConsumed || false,
+          creditsRemaining: data.creditsRemaining,
+        };
+      } catch (err) {
+        console.error('[findEmail] Error updating email status for social affiliate:', err);
+        return {
+          email: null,
+          emails: [],
+          status: 'error' as const,
+          error: 'Network error while finding email',
+        };
+      }
     }
     // ==========================================================================
     // END SOCIAL MEDIA BIO EMAIL CHECK
@@ -868,13 +928,23 @@ export function useSavedAffiliates() {
         );
 
         if (isSocialAffiliate) {
-          // For social affiliates, check if bio email already exists
+          // ======================================================================
+          // SOCIAL AFFILIATE EMAIL LOOKUP - Updated January 16, 2026
+          // 
+          // For social affiliates, check if bio email already exists.
           // Note: affiliates with existing emails are already filtered out above,
           // so if we get here, the social affiliate has NO bio email → not_found
+          // 
+          // CREDIT POLICY UPDATE - January 16, 2026:
+          // Previously bio emails were free. Client decided to charge 1 credit
+          // for ALL email discoveries, including bio-extracted emails.
+          // - If email found: 1 credit charged
+          // - If no email: FREE (user shouldn't pay for failure)
+          // ======================================================================
           const emailStatus = affiliate.email ? 'found' : 'not_found';
           
-          // Update status via PATCH (no credits consumed)
-          await fetch('/api/affiliates/saved', {
+          // Call PATCH endpoint (now handles credit check/consumption)
+          const res = await fetch('/api/affiliates/saved', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -886,7 +956,48 @@ export function useSavedAffiliates() {
             }),
           });
 
-          // Update local cache
+          const data = await res.json();
+
+          // ======================================================================
+          // CREDIT ERROR HANDLING - January 16, 2026
+          // 
+          // When user runs out of email credits during bulk operation, API returns
+          // 402. We stop processing remaining affiliates and return early with
+          // the credit error flag so the UI can display an appropriate message.
+          // Same behavior as web affiliate credit errors.
+          // ======================================================================
+          if (res.status === 402) {
+            // Revalidate to ensure data consistency before returning
+            mutate();
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('credits-updated'));
+            }
+            return { 
+              foundCount, 
+              notFoundCount, 
+              errorCount, 
+              skippedCount: skippedCount + (affiliatesToSearch.length - i - 1),
+              creditError: true,
+              creditErrorMessage: data.message || data.error || 'Insufficient email credits',
+            };
+          }
+
+          // Check for other API errors
+          if (!res.ok) {
+            console.error('[findEmailsBulk] Social affiliate API error:', data.error);
+            errorCount++;
+            onProgress?.({
+              current: i + 1,
+              total: affiliatesToSearch.length,
+              currentAffiliate: affiliate,
+              status: 'error',
+            });
+            continue;
+          }
+
+          // ======================================================================
+          // SUCCESS - Update local cache
+          // ======================================================================
           mutate(
             (currentData: any) => ({
               ...currentData,
@@ -904,6 +1015,13 @@ export function useSavedAffiliates() {
             { revalidate: false }
           );
 
+          // Trigger credits refresh if credits were consumed
+          if (data.creditsConsumed) {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('credits-updated'));
+            }
+          }
+
           // Count result
           if (emailStatus === 'found') {
             foundCount++;
@@ -919,7 +1037,7 @@ export function useSavedAffiliates() {
             status: emailStatus,
           });
 
-          continue; // Skip to next affiliate, no API call needed
+          continue; // Skip to next affiliate, no Lusha/Apollo API call needed
         }
         // ========================================================================
         // END SOCIAL MEDIA BIO EMAIL CHECK

@@ -321,19 +321,24 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
   // Updated January 6th, 2026 - Neo-brutalist design for discovery method
   // Updated January 10th, 2026 - i18n migration
+  // Updated January 16, 2026 - Removed label, added 5-word limit for compact single-line display
   const renderDiscoveryMethod = () => {
     if (!discoveryMethod) return null;
     
-    // i18n: Use translated keyword label
-    const label = t.affiliateRow.discovery.keywordLabel;
+    // Limit to first 5 words for consistent badge size (matches Outreach page)
+    const fullText = discoveryMethod.value;
+    const words = fullText.split(' ');
+    const truncatedText = words.length > 5 
+      ? words.slice(0, 5).join(' ') + '...'
+      : fullText;
 
     return (
-      <div>
-        <p className="text-[10px] font-bold mb-1 text-gray-400 dark:text-gray-500 uppercase tracking-wide">{label}</p>
-        <span className="inline-block px-2 py-1 text-[11px] font-bold bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-gray-600">
-          {discoveryMethod.value}
-        </span>
-      </div>
+      <span 
+        className="inline-block px-2 py-1 text-[11px] font-bold bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-gray-600 max-w-[160px] truncate"
+        title={fullText}
+      >
+        {truncatedText}
+      </span>
     );
   };
 
@@ -1080,7 +1085,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
   return (
     // DashboardDemo row styling - clean white/dark with subtle hover
-    <div className={`group ${gridClass} items-center p-4 bg-white dark:bg-[#0f0f0f] hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors`}>
+    // Updated January 16, 2026: Added min-h-[72px] to prevent row height shift when email/status states change
+    <div className={`group ${gridClass} items-center p-4 min-h-[72px] bg-white dark:bg-[#0f0f0f] hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors`}>
       {/* Checkbox - col-span-1, accent-brandYellow */}
       <div className="col-span-1 flex justify-center">
         <input 
@@ -1180,6 +1186,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       </div>
 
       {/* Relevant Content - col-span-2 for pipeline (no date column), col-span-3 for find */}
+      {/* Updated January 16, 2026: Added max-w-[200px] wrapper and break-words to prevent layout shifts */}
       <div className={`${isPipelineView ? "col-span-2" : "col-span-3"} min-w-0 overflow-hidden`}>
         <div className="flex items-start gap-3">
           {/* Video/Post Thumbnail for social media - Neo-brutalist with bold borders */}
@@ -1213,12 +1220,15 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             </a>
           )}
           
-          <div className="flex-1 min-w-0 space-y-1">
+          {/* January 16, 2026: Fixed max-width container to prevent content from affecting table layout */}
+          <div className="flex-1 min-w-0 max-w-[200px] space-y-1 overflow-hidden">
+            {/* Title with tooltip, break-words for long URLs/hashtags, line-clamp-2 for 2-line limit */}
             <a 
               href={link}
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-black text-gray-900 dark:text-white hover:text-[#ffbf23] cursor-pointer line-clamp-2 block leading-tight"
+              className="text-xs font-black text-gray-900 dark:text-white hover:text-[#ffbf23] cursor-pointer line-clamp-2 block leading-tight break-words"
+              title={title}
             >
               {title}
             </a>
@@ -1228,13 +1238,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {isSocialMedia && (views || date) && (
               <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
                 {views && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
                     <Eye size={10} />
                     {views} {t.affiliateRow.metrics.views}
                   </span>
                 )}
                 {date && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
                     {formatDate(date)}
                   </span>
                 )}
@@ -1245,16 +1255,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {/* Updated January 10th, 2026 - i18n migration */}
             {!isSocialMedia && (
               <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                <span className="font-bold text-gray-700 dark:text-gray-300">rank {rank}</span>
-                <span>{t.affiliateRow.discovery.rankFor}</span>
-                <span className="font-bold text-gray-900 dark:text-white truncate max-w-[100px]">{keyword}</span>
+                <span className="font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">rank {rank}</span>
+                <span className="whitespace-nowrap">{t.affiliateRow.discovery.rankFor}</span>
+                <span className="font-bold text-gray-900 dark:text-white truncate max-w-[80px]" title={keyword}>{keyword}</span>
               </div>
             )}
 
             {subItems && subItems.length > 0 && (
                <p 
                  onClick={() => setIsModalOpen(true)}
-                 className="text-[9px] text-[#ffbf23] font-black cursor-pointer hover:underline inline-block select-none uppercase"
+                 className="text-[9px] text-[#ffbf23] font-black cursor-pointer hover:underline inline-block select-none uppercase whitespace-nowrap"
                >
                  +{subItems.length} {t.affiliateRow.discovery.more}
                </p>
@@ -1264,7 +1274,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       </div>
 
       {/* Discovery Method - col-span-2 (NEW DESIGN January 6th, 2026) */}
-      <div className="col-span-2">
+      {/* Updated January 16, 2026: Added h-8 flex items-center for consistent height */}
+      <div className="col-span-2 h-8 flex items-center">
          {renderDiscoveryMethod()}
       </div>
 
@@ -1287,9 +1298,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       )}
 
       {/* Status (Pipeline Only) - col-span-1 Neo-brutalist */}
+      {/* Updated January 16, 2026: Added h-8 flex items-center for consistent height with Email column */}
       {isPipelineView && (
-        <div className="col-span-1">
-           <span className="inline-flex items-center px-2 py-1 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
+        <div className="col-span-1 h-8 flex items-center">
+           <span className="h-7 inline-flex items-center px-2 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
              {t.affiliateRow.badges.discovered} <ChevronDown size={10} className="ml-1" />
            </span>
         </div>
@@ -1297,41 +1309,38 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
       {/* Emails (Pipeline Only) - col-span-1 Neo-brutalist */}
       {/* Updated January 10th, 2026 - i18n migration */}
+      {/* Updated January 16, 2026: Fixed height container (h-8/32px) to prevent layout shift on state change */}
       {isPipelineView && (
-         <div className="col-span-1">
+         <div className="col-span-1 h-8 flex items-center">
             {/* Email Found - Show email count badge that opens modal */}
+            {/* Updated January 16, 2026: Added whitespace-nowrap to prevent text wrapping */}
             {(emailStatus === 'found' || email) && email ? (
                <button 
                  onClick={() => setIsEmailModalOpen(true)}
-                 className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase border-2 border-black hover:bg-emerald-600 transition-colors group"
+                 className="h-7 flex items-center gap-1.5 px-2 bg-emerald-500 text-white text-[10px] font-black uppercase border-2 border-black hover:bg-emerald-600 transition-colors group whitespace-nowrap"
                  title={t.affiliateRow.actions.view}
                >
                  <Mail size={12} />
-                 <span>{emailResults?.emails?.length || 1} {t.affiliateRow.actions.found}</span>
+                 <span className="whitespace-nowrap">{emailResults?.emails?.length || 1} {t.affiliateRow.actions.found}</span>
                  <Eye size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                </button>
             ) : emailStatus === 'searching' ? (
                /* Searching State - Animated spinner */
-               <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+               <div className="w-7 h-7 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
                  <Loader2 size={14} className="text-black animate-spin" />
                </div>
             ) : emailStatus === 'not_found' ? (
-               /* Not Found State - Show 0 found + retry */
-               <div className="flex items-center gap-1">
-                 <button 
-                   onClick={() => setIsEmailModalOpen(true)}
-                   className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[10px] font-bold uppercase border-2 border-black dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                   title={t.affiliateRow.actions.view}
-                 >
-                   <X size={10} />
-                   {t.affiliateRow.actions.notFound}
-                 </button>
+               /* Not Found State - January 16, 2026: Same style as status pills, consistent h-7 height */
+               <div className="flex items-center gap-1 flex-nowrap">
+                 <span className="h-7 inline-flex items-center px-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase border-2 border-black dark:border-gray-600 whitespace-nowrap">
+                   0 {t.affiliateRow.actions.found}
+                 </span>
                  <button 
                    onClick={onFindEmail}
-                   className="w-7 h-7 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors group"
+                   className="w-7 h-7 inline-flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors group"
                    title={t.affiliateRow.actions.retry}
                  >
-                   <RotateCw size={12} className="text-gray-500 group-hover:rotate-180 transition-transform duration-300" />
+                   <RotateCw size={12} className="group-hover:rotate-180 transition-transform duration-300" />
                  </button>
                </div>
             ) : emailStatus === 'error' ? (
@@ -1355,7 +1364,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                /* Default: Find Email Button - Neo-brutalist */
                <button 
                  onClick={onFindEmail}
-                 className="flex items-center gap-1.5 px-2 py-1.5 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black hover:shadow-[2px_2px_0px_0px_#000000] transition-all"
+                 className="h-7 flex items-center gap-1.5 px-2 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black hover:shadow-[2px_2px_0px_0px_#000000] transition-all"
                  title={t.affiliateRow.actions.findEmail}
                >
                  <Search size={12} />
@@ -1367,7 +1376,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
       {/* Actions - col-span-2 (NEW DESIGN January 6th, 2026) */}
       {/* Updated January 10th, 2026 - i18n migration */}
-      <div className="col-span-2 flex items-center justify-end gap-2">
+      {/* Updated January 16, 2026: Added h-8 for consistent height */}
+      <div className="col-span-2 h-8 flex items-center justify-end gap-2">
         {/* Delete Button - Neo-brutalist style */}
         <button 
           onClick={handleDeleteClick}

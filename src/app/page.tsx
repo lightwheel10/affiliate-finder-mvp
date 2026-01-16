@@ -39,7 +39,7 @@
  * =============================================================================
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@stackframe/stack';
 import { useRouter } from 'next/navigation';
 import { LandingPage } from './components/landing/LandingPage';
@@ -66,15 +66,37 @@ export default function Home() {
   // We no longer show LoadingOnboardingScreen after onboarding completion.
   const [hasRedirected, setHasRedirected] = useState(false);
 
+  // ==========================================================================
+  // SKIP AUTO-REDIRECT FLAG - January 15th, 2026
+  // 
+  // This ref prevents a race condition during onboarding completion:
+  // 
+  // PROBLEM: After onboarding, we want to send the user to /discovered.
+  // But the useEffect below also watches for onboarded users and redirects
+  // them to /find. Both fire at the same time, causing the user to briefly
+  // see /discovered then get bounced to /find.
+  // 
+  // SOLUTION: Set this ref to true in onComplete() BEFORE refetch/navigation.
+  // The useEffect checks this flag and skips the auto-redirect if set.
+  // 
+  // WHY A REF: Refs update instantly (synchronously), unlike state which
+  // batches updates. This ensures the flag is set before the useEffect runs.
+  // ==========================================================================
+  const skipAutoRedirect = useRef(false);
+
   // ============================================================================
   // REDIRECT EFFECT - January 3rd, 2026
+  // Updated: January 15th, 2026 - Added skipAutoRedirect check
   // 
   // When an authenticated and onboarded user lands on "/", redirect them to
   // "/find" where the actual dashboard is. This keeps the landing page clean
   // and allows the (dashboard) route group to handle all authenticated pages.
+  // 
+  // IMPORTANT: We check skipAutoRedirect.current to avoid redirecting users
+  // who just completed onboarding - they should go to /discovered instead.
   // ============================================================================
   useEffect(() => {
-    if (stackUser && !neonLoading && isOnboarded && userId && !hasRedirected) {
+    if (stackUser && !neonLoading && isOnboarded && userId && !hasRedirected && !skipAutoRedirect.current) {
       setHasRedirected(true);
       router.replace('/find');
     }
@@ -142,8 +164,9 @@ export default function Home() {
           // ONBOARDING COMPLETION CALLBACK - January 15th, 2026
           // 
           // After payment and affiliate pre-fetch complete:
-          // 1. Refetch user data to update cache with is_onboarded: true
-          // 2. Navigate to /discovered (not /find!)
+          // 1. Set skipAutoRedirect flag to prevent useEffect from redirecting to /find
+          // 2. Refetch user data to update cache with is_onboarded: true
+          // 3. Navigate to /discovered (not /find!)
           // 
           // WHY /discovered INSTEAD OF /find:
           // During onboarding, we pre-fetch affiliate results and save them to
@@ -154,7 +177,9 @@ export default function Home() {
           // "ok, we found nothing" - which is confusing since we just searched.
           // 
           // Updated: January 15th, 2026 - Changed from /find to /discovered
+          // Updated: January 15th, 2026 - Added skipAutoRedirect to fix race condition
           // ==========================================================================
+          skipAutoRedirect.current = true; // Block the auto-redirect useEffect
           await refetch();
           router.replace('/discovered');
         }}
