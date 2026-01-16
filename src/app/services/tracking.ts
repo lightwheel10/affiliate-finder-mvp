@@ -15,6 +15,7 @@ export const API_COSTS = {
   apify_similarweb: 0.05,  // $0.05 per domain
   apollo_email: 0.03,      // $0.03 per email lookup
   lusha_email: 0.05,       // $0.05 per email lookup (estimate)
+  website_scraper: 0,      // $0 - FREE, just HTTP requests (January 16, 2026)
 } as const;
 
 // ============================================================================

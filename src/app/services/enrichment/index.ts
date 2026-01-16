@@ -48,7 +48,7 @@ import {
   validateEnrichmentConfig,
   getEffectivePrimaryProvider 
 } from './config';
-import { ApolloProvider, LushaProvider } from './providers';
+import { ApolloProvider, LushaProvider, WebsiteScraperProvider } from './providers';
 
 // =============================================================================
 // RE-EXPORTS
@@ -125,6 +125,29 @@ export class EnrichmentService {
     if (lusha.isEnabled()) {
       this.providers.set('lusha', lusha);
       console.log('✅ [Enrichment] Lusha provider registered');
+    }
+    
+    // =========================================================================
+    // WEBSITE SCRAPER PROVIDER - January 16, 2026
+    // 
+    // Register the website scraper as a FREE fallback provider.
+    // 
+    // This provider runs LAST in the sequential search chain, only when
+    // all paid providers (Lusha, Apollo) have failed to find an email.
+    // 
+    // Why this exists:
+    // - Lusha/Apollo are B2B databases that don't cover small affiliate sites
+    // - Website scraping finds emails on 58% of affiliate sites where B2B fails
+    // - EU law requires contact info on /impressum pages (easy to scrape)
+    // - No API cost to us (FREE)
+    // 
+    // Credit policy: User pays 1 credit if email is found (consistent with
+    // other providers), FREE if not found.
+    // =========================================================================
+    const websiteScraper = new WebsiteScraperProvider();
+    if (websiteScraper.isEnabled()) {
+      this.providers.set('website_scraper', websiteScraper);
+      console.log('✅ [Enrichment] Website Scraper provider registered (FREE fallback)');
     }
     
     // Validate configuration

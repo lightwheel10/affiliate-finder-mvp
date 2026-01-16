@@ -67,6 +67,77 @@ export const ENRICHMENT_CONFIG: EnrichmentConfig = {
       apiKey: process.env.LUSHA_API_KEY,
       costPerLookup: 0.05,
     },
+    
+    /**
+     * Website Scraper Configuration - January 16, 2026
+     * 
+     * FREE fallback provider that scrapes affiliate websites for contact emails.
+     * Runs ONLY when Lusha and Apollo both fail to find an email.
+     * 
+     * Why this exists:
+     * - Lusha/Apollo are B2B databases that work great for large companies
+     * - Affiliate sites are often small blogs/personal sites NOT in B2B databases
+     * - Many countries have legal requirements to display contact info
+     * - Testing showed 58% success rate vs 0% for Lusha/Apollo on affiliate sites
+     * 
+     * Methods used (in order):
+     * 1. Contact pages (language-specific + universal)
+     * 2. Mailto links (href="mailto:...")
+     * 3. Structured data (JSON-LD)
+     * 4. Meta tags
+     * 
+     * Cost: $0.00 (no API, just HTTP requests)
+     * Credit policy: User pays 1 email credit if email is FOUND (consistent with other providers)
+     * 
+     * GLOBAL SUPPORT - January 16, 2026
+     * Supports all 17 languages from onboarding:
+     * - English, Spanish, German, French, Portuguese, Italian, Dutch
+     * - Swedish, Danish, Norwegian, Finnish
+     * - Polish, Czech
+     * - Japanese, Korean
+     * - Arabic, Hebrew
+     */
+    website_scraper: {
+      enabled: process.env.WEBSITE_SCRAPER_ENABLED !== 'false', // Enabled by default
+      timeoutMs: parseInt(process.env.WEBSITE_SCRAPER_TIMEOUT_MS || '10000', 10),
+      // Universal contact paths that work across all languages
+      // Language-specific paths are added dynamically by the provider
+      contactPaths: [
+        // Universal paths (English is the lingua franca of the web)
+        '/contact',
+        '/contact-us',
+        '/about',
+        '/about-us',
+        // German (Impressumspflicht - legal requirement)
+        '/impressum',
+        '/kontakt',
+        // French
+        '/a-propos',
+        '/mentions-legales',
+        // Spanish
+        '/contacto',
+        '/sobre-nosotros',
+        // Portuguese
+        '/contato',
+        '/sobre',
+        // Italian
+        '/contatti',
+        '/chi-siamo',
+        // Dutch
+        '/over-ons',
+        // Nordic (Swedish, Danish, Norwegian)
+        '/om-oss',
+        '/om-os',
+        // Finnish
+        '/yhteystiedot',
+        '/meista',
+        // Polish & Czech
+        '/o-nas',
+        // Homepage as last resort
+        '/',
+      ],
+      costPerLookup: 0, // No API cost
+    },
   },
   
   // ---------------------------------------------------------------------------

@@ -13,8 +13,15 @@
 
 /**
  * Available enrichment provider identifiers
+ * 
+ * Updated: January 16, 2026 - Added 'website_scraper' provider
+ * 
+ * Provider order of priority (in sequential search):
+ * 1. lusha - Primary B2B provider (paid API)
+ * 2. apollo - Fallback B2B provider (paid API)
+ * 3. website_scraper - Free fallback, scrapes contact pages (no API cost)
  */
-export type EnrichmentProviderName = 'apollo' | 'lusha';
+export type EnrichmentProviderName = 'apollo' | 'lusha' | 'website_scraper';
 
 /**
  * Email status values used throughout the application
@@ -31,6 +38,9 @@ export type EmailStatus = 'not_searched' | 'searching' | 'found' | 'not_found' |
  * Different providers require different combinations:
  * - Apollo: domain + optional personName
  * - Lusha: (firstName + lastName + domain) OR email OR linkedinUrl
+ * - WebsiteScraper: domain + optional targetLanguage (for path prioritization)
+ * 
+ * Updated: January 16, 2026 - Added targetLanguage for global support
  */
 export interface EnrichmentRequest {
   /** Company/website domain (e.g., "techcrunch.com") */
@@ -50,6 +60,20 @@ export interface EnrichmentRequest {
   
   /** LinkedIn profile URL */
   linkedinUrl?: string;
+  
+  /**
+   * User's target language from onboarding (January 16, 2026)
+   * 
+   * Used by WebsiteScraperProvider to prioritize language-specific
+   * contact page paths. For example, if targetLanguage is 'German',
+   * the scraper will try /impressum and /kontakt before /contact.
+   * 
+   * Supported values (from onboarding):
+   * English, Spanish, German, French, Portuguese, Italian, Dutch,
+   * Swedish, Danish, Norwegian, Finnish, Polish, Czech,
+   * Japanese, Korean, Arabic, Hebrew
+   */
+  targetLanguage?: string;
 }
 
 /**
@@ -214,12 +238,37 @@ export interface FeatureFlags {
 }
 
 /**
+ * Configuration for the website scraper provider
+ * 
+ * Added: January 16, 2026
+ * 
+ * The website scraper is a FREE fallback that runs when paid providers fail.
+ * It scrapes contact pages, structured data, and mailto links to find emails.
+ */
+export interface WebsiteScraperConfig {
+  /** Whether the scraper is enabled (default: true) */
+  enabled: boolean;
+  
+  /** Request timeout in milliseconds (default: 10000) */
+  timeoutMs: number;
+  
+  /** Contact page paths to check (in order) */
+  contactPaths: string[];
+  
+  /** Cost per lookup (always 0 since no API cost) */
+  costPerLookup: number;
+}
+
+/**
  * Complete enrichment service configuration
+ * 
+ * Updated: January 16, 2026 - Added website_scraper provider
  */
 export interface EnrichmentConfig {
   providers: {
     apollo: ProviderConfig;
     lusha: ProviderConfig;
+    website_scraper: WebsiteScraperConfig;
   };
   strategy: StrategyConfig;
   features: FeatureFlags;

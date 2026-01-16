@@ -150,9 +150,12 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     // GET USER FROM DATABASE (December 2025)
     // Use authenticated email to get userId - never trust client-provided userId
+    // 
+    // Updated January 16, 2026: Also fetch target_language for website scraper
+    // The scraper uses this to prioritize language-specific contact page paths
     // ==========================================================================
     const users = await sql`
-      SELECT id FROM users WHERE email = ${authUser.primaryEmail}
+      SELECT id, target_language FROM users WHERE email = ${authUser.primaryEmail}
     `;
 
     if (users.length === 0) {
@@ -164,6 +167,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = users[0].id as number;
+    const targetLanguage = users[0].target_language as string | null;
 
     // ==========================================================================
     // CREDIT CHECK (December 2025)
@@ -188,9 +192,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate forced provider if specified
-    if (forcedProvider && !['apollo', 'lusha'].includes(forcedProvider)) {
+    // January 16, 2026: Added website_scraper as valid provider
+    if (forcedProvider && !['apollo', 'lusha', 'website_scraper'].includes(forcedProvider)) {
       return NextResponse.json(
-        { error: 'Invalid provider. Must be "apollo" or "lusha"' },
+        { error: 'Invalid provider. Must be "apollo", "lusha", or "website_scraper"' },
         { status: 400 }
       );
     }
@@ -283,12 +288,14 @@ export async function POST(request: NextRequest) {
     }
     
     // Build the enrichment request
+    // January 16, 2026: Added targetLanguage for website scraper path prioritization
     const enrichmentRequest: EnrichmentRequest = {
       domain: searchDomain,
       personName: effectivePersonName,
       firstName,
       lastName,
       linkedinUrl,
+      targetLanguage: targetLanguage || undefined,
     };
     
     console.log(`📧 [API] Enrichment request:`, enrichmentRequest);
@@ -312,11 +319,28 @@ export async function POST(request: NextRequest) {
 
     // ==========================================================================
     // TRACK API CALL
+    // 
+    // Updated January 16, 2026: Added website_scraper provider tracking
+    // The website scraper has $0 cost since it's just HTTP requests
     // ==========================================================================
     
     // Determine the service name for tracking
-    const serviceName = result.provider === 'lusha' ? 'lusha_email' : 'apollo_email';
-    const endpoint = result.provider === 'lusha' ? 'v2/person' : 'mixed_people/search';
+    let serviceName: string;
+    let endpoint: string;
+    
+    switch (result.provider) {
+      case 'lusha':
+        serviceName = 'lusha_email';
+        endpoint = 'v2/person';
+        break;
+      case 'website_scraper':
+        serviceName = 'website_scraper';
+        endpoint = 'scrape';
+        break;
+      default:
+        serviceName = 'apollo_email';
+        endpoint = 'mixed_people/search';
+    }
     
     await trackApiCall({
       userId,
