@@ -204,8 +204,15 @@ export default function FindNewPage() {
   // 
   // The URL is cleaned up after opening to prevent the modal from reopening
   // if the user refreshes the page or navigates back.
+  // 
+  // January 17th, 2026 FIX: Added null check for searchParams.
+  // useSearchParams() can return null during SSR/initial render.
+  // Without this check, TypeScript error TS18047: 'searchParams' is possibly 'null'
   // ============================================================================
   useEffect(() => {
+    // Guard against null searchParams (can happen during SSR)
+    if (!searchParams) return;
+    
     const shouldOpenModal = searchParams.get('openModal') === 'true';
     if (shouldOpenModal) {
       setIsFindModalOpen(true);

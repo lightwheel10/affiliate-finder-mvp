@@ -53,7 +53,17 @@ import {
   EnrichmentProviderName,
   EnrichmentRequest 
 } from '@/app/services/enrichment/index';
-import { trackApiCall, API_COSTS } from '@/app/services/tracking';
+// =============================================================================
+// January 17th, 2026: Added ApiService type import
+// 
+// FIX for TypeScript errors TS2322 and TS7053:
+// - serviceName was typed as 'string' but trackApiCall expects ApiService type
+// - API_COSTS couldn't be indexed with 'string', needs specific key type
+// 
+// ApiService is defined as: keyof typeof API_COSTS
+// This ensures type safety when tracking API calls.
+// =============================================================================
+import { trackApiCall, API_COSTS, ApiService } from '@/app/services/tracking';
 import { stackServerApp } from '@/stack/server';
 import { checkCredits, consumeCredits } from '@/lib/credits';
 
@@ -322,10 +332,22 @@ export async function POST(request: NextRequest) {
     // 
     // Updated January 16, 2026: Added website_scraper provider tracking
     // The website scraper has $0 cost since it's just HTTP requests
+    // 
+    // January 17th, 2026 FIX: Changed serviceName type from 'string' to 'ApiService'
+    // 
+    // PREVIOUS BUG:
+    // - serviceName was typed as 'string'
+    // - trackApiCall expected ApiService (specific union type)
+    // - API_COSTS[serviceName] failed because string can't index the object
+    // 
+    // FIX:
+    // - Now using ApiService type which is: keyof typeof API_COSTS
+    // - This ensures type safety and proper indexing of API_COSTS
     // ==========================================================================
     
     // Determine the service name for tracking
-    let serviceName: string;
+    // Using ApiService type for type safety (not plain string)
+    let serviceName: ApiService;
     let endpoint: string;
     
     switch (result.provider) {

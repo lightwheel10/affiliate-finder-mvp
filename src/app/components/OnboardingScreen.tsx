@@ -1880,10 +1880,30 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           January 17, 2026: Updated to use translated plan details */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {PRICING_PLANS.map((plan) => {
-          const price = billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
+          const isEnterprise = plan.id === 'enterprise';
+          
+          // =================================================================
+          // January 17th, 2026 FIX: TypeScript error TS2339
+          // 
+          // PROBLEM:
+          // - PRICING_PLANS has different structures for different plans:
+          //   - 'pro' and 'business' have monthlyPrice and annualPrice
+          //   - 'enterprise' has priceLabel instead (no price fields)
+          // - TypeScript union type means plan.monthlyPrice might not exist
+          // 
+          // FIX:
+          // - Check if plan is enterprise first
+          // - Use 'in' operator to safely check if properties exist
+          // - Enterprise shows 'Custom' label, others show actual price
+          // =================================================================
+          const price = isEnterprise 
+            ? 0  // Enterprise has no numeric price
+            : ('monthlyPrice' in plan 
+                ? (billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice)
+                : 0);
+          
           const isSelected = selectedPlan === plan.id;
           const isPopular = plan.popular;
-          const isEnterprise = plan.id === 'enterprise';
           
           // Get translated plan details - January 17, 2026
           const planTranslations = t.onboarding.step5.plans[plan.id as keyof typeof t.onboarding.step5.plans];
@@ -1995,9 +2015,27 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
   // Get selected plan info for Step 7
   const selectedPlanInfo = PRICING_PLANS.find(p => p.id === selectedPlan);
-  const selectedPlanPrice = billingInterval === 'monthly' 
-    ? selectedPlanInfo?.monthlyPrice || 0 
-    : selectedPlanInfo?.annualPrice || 0;
+  
+  // ==========================================================================
+  // January 17th, 2026 FIX: TypeScript error TS2339
+  // 
+  // PROBLEM:
+  // - selectedPlanInfo could be any of the PRICING_PLANS items
+  // - 'enterprise' plan doesn't have monthlyPrice/annualPrice properties
+  // - TypeScript complains about accessing these on a union type
+  // 
+  // FIX:
+  // - Check if the property exists using 'in' operator before accessing
+  // - Enterprise users skip card entry anyway (see step === 6 handler)
+  //   so this value is never used for enterprise, but we need it for TS
+  // ==========================================================================
+  const selectedPlanPrice = (() => {
+    if (!selectedPlanInfo) return 0;
+    if (!('monthlyPrice' in selectedPlanInfo)) return 0; // Enterprise plan
+    return billingInterval === 'monthly' 
+      ? selectedPlanInfo.monthlyPrice 
+      : selectedPlanInfo.annualPrice;
+  })();
 
   // ==========================================================================
   // DISCOUNT CODE VALIDATION (January 3rd, 2026)
@@ -2042,10 +2080,27 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   }, []);
 
   // Render Step 7 wrapped in StripeProvider
+  // 
+  // ==========================================================================
+  // January 17th, 2026 FIX: TypeScript error TS2339
+  // 
+  // PROBLEM:
+  // - Code was accessing selectedPlanInfo?.name
+  // - But PRICING_PLANS items don't have a 'name' property
+  // - Plan names were moved to translations (t.onboarding.step5.plans)
+  // 
+  // FIX:
+  // - Get plan name from translations instead of plan object
+  // - Use selectedPlan id to look up the translated name
+  // ==========================================================================
+  const selectedPlanName = selectedPlan 
+    ? t.onboarding.step5.plans[selectedPlan as keyof typeof t.onboarding.step5.plans]?.name || ''
+    : '';
+    
   const renderStep7 = () => (
     <StripeProvider>
       <Step7CardForm
-        selectedPlanName={selectedPlanInfo?.name || ''}
+        selectedPlanName={selectedPlanName}
         selectedPlanPrice={selectedPlanPrice}
         billingInterval={billingInterval}
         cardholderName={cardholderName}
