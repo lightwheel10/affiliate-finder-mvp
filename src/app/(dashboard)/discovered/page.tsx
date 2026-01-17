@@ -30,6 +30,11 @@
  */
 
 import { useState, useMemo } from 'react';
+// =============================================================================
+// January 17th, 2026: Added Link for "Find Affiliates" button navigation
+// When clicked, routes to /find?openModal=true to auto-open the search modal
+// =============================================================================
+import Link from 'next/link';
 import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { AffiliateRow } from '../../components/AffiliateRow';
 import { ScanCountdown } from '../../components/ScanCountdown';
@@ -376,12 +381,24 @@ export default function DiscoveredPage() {
             <CreditsDisplay variant="neo" />
           </div>
 
-          {/* Find Button - DashboardDemo exact styling */}
-          <button 
-            className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
-          >
-            <Plus size={14} strokeWidth={3} /> {t.dashboard.header.findAffiliates}
-          </button>
+          {/* =================================================================
+              Find Button - January 17th, 2026: Now functional!
+              
+              PREVIOUS: Button was non-functional (just styled, no onClick)
+              NEW: Wrapped with Link to /find?openModal=true
+              
+              When clicked:
+              1. Navigates to /find page
+              2. Query param openModal=true triggers auto-open of search modal
+              3. User can immediately start searching without clicking again
+              ================================================================= */}
+          <Link href="/find?openModal=true">
+            <button 
+              className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+            >
+              <Plus size={14} strokeWidth={3} /> {t.dashboard.header.findAffiliates}
+            </button>
+          </Link>
         </div>
       </header>
 

@@ -31,6 +31,13 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+// =============================================================================
+// January 17th, 2026: Added useSearchParams for auto-open modal feature
+// When user clicks "Find Affiliates" button on other pages (discovered, saved,
+// outreach), they are routed to /find?openModal=true and the modal opens
+// automatically. See useEffect below that handles this.
+// =============================================================================
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { AffiliateRow } from '../../components/AffiliateRow';
 import { AffiliateRowSkeleton } from '../../components/AffiliateRowSkeleton';
@@ -70,6 +77,27 @@ const MAX_KEYWORDS = 5;
 export default function FindNewPage() {
   // Translation hook (January 9th, 2026)
   const { t } = useLanguage();
+  
+  // ==========================================================================
+  // AUTO-OPEN MODAL FROM URL PARAM - January 17th, 2026
+  // 
+  // PURPOSE:
+  // When users click the "Find Affiliates" button on other pages (discovered,
+  // saved, outreach), they are routed to /find?openModal=true. This hook
+  // reads that query parameter.
+  // 
+  // WHY THIS EXISTS:
+  // Previously, the "Find Affiliates" buttons on other pages were non-functional
+  // (just styled elements with no onClick handler). Now they route here AND
+  // automatically open the search modal for a seamless user experience.
+  // 
+  // HOW IT WORKS:
+  // 1. User clicks "Find Affiliates" on /discovered, /saved, or /outreach
+  // 2. Link navigates to /find?openModal=true
+  // 3. This component reads the searchParams
+  // 4. useEffect below detects openModal=true and opens the modal
+  // ==========================================================================
+  const searchParams = useSearchParams();
   
   // ==========================================================================
   // USER DATA - January 4th, 2026
@@ -164,6 +192,28 @@ export default function FindNewPage() {
   // ============================================================================
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  // ============================================================================
+  // AUTO-OPEN MODAL EFFECT - January 17th, 2026
+  // 
+  // This effect detects when user navigated here via "Find Affiliates" button
+  // from another page (/discovered, /saved, /outreach).
+  // 
+  // Those pages link to /find?openModal=true, and this effect opens the modal
+  // automatically so the user doesn't have to click the button again.
+  // 
+  // The URL is cleaned up after opening to prevent the modal from reopening
+  // if the user refreshes the page or navigates back.
+  // ============================================================================
+  useEffect(() => {
+    const shouldOpenModal = searchParams.get('openModal') === 'true';
+    if (shouldOpenModal) {
+      setIsFindModalOpen(true);
+      // Clean up URL to remove the query param (prevents re-opening on refresh)
+      // Using replaceState so it doesn't add a new history entry
+      window.history.replaceState({}, '', '/find');
+    }
+  }, [searchParams]);
 
   // Add keyword to list
   const addKeyword = () => {
