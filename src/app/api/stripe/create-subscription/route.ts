@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, getPriceId, isValidPlan, isValidInterval, TRIAL_DAYS } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
+import { initializeTrialCredits } from '@/lib/credits'; // January 19th, 2026: Initialize credits directly
 
 // =============================================================================
 // POST /api/stripe/create-subscription

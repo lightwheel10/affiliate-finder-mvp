@@ -71,8 +71,11 @@ const sqlClient = postgres(connectionWithSchema, {
   idle_timeout: 20, // Close idle connections after 20 seconds
   connect_timeout: 10, // 10 second connection timeout
   
-  // Using direct connection (not pooler), so prepared statements are fine
-  prepare: true, // Enable prepared statements for better performance
+  // IMPORTANT: Disable prepared statements for Supabase pooler (Transaction mode)
+  // The pooler doesn't support prepared statements because it routes queries
+  // to different backend connections. This is required for Vercel serverless.
+  // January 19th, 2026
+  prepare: false,
   
   // Transform options to match Neon behavior
   transform: {
