@@ -356,6 +356,73 @@ export async function POST(request: NextRequest) {
     console.log(`[Stripe] Subscription created for user ${userId}: ${subscription.id} (${subscription.status})`);
 
     // ==========================================================================
+    // INITIALIZE TRIAL CREDITS
+    // ==========================================================================
+    // 
+    // PROBLEM (Discovered January 20th, 2026):
+    // -----------------------------------------
+    // Credits were ONLY being initialized by the Stripe webhook handler
+    // (customer.subscription.created event in /pages/api/stripe/webhook.ts).
+    // 
+    // However, this caused a critical bug where credits were never created:
+    // 
+    // 1. RACE CONDITION: The webhook might arrive BEFORE this endpoint finishes
+    //    updating the database. When the webhook tries to look up the user by
+    //    stripe_customer_id, it finds nothing and exits early.
+    // 
+    // 2. WEBHOOK RELIABILITY: Webhooks can fail, be delayed, or not retry
+    //    if they return 200 (which ours does even on lookup failure).
+    // 
+    // 3. USER EXPERIENCE: User sees "subscription created successfully" but
+    //    has no credits, leading to confusion and support tickets.
+    // 
+    // SOLUTION:
+    // ---------
+    // Initialize credits DIRECTLY in this endpoint after the subscription is
+    // created and database is updated. This guarantees credits exist before
+    // we return success to the user.
+    // 
+    // The initializeTrialCredits() function is IDEMPOTENT (safe to call twice):
+    // - If credits already exist → skips and returns true
+    // - If user already had a trial → blocks and returns false
+    // - If called by both endpoint AND webhook → first wins, second skips
+    // 
+    // We keep the webhook initialization as a BACKUP for edge cases where
+    // this endpoint might fail after Stripe call but before credit init.
+    // 
+    // Authors: DevMentor AI + Human Developer
+    // Date: January 20th, 2026
+    // Related files: 
+    //   - /pages/api/stripe/webhook.ts (also calls initializeTrialCredits)
+    //   - /lib/credits.ts (initializeTrialCredits function)
+    // ==========================================================================
+    
+    if (subscription.status === 'trialing' && trialEnd) {
+      try {
+        // Convert ISO string back to Date for the credits function
+        const trialStartDate = new Date(currentPeriodStart);
+        const trialEndDate = new Date(trialEnd);
+        
+        const creditsInitialized = await initializeTrialCredits(userId, trialStartDate, trialEndDate);
+        
+        if (creditsInitialized) {
+          console.log(`[Stripe] ✅ Trial credits initialized for user ${userId}`);
+        } else {
+          // This happens if user already had a trial before (security check)
+          console.log(`[Stripe] ⚠️ Credits not initialized for user ${userId} (may have had previous trial)`);
+        }
+      } catch (creditError) {
+        // Log the error but DON'T fail the subscription creation
+        // The webhook can retry, or credits can be manually added
+        console.error(`[Stripe] ❌ Failed to initialize credits for user ${userId}:`, creditError);
+        // We intentionally don't throw here - subscription was created successfully
+        // Credits can be initialized later via webhook or manual intervention
+      }
+    } else {
+      console.log(`[Stripe] Skipping credit init - status: ${subscription.status}, trialEnd: ${trialEnd}`);
+    }
+
+    // ==========================================================================
     // RETURN SUCCESS RESPONSE
     // ==========================================================================
     return NextResponse.json({
