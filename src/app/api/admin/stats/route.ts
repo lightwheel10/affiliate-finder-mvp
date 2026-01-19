@@ -73,18 +73,18 @@ export async function GET(request: NextRequest) {
       serviceBreakdownResult,
     ] = await Promise.all([
       // Total users
-      sql`SELECT COUNT(*)::int as count FROM users`,
+      sql`SELECT COUNT(*)::int as count FROM crewcast.users`,
       
       // Active trials
-      sql`SELECT COUNT(*)::int as count FROM subscriptions WHERE status = 'trialing'`,
+      sql`SELECT COUNT(*)::int as count FROM crewcast.subscriptions WHERE status = 'trialing'`,
       
       // Paid subscriptions
-      sql`SELECT COUNT(*)::int as count FROM subscriptions WHERE status = 'active'`,
+      sql`SELECT COUNT(*)::int as count FROM crewcast.subscriptions WHERE status = 'active'`,
       
       // Total API cost for selected period
       sql`
         SELECT COALESCE(SUM(estimated_cost), 0)::float as cost 
-        FROM api_calls 
+        FROM crewcast.api_calls 
         WHERE created_at >= ${rangeStart}::date
           AND created_at < ${rangeEnd}::date + INTERVAL '1 day'
       `,
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       // API calls today
       sql`
         SELECT COUNT(*)::int as count 
-        FROM api_calls 
+        FROM crewcast.api_calls 
         WHERE created_at >= DATE_TRUNC('day', NOW())
       `,
       
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
           DATE(created_at) as date,
           COALESCE(SUM(estimated_cost), 0)::float as cost,
           COUNT(*)::int as calls
-        FROM api_calls
+        FROM crewcast.api_calls
         WHERE created_at >= ${rangeStart}::date
           AND created_at < ${rangeEnd}::date + INTERVAL '1 day'
         GROUP BY DATE(created_at)
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
           service,
           COUNT(*)::int as calls,
           COALESCE(SUM(estimated_cost), 0)::float as cost
-        FROM api_calls
+        FROM crewcast.api_calls
         WHERE created_at >= ${rangeStart}::date
           AND created_at < ${rangeEnd}::date + INTERVAL '1 day'
         GROUP BY service

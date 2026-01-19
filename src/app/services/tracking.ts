@@ -34,7 +34,7 @@ export interface SearchLog {
 export async function trackSearch(log: SearchLog): Promise<number | null> {
   try {
     const result = await sql`
-      INSERT INTO searches (user_id, keyword, sources, results_count, searched_at)
+      INSERT INTO crewcast.searches (user_id, keyword, sources, results_count, searched_at)
       VALUES (${log.userId}, ${log.keyword}, ${log.sources}, 0, NOW())
       RETURNING id
     `;
@@ -55,7 +55,7 @@ export async function completeSearch(
 ): Promise<void> {
   try {
     await sql`
-      UPDATE searches 
+      UPDATE crewcast.searches 
       SET results_count = ${resultsCount}, 
           total_cost = ${totalCost},
           completed_at = NOW()
@@ -72,7 +72,7 @@ export async function completeSearch(
 export async function getUserRecentSearches(userId: number, limit: number = 10) {
   const result = await sql`
     SELECT id, keyword, sources, results_count, total_cost, searched_at, completed_at
-    FROM searches
+    FROM crewcast.searches
     WHERE user_id = ${userId}
     ORDER BY searched_at DESC
     LIMIT ${limit}
@@ -110,7 +110,7 @@ export async function trackApiCall(log: ApiCallLog): Promise<void> {
       (log.resultsCount ? log.resultsCount * API_COSTS[log.service] : API_COSTS[log.service]);
 
     await sql`
-      INSERT INTO api_calls (
+      INSERT INTO crewcast.api_calls (
         user_id, service, endpoint, keyword, domain,
         status, results_count, error_message, estimated_cost,
         apify_run_id, duration_ms
@@ -146,7 +146,7 @@ export async function getUserMonthlyUsage(userId: number) {
       COALESCE(SUM(estimated_cost), 0)::float as total_cost,
       COUNT(CASE WHEN status = 'success' THEN 1 END)::int as success_count,
       COUNT(CASE WHEN status = 'error' THEN 1 END)::int as error_count
-    FROM api_calls
+    FROM crewcast.api_calls
     WHERE user_id = ${userId}
       AND created_at >= DATE_TRUNC('month', NOW())
     GROUP BY service
@@ -161,7 +161,7 @@ export async function getUserMonthlyUsage(userId: number) {
 export async function getUserMonthlyCost(userId: number): Promise<number> {
   const result = await sql`
     SELECT COALESCE(SUM(estimated_cost), 0)::float as total_cost
-    FROM api_calls
+    FROM crewcast.api_calls
     WHERE user_id = ${userId}
       AND created_at >= DATE_TRUNC('month', NOW())
   `;
@@ -175,7 +175,7 @@ export async function getUserMonthlyCost(userId: number): Promise<number> {
 export async function getUserMonthlySearchCount(userId: number): Promise<number> {
   const result = await sql`
     SELECT COUNT(*)::int as search_count
-    FROM searches
+    FROM crewcast.searches
     WHERE user_id = ${userId}
       AND searched_at >= DATE_TRUNC('month', NOW())
   `;
@@ -202,7 +202,7 @@ export async function getDailyCostBreakdown(userId: number, days: number = 30) {
       COUNT(*)::int as calls,
       COALESCE(SUM(estimated_cost), 0)::float as cost,
       COALESCE(AVG(duration_ms), 0)::int as avg_duration_ms
-    FROM api_calls
+    FROM crewcast.api_calls
     WHERE user_id = ${userId}
       AND created_at >= NOW() - INTERVAL '1 day' * ${days}
     GROUP BY DATE(created_at), service

@@ -92,8 +92,8 @@ export async function GET(request: NextRequest) {
     // =========================================================================
     const users = await sql`
       SELECT u.id, u.email, s.stripe_customer_id
-      FROM users u
-      LEFT JOIN subscriptions s ON u.id = s.user_id
+      FROM crewcast.users u
+      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
       WHERE u.id = ${userIdNum}
     `;
 

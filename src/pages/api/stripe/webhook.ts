@@ -247,8 +247,8 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   }
 
   const users = await sql`
-    SELECT u.id FROM users u
-    JOIN subscriptions s ON u.id = s.user_id
+    SELECT u.id FROM crewcast.users u
+    JOIN crewcast.subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
 
@@ -349,7 +349,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     : null;
 
   await sql`
-    UPDATE subscriptions
+    UPDATE crewcast.subscriptions
     SET
       stripe_subscription_id = ${subData.id},
       status = ${dbStatus},
@@ -364,7 +364,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   `;
 
   await sql`
-    UPDATE users
+    UPDATE crewcast.users
     SET
       plan = COALESCE(${plan}, plan),
       has_subscription = ${dbStatus === 'active' || dbStatus === 'trialing'},
@@ -409,8 +409,8 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   }
 
   const users = await sql`
-    SELECT u.id FROM users u
-    JOIN subscriptions s ON u.id = s.user_id
+    SELECT u.id FROM crewcast.users u
+    JOIN crewcast.subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
 
@@ -422,7 +422,7 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   const dbUserId = users[0].id;
 
   await sql`
-    UPDATE subscriptions
+    UPDATE crewcast.subscriptions
     SET
       status = 'canceled',
       cancel_at_period_end = true,
@@ -431,7 +431,7 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   `;
 
   await sql`
-    UPDATE users
+    UPDATE crewcast.users
     SET
       has_subscription = false,
       plan = 'free_trial',
@@ -548,8 +548,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // ==========================================================================
   const users = await sql`
     SELECT u.id, u.email, u.plan, s.stripe_subscription_id, s.status, s.first_payment_at
-    FROM users u
-    JOIN subscriptions s ON u.id = s.user_id
+    FROM crewcast.users u
+    JOIN crewcast.subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
 
@@ -587,7 +587,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // UPDATE SUBSCRIPTION STATUS (only for actual payments)
   // ==========================================================================
   await sql`
-    UPDATE subscriptions
+    UPDATE crewcast.subscriptions
     SET
       status = 'active',
       updated_at = NOW()
@@ -595,7 +595,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   `;
 
   await sql`
-    UPDATE users
+    UPDATE crewcast.users
     SET
       has_subscription = true,
       updated_at = NOW()
@@ -661,7 +661,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // ============================================================================
   try {
     const subscriptionCheck = await sql`
-      SELECT first_payment_at FROM subscriptions WHERE user_id = ${dbUserId}
+      SELECT first_payment_at FROM crewcast.subscriptions WHERE user_id = ${dbUserId}
     `;
     
     if (subscriptionCheck.length > 0 && !subscriptionCheck[0].first_payment_at) {
@@ -670,7 +670,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       const nextScanAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
       
       await sql`
-        UPDATE subscriptions
+        UPDATE crewcast.subscriptions
         SET
           first_payment_at = ${now.toISOString()},
           next_auto_scan_at = ${nextScanAt.toISOString()},
@@ -705,8 +705,8 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   }
 
   const users = await sql`
-    SELECT u.id FROM users u
-    JOIN subscriptions s ON u.id = s.user_id
+    SELECT u.id FROM crewcast.users u
+    JOIN crewcast.subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
 
@@ -718,7 +718,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   const dbUserId = users[0].id;
 
   await sql`
-    UPDATE subscriptions
+    UPDATE crewcast.subscriptions
     SET
       status = 'past_due',
       updated_at = NOW()
@@ -753,8 +753,8 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
   }
 
   const users = await sql`
-    SELECT u.id FROM users u
-    JOIN subscriptions s ON u.id = s.user_id
+    SELECT u.id FROM crewcast.users u
+    JOIN crewcast.subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
 
@@ -766,7 +766,7 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
   const dbUserId = users[0].id;
 
   await sql`
-    UPDATE subscriptions
+    UPDATE crewcast.subscriptions
     SET
       stripe_payment_method_id = ${paymentMethod.id},
       card_last4 = ${card.last4},
@@ -778,7 +778,7 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
   `;
 
   await sql`
-    UPDATE users
+    UPDATE crewcast.users
     SET
       billing_last4 = ${card.last4},
       billing_brand = ${card.brand},

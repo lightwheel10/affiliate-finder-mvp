@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     const affiliates = await sql`
-      SELECT * FROM saved_affiliates 
+      SELECT * FROM crewcast.saved_affiliates 
       WHERE user_id = ${parseInt(userId)}
       ORDER BY saved_at DESC
     `;
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // Check for duplicate
     const existing = await sql`
-      SELECT id FROM saved_affiliates 
+      SELECT id FROM crewcast.saved_affiliates 
       WHERE user_id = ${userId} AND link = ${link}
     `;
 
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newAffiliates = await sql`
-      INSERT INTO saved_affiliates (
+      INSERT INTO crewcast.saved_affiliates (
         user_id, title, link, domain, snippet, source,
         is_affiliate, person_name, summary, email, thumbnail,
         views, date, rank, keyword, highlighted_words,
@@ -191,7 +191,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await sql`
-      DELETE FROM saved_affiliates 
+      DELETE FROM crewcast.saved_affiliates 
       WHERE user_id = ${parseInt(userId)} AND link = ${link}
     `;
 
@@ -303,7 +303,7 @@ export async function PATCH(request: NextRequest) {
     // CRITICAL FIX January 14, 2026: Must persist email to database!
     // Without this, email only shows via optimistic update and is lost on refresh.
     await sql`
-      UPDATE saved_affiliates 
+      UPDATE crewcast.saved_affiliates 
       SET 
         email = COALESCE(${email || null}, email),
         email_status = ${emailStatus},

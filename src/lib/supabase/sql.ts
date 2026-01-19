@@ -76,11 +76,9 @@ const sqlClient = postgres(connectionString || '', {
     undefined: null,
   },
   
-  // Set search_path to 'crewcast' schema via connection parameters
-  // This ensures all queries target the crewcast schema by default
-  connection: {
-    search_path: 'crewcast',
-  },
+  // NOTE (January 19th, 2026): search_path cannot be set via connection params
+  // because Supabase's pooler (Supavisor) ignores session-level settings.
+  // Instead, all table names are explicitly prefixed with 'crewcast.' schema.
 });
 
 // =============================================================================

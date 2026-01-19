@@ -107,8 +107,8 @@ export async function GET(request: NextRequest) {
         u.competitors,
         u.target_country,
         u.target_language
-      FROM subscriptions s
-      JOIN users u ON s.user_id = u.id
+      FROM crewcast.subscriptions s
+      JOIN crewcast.users u ON s.user_id = u.id
       WHERE 
         s.status = 'active'
         AND s.first_payment_at IS NOT NULL
@@ -402,7 +402,7 @@ async function saveDiscoveredAffiliate(
 ): Promise<void> {
   // Check for existing (duplicate detection by link)
   const existing = await sql`
-    SELECT id FROM discovered_affiliates 
+    SELECT id FROM crewcast.discovered_affiliates 
     WHERE user_id = ${userId} AND link = ${result.link}
   `;
   
@@ -413,7 +413,7 @@ async function saveDiscoveredAffiliate(
   
   // Insert new affiliate
   await sql`
-    INSERT INTO discovered_affiliates (
+    INSERT INTO crewcast.discovered_affiliates (
       user_id, search_keyword, title, link, domain, snippet, source,
       thumbnail, views, date, rank, keyword,
       discovery_method_type, discovery_method_value,
@@ -455,7 +455,7 @@ async function updateScanSchedule(userId: number): Promise<void> {
   const nextScanAt = new Date(now.getTime() + SCAN_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
   
   await sql`
-    UPDATE subscriptions
+    UPDATE crewcast.subscriptions
     SET
       last_auto_scan_at = ${now.toISOString()},
       next_auto_scan_at = ${nextScanAt.toISOString()},

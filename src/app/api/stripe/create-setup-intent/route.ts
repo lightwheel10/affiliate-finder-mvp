@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     // This prevents creating Stripe resources for non-existent users
     // ==========================================================================
     const users = await sql`
-      SELECT id, email, name FROM users WHERE id = ${userId}
+      SELECT id, email, name FROM crewcast.users WHERE id = ${userId}
     `;
 
     if (users.length === 0) {
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     // If user already has a Stripe customer, reuse it (idempotency)
     // ==========================================================================
     const existingSubscriptions = await sql`
-      SELECT stripe_customer_id FROM subscriptions WHERE user_id = ${userId}
+      SELECT stripe_customer_id FROM crewcast.subscriptions WHERE user_id = ${userId}
     `;
 
     let stripeCustomerId: string | null = null;
@@ -135,19 +135,19 @@ export async function POST(request: NextRequest) {
       // Save customer ID to database immediately
       // Check if subscription record exists
       const subExists = await sql`
-        SELECT id FROM subscriptions WHERE user_id = ${userId}
+        SELECT id FROM crewcast.subscriptions WHERE user_id = ${userId}
       `;
 
       if (subExists.length > 0) {
         await sql`
-          UPDATE subscriptions 
+          UPDATE crewcast.subscriptions 
           SET stripe_customer_id = ${stripeCustomerId}, updated_at = NOW()
           WHERE user_id = ${userId}
         `;
       } else {
         // Create a placeholder subscription record with just the customer ID
         await sql`
-          INSERT INTO subscriptions (user_id, stripe_customer_id, plan, status, cancel_at_period_end)
+          INSERT INTO crewcast.subscriptions (user_id, stripe_customer_id, plan, status, cancel_at_period_end)
           VALUES (${userId}, ${stripeCustomerId}, 'free_trial', 'incomplete', false)
         `;
       }

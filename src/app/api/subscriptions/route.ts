@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     // Verify the authenticated user matches the requested user
     // ==========================================================================
     const users = await sql`
-      SELECT email FROM users WHERE id = ${userIdNum}
+      SELECT email FROM crewcast.users WHERE id = ${userIdNum}
     `;
 
     if (users.length === 0) {
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     // explicitly as UTC in the SQL query. Not implemented since prod works fine.
     // ==========================================================================
     const subscriptions = await sql`
-      SELECT * FROM subscriptions WHERE user_id = ${userIdNum}
+      SELECT * FROM crewcast.subscriptions WHERE user_id = ${userIdNum}
     `;
 
     if (subscriptions.length === 0) {

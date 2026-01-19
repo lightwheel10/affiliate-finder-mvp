@@ -83,19 +83,19 @@ export async function GET(request: NextRequest) {
         uc.is_trial_period,
         COALESCE((
           SELECT SUM(estimated_cost)
-          FROM api_calls
+          FROM crewcast.api_calls
           WHERE user_id = u.id
           AND created_at >= DATE_TRUNC('month', NOW())
         ), 0)::float as monthly_cost,
         COALESCE((
           SELECT COUNT(*)
-          FROM api_calls
+          FROM crewcast.api_calls
           WHERE user_id = u.id
           AND created_at >= DATE_TRUNC('month', NOW())
         ), 0)::int as monthly_calls
-      FROM users u
-      LEFT JOIN subscriptions s ON u.id = s.user_id
-      LEFT JOIN user_credits uc ON u.id = uc.user_id
+      FROM crewcast.users u
+      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
+      LEFT JOIN crewcast.user_credits uc ON u.id = uc.user_id
       ORDER BY u.created_at DESC
     `;
 

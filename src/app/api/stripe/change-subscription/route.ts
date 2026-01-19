@@ -106,8 +106,8 @@ export async function POST(request: NextRequest) {
         s.plan as current_plan,
         s.billing_interval as current_interval,
         s.status
-      FROM users u
-      LEFT JOIN subscriptions s ON u.id = s.user_id
+      FROM crewcast.users u
+      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
       WHERE u.id = ${userId}
     `;
 
@@ -382,7 +382,7 @@ export async function POST(request: NextRequest) {
       : null;
 
     await sql`
-      UPDATE subscriptions
+      UPDATE crewcast.subscriptions
       SET
         plan = ${newPlan},
         billing_interval = ${newBillingInterval},
@@ -396,7 +396,7 @@ export async function POST(request: NextRequest) {
 
     // Also update the users table for quick access
     await sql`
-      UPDATE users
+      UPDATE crewcast.users
       SET
         plan = ${newPlan},
         updated_at = NOW()
@@ -482,7 +482,7 @@ export async function POST(request: NextRequest) {
       try {
         // Check if first_payment_at is not already set
         const currentSub = await sql`
-          SELECT first_payment_at FROM subscriptions WHERE user_id = ${userId}
+          SELECT first_payment_at FROM crewcast.subscriptions WHERE user_id = ${userId}
         `;
         
         if (currentSub.length > 0 && !currentSub[0].first_payment_at) {
@@ -490,7 +490,7 @@ export async function POST(request: NextRequest) {
           const nextScanAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
           
           await sql`
-            UPDATE subscriptions
+            UPDATE crewcast.subscriptions
             SET
               first_payment_at = ${now.toISOString()},
               next_auto_scan_at = ${nextScanAt.toISOString()},

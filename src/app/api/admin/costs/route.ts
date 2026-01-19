@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
           COALESCE(AVG(duration_ms), 0)::int as avg_duration,
           COUNT(CASE WHEN status = 'success' THEN 1 END)::int as success_count,
           COUNT(CASE WHEN status = 'error' THEN 1 END)::int as error_count
-        FROM api_calls
+        FROM crewcast.api_calls
         WHERE created_at >= NOW() - INTERVAL '1 day' * ${days}
         GROUP BY service
         ORDER BY cost DESC
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
           DATE(created_at) as date,
           COALESCE(SUM(estimated_cost), 0)::float as cost,
           COUNT(*)::int as calls
-        FROM api_calls
+        FROM crewcast.api_calls
         WHERE created_at >= NOW() - INTERVAL '1 day' * ${days}
         GROUP BY DATE(created_at)
         ORDER BY date ASC
@@ -119,8 +119,8 @@ export async function GET(request: NextRequest) {
           u.name,
           COALESCE(SUM(ac.estimated_cost), 0)::float as total_cost,
           COUNT(ac.id)::int as total_calls
-        FROM users u
-        LEFT JOIN api_calls ac ON u.id = ac.user_id
+        FROM crewcast.users u
+        LEFT JOIN crewcast.api_calls ac ON u.id = ac.user_id
           AND ac.created_at >= NOW() - INTERVAL '1 day' * ${days}
         GROUP BY u.id, u.email, u.name
         HAVING COALESCE(SUM(ac.estimated_cost), 0) > 0
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
           EXTRACT(HOUR FROM created_at)::int as hour,
           COUNT(*)::int as calls,
           COALESCE(SUM(estimated_cost), 0)::float as cost
-        FROM api_calls
+        FROM crewcast.api_calls
         WHERE created_at >= DATE_TRUNC('day', NOW())
         GROUP BY EXTRACT(HOUR FROM created_at)
         ORDER BY hour ASC
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
         SELECT 
           status,
           COUNT(*)::int as count
-        FROM api_calls
+        FROM crewcast.api_calls
         WHERE created_at >= NOW() - INTERVAL '1 day' * ${days}
         GROUP BY status
       `,
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
           COALESCE(SUM(estimated_cost), 0)::float as total_cost,
           COUNT(DISTINCT user_id)::int as unique_users,
           COALESCE(AVG(duration_ms), 0)::int as avg_duration
-        FROM api_calls
+        FROM crewcast.api_calls
         WHERE created_at >= NOW() - INTERVAL '1 day' * ${days}
       `,
     ]);

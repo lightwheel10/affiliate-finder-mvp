@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const users = await sql`
       SELECT u.id, u.email, u.name, s.stripe_customer_id, s.stripe_subscription_id
-      FROM users u
-      LEFT JOIN subscriptions s ON u.id = s.user_id
+      FROM crewcast.users u
+      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
       WHERE u.id = ${userId}
     `;
 
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       
       if (paymentMethod.card) {
         await sql`
-          UPDATE subscriptions
+          UPDATE crewcast.subscriptions
           SET 
             stripe_payment_method_id = ${paymentMethodId},
             card_last4 = ${paymentMethod.card.last4},

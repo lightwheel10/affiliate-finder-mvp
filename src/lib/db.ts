@@ -26,7 +26,7 @@
  * ------
  * Same as before! The sql function works identically:
  * 
- * const users = await sql`SELECT * FROM users WHERE id = ${id}`;
+ * const users = await sql`SELECT * FROM crewcast.users WHERE id = ${id}`;
  * 
  * =============================================================================
  */

@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         id, email, name, brand, bio, 
         target_country, target_language,
         competitors, topics, affiliate_types
-      FROM users 
+      FROM crewcast.users 
       WHERE email = ${authUser.email}
     `;
 
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
           instagram_username, instagram_bio, instagram_followers,
           tiktok_username, tiktok_bio, tiktok_followers,
           channel_name, channel_subscribers
-        FROM saved_affiliates
+        FROM crewcast.saved_affiliates
         WHERE id = ${affiliateId} AND user_id = ${userId}
       `;
 
@@ -348,7 +348,7 @@ export async function POST(request: NextRequest) {
       // Use raw SQL to merge into the JSONB column
       // This appends/updates the message for this specific email key
       await sql`
-        UPDATE saved_affiliates
+        UPDATE crewcast.saved_affiliates
         SET 
           ai_generated_message = ${result.message},
           ai_generated_subject = ${result.subject || null},
@@ -437,7 +437,7 @@ export async function PATCH(request: NextRequest) {
     // STEP 3: GET USER ID FROM DATABASE
     // =========================================================================
     const users = await sql`
-      SELECT id FROM users WHERE email = ${authUser.email}
+      SELECT id FROM crewcast.users WHERE email = ${authUser.email}
     `;
 
     if (users.length === 0) {
@@ -453,7 +453,7 @@ export async function PATCH(request: NextRequest) {
     // STEP 4: VERIFY AFFILIATE BELONGS TO USER
     // =========================================================================
     const affiliates = await sql`
-      SELECT id FROM saved_affiliates 
+      SELECT id FROM crewcast.saved_affiliates 
       WHERE id = ${affiliateId} AND user_id = ${userId}
     `;
 
@@ -478,7 +478,7 @@ export async function PATCH(request: NextRequest) {
     };
 
     await sql`
-      UPDATE saved_affiliates
+      UPDATE crewcast.saved_affiliates
       SET 
         ai_generated_message = ${message},
         ai_generated_subject = ${subject || null},

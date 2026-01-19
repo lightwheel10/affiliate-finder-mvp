@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const users = await sql`
       SELECT u.id, u.email, u.name, s.stripe_customer_id, s.stripe_subscription_id, s.status
-      FROM users u
-      LEFT JOIN subscriptions s ON u.id = s.user_id
+      FROM crewcast.users u
+      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
       WHERE u.id = ${userId}
     `;
 
@@ -274,14 +274,14 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     // UPDATE DATABASE
     // ==========================================================================
-    // Update subscriptions table
+    // Update crewcast.subscriptions table
     const existingSub = await sql`
-      SELECT id FROM subscriptions WHERE user_id = ${userId}
+      SELECT id FROM crewcast.subscriptions WHERE user_id = ${userId}
     `;
 
     if (existingSub.length > 0) {
       await sql`
-        UPDATE subscriptions
+        UPDATE crewcast.subscriptions
         SET
           stripe_customer_id = ${stripeCustomerId},
           stripe_subscription_id = ${subscription.id},
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
       `;
     } else {
       await sql`
-        INSERT INTO subscriptions (
+        INSERT INTO crewcast.subscriptions (
           user_id,
           stripe_customer_id,
           stripe_subscription_id,
@@ -338,9 +338,9 @@ export async function POST(request: NextRequest) {
       `;
     }
 
-    // Update users table
+    // Update crewcast.users table
     await sql`
-      UPDATE users
+      UPDATE crewcast.users
       SET
         plan = ${plan},
         has_subscription = true,

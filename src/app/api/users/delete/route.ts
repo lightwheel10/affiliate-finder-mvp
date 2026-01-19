@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const users = await sql`
       SELECT id, email
-      FROM users
+      FROM crewcast.users
       WHERE id = ${userId}
     `;
 
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const subscriptions = await sql`
       SELECT stripe_subscription_id, stripe_customer_id
-      FROM subscriptions
+      FROM crewcast.subscriptions
       WHERE user_id = ${userId}
     `;
 
@@ -128,42 +128,42 @@ export async function POST(request: NextRequest) {
     
     // Delete saved affiliates
     const deletedSaved = await sql`
-      DELETE FROM saved_affiliates WHERE user_id = ${userId}
+      DELETE FROM crewcast.saved_affiliates WHERE user_id = ${userId}
       RETURNING id
     `;
     console.log(`[DeleteAccount] Deleted ${deletedSaved.length} saved affiliates`);
 
     // Delete discovered affiliates
     const deletedDiscovered = await sql`
-      DELETE FROM discovered_affiliates WHERE user_id = ${userId}
+      DELETE FROM crewcast.discovered_affiliates WHERE user_id = ${userId}
       RETURNING id
     `;
     console.log(`[DeleteAccount] Deleted ${deletedDiscovered.length} discovered affiliates`);
 
     // Delete searches
     const deletedSearches = await sql`
-      DELETE FROM searches WHERE user_id = ${userId}
+      DELETE FROM crewcast.searches WHERE user_id = ${userId}
       RETURNING id
     `;
     console.log(`[DeleteAccount] Deleted ${deletedSearches.length} searches`);
 
     // Delete API call logs
     const deletedApiCalls = await sql`
-      DELETE FROM api_calls WHERE user_id = ${userId}
+      DELETE FROM crewcast.api_calls WHERE user_id = ${userId}
       RETURNING id
     `;
     console.log(`[DeleteAccount] Deleted ${deletedApiCalls.length} API call logs`);
 
     // Delete subscription record
     const deletedSubscriptions = await sql`
-      DELETE FROM subscriptions WHERE user_id = ${userId}
+      DELETE FROM crewcast.subscriptions WHERE user_id = ${userId}
       RETURNING id
     `;
     console.log(`[DeleteAccount] Deleted ${deletedSubscriptions.length} subscription records`);
 
     // Delete user record (must be last due to foreign keys)
     await sql`
-      DELETE FROM users WHERE id = ${userId}
+      DELETE FROM crewcast.users WHERE id = ${userId}
     `;
     console.log(`[DeleteAccount] Deleted user record`);
 

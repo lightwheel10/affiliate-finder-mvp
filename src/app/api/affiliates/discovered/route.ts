@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const affiliates = await sql`
-      SELECT * FROM discovered_affiliates 
+      SELECT * FROM crewcast.discovered_affiliates 
       WHERE user_id = ${parseInt(userId)}
       ORDER BY discovered_at DESC
     `;
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     // Check for duplicate
     const existing = await sql`
-      SELECT id FROM discovered_affiliates 
+      SELECT id FROM crewcast.discovered_affiliates 
       WHERE user_id = ${userId} AND link = ${link}
     `;
 
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newAffiliates = await sql`
-      INSERT INTO discovered_affiliates (
+      INSERT INTO crewcast.discovered_affiliates (
         user_id, search_keyword, title, link, domain, snippet, source,
         is_affiliate, person_name, summary, email, thumbnail,
         views, date, rank, keyword, highlighted_words,
@@ -214,7 +214,7 @@ export async function PATCH(request: NextRequest) {
 
     // Update all discovered affiliates for this user + domain with SimilarWeb data
     const result = await sql`
-      UPDATE discovered_affiliates
+      UPDATE crewcast.discovered_affiliates
       SET 
         similarweb_monthly_visits = ${similarWeb.monthlyVisits ?? null},
         similarweb_global_rank = ${similarWeb.globalRank ?? null},
@@ -265,7 +265,7 @@ export async function DELETE(request: NextRequest) {
     if (clearAll === 'true') {
       // Clear all discovered affiliates for the user
       await sql`
-        DELETE FROM discovered_affiliates 
+        DELETE FROM crewcast.discovered_affiliates 
         WHERE user_id = ${parseInt(userId)}
       `;
       return NextResponse.json({ success: true, cleared: true });
@@ -276,7 +276,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await sql`
-      DELETE FROM discovered_affiliates 
+      DELETE FROM crewcast.discovered_affiliates 
       WHERE user_id = ${parseInt(userId)} AND link = ${link}
     `;
 

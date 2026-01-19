@@ -74,9 +74,9 @@ export async function GET(
         uc.period_start as credits_period_start,
         uc.period_end as credits_period_end,
         uc.is_trial_period
-      FROM users u
-      LEFT JOIN subscriptions s ON u.id = s.user_id
-      LEFT JOIN user_credits uc ON u.id = uc.user_id
+      FROM crewcast.users u
+      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
+      LEFT JOIN crewcast.user_credits uc ON u.id = uc.user_id
       WHERE u.id = ${userId}
     `;
 
@@ -97,7 +97,7 @@ export async function GET(
         estimated_cost,
         duration_ms,
         created_at
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
       LIMIT 100
@@ -113,7 +113,7 @@ export async function GET(
         total_cost,
         searched_at,
         completed_at
-      FROM searches
+      FROM crewcast.searches
       WHERE user_id = ${userId}
       ORDER BY searched_at DESC
       LIMIT 50
@@ -125,7 +125,7 @@ export async function GET(
         service,
         COUNT(*)::int as calls,
         COALESCE(SUM(estimated_cost), 0)::float as cost
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE user_id = ${userId}
       AND created_at >= DATE_TRUNC('month', NOW())
       GROUP BY service
@@ -142,7 +142,7 @@ export async function GET(
         reason,
         reference_type,
         created_at
-      FROM credit_transactions
+      FROM crewcast.credit_transactions
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
       LIMIT 50

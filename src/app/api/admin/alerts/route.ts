@@ -43,17 +43,17 @@ async function getCurrentCosts() {
   const [daily, weekly, monthly] = await Promise.all([
     sql`
       SELECT COALESCE(SUM(estimated_cost), 0)::float as cost
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= DATE_TRUNC('day', NOW())
     `,
     sql`
       SELECT COALESCE(SUM(estimated_cost), 0)::float as cost
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= NOW() - INTERVAL '7 days'
     `,
     sql`
       SELECT COALESCE(SUM(estimated_cost), 0)::float as cost
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= DATE_TRUNC('month', NOW())
     `,
   ]);

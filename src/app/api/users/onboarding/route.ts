@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const updatedUsers = await sql`
-      UPDATE users 
+      UPDATE crewcast.users 
       SET 
         name = ${name},
         role = ${role},

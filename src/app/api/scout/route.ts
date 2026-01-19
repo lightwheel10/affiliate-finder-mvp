@@ -102,7 +102,7 @@ export async function POST(req: Request) {
     // ==========================================================================
     const users = await sql`
       SELECT id, brand, competitors, target_country, target_language 
-      FROM users WHERE email = ${authUser.email}
+      FROM crewcast.users WHERE email = ${authUser.email}
     `;
 
     if (users.length === 0) {
@@ -477,7 +477,7 @@ export async function POST(req: Request) {
               for (const [domain, swData] of similarWebDataMap) {
                 try {
                   const result = await sql`
-                    UPDATE discovered_affiliates
+                    UPDATE crewcast.discovered_affiliates
                     SET 
                       similarweb_monthly_visits = ${swData.monthlyVisits ?? null},
                       similarweb_global_rank = ${swData.globalRank ?? null},

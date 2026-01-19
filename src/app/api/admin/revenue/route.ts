@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
     const costResult = await sql`
       SELECT 
         COALESCE(SUM(estimated_cost), 0)::float as total_cost
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= ${rangeStart.toISOString()}::timestamptz
         AND created_at <= ${rangeEnd.toISOString()}::timestamptz
     `;
@@ -143,9 +143,9 @@ export async function GET(request: NextRequest) {
         u.plan,
         s.stripe_subscription_id,
         COALESCE(SUM(ac.estimated_cost), 0)::float as api_cost
-      FROM users u
-      LEFT JOIN subscriptions s ON u.id = s.user_id AND s.status = 'active'
-      LEFT JOIN api_calls ac ON u.id = ac.user_id 
+      FROM crewcast.users u
+      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id AND s.status = 'active'
+      LEFT JOIN crewcast.api_calls ac ON u.id = ac.user_id 
         AND ac.created_at >= ${rangeStart.toISOString()}::timestamptz
         AND ac.created_at <= ${rangeEnd.toISOString()}::timestamptz
       GROUP BY u.id, u.email, u.name, u.plan, s.stripe_subscription_id
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
       SELECT 
         DATE(created_at) as date,
         COALESCE(SUM(estimated_cost), 0)::float as cost
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= ${rangeStart.toISOString()}::timestamptz
         AND created_at <= ${rangeEnd.toISOString()}::timestamptz
       GROUP BY DATE(created_at)

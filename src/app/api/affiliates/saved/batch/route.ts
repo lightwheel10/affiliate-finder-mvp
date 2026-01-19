@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
       // Check for duplicate (same user + same link)
       const existing = await sql`
-        SELECT id FROM saved_affiliates 
+        SELECT id FROM crewcast.saved_affiliates 
         WHERE user_id = ${userId} AND link = ${link}
       `;
 
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
       // Insert new affiliate
       const newAffiliates = await sql`
-        INSERT INTO saved_affiliates (
+        INSERT INTO crewcast.saved_affiliates (
           user_id, title, link, domain, snippet, source,
           is_affiliate, person_name, summary, email, thumbnail,
           views, date, rank, keyword, highlighted_words,
@@ -216,7 +216,7 @@ export async function DELETE(request: NextRequest) {
     // Delete all matching affiliates in one query using ANY
     // RETURNING * gives us the actual deleted rows so we can count them accurately
     const deletedRows = await sql`
-      DELETE FROM saved_affiliates 
+      DELETE FROM crewcast.saved_affiliates 
       WHERE user_id = ${userId} AND link = ANY(${links})
       RETURNING id
     `;

@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // Verify the authenticated user matches the requested user
     // ==========================================================================
     const users = await sql`
-      SELECT email, plan FROM users WHERE id = ${userIdNum}
+      SELECT email, plan FROM crewcast.users WHERE id = ${userIdNum}
     `;
 
     if (users.length === 0) {

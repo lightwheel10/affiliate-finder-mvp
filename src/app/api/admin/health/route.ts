@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
         COALESCE(ROUND(AVG(duration_ms)), 0)::int as avg_duration,
         COALESCE(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms), 0)::int as p95_duration,
         COALESCE(ROUND(AVG(CASE WHEN status = 'error' THEN duration_ms END)), 0)::int as avg_error_duration
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= ${startTime}::timestamptz
       GROUP BY service
       ORDER BY total_calls DESC
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
         service,
         COUNT(CASE WHEN status = 'error' THEN 1 END)::int as errors,
         COUNT(*)::int as total
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= ${startTime}::timestamptz
       GROUP BY DATE_TRUNC('hour', created_at), service
       ORDER BY hour
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         COUNT(*)::int as calls,
         COUNT(CASE WHEN status = 'success' THEN 1 END)::int as success_count,
         COUNT(CASE WHEN status = 'error' THEN 1 END)::int as error_count
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= ${startTime}::timestamptz
       GROUP BY EXTRACT(HOUR FROM created_at)
       ORDER BY hour
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
         duration_ms,
         user_id,
         created_at
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE status = 'error'
         AND created_at >= ${startTime}::timestamptz
       ORDER BY created_at DESC
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
         COALESCE(ROUND(AVG(duration_ms)), 0)::int as avg_duration,
         COALESCE(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms), 0)::int as p95_duration,
         COUNT(DISTINCT user_id)::int as unique_users
-      FROM api_calls
+      FROM crewcast.api_calls
       WHERE created_at >= ${startTime}::timestamptz
     `;
 

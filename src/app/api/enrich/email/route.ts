@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     // The scraper uses this to prioritize language-specific contact page paths
     // ==========================================================================
     const users = await sql`
-      SELECT id, target_language FROM users WHERE email = ${authUser.email}
+      SELECT id, target_language FROM crewcast.users WHERE email = ${authUser.email}
     `;
 
     if (users.length === 0) {
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
 
     await sql`
-      UPDATE saved_affiliates 
+      UPDATE crewcast.saved_affiliates 
       SET email_status = 'searching'
       WHERE id = ${affiliateId} AND user_id = ${userId}
     `;
@@ -422,7 +422,7 @@ export async function POST(request: NextRequest) {
     } : null;
     
     await sql`
-      UPDATE saved_affiliates 
+      UPDATE crewcast.saved_affiliates 
       SET 
         email = ${result.email || null},
         email_status = ${emailStatus},

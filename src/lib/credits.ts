@@ -120,7 +120,7 @@ export interface DbUserCredits {
 export async function getUserCredits(userId: number): Promise<UserCredits | null> {
   try {
     const result = await sql`
-      SELECT * FROM user_credits WHERE user_id = ${userId}
+      SELECT * FROM crewcast.user_credits WHERE user_id = ${userId}
     `;
 
     if (result.length === 0) {
@@ -196,7 +196,7 @@ export async function checkCredits(
         ai_credits_total,
         ai_credits_used,
         period_end
-      FROM user_credits 
+      FROM crewcast.user_credits 
       WHERE user_id = ${userId}
     `;
 
@@ -318,7 +318,7 @@ export async function consumeCredits(
     switch (creditType) {
       case 'topic_search':
         updateResult = await sql`
-          UPDATE user_credits
+          UPDATE crewcast.user_credits
           SET 
             topic_search_credits_used = topic_search_credits_used + ${amount},
             updated_at = NOW()
@@ -329,7 +329,7 @@ export async function consumeCredits(
         break;
       case 'email':
         updateResult = await sql`
-          UPDATE user_credits
+          UPDATE crewcast.user_credits
           SET 
             email_credits_used = email_credits_used + ${amount},
             updated_at = NOW()
@@ -340,7 +340,7 @@ export async function consumeCredits(
         break;
       case 'ai':
         updateResult = await sql`
-          UPDATE user_credits
+          UPDATE crewcast.user_credits
           SET 
             ai_credits_used = ai_credits_used + ${amount},
             updated_at = NOW()
@@ -363,7 +363,7 @@ export async function consumeCredits(
 
     // Log the transaction
     await sql`
-      INSERT INTO credit_transactions (
+      INSERT INTO crewcast.credit_transactions (
         user_id, credit_type, amount, balance_after, reason, reference_id, reference_type
       ) VALUES (
         ${userId}, ${creditType}, ${-amount}, ${newBalance}, 'usage', ${referenceId || null}, ${referenceType || null}
@@ -398,7 +398,7 @@ export async function initializeTrialCredits(
   try {
     // Check if user already has credits
     const existing = await sql`
-      SELECT id, period_end, is_trial_period FROM user_credits WHERE user_id = ${userId}
+      SELECT id, period_end, is_trial_period FROM crewcast.user_credits WHERE user_id = ${userId}
     `;
 
     if (existing.length > 0) {
@@ -421,10 +421,10 @@ export async function initializeTrialCredits(
     }
 
     // SECURITY: Check if user already had a trial before by looking at credit transactions
-    // NOTE: We can't use trial_start_date from users table because it's set DURING signup
+    // NOTE: We can't use trial_start_date from crewcast.users table because it's set DURING signup
     // before this function is called. Instead, check if there's a previous trial_start transaction.
     const previousTrialCheck = await sql`
-      SELECT id FROM credit_transactions 
+      SELECT id FROM crewcast.credit_transactions 
       WHERE user_id = ${userId} 
       AND reason IN ('trial_start', 'trial_restart')
       LIMIT 1
@@ -438,7 +438,7 @@ export async function initializeTrialCredits(
 
     // Create credit record with trial credits (same for all users)
     await sql`
-      INSERT INTO user_credits (
+      INSERT INTO crewcast.user_credits (
         user_id,
         topic_search_credits_total,
         email_credits_total,
@@ -465,7 +465,7 @@ export async function initializeTrialCredits(
 
     // Log the transaction
     await sql`
-      INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
+      INSERT INTO crewcast.credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
       VALUES 
         (${userId}, 'topic_search', ${PLAN_CREDITS.trial.topicSearches}, ${PLAN_CREDITS.trial.topicSearches}, 'trial_start', 'subscription'),
         (${userId}, 'email', ${PLAN_CREDITS.trial.email}, ${PLAN_CREDITS.trial.email}, 'trial_start', 'subscription'),
@@ -506,7 +506,7 @@ export async function resetCreditsForNewPeriod(
     let verifiedPlan = plan;
     if (plan === 'enterprise') {
       const userCheck = await sql`
-        SELECT plan FROM users WHERE id = ${userId}
+        SELECT plan FROM crewcast.users WHERE id = ${userId}
       `;
       if (userCheck.length === 0 || userCheck[0].plan !== 'enterprise') {
         console.error(`[Credits] SECURITY: User ${userId} attempted enterprise credits but is not enterprise. Falling back to pro.`);
@@ -518,13 +518,13 @@ export async function resetCreditsForNewPeriod(
 
     // Update or insert credit record
     const existing = await sql`
-      SELECT id FROM user_credits WHERE user_id = ${userId}
+      SELECT id FROM crewcast.user_credits WHERE user_id = ${userId}
     `;
 
     if (existing.length > 0) {
       // Update existing record
       await sql`
-        UPDATE user_credits
+        UPDATE crewcast.user_credits
         SET
           topic_search_credits_total = ${planCredits.topicSearches},
           email_credits_total = ${planCredits.email},
@@ -541,7 +541,7 @@ export async function resetCreditsForNewPeriod(
     } else {
       // Insert new record
       await sql`
-        INSERT INTO user_credits (
+        INSERT INTO crewcast.user_credits (
           user_id,
           topic_search_credits_total,
           email_credits_total,
@@ -569,7 +569,7 @@ export async function resetCreditsForNewPeriod(
 
     // Log the transactions
     await sql`
-      INSERT INTO credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
+      INSERT INTO crewcast.credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
       VALUES 
         (${userId}, 'topic_search', ${planCredits.topicSearches}, ${planCredits.topicSearches}, 'reset', 'invoice'),
         (${userId}, 'email', ${planCredits.email}, ${planCredits.email}, 'reset', 'invoice'),

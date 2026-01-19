@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const userAndSub = await sql`
       SELECT u.email, s.stripe_subscription_id, s.stripe_customer_id, s.status, s.cancel_at_period_end
-      FROM users u
-      LEFT JOIN subscriptions s ON u.id = s.user_id
+      FROM crewcast.users u
+      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
       WHERE u.id = ${userId}
     `;
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const subscriptions = await sql`
       SELECT stripe_subscription_id, stripe_customer_id, status, cancel_at_period_end
-      FROM subscriptions
+      FROM crewcast.subscriptions
       WHERE user_id = ${userId}
     `;
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     // UPDATE DATABASE
     // ==========================================================================
     await sql`
-      UPDATE subscriptions
+      UPDATE crewcast.subscriptions
       SET
         cancel_at_period_end = false,
         updated_at = NOW()

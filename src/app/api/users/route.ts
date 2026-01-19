@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get('id');
 
     if (id) {
-      const users = await sql`SELECT * FROM users WHERE id = ${parseInt(id)}`;
+      const users = await sql`SELECT * FROM crewcast.users WHERE id = ${parseInt(id)}`;
       if (users.length === 0) {
         return NextResponse.json({ user: null });
       }
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (email) {
-      const users = await sql`SELECT * FROM users WHERE email = ${email}`;
+      const users = await sql`SELECT * FROM crewcast.users WHERE email = ${email}`;
       if (users.length === 0) {
         return NextResponse.json({ user: null });
       }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Use INSERT ... ON CONFLICT to handle race conditions
     // If user exists, just return the existing user without updating
     const result = await sql`
-      INSERT INTO users (email, name, is_onboarded, onboarding_step, has_subscription, plan)
+      INSERT INTO crewcast.users (email, name, is_onboarded, onboarding_step, has_subscription, plan)
       VALUES (${email}, ${name}, ${isOnboarded ?? false}, ${onboardingStep ?? 1}, ${hasSubscription ?? false}, ${plan ?? 'free_trial'})
       ON CONFLICT (email) DO NOTHING
       RETURNING *
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     // If INSERT returned nothing, user already exists - fetch them
     if (result.length === 0) {
-      const existingUsers = await sql`SELECT * FROM users WHERE email = ${email}`;
+      const existingUsers = await sql`SELECT * FROM crewcast.users WHERE email = ${email}`;
       return NextResponse.json({ user: existingUsers[0] as DbUser, created: false });
     }
 
@@ -126,7 +126,7 @@ export async function PATCH(request: NextRequest) {
     // For simplicity, we'll update all provided fields
     // Note: This is a simplified version - in production you'd want proper parameterized queries
     const updatedUsers = await sql`
-      UPDATE users 
+      UPDATE crewcast.users 
       SET 
         name = COALESCE(${updates.name ?? null}, name),
         is_onboarded = COALESCE(${updates.isOnboarded ?? null}, is_onboarded),

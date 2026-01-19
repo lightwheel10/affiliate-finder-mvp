@@ -99,7 +99,7 @@ async function saveResultToDb(
   try {
     // Check for existing entry (prevent duplicates)
     const existing = await sql`
-      SELECT id FROM discovered_affiliates 
+      SELECT id FROM crewcast.discovered_affiliates 
       WHERE user_id = ${userId} AND link = ${result.link}
     `;
 
@@ -109,7 +109,7 @@ async function saveResultToDb(
 
     // Insert new discovered affiliate with ALL fields
     await sql`
-      INSERT INTO discovered_affiliates (
+      INSERT INTO crewcast.discovered_affiliates (
         user_id,
         search_keyword,
         title,
@@ -228,7 +228,7 @@ async function updateWithSimilarWebData(
 ): Promise<boolean> {
   try {
     await sql`
-      UPDATE discovered_affiliates
+      UPDATE crewcast.discovered_affiliates
       SET 
         similarweb_monthly_visits = ${swData.monthlyVisits ?? null},
         similarweb_global_rank = ${swData.globalRank ?? null},
@@ -298,7 +298,7 @@ export async function POST(req: Request): Promise<Response> {
     // VERIFY USER EXISTS
     // =========================================================================
     const userCheck = await sql`
-      SELECT id FROM users WHERE id = ${userId}
+      SELECT id FROM crewcast.users WHERE id = ${userId}
     `;
 
     if (userCheck.length === 0) {
