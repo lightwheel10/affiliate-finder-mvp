@@ -365,23 +365,33 @@ export async function POST(req: Request) {
         
         // Mark search as complete in database BEFORE SimilarWeb
         if (searchId) {
-          await completeSearch(searchId, totalResultsStreamed, totalCost);
-          console.log(`📝 Search ${searchId} completed: ${totalResultsStreamed} results, $${totalCost.toFixed(4)} cost`);
+          try {
+            await completeSearch(searchId, totalResultsStreamed, totalCost);
+            console.log(`📝 Search ${searchId} completed: ${totalResultsStreamed} results, $${totalCost.toFixed(4)} cost`);
+          } catch (completeError: any) {
+            // January 20th, 2026: Don't let this block SimilarWeb
+            console.error(`⚠️ completeSearch failed (non-blocking): ${completeError.message}`);
+          }
         }
         
         // Consume credit BEFORE SimilarWeb
         if (enforceCredits && totalResultsStreamed > 0) {
-          const consumeResult = await consumeCredits(
-            userId, 
-            'topic_search', 
-            1, 
-            searchId?.toString(), 
-            'search'
-          );
-          if (consumeResult.success) {
-            console.log(`💳 [Scout] Consumed 1 topic_search credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
-          } else {
-            console.error(`❌ [Scout] Failed to consume credit for user ${userId}`);
+          try {
+            const consumeResult = await consumeCredits(
+              userId, 
+              'topic_search', 
+              1, 
+              searchId?.toString(), 
+              'search'
+            );
+            if (consumeResult.success) {
+              console.log(`💳 [Scout] Consumed 1 topic_search credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
+            } else {
+              console.error(`❌ [Scout] Failed to consume credit for user ${userId}`);
+            }
+          } catch (creditError: any) {
+            // January 20th, 2026: Don't let this block SimilarWeb
+            console.error(`⚠️ consumeCredits failed (non-blocking): ${creditError.message}`);
           }
         }
 
@@ -405,6 +415,16 @@ export async function POST(req: Request) {
         // - Total: max ~180 seconds (safely under 300s limit)
         // ======================================================================
         const SIMILARWEB_TIMEOUT_MS = 120000; // 120 seconds (2 min) for SimilarWeb batch
+        
+        // ======================================================================
+        // DIAGNOSTIC LOGGING - January 20th, 2026
+        // Added to debug why SimilarWeb enrichment may not be running
+        // ======================================================================
+        console.log(`🔍 [SimilarWeb Debug] Checking conditions:`);
+        console.log(`   - webDomains.length: ${webDomains.length}`);
+        console.log(`   - webDomains: ${webDomains.slice(0, 5).join(', ')}${webDomains.length > 5 ? '...' : ''}`);
+        console.log(`   - isStreamClosed: ${isStreamClosed}`);
+        console.log(`   - Will run enrichment: ${webDomains.length > 0 && !isStreamClosed}`);
         
         if (webDomains.length > 0 && !isStreamClosed) {
           console.log(`📊 Starting SimilarWeb BATCH enrichment for ${webDomains.length} domains (max ${SIMILARWEB_TIMEOUT_MS/1000}s)...`);
@@ -524,6 +544,15 @@ export async function POST(req: Request) {
               console.error('⚠️ SimilarWeb BATCH enrichment failed:', enrichError.message);
             }
             // Continue to send [DONE] - search results are already streamed
+          }
+        } else {
+          // Log why SimilarWeb was skipped
+          console.log(`⏭️ [SimilarWeb Debug] SKIPPED enrichment because:`);
+          if (webDomains.length === 0) {
+            console.log(`   - No Web domains found (only social media results?)`);
+          }
+          if (isStreamClosed) {
+            console.log(`   - Stream was already closed by client`);
           }
         }
 
