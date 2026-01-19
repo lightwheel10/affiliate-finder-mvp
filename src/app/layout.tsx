@@ -1,6 +1,32 @@
+/**
+ * =============================================================================
+ * ROOT LAYOUT - SUPABASE AUTH
+ * =============================================================================
+ * 
+ * Created: Original
+ * Updated: January 19th, 2026 - Removed Stack Auth, migrated to Supabase
+ * 
+ * WHAT CHANGED:
+ * -------------
+ * - Removed StackProvider and StackTheme from @stackframe/stack
+ * - Removed stackClientApp import
+ * - Supabase auth is handled via cookies (no provider needed)
+ * - All other functionality preserved (i18n, fonts, toasts)
+ * 
+ * WHY NO SUPABASE PROVIDER:
+ * -------------------------
+ * Unlike Stack Auth which required wrapping the app in StackProvider,
+ * Supabase auth works via:
+ * 1. HTTP-only cookies (set by /auth/callback)
+ * 2. Browser client (getSupabaseBrowserClient singleton)
+ * 3. useSupabaseUser hook (manages auth state)
+ * 
+ * This is simpler and more secure (HTTP-only cookies prevent XSS attacks).
+ * 
+ * =============================================================================
+ */
+
 import type { Metadata } from "next";
-import { StackProvider, StackTheme } from "@stackframe/stack";
-import { stackClientApp } from "../stack/client";
 import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
 
@@ -65,40 +91,25 @@ const firaCode = Fira_Code({
   weight: ["400", "700"],
 });
 
-/* OLD_DESIGN_START - Geist fonts (pre-January 6th, 2026)
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-OLD_DESIGN_END */
-
 export const metadata: Metadata = {
   title: "CrewCast Studio | backed by selecdoo AI",
   description: "Find the best affiliates for your campaign - backed by selecdoo AI",
 };
 
 // =============================================================================
-// STACK AUTH THEME CONFIGURATION - NEO-BRUTALIST (January 9th, 2026)
-//
-// Customizes the Stack Auth SignIn/SignUp components to match our design:
-// - Primary color: Brand yellow (#ffbf23)
-// - Radius: 0 for sharp neo-brutalist edges
-// - Works for both light and dark modes
+// STACK AUTH REMOVED - January 19th, 2026
+// 
+// Previously this file included:
+// - import { StackProvider, StackTheme } from "@stackframe/stack";
+// - import { stackClientApp } from "../stack/client";
+// - const stackAuthTheme = { ... }
+// - <StackProvider app={stackClientApp}> wrapper
+// - <StackTheme theme={stackAuthTheme}> wrapper
+// 
+// These have been removed as we migrated to Supabase Auth.
+// Supabase Auth doesn't require a provider - it uses cookies and
+// the useSupabaseUser hook for state management.
 // =============================================================================
-const stackAuthTheme = {
-  light: {
-    primary: '#ffbf23',
-  },
-  dark: {
-    primary: '#ffbf23',
-  },
-  radius: '0',
-};
 
 export default function RootLayout({
   children,
@@ -124,32 +135,38 @@ export default function RootLayout({
             - Provides translations via useLanguage() hook
             ================================================================= */}
         <LanguageProvider>
-          <StackProvider app={stackClientApp}>
-            {/* Updated January 9th, 2026: Added theme prop for neo-brutalist styling */}
-            <StackTheme theme={stackAuthTheme}>
-              {children}
-            </StackTheme>
-          </StackProvider>
+          {/* =============================================================
+              SUPABASE AUTH (January 19th, 2026)
+              
+              No provider needed! Supabase auth works via:
+              1. HTTP-only cookies (set by /auth/callback)
+              2. Browser client singleton (getSupabaseBrowserClient)
+              3. useSupabaseUser hook (manages auth state)
+              
+              Children are rendered directly - auth state is managed
+              by individual components using useSupabaseUser().
+              ============================================================= */}
+          {children}
         
-        {/* =====================================================================
-            GLOBAL TOAST CONTAINER (January 5th, 2026)
-            Updated: January 16, 2026 - Added visibleToasts={1} to show only one at a time
-            
-            Configuration:
-            - position: bottom-right (consistent with previous Outreach page toasts)
-            - richColors: true (styled success=green, error=red, warning=yellow, info=blue)
-            - closeButton: removed (toasts auto-dismiss, no need for manual close)
-            - duration: 4000ms (auto-dismiss after 4 seconds)
-            - visibleToasts: 1 (only show one toast at a time, new ones replace old)
-            - toastOptions.className: ensures proper z-index above modals
-            
-            To trigger toasts from anywhere in the app:
-              import { toast } from 'sonner';
-              toast.success('Success message');
-              toast.error('Error message');
-              toast.warning('Warning message');
-              toast.info('Info message');
-            ===================================================================== */}
+          {/* =====================================================================
+              GLOBAL TOAST CONTAINER (January 5th, 2026)
+              Updated: January 16, 2026 - Added visibleToasts={1} to show only one at a time
+              
+              Configuration:
+              - position: bottom-right (consistent with previous Outreach page toasts)
+              - richColors: true (styled success=green, error=red, warning=yellow, info=blue)
+              - closeButton: removed (toasts auto-dismiss, no need for manual close)
+              - duration: 4000ms (auto-dismiss after 4 seconds)
+              - visibleToasts: 1 (only show one toast at a time, new ones replace old)
+              - toastOptions.className: ensures proper z-index above modals
+              
+              To trigger toasts from anywhere in the app:
+                import { toast } from 'sonner';
+                toast.success('Success message');
+                toast.error('Error message');
+                toast.warning('Warning message');
+                toast.info('Info message');
+              ===================================================================== */}
           {/* =====================================================================
               TOASTER - NEO-BRUTALIST DESIGN (Updated January 17, 2026)
               

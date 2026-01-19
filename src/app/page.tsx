@@ -2,8 +2,11 @@
 
 /**
  * =============================================================================
- * LANDING PAGE / AUTH ROUTER - January 3rd, 2026
+ * LANDING PAGE / AUTH ROUTER
  * =============================================================================
+ * 
+ * Created: January 3rd, 2026
+ * Updated: January 19th, 2026 - Migrated from Stack Auth to Supabase Auth
  * 
  * This page handles the root URL (/) and serves two purposes:
  * 
@@ -28,19 +31,18 @@
  *   - /find: Dashboard "Find New Affiliates" page (in (dashboard) route group)
  *   - All dashboard pages share a layout with persistent Sidebar
  * 
- * AUTH STATE MACHINE:
- * -------------------
- * 1. stackUser === undefined → Loading (Stack Auth checking session)
- * 2. stackUser === null → Not authenticated → Show Landing Page
- * 3. stackUser exists + neonLoading → Loading (fetching/creating Neon user)
- * 4. stackUser exists + neonUser exists + !isOnboarded → Show Onboarding
- * 5. stackUser exists + neonUser exists + isOnboarded → Redirect to /find
+ * AUTH STATE MACHINE (Updated January 19th, 2026 for Supabase):
+ * -------------------------------------------------------------
+ * 1. isLoading === true → Loading (Supabase Auth checking session)
+ * 2. supabaseUser === null → Not authenticated → Show Landing Page
+ * 3. supabaseUser exists + isLoading → Loading (fetching/creating DB user)
+ * 4. supabaseUser exists + dbUser exists + !isOnboarded → Show Onboarding
+ * 5. supabaseUser exists + dbUser exists + isOnboarded → Redirect to /find
  * 
  * =============================================================================
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useUser } from '@stackframe/stack';
 import { useRouter } from 'next/navigation';
 import { LandingPage } from './components/landing/LandingPage';
 import { OnboardingScreen } from './components/OnboardingScreen';
@@ -48,19 +50,40 @@ import { OnboardingScreen } from './components/OnboardingScreen';
 // Previously showed "Setting up your workspace!" for 2 seconds after onboarding.
 // This caused a double loading screen issue. Now we go directly to dashboard.
 import { AuthLoadingScreen } from './components/AuthLoadingScreen';
-import { useNeonUser } from './hooks/useNeonUser';
+
+// =============================================================================
+// SUPABASE AUTH HOOK (January 19th, 2026)
+// Replaces: import { useUser } from '@stackframe/stack';
+// Replaces: import { useNeonUser } from './hooks/useNeonUser';
+// 
+// useSupabaseUser combines both Stack Auth state AND database user fetching
+// into a single hook, simplifying the auth state machine.
+// =============================================================================
+import { useSupabaseUser } from './hooks/useSupabaseUser';
 
 export default function Home() {
-  const stackUser = useUser();
+  // ===========================================================================
+  // SUPABASE AUTH STATE (January 19th, 2026)
+  // 
+  // Previously we had two separate hooks:
+  //   const stackUser = useUser();           // Stack Auth state
+  //   const { ... } = useNeonUser();         // Database user state
+  // 
+  // Now useSupabaseUser provides everything in one hook:
+  //   - supabaseUser: The Supabase auth user (replaces stackUser)
+  //   - isLoading: Combined loading state for auth + database
+  //   - All the same database user fields (userId, isOnboarded, etc.)
+  // ===========================================================================
   const { 
+    supabaseUser,  // Replaces stackUser from @stackframe/stack
     userId, 
     isOnboarded, 
     onboardingStep,
-    isLoading: neonLoading, 
+    isLoading,     // Combined loading state (replaces neonLoading)
     userName, 
     user,
     refetch 
-  } = useNeonUser();
+  } = useSupabaseUser();
   const router = useRouter();
   // showLoadingScreen state removed - January 3rd, 2026
   // We no longer show LoadingOnboardingScreen after onboarding completion.
@@ -87,6 +110,7 @@ export default function Home() {
   // ============================================================================
   // REDIRECT EFFECT - January 3rd, 2026
   // Updated: January 15th, 2026 - Added skipAutoRedirect check
+  // Updated: January 19th, 2026 - Changed stackUser to supabaseUser
   // 
   // When an authenticated and onboarded user lands on "/", redirect them to
   // "/find" where the actual dashboard is. This keeps the landing page clean
@@ -96,25 +120,27 @@ export default function Home() {
   // who just completed onboarding - they should go to /discovered instead.
   // ============================================================================
   useEffect(() => {
-    if (stackUser && !neonLoading && isOnboarded && userId && !hasRedirected && !skipAutoRedirect.current) {
+    if (supabaseUser && !isLoading && isOnboarded && userId && !hasRedirected && !skipAutoRedirect.current) {
       setHasRedirected(true);
       router.replace('/find');
     }
-  }, [stackUser, neonLoading, isOnboarded, userId, hasRedirected, router]);
+  }, [supabaseUser, isLoading, isOnboarded, userId, hasRedirected, router]);
 
   // ============================================
-  // CASE 1: Stack Auth is still loading
+  // CASE 1: Auth is still loading
+  // Updated: January 19th, 2026 - Supabase Auth
   // 
   // Shows a neutral AuthLoadingScreen that works for all users.
   // ============================================
-  if (stackUser === undefined) {
+  if (isLoading) {
     return <AuthLoadingScreen />;
   }
 
   // ============================================
   // CASE 2: Not authenticated → Landing Page
+  // Updated: January 19th, 2026 - Changed stackUser to supabaseUser
   // ============================================
-  if (!stackUser) {
+  if (!supabaseUser) {
     return (
       <LandingPage 
         onLoginClick={() => router.push('/sign-in')}
@@ -124,24 +150,17 @@ export default function Home() {
   }
 
   // ============================================
-  // CASE 3: Authenticated but Neon user loading
-  // 
-  // Shows AuthLoadingScreen while fetching/creating user.
-  // ============================================
-  if (neonLoading) {
-    return <AuthLoadingScreen />;
-  }
-
-  // ============================================
-  // CASE 4: Not onboarded → Show Onboarding
+  // CASE 3: Not onboarded → Show Onboarding
   // Resume from saved step with pre-filled data
   // 
   // January 3rd, 2026: Removed the old LoadingOnboardingScreen ("Setting up
   // your workspace!") that used to show for 2 seconds after onboarding.
   // Now we go directly to the dashboard after refetch.
+  // 
+  // Updated: January 19th, 2026 - Changed stackUser?.primaryEmail to supabaseUser?.email
   // ============================================
   if (!isOnboarded && userId) {
-    const userEmail = stackUser?.primaryEmail || '';
+    const userEmail = supabaseUser?.email || '';
     
     return (
       <OnboardingScreen 

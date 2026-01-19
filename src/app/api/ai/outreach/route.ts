@@ -38,7 +38,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 import { checkCredits, consumeCredits } from '@/lib/credits';
 import { 
   generateOutreachEmail, 
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     // STEP 1: AUTHENTICATION
     // Verify user is authenticated via Stack Auth
     // =========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       console.error('[AI Outreach] Unauthorized: No authenticated user');
@@ -117,11 +117,11 @@ export async function POST(request: NextRequest) {
         target_country, target_language,
         competitors, topics, affiliate_types
       FROM users 
-      WHERE email = ${authUser.primaryEmail}
+      WHERE email = ${authUser.email}
     `;
 
     if (users.length === 0) {
-      console.error(`[AI Outreach] User not found: ${authUser.primaryEmail}`);
+      console.error(`[AI Outreach] User not found: ${authUser.email}`);
       return NextResponse.json(
         { error: 'User account not found. Please complete onboarding.' },
         { status: 404 }
@@ -411,7 +411,7 @@ export async function PATCH(request: NextRequest) {
     // =========================================================================
     // STEP 1: AUTHENTICATION
     // =========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       return NextResponse.json(
@@ -437,7 +437,7 @@ export async function PATCH(request: NextRequest) {
     // STEP 3: GET USER ID FROM DATABASE
     // =========================================================================
     const users = await sql`
-      SELECT id FROM users WHERE email = ${authUser.primaryEmail}
+      SELECT id FROM users WHERE email = ${authUser.email}
     `;
 
     if (users.length === 0) {

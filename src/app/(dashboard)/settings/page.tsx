@@ -32,11 +32,14 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { useUser } from '@stackframe/stack';
+// January 19th, 2026: Removed Stack Auth import
+// import { useUser } from '@stackframe/stack';
+// Now using useSupabaseUser hook which provides supabaseUser
 import { PricingModal } from '../../components/PricingModal';
 import { AddCardModal } from '../../components/AddCardModal';
 import { Modal } from '../../components/Modal';
-import { useNeonUser } from '../../hooks/useNeonUser';
+// January 19th, 2026: Migrated from useNeonUser to useSupabaseUser
+import { useSupabaseUser } from '../../hooks/useSupabaseUser';
 import { useSubscription } from '../../hooks/useSubscription';
 import { 
   User, 
@@ -80,9 +83,9 @@ export default function SettingsPage() {
   const { t } = useLanguage();
   
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-  const user = useUser();
-  // January 13th, 2026: Added refetch for updating name, country, language
-  const { userId, user: neonUser, refetch: refetchNeonUser } = useNeonUser();
+  // January 19th, 2026: Migrated from Stack Auth useUser() + useNeonUser() to useSupabaseUser()
+  // const user = useUser(); // Removed - Stack Auth
+  const { userId, user: neonUser, refetch: refetchNeonUser, supabaseUser } = useSupabaseUser();
   const { subscription, isLoading: subscriptionLoading, isTrialing, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
@@ -158,7 +161,8 @@ export default function SettingsPage() {
                   {/* January 13th, 2026: Removed tab title and description as per user request */}
                   {activeTab === 'profile' && (
                     <ProfileSettings
-                      user={user}
+                      supabaseUser={supabaseUser}  // January 19th, 2026: Supabase Auth user (for email)
+                      userName={neonUser?.name || supabaseUser?.email?.split('@')[0] || 'User'}  // January 19th, 2026: From database
                       neonUserId={userId}
                       currentCountry={neonUser?.target_country}
                       currentLanguage={neonUser?.target_language}
@@ -178,7 +182,7 @@ export default function SettingsPage() {
                     />
                   )}
                   {activeTab === 'notifications' && <NotificationSettings />}
-                  {activeTab === 'security' && <SecuritySettings user={user} neonUserId={userId} />}
+                  {activeTab === 'security' && <SecuritySettings user={supabaseUser} neonUserId={userId} />}  {/* January 19th, 2026: Changed from Stack user */}
                 </div>
               </div>
             </div>
@@ -201,12 +205,13 @@ export default function SettingsPage() {
         }}
       />
 
-      {userId && user?.primaryEmail && (
+      {/* January 19th, 2026: Changed from user?.primaryEmail to supabaseUser?.email */}
+      {userId && supabaseUser?.email && (
         <AddCardModal
           isOpen={isAddCardModalOpen}
           onClose={() => setIsAddCardModalOpen(false)}
           userId={userId}
-          userEmail={user.primaryEmail}
+          userEmail={supabaseUser.email}
           onSuccess={() => {
             refetchSubscription();
             setIsAddCardModalOpen(false);
@@ -315,10 +320,15 @@ export default function SettingsPage() {
 // January 13th, 2026: 
 // - Added editable name functionality
 // - Added country and language dropdowns
-// - Updates both Stack Auth (displayName) and Neon DB (name, target_country, target_language)
+// 
+// January 19th, 2026:
+// - Migrated from Stack Auth to Supabase
+// - Updates Supabase database (name, target_country, target_language)
+// - No longer updates Stack Auth displayName (DB is source of truth)
 // =============================================================================
 interface ProfileSettingsProps {
-  user: any;
+  supabaseUser: any;  // January 19th, 2026: Supabase Auth user (for email)
+  userName: string;   // January 19th, 2026: From database
   neonUserId: number | null;
   currentCountry?: string | null;   // January 13th, 2026: From Neon DB
   currentLanguage?: string | null;  // January 13th, 2026: From Neon DB
@@ -372,12 +382,12 @@ const LANGUAGES = [
   { name: 'Arabic', symbol: 'ع' },
 ];
 
-function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, onProfileUpdated }: ProfileSettingsProps) {
+function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, currentLanguage, onProfileUpdated }: ProfileSettingsProps) {
   // January 17, 2026: Added i18n support
   const { t } = useLanguage();
   
-  const userName = user?.displayName || 'User';
-  const userEmail = user?.primaryEmail || '';
+  // January 19th, 2026: Using props directly (userName from DB, email from Supabase)
+  const userEmail = supabaseUser?.email || '';
   
   // Editing state (January 13th, 2026)
   const [isEditing, setIsEditing] = useState(false);
@@ -430,12 +440,8 @@ function ProfileSettings({ user, neonUserId, currentCountry, currentLanguage, on
     setSaveError(null);
 
     try {
-      // Update Stack Auth displayName
-      if (user) {
-        await user.update({ displayName: editName.trim() });
-      }
-
-      // Update Neon DB (name, country, language)
+      // January 19th, 2026: Removed Stack Auth update - database is now source of truth
+      // Update Supabase DB (name, country, language)
       if (neonUserId) {
         const res = await fetch('/api/users', {
           method: 'PATCH',

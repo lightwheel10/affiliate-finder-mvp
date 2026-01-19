@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 
 // =============================================================================
 // UPDATE PAYMENT METHOD API
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     // AUTHENTICATION: Verify user is logged in
     // ==========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     if (!authUser) {
       return NextResponse.json(
         { error: 'Unauthorized. Please log in.' },
@@ -78,9 +78,9 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     // AUTHORIZATION: Verify the authenticated user matches the target user
     // ==========================================================================
-    if (authUser.primaryEmail !== user.email) {
+    if (authUser.email !== user.email) {
       console.error('[UpdatePaymentMethod] Auth mismatch:', {
-        authEmail: authUser.primaryEmail,
+        authEmail: authUser.email,
         userEmail: user.email,
       });
       return NextResponse.json(

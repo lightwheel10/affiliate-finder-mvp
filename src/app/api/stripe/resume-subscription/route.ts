@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 
 // =============================================================================
 // POST /api/stripe/resume-subscription
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     // AUTHENTICATION CHECK
     // Verify the user is authenticated via Stack Auth
     // ==========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       console.error('[Stripe] Unauthorized: No authenticated user');
@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
     // AUTHORIZATION CHECK
     // Verify the authenticated user matches the requested user
     // ==========================================================================
-    if (authUser.primaryEmail !== userData.email) {
-      console.error(`[Stripe] Authorization failed: ${authUser.primaryEmail} tried to resume subscription for user ${userId}`);
+    if (authUser.email !== userData.email) {
+      console.error(`[Stripe] Authorization failed: ${authUser.email} tried to resume subscription for user ${userId}`);
       return NextResponse.json(
         { error: 'Not authorized to access this resource' },
         { status: 403 }

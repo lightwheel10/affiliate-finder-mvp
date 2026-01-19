@@ -1,73 +1,51 @@
-'use client';
-
 /**
  * =============================================================================
- * SIGN UP PAGE - NEO-BRUTALIST (Updated January 9th, 2026)
+ * SIGN UP PAGE - REDIRECT TO SIGN-IN WITH MODE
+ * =============================================================================
  * 
- * Design changes applied:
- * - Sharp edges on loading spinner (removed rounded-full)
- * - Updated background color for dark mode support
- * - Neo-brutalist back button styling
- * - Brand yellow (#ffbf23) accent color
+ * Created: January 9th, 2026 (Original Stack Auth version)
+ * Updated: January 19th, 2026 - Migrated to Supabase Magic Link
+ * Updated: January 19th, 2026 - Pass mode=signup to show correct messaging
  * 
- * Note: The SignUp component itself is styled via StackTheme in layout.tsx
- * with primary color #ffbf23 and radius: '0' for sharp edges
+ * WHAT CHANGED (January 19th, 2026):
+ * ----------------------------------
+ * With Magic Link authentication, sign-up and sign-in are the SAME flow:
+ * 1. User enters email
+ * 2. Gets magic link
+ * 3. Clicks link
+ * 4. If new user → Supabase creates account automatically
+ * 5. If existing user → Signs them in
+ * 
+ * So we redirect /sign-up to /sign-in?mode=signup.
+ * The mode=signup parameter tells the sign-in page to show:
+ * - "Start Your Free Trial" instead of "Welcome Back"
+ * - Different subtitle messaging for new users
+ * 
+ * This page exists to:
+ * - Handle "Start free trial" clicks from landing page
+ * - Handle any old links or bookmarks to /sign-up
+ * 
  * =============================================================================
  */
 
-import { SignUp, useUser } from "@stackframe/stack";
-import Link from "next/link";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SignUpPage() {
-  const user = useUser();
   const router = useRouter();
 
-  // Auto-redirect to home if already signed in
+  // January 19th, 2026: Redirect to sign-in with mode=signup
+  // This tells the sign-in page to show new user messaging
   useEffect(() => {
-    if (user) {
-      router.replace('/');
-    }
-  }, [user, router]);
+    router.replace('/sign-in?mode=signup');
+  }, [router]);
 
-  // Show loading while checking auth or redirecting - NEO-BRUTALIST (January 9th, 2026)
-  if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0a0a0a]">
-        <div className="w-8 h-8 border-2 border-[#ffbf23] border-t-transparent animate-spin"></div>
-      </div>
-    );
-  }
-
-  // Show sign-up form for unauthenticated users - NEO-BRUTALIST (January 9th, 2026)
+  // Show loading while redirecting
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-[#0a0a0a]">
-      {/* Header with logo - NEO-BRUTALIST (January 9th, 2026) */}
-      <div className="w-full max-w-md px-4 mb-6">
-        <div className="flex items-center justify-between">
-          <Link 
-            href="/" 
-            className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-700 px-3 py-1.5"
-          >
-            <ArrowLeft size={16} />
-            Back to Home
-          </Link>
-          
-          {/* Logo - NEO-BRUTALIST (January 9th, 2026) */}
-          <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
-            </div>
-            <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">
-              CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span>
-            </span>
-          </div>
-        </div>
-      </div>
-      
-      <SignUp automaticRedirect={true} />
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0a0a0a]">
+      <div className="w-8 h-8 border-2 border-[#ffbf23] border-t-transparent animate-spin"></div>
     </div>
   );
 }

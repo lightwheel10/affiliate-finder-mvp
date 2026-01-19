@@ -8,7 +8,7 @@ import {
   searchInstagramApify,
   searchTikTokApify 
 } from '../../services/apify';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 import { sql } from '@/lib/db';
 import { checkCredits, consumeCredits } from '@/lib/credits';
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     // AUTHENTICATION CHECK (December 2025)
     // Verify user is authenticated via Stack Auth
     // ==========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       console.error('[Scout] Unauthorized: No authenticated user');
@@ -102,11 +102,11 @@ export async function POST(req: Request) {
     // ==========================================================================
     const users = await sql`
       SELECT id, brand, competitors, target_country, target_language 
-      FROM users WHERE email = ${authUser.primaryEmail}
+      FROM users WHERE email = ${authUser.email}
     `;
 
     if (users.length === 0) {
-      console.error(`[Scout] User not found in database: ${authUser.primaryEmail}`);
+      console.error(`[Scout] User not found in database: ${authUser.email}`);
       return new Response(JSON.stringify({ error: 'User account not found. Please complete onboarding.' }), { 
         status: 404,
         headers: { 'Content-Type': 'application/json' }

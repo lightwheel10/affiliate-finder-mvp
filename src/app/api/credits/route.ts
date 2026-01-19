@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { getUserCredits } from '@/lib/credits';
 
 // =============================================================================
@@ -9,18 +9,19 @@ import { getUserCredits } from '@/lib/credits';
 // Fetches credit balances for a user.
 // 
 // SECURITY:
-// - Requires authenticated Stack Auth session
+// - Requires authenticated Supabase session (via cookies)
 // - Verifies authenticated user matches the requested userId
 //
 // Created: December 2025
+// Updated: January 19th, 2026 - Migrated from Stack Auth to Supabase Auth
 // =============================================================================
 
 export async function GET(request: NextRequest) {
   try {
     // ==========================================================================
-    // AUTHENTICATION CHECK
+    // AUTHENTICATION CHECK (January 19th, 2026: Supabase Auth)
     // ==========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       return NextResponse.json(
@@ -53,8 +54,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if (authUser.primaryEmail !== users[0].email) {
-      console.error(`[Credits] Authorization failed: ${authUser.primaryEmail} tried to access credits for user ${userIdNum}`);
+    if (authUser.email !== users[0].email) {
+      console.error(`[Credits] Authorization failed: ${authUser.email} tried to access credits for user ${userIdNum}`);
       return NextResponse.json(
         { error: 'Not authorized to access this resource' },
         { status: 403 }

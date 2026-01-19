@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbSubscription } from '@/lib/db';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 
 // =============================================================================
 // GET /api/subscriptions?userId=xxx
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // ==========================================================================
     // AUTHENTICATION CHECK
     // ==========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       return NextResponse.json(
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ subscription: null });
     }
 
-    if (authUser.primaryEmail !== users[0].email) {
-      console.error(`[Subscriptions] Authorization failed: ${authUser.primaryEmail} tried to access subscription for user ${userIdNum}`);
+    if (authUser.email !== users[0].email) {
+      console.error(`[Subscriptions] Authorization failed: ${authUser.email} tried to access subscription for user ${userIdNum}`);
       return NextResponse.json(
         { error: 'Not authorized to access this resource' },
         { status: 403 }

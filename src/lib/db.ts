@@ -1,7 +1,39 @@
-import { neon } from '@neondatabase/serverless';
+/**
+ * =============================================================================
+ * DATABASE CONNECTION - SUPABASE PostgreSQL
+ * =============================================================================
+ * 
+ * Created: Original (Neon)
+ * Updated: January 19th, 2026 - Migrated from Neon to Supabase
+ * 
+ * WHAT CHANGED:
+ * -------------
+ * - Replaced Neon's sql function with Supabase's sql wrapper
+ * - Uses 'crewcast' schema (isolated from other services in shared Supabase)
+ * - Connection string from SUPABASE_DATABASE_URL env variable
+ * 
+ * WHY 'crewcast' SCHEMA:
+ * ----------------------
+ * The Supabase project is shared with other client services. Using a dedicated
+ * schema ('crewcast') keeps our tables separate from:
+ * - public schema (default, used by other services)
+ * - Supabase internal schemas (auth, storage, etc.)
+ * 
+ * The sql wrapper automatically uses search_path=crewcast so all queries
+ * target our tables without needing to prefix them.
+ * 
+ * USAGE:
+ * ------
+ * Same as before! The sql function works identically:
+ * 
+ * const users = await sql`SELECT * FROM users WHERE id = ${id}`;
+ * 
+ * =============================================================================
+ */
 
-// Create a SQL query function using the Neon serverless driver
-export const sql = neon(process.env.DATABASE_URL!);
+// Import the Supabase SQL wrapper (drop-in replacement for Neon)
+// This uses the 'postgres' package with search_path set to 'crewcast' schema
+export { sql } from './supabase/sql';
 
 // Type definitions for database tables
 export interface DbUser {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, getPriceId, isValidPlan, isValidInterval, TRIAL_DAYS } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 
 // =============================================================================
 // POST /api/stripe/create-subscription
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     // AUTHENTICATION CHECK
     // Verify the user is authenticated via Stack Auth
     // ==========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       console.error('[Stripe] Unauthorized: No authenticated user');
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
     // Verify the authenticated user matches the requested user
     // This prevents users from creating subscriptions for other users
     // ==========================================================================
-    if (authUser.primaryEmail !== user.email) {
-      console.error(`[Stripe] Authorization failed: ${authUser.primaryEmail} tried to access user ${userId} (${user.email})`);
+    if (authUser.email !== user.email) {
+      console.error(`[Stripe] Authorization failed: ${authUser.email} tried to access user ${userId} (${user.email})`);
       return NextResponse.json(
         { error: 'Not authorized to access this resource' },
         { status: 403 }

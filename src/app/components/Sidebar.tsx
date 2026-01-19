@@ -36,13 +36,16 @@ import {
   BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUser } from '@stackframe/stack';
+// January 19th, 2026: Removed Stack Auth import
+// import { useUser } from '@stackframe/stack';
+// Now using useSupabaseUser hook which provides supabaseUser and signOut
 import { Modal } from './Modal';
 import { PricingModal } from './PricingModal';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffiliates';
-import { useNeonUser } from '../hooks/useNeonUser';
+// January 19th, 2026: Migrated from useNeonUser to useSupabaseUser
+import { useSupabaseUser } from '../hooks/useSupabaseUser';
 import { useSubscription } from '../hooks/useSubscription';
 // =============================================================================
 // LANGUAGE SWITCHER (January 9th, 2026)
@@ -164,8 +167,9 @@ OLD_DESIGN_END */
 export const Sidebar: React.FC = () => {
   // Translation hook (January 9th, 2026)
   const { t } = useLanguage();
-  const user = useUser();
-  const { userId, isLoading: userLoading } = useNeonUser();
+  // January 19th, 2026: Migrated from Stack Auth useUser() + useNeonUser() to useSupabaseUser()
+  // const user = useUser(); // Removed - Stack Auth
+  const { userId, user, supabaseUser, userName: hookUserName, isLoading: userLoading, signOut } = useSupabaseUser();
   const { subscription, isTrialing, daysLeftInTrial, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription(userId);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -220,15 +224,18 @@ export const Sidebar: React.FC = () => {
     setDisplayDiscoveredCount(discoveredCount);
   }, [discoveredCount]);
 
+  // January 19th, 2026: Updated to use signOut from useSupabaseUser
   const handleLogout = async () => {
-    await user?.signOut();
+    await signOut();
     setIsLogoutModalOpen(false);
   };
 
-  // Get user display info from Stack Auth
-  const userName = user?.displayName || user?.primaryEmail?.split('@')[0] || 'User';
-  const userEmail = user?.primaryEmail || '';
-  const userImageUrl = user?.profileImageUrl;
+  // January 19th, 2026: Updated to use Supabase user properties
+  // Supabase user has: email, user_metadata.name, user_metadata.avatar_url
+  // Database user (from useSupabaseUser) has: name, email, profile_image_url
+  const userName = hookUserName || user?.name || supabaseUser?.email?.split('@')[0] || 'User';
+  const userEmail = supabaseUser?.email || user?.email || '';
+  const userImageUrl = user?.profile_image_url || supabaseUser?.user_metadata?.avatar_url;
 
   // Show skeleton while user data is loading
   if (userLoading || subscriptionLoading) {

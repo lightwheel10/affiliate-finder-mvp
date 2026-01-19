@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser, getSupabaseServerClient } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 
 // =============================================================================
 // DELETE /api/users/delete
 // 
 // Created: January 13th, 2026
+// Updated: January 19th, 2026 - Migrated from Stack Auth to Supabase
 // 
 // Permanently deletes a user account. This action is IRREVERSIBLE.
 // 
@@ -17,11 +18,11 @@ import { stackServerApp } from '@/stack/server';
 // 4. All searches for this user
 // 5. All api_calls for this user
 // 6. The subscription record
-// 7. The user record from Neon DB
-// 8. The user from Stack Auth
+// 7. The user record from database
+// 8. The user from Supabase Auth
 //
 // SECURITY:
-// - Requires authenticated Stack Auth session
+// - Requires authenticated Supabase session
 // - Verifies authenticated user matches the requested userId
 // - Validates user must type "DELETE" to confirm
 // =============================================================================
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     // AUTHENTICATION CHECK
     // Verify the user is authenticated via Stack Auth
     // ==========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       console.error('[DeleteAccount] Unauthorized: No authenticated user');
@@ -86,8 +87,8 @@ export async function POST(request: NextRequest) {
     // AUTHORIZATION CHECK
     // Verify the authenticated user matches the requested user
     // ==========================================================================
-    if (authUser.primaryEmail !== userData.email) {
-      console.error(`[DeleteAccount] Authorization failed: ${authUser.primaryEmail} tried to delete user ${userId}`);
+    if (authUser.email !== userData.email) {
+      console.error(`[DeleteAccount] Authorization failed: ${authUser.email} tried to delete user ${userId}`);
       return NextResponse.json(
         { error: 'Not authorized to delete this account' },
         { status: 403 }
@@ -167,21 +168,23 @@ export async function POST(request: NextRequest) {
     console.log(`[DeleteAccount] Deleted user record`);
 
     // ==========================================================================
-    // STEP 3: DELETE FROM STACK AUTH
-    // January 13th, 2026: Delete the authentication account
-    // Note: We use authUser.id directly (string) to get the ServerUser
+    // STEP 3: DELETE FROM SUPABASE AUTH
+    // January 19th, 2026: Migrated from Stack Auth to Supabase
+    // Note: We use the service role client to delete the auth user
     // ==========================================================================
     try {
-      // Get the Stack Auth user by their ID and delete
-      // stackServerApp.getUser(id) takes a string ID directly, not an object
-      const stackUser = await stackServerApp.getUser(authUser.id);
-      if (stackUser) {
-        await stackUser.delete();
-        console.log(`[DeleteAccount] Deleted Stack Auth user`);
+      // Get the Supabase admin client and delete the auth user
+      const supabaseAdmin = getSupabaseServerClient();
+      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+      
+      if (deleteAuthError) {
+        console.error('[DeleteAccount] Error deleting Supabase Auth user:', deleteAuthError);
+      } else {
+        console.log(`[DeleteAccount] Deleted Supabase Auth user`);
       }
-    } catch (stackError) {
+    } catch (supabaseError) {
       // Log but don't fail - user might already be deleted
-      console.error('[DeleteAccount] Error deleting Stack Auth user:', stackError);
+      console.error('[DeleteAccount] Error deleting Supabase Auth user:', supabaseError);
     }
 
     console.log(`[DeleteAccount] Account deletion completed for user ${userId}`);

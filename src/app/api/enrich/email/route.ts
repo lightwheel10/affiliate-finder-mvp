@@ -64,7 +64,7 @@ import {
 // This ensures type safety when tracking API calls.
 // =============================================================================
 import { trackApiCall, API_COSTS, ApiService } from '@/app/services/tracking';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 import { checkCredits, consumeCredits } from '@/lib/credits';
 
 // Check if credit enforcement is enabled
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     // AUTHENTICATION CHECK (December 2025)
     // Verify user is authenticated via Stack Auth
     // ==========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       console.error('[Email Enrich] Unauthorized: No authenticated user');
@@ -165,11 +165,11 @@ export async function POST(request: NextRequest) {
     // The scraper uses this to prioritize language-specific contact page paths
     // ==========================================================================
     const users = await sql`
-      SELECT id, target_language FROM users WHERE email = ${authUser.primaryEmail}
+      SELECT id, target_language FROM users WHERE email = ${authUser.email}
     `;
 
     if (users.length === 0) {
-      console.error(`[Email Enrich] User not found in database: ${authUser.primaryEmail}`);
+      console.error(`[Email Enrich] User not found in database: ${authUser.email}`);
       return NextResponse.json(
         { error: 'User account not found. Please complete onboarding.' },
         { status: 404 }

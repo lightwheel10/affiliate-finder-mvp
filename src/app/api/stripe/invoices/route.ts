@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { stackServerApp } from '@/stack/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 
 // =============================================================================
 // GET /api/stripe/invoices
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     // STEP 1: AUTHENTICATION
     // Verify the user is authenticated via Stack Auth
     // =========================================================================
-    const authUser = await stackServerApp.getUser();
+    const authUser = await getAuthenticatedUser();
     
     if (!authUser) {
       console.error('[Stripe Invoices] Unauthorized: No authenticated user');
@@ -112,8 +112,8 @@ export async function GET(request: NextRequest) {
     // Verify the authenticated user matches the requested user
     // This prevents users from viewing other users' invoices
     // =========================================================================
-    if (authUser.primaryEmail !== userData.email) {
-      console.error(`[Stripe Invoices] Authorization failed: ${authUser.primaryEmail} tried to access invoices for user ${userIdNum} (${userData.email})`);
+    if (authUser.email !== userData.email) {
+      console.error(`[Stripe Invoices] Authorization failed: ${authUser.email} tried to access invoices for user ${userIdNum} (${userData.email})`);
       return NextResponse.json(
         { error: 'Not authorized to access this resource' },
         { status: 403 }

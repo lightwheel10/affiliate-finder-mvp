@@ -1,40 +1,71 @@
-'use client';
-
 /**
  * =============================================================================
- * AuthGuard Component - NEO-BRUTALIST
+ * AuthGuard Component - SUPABASE AUTH
  * =============================================================================
  * 
- * Updated: January 8th, 2026
+ * Created: January 8th, 2026 (Original Stack Auth version)
+ * Updated: January 19th, 2026 - Migrated to Supabase Auth
  * 
- * NEO-BRUTALIST DESIGN UPDATE:
- * - Sharp edges (no rounded corners)
- * - Bold borders (border-2 to border-4 with black)
- * - Yellow accent color (#ffbf23)
- * - Square elements throughout
- * - Dark mode support
+ * WHAT CHANGED:
+ * -------------
+ * - Replaced useUser() from @stackframe/stack with useSupabaseUser()
+ * - Same logic and flow preserved
+ * - Neo-brutalist design unchanged
  * 
+ * WHAT THIS COMPONENT DOES:
+ * -------------------------
  * AuthGuard wraps authenticated pages and ensures:
  * 1. User is signed in (redirects to sign-in if not)
- * 2. User has completed onboarding (shows onboarding if not)
+ * 2. User has completed onboarding (shows OnboardingScreen if not)
+ * 3. Only shows the actual page content when fully authenticated and onboarded
+ * 
+ * WHY THIS PATTERN:
+ * -----------------
+ * - Centralizes auth logic (don't repeat in every page)
+ * - Handles loading states consistently
+ * - Prevents flash of unauthenticated content
+ * - Protects dashboard from unonboarded users
+ * 
+ * FLOW:
+ * -----
+ * 1. User navigates to protected page (e.g., /find)
+ * 2. AuthGuard checks if user is authenticated
+ *    - No → Redirect to /sign-in
+ * 3. AuthGuard checks if user is onboarded
+ *    - No → Show OnboardingScreen
+ * 4. User is authenticated AND onboarded → Show page content
+ * 
+ * SECURITY NOTE:
+ * --------------
+ * AuthGuard is a client-side check. For true security, API routes
+ * should also verify authentication using getAuthenticatedUser().
+ * AuthGuard is for UX (preventing accidental access), not security.
  * 
  * =============================================================================
  */
 
-import { useUser } from '@stackframe/stack';
+'use client';
+
 import { useRouter } from 'next/navigation';
-import { useNeonUser } from '../hooks/useNeonUser';
+import { useEffect } from 'react';
+
+// ============================================================================
+// SUPABASE AUTH HOOK (January 19th, 2026)
+// Replaces: import { useUser } from '@stackframe/stack';
+// ============================================================================
+import { useSupabaseUser } from '../hooks/useSupabaseUser';
+
 import { OnboardingScreen } from './OnboardingScreen';
 import { AuthLoadingScreen } from './AuthLoadingScreen';
-import { useEffect } from 'react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 /**
- * PageSkeleton - NEO-BRUTALIST (Updated January 8th, 2026)
+ * PageSkeleton - NEO-BRUTALIST
  * 
+ * Shows while waiting for auth state to resolve.
  * Matches the neo-brutalist layout with sidebar.
  * Width updated from w-52 to w-64 to match actual Sidebar.
  */
@@ -126,33 +157,76 @@ const PageSkeleton = () => (
 );
 
 /**
- * AuthGuard - Updated January 8th, 2026
+ * AuthGuard Component
+ * 
+ * Updated: January 19th, 2026 - Migrated from Stack Auth to Supabase Auth
+ * 
+ * Changes:
+ * - Replaced useUser() from @stackframe/stack with useSupabaseUser()
+ * - supabaseUser replaces stackUser for auth state
+ * - Same onboarding and redirect logic preserved
  */
 export function AuthGuard({ children }: AuthGuardProps) {
-  const stackUser = useUser();
-  const { userId, isOnboarded, isLoading: neonLoading, userName, refetch } = useNeonUser();
+  // ===========================================================================
+  // SUPABASE AUTH STATE (January 19th, 2026)
+  // 
+  // useSupabaseUser() provides:
+  // - supabaseUser: The Supabase auth user (null if not logged in)
+  // - userId: Database user ID
+  // - isOnboarded: Whether user completed onboarding
+  // - isLoading: True while checking auth state
+  // - userName: Display name
+  // - refetch: Function to refresh user data
+  // ===========================================================================
+  const { 
+    supabaseUser, 
+    userId, 
+    isOnboarded, 
+    isLoading, 
+    userName,
+    user,
+    refetch 
+  } = useSupabaseUser();
+  
   const router = useRouter();
 
-  // Redirect to sign-in if not authenticated
+  // ===========================================================================
+  // REDIRECT TO SIGN-IN IF NOT AUTHENTICATED
+  // ===========================================================================
   useEffect(() => {
-    if (stackUser === null) {
+    // Wait for auth state to resolve
+    if (isLoading) return;
+    
+    // Not authenticated → redirect to sign-in
+    if (!supabaseUser) {
       router.push('/sign-in');
     }
-  }, [stackUser, router]);
+  }, [supabaseUser, isLoading, router]);
 
-  // Show loading state while Stack Auth or Neon is loading
-  if (stackUser === undefined || neonLoading) {
+  // ===========================================================================
+  // LOADING STATE
+  // Show loading screen while checking auth or fetching user data
+  // ===========================================================================
+  if (isLoading) {
     return <AuthLoadingScreen />;
   }
 
-  // Not signed in - will redirect
-  if (!stackUser) {
+  // ===========================================================================
+  // NOT AUTHENTICATED
+  // Will redirect to sign-in (handled by useEffect above)
+  // Show loading screen while redirecting
+  // ===========================================================================
+  if (!supabaseUser) {
     return <AuthLoadingScreen />;
   }
 
-  // Show onboarding for users who haven't completed it
+  // ===========================================================================
+  // ONBOARDING CHECK
+  // User is authenticated but hasn't completed onboarding
+  // Show the onboarding flow instead of the page content
+  // ===========================================================================
   if (!isOnboarded && userId) {
-    const userEmail = stackUser?.primaryEmail || '';
+    const userEmail = supabaseUser?.email || '';
     
     return (
       <OnboardingScreen 
@@ -160,17 +234,25 @@ export function AuthGuard({ children }: AuthGuardProps) {
         userName={userName}
         userEmail={userEmail}
         onComplete={async () => {
+          // Refetch user data after onboarding completes
+          // This updates isOnboarded and allows access to dashboard
           await refetch();
         }}
       />
     );
   }
 
-  // Guard against race condition
+  // ===========================================================================
+  // GUARD AGAINST RACE CONDITION
+  // User is authenticated but database user not yet created
+  // ===========================================================================
   if (!userId) {
     return <AuthLoadingScreen />;
   }
 
-  // User is authenticated and onboarded - show the page
+  // ===========================================================================
+  // AUTHENTICATED AND ONBOARDED
+  // User passed all checks - render the protected page content
+  // ===========================================================================
   return <>{children}</>;
 }
