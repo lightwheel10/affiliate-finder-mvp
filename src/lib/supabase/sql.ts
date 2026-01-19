@@ -55,17 +55,11 @@ if (!connectionString) {
   );
 }
 
-// Build connection string with schema
-// Append search_path to the connection URL so all queries default to 'crewcast' schema
-const connectionWithSchema = connectionString 
-  ? (connectionString.includes('?') 
-      ? `${connectionString}&options=-c%20search_path%3Dcrewcast`
-      : `${connectionString}?options=-c%20search_path%3Dcrewcast`)
-  : '';
-
 // Create the postgres client with connection pooling settings
 // optimized for serverless environments (Vercel, etc.)
-const sqlClient = postgres(connectionWithSchema, {
+// January 19th, 2026: Set search_path via connection parameters
+// (Supabase Shared Pooler doesn't support URL options parameter)
+const sqlClient = postgres(connectionString || '', {
   // Serverless-optimized settings
   max: 1, // Use 1 connection per function invocation
   idle_timeout: 20, // Close idle connections after 20 seconds
@@ -74,13 +68,18 @@ const sqlClient = postgres(connectionWithSchema, {
   // IMPORTANT: Disable prepared statements for Supabase pooler (Transaction mode)
   // The pooler doesn't support prepared statements because it routes queries
   // to different backend connections. This is required for Vercel serverless.
-  // January 19th, 2026
   prepare: false,
   
   // Transform options to match Neon behavior
   transform: {
     // Convert undefined to null (prevents TypeScript errors with optional params)
     undefined: null,
+  },
+  
+  // Set search_path to 'crewcast' schema via connection parameters
+  // This ensures all queries target the crewcast schema by default
+  connection: {
+    search_path: 'crewcast',
   },
 });
 
