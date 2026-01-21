@@ -114,6 +114,36 @@ const ECOMMERCE_DOMAINS = [
   'medium.com',  // Medium authors can be contacted, but medium.com itself is not useful
   'linkedin.com', 'facebook.com', 'twitter.com', 'x.com',
   
+  // ==========================================================================
+  // SOCIAL MEDIA PLATFORMS - January 21, 2026 (REV-104 Fix)
+  // 
+  // CRITICAL FIX: Block TikTok, Instagram, YouTube from Web search results
+  // 
+  // PROBLEM:
+  // When Serper returns social media URLs (e.g., tiktok.com/@username), they
+  // get saved as "Web" results with domain="tiktok.com". When users click
+  // "Find Email", the enrichment API tries to lookup "tiktok.com" via Lusha/Apollo,
+  // which FAILS because these services need BUSINESS DOMAINS, not social platforms.
+  // 
+  // SOLUTION:
+  // Block these domains from Web search results entirely. Users will still find
+  // creators on these platforms via the dedicated Apify scrapers (YouTube scraper,
+  // Instagram scraper, TikTok scraper), which return proper profile data with
+  // bio emails extracted.
+  // 
+  // WHY THIS WORKS:
+  // - Prevents "domain=tiktok.com" from being saved to database
+  // - Apify scrapers find creators WITH their bio emails already extracted
+  // - Email enrichment only runs on actual business domains
+  // - No more "Invalid domain" errors for social media URLs
+  // 
+  // AFFECTED ISSUE: REV-104 "Error by Mail finding" (TikTok email lookup errors)
+  // ==========================================================================
+  'tiktok.com',
+  'instagram.com',
+  'youtube.com',
+  'youtu.be',  // YouTube short links
+  
   // Wikipedia / reference
   'wikipedia.org', 'wikihow.com',
 ];
