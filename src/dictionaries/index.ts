@@ -1002,25 +1002,21 @@ export interface Dictionary {
   };
 
   // =========================================================================
-  // FINDING AFFILIATES SCREEN - January 15th, 2026
+  // FINDING AFFILIATES SCREEN - January 21st, 2026 (Enhanced)
   // =========================================================================
-  // Finding Affiliates Screen - January 15th, 2026 (simplified)
   findingAffiliates: {
+    // New animated progress fields (January 21st, 2026)
+    steps: string[];
+    complete: string;
+    elapsed: string;
+    estimatedTime: string;
+    // Legacy fields kept for backwards compatibility
     thankYou: string;
     preparingDashboard: string;
     pleaseWait: string;
-    // Legacy fields
     title: string;
     subtitle: string;
     timeEstimate: string;
-    steps: {
-      step1Label: string;
-      step1Desc: string;
-      step2Label: string;
-      step2Desc: string;
-      step3Label: string;
-      step3Desc: string;
-    };
   };
 
   // =========================================================================

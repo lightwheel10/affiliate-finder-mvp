@@ -1027,33 +1027,35 @@ export const de: Dictionary = {
   },
 
   // =========================================================================
-  // FINDING AFFILIATES SCREEN - January 15th, 2026
-  // 
-  // Shown during onboarding AFTER payment succeeds while we pre-fetch
-  // affiliate results so user sees results immediately on dashboard.
   // =========================================================================
-  // =========================================================================
-  // FINDING AFFILIATES SCREEN - January 15th, 2026
+  // FINDING AFFILIATES SCREEN - January 21st, 2026 (Enhanced)
   // 
-  // Simplified version - just shows "Thank you! Preparing dashboard..."
-  // Shown after payment succeeds while we pre-fetch affiliate results.
+  // Shows animated progress bar with cycling step messages.
+  // Progress animates 0% → 95% over ~2 minutes, then jumps to 100% on complete.
   // =========================================================================
   findingAffiliates: {
+    // Step messages that cycle during the search (array for animation)
+    steps: [
+      'Wir suchen nach Affiliates...',
+      'Wettbewerber scannen',
+      'Keywords prüfen',
+      'Instagram & TikTok scannen',
+      'Erste Ergebnisse vorbereiten',
+      'Fertig!',
+    ],
+    // Completion message (shown when API returns)
+    complete: 'Fertig!',
+    // Elapsed time suffix
+    elapsed: 'vergangen',
+    // Estimated time note at bottom
+    estimatedTime: 'Geschätzte Zeit: ~3 Minuten',
+    // Legacy fields kept for backwards compatibility
     thankYou: 'Vielen Dank!',
     preparingDashboard: 'Ihr Dashboard wird vorbereitet...',
     pleaseWait: 'Bitte warten Sie einen Moment',
-    // Legacy fields kept for backwards compatibility
     title: 'Affiliates werden gesucht',
     subtitle: 'Partner für {brand} werden entdeckt',
     timeEstimate: 'Dies dauert normalerweise 20-30 Sekunden',
-    steps: {
-      step1Label: 'Affiliates suchen',
-      step1Desc: 'Durchsuche {count} ausgewählte Themen',
-      step2Label: 'Ergebnisse analysieren',
-      step2Desc: 'Potenzielle Partner identifizieren',
-      step3Label: 'Dashboard vorbereiten',
-      step3Desc: 'Ergebnisse für Sie organisieren',
-    },
   },
 
   // =========================================================================

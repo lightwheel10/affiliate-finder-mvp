@@ -306,16 +306,14 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
         </div>
       </div>
 
-      {/* Ready indicator (for debugging - can be removed in production) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-[10px] text-slate-400 flex flex-wrap gap-2">
-          <span>{stripe ? '✓ Stripe' : '○ Stripe'}</span>
-          <span>{cardNumberComplete ? '✓ Card' : '○ Card'}</span>
-          <span>{cardExpiryComplete ? '✓ Expiry' : '○ Expiry'}</span>
-          <span>{cardCvcComplete ? '✓ CVC' : '○ CVC'}</span>
-          <span>{cardholderName.trim() ? '✓ Name' : '○ Name'}</span>
-        </div>
-      )}
+      {/* =================================================================
+        January 21st, 2026: REMOVED debug indicator
+        
+        Previously showed: ✓ Stripe, ✓ Card, ✓ Expiry, ✓ CVC, ✓ Name
+        
+        REMOVED per client request - was showing in production despite
+        the NODE_ENV check (likely due to build-time bundling).
+        ================================================================= */}
     </div>
   );
 };

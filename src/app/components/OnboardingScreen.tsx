@@ -255,6 +255,14 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const [isFindingAffiliates, setIsFindingAffiliates] = useState(false);
   
+  // ==========================================================================
+  // SEARCH COMPLETION STATE - January 21st, 2026
+  // 
+  // Tracks when the affiliate search API has returned (success or error).
+  // Used to signal FindingAffiliatesScreen to jump to 100% progress.
+  // ==========================================================================
+  const [isSearchComplete, setIsSearchComplete] = useState(false);
+  
   // Discount Code
   const [discountCode, setDiscountCode] = useState('');
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
@@ -873,8 +881,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         console.log('[Onboarding] Topics found, pre-fetching affiliates...');
         console.log('[Onboarding] Topics:', topics.join(', '));
         
-        // Show the FindingAffiliatesScreen
+        // Show the FindingAffiliatesScreen and reset completion state
+        // January 21st, 2026: Added isSearchComplete for progress bar animation
         setIsFindingAffiliates(true);
+        setIsSearchComplete(false);
         
         try {
           // Call the onboarding scout API and WAIT for it to complete
@@ -902,6 +912,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           // Log error but don't fail - user can still proceed
           console.error('[Onboarding] Pre-fetch error:', scoutError);
         }
+        
+        // ====================================================================
+        // January 21st, 2026: Signal completion and wait for celebration
+        // 
+        // Set isSearchComplete=true so FindingAffiliatesScreen jumps to 100%
+        // Wait 1 second for user to see "Complete!" message before redirect
+        // ====================================================================
+        setIsSearchComplete(true);
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Hide the FindingAffiliatesScreen
         setIsFindingAffiliates(false);
@@ -1009,11 +1028,12 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // - Time estimate message
   // 
   // User MUST wait for this to complete - no skip button.
+  // 
+  // January 21st, 2026: Updated to pass isComplete prop for progress bar
   // ==========================================================================
   const renderFindingAffiliatesScreen = () => (
     <FindingAffiliatesScreen
-      topicsCount={topics.length}
-      brandName={brand}
+      isComplete={isSearchComplete}
     />
   );
 
@@ -1489,17 +1509,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             </p>
             
             {/* =================================================================
-              January 17th, 2026: Changed from grid-cols-3 to grid-cols-2
+              LAYOUT HISTORY:
+              - January 9th, 2026: Initial grid-cols-3 layout
+              - January 17th, 2026: Changed to grid-cols-2 (domains truncated)
+              - January 21st, 2026: Changed to SINGLE COLUMN LIST (client request)
               
-              REASON: Competitor domains were getting cut off (truncated) 
-              because 3-column layout didn't provide enough width.
+              January 21st, 2026 - CLIENT REQUEST (Linear Issue):
+              "This one will be better as a list - cause if the domain names 
+              are longer it cant be read exactly."
               
-              CHANGES:
-              - grid-cols-3 → grid-cols-2 (more width per card)
-              - Removed 'truncate' from domain text (line below name)
-              - Domain now wraps if needed, showing full URL
+              CHANGE: grid-cols-2 → flex flex-col (single column list)
+              REASON: Long domain names like "herbalsolutions.de" were getting
+                      truncated in 2-column layout. List ensures full visibility.
               ================================================================= */}
-            <div className="grid grid-cols-2 gap-1.5 max-h-[140px] overflow-y-auto scrollbar-hide">
+            <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto scrollbar-hide">
               {suggestedCompetitors
                 .filter(comp => !competitors.includes(comp.domain))
                 .slice(0, 12)
@@ -1510,46 +1533,57 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     onClick={() => toggleCompetitor(comp.domain)}
                     disabled={competitors.length >= 5}
                     className={cn(
-                      "group relative flex items-center gap-2 p-2 border-2 text-left transition-all",
+                      "group relative flex items-center gap-3 p-2.5 border-2 text-left transition-all",
                       competitors.length >= 5
                         ? "border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed"
                         : "border-gray-200 dark:border-gray-700 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10"
                     )}
                   >
                     {/* Favicon - NEO-BRUTALIST (January 9th, 2026) */}
-                    <div className="w-6 h-6 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-gray-200 dark:border-gray-700">
                       <img 
                         src={`https://www.google.com/s2/favicons?domain=${comp.domain}&sz=32`}
                         alt={comp.name}
-                        className="w-4 h-4 object-contain"
+                        className="w-5 h-5 object-contain"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <span className="hidden text-[10px] font-bold text-gray-400">
+                      <span className="hidden text-xs font-bold text-gray-400">
                         {comp.name[0].toUpperCase()}
                       </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate">{comp.name}</p>
-                      {/* January 17th, 2026: Removed 'truncate' - show full domain */}
-                      <p className="text-[9px] text-gray-400 break-all">{comp.domain}</p>
+                    {/* January 21st, 2026: Single line layout - name and domain inline */}
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{comp.name}</p>
+                      <span className="text-gray-300 dark:text-gray-600">•</span>
+                      <p className="text-xs text-gray-400">{comp.domain}</p>
                     </div>
-                    <Plus size={12} className="text-gray-300 group-hover:text-[#ffbf23] transition-colors shrink-0" />
+                    <Plus size={14} className="text-gray-300 group-hover:text-[#ffbf23] transition-colors shrink-0" />
                   </button>
                 ))}
             </div>
           </div>
         )}
 
-        {/* Selected Competitors - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
-        {/* January 17th, 2026: Updated to grid-cols-2 and removed truncate for domain visibility */}
+        {/* =================================================================
+          SELECTED COMPETITORS SECTION
+          
+          LAYOUT HISTORY:
+          - January 9th, 2026: Initial NEO-BRUTALIST grid-cols-3
+          - January 17th, 2026: Changed to grid-cols-2 (domains truncated)
+          - January 21st, 2026: Changed to SINGLE COLUMN LIST (client request)
+          
+          January 21st, 2026 - CLIENT REQUEST:
+          Matching the suggestions layout above - single column list for
+          consistent UX and full domain visibility.
+          ================================================================= */}
         {competitors.length > 0 && (
           <div className="space-y-2">
             <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">{t.onboarding.step3.yourCompetitors}</p>
             
-            <div className="grid grid-cols-2 gap-1.5 max-h-[140px] overflow-y-auto scrollbar-hide">
+            <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto scrollbar-hide">
               {competitors.map(comp => {
                 const suggestion = suggestedCompetitors.find(s => s.domain === comp);
                 const displayName = suggestion?.name || comp;
@@ -1559,30 +1593,32 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     key={comp}
                     type="button"
                     onClick={() => toggleCompetitor(comp)}
-                    className="group relative flex items-center gap-2 p-2 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-left transition-all hover:bg-[#ffbf23]/20"
+                    className="group relative flex items-center gap-3 p-2.5 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-left transition-all hover:bg-[#ffbf23]/20"
                   >
                     {/* Favicon - NEO-BRUTALIST (January 9th, 2026) */}
-                    <div className="w-6 h-6 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-[#ffbf23]/30">
+                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-[#ffbf23]/30">
                       <img 
                         src={`https://www.google.com/s2/favicons?domain=${comp}&sz=32`}
                         alt={displayName}
-                        className="w-4 h-4 object-contain"
+                        className="w-5 h-5 object-contain"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <span className="hidden text-[10px] font-bold text-gray-400">
+                      <span className="hidden text-xs font-bold text-gray-400">
                         {displayName[0].toUpperCase()}
                       </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-gray-900 dark:text-white truncate">{displayName}</p>
-                      {/* January 17th, 2026: Removed 'truncate' - show full domain */}
-                      <p className="text-[9px] text-gray-500 dark:text-gray-400 break-all">{comp}</p>
+                    {/* January 21st, 2026: Single line layout - name and domain inline */}
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <p className="text-xs font-bold text-gray-900 dark:text-white">{displayName}</p>
+                      <span className="text-gray-300 dark:text-gray-600">•</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{comp}</p>
                     </div>
-                    <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X size={10} />
+                    {/* Remove button - appears on hover */}
+                    <div className="w-5 h-5 bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <X size={12} />
                     </div>
                   </button>
                 );
