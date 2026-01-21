@@ -7,14 +7,25 @@
  * Updated: January 19th, 2026 - Migrated to Supabase Magic Link
  * Updated: January 19th, 2026 - Performance fix: Show form immediately
  * Updated: January 19th, 2026 - Dynamic messaging based on mode (signin/signup)
+ * Updated: January 21st, 2026 - Added i18n translations (EN/DE support)
+ * 
+ * i18n TRANSLATIONS (January 21st, 2026):
+ * ---------------------------------------
+ * Added multi-language support per client request.
+ * All UI text now comes from translation files:
+ * - src/dictionaries/en.ts (English)
+ * - src/dictionaries/de.ts (German)
+ * 
+ * Uses the useLanguage() hook from LanguageContext.
+ * Language is auto-detected from browser or can be changed via language toggle.
  * 
  * DYNAMIC MESSAGING (January 19th, 2026):
  * ---------------------------------------
  * This page handles both sign-in and sign-up with Magic Link.
  * The flow is identical, but the messaging should be different:
  * 
- * - /sign-in (no mode) → "Welcome Back" (returning user)
- * - /sign-in?mode=signup → "Start Your Free Trial" (new user)
+ * - /sign-in (no mode) → Uses t.auth.signIn translations (returning user)
+ * - /sign-in?mode=signup → Uses t.auth.signUp translations (new user)
  * 
  * The ?mode=signup param is added by /sign-up redirect.
  * 
@@ -66,6 +77,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Sparkles, Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // =============================================================================
 // MAGIC LINK FORM STATES
@@ -76,6 +88,11 @@ export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
+  
+  // ===========================================================================
+  // i18n TRANSLATIONS - January 21st, 2026
+  // ===========================================================================
+  const { t } = useLanguage();
   
   // ===========================================================================
   // STATE - January 19th, 2026
@@ -102,28 +119,29 @@ export default function SignInPage() {
 
   // ===========================================================================
   // EDGE CASE 3: Handle error from callback - January 19th, 2026
+  // Updated: January 21st, 2026 - Use translated error messages
   // ===========================================================================
   // If the auth callback failed, it redirects here with ?error=...
-  // We show a user-friendly error message
+  // We show a user-friendly error message (now translated)
   useEffect(() => {
     const errorParam = searchParams?.get('error');
     if (errorParam) {
-      // Map error codes to user-friendly messages
+      // Map error codes to translated messages (January 21st, 2026)
       const errorMessages: Record<string, string> = {
-        'auth_failed': 'Authentication failed. Please try again.',
-        'config': 'Configuration error. Please contact support.',
-        'invalid_token': 'The magic link has expired. Please request a new one.',
-        'access_denied': 'Access denied. Please try again.',
+        'auth_failed': t.auth.signIn.authFailed,
+        'config': t.auth.signIn.configError,
+        'invalid_token': t.auth.signIn.invalidToken,
+        'access_denied': t.auth.signIn.accessDenied,
       };
       
-      setErrorMessage(errorMessages[errorParam] || 'Something went wrong. Please try again.');
+      setErrorMessage(errorMessages[errorParam] || t.auth.signIn.genericError);
       setFormState('error');
       
       // Clean up the URL (remove error param) without triggering navigation
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   // ===========================================================================
   // BACKGROUND AUTH CHECK - January 19th, 2026
@@ -203,9 +221,9 @@ export default function SignInPage() {
       return;
     }
     
-    // Validate email
+    // Validate email (January 21st, 2026: Use translated error)
     if (!email || !email.includes('@')) {
-      setErrorMessage('Please enter a valid email address');
+      setErrorMessage(t.auth.signIn.invalidEmail);
       setFormState('error');
       return;
     }
@@ -226,7 +244,7 @@ export default function SignInPage() {
 
       if (error) {
         console.error('[Sign In] Error sending magic link:', error);
-        setErrorMessage(error.message || 'Failed to send magic link');
+        setErrorMessage(error.message || t.auth.signIn.genericError);
         setFormState('error');
         return;
       }
@@ -237,7 +255,7 @@ export default function SignInPage() {
       
     } catch (err) {
       console.error('[Sign In] Unexpected error:', err);
-      setErrorMessage('Something went wrong. Please try again.');
+      setErrorMessage(t.auth.signIn.genericError);
       setFormState('error');
     }
   };
@@ -251,13 +269,14 @@ export default function SignInPage() {
   
   // Only show a minimal redirect indicator if we KNOW user is authenticated
   // and we're actively redirecting (not during initial check)
+  // January 21st, 2026: Use translated redirect message
   if (isAuthenticated && isRedirectingRef.current) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0a0a0a]">
         <div className="text-center">
           <div className="w-8 h-8 mx-auto border-2 border-[#ffbf23] border-t-transparent animate-spin mb-4"></div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Already signed in, redirecting...
+            {t.auth.signIn.alreadySignedIn}
           </p>
         </div>
       </div>
@@ -268,6 +287,7 @@ export default function SignInPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-[#0a0a0a] px-4">
       {/* ================================================================= */}
       {/* HEADER WITH LOGO - NEO-BRUTALIST */}
+      {/* January 21st, 2026: Using translated text */}
       {/* ================================================================= */}
       <div className="w-full max-w-md mb-8">
         <div className="flex items-center justify-between">
@@ -276,7 +296,7 @@ export default function SignInPage() {
             className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-700 px-3 py-1.5"
           >
             <ArrowLeft size={16} />
-            Back to Home
+            {t.auth.signIn.backToHome}
           </Link>
           
           {/* Logo - NEO-BRUTALIST */}
@@ -299,24 +319,25 @@ export default function SignInPage() {
           
           {/* ============================================================= */}
           {/* Form Header - Dynamic based on mode (January 19th, 2026) */}
-          {/* /sign-in → "Welcome Back" (returning user) */}
-          {/* /sign-in?mode=signup → "Start Your Free Trial" (new user) */}
+          {/* January 21st, 2026: Now using translated strings */}
+          {/* /sign-in → t.auth.signIn translations (returning user) */}
+          {/* /sign-in?mode=signup → t.auth.signUp translations (new user) */}
           {/* ============================================================= */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
-              {isSignupMode ? 'Start Your Free Trial' : 'Welcome Back'}
+              {isSignupMode ? t.auth.signUp.title : t.auth.signIn.title}
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {isSignupMode 
-                ? 'Enter your email to get started — no credit card required'
-                : 'Enter your email to receive a magic link'
+                ? t.auth.signUp.subtitle
+                : t.auth.signIn.subtitle
               }
             </p>
           </div>
 
           {/* ============================================================= */}
           {/* SUCCESS STATE - Magic link sent (January 19th, 2026) */}
-          {/* Message varies based on signup vs signin mode */}
+          {/* January 21st, 2026: Now using translated strings */}
           {/* ============================================================= */}
           {formState === 'sent' ? (
             <div className="text-center py-4">
@@ -324,19 +345,19 @@ export default function SignInPage() {
                 <CheckCircle size={32} className="text-black" />
               </div>
               <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">
-                Check Your Email
+                {t.auth.signIn.checkEmail}
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                We sent a magic link to<br />
+                {t.auth.signIn.magicLinkSent}<br />
                 <span className="font-bold text-gray-900 dark:text-white">{email}</span>
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-500">
                 {isSignupMode 
-                  ? 'Click the link in the email to create your account.'
-                  : 'Click the link in the email to sign in.'
+                  ? t.auth.signUp.clickToCreate
+                  : t.auth.signIn.clickToSignIn
                 }
                 <br />
-                Don&apos;t see it? Check your spam folder.
+                {t.auth.signIn.checkSpam}
               </p>
               
               {/* Send again button */}
@@ -347,12 +368,13 @@ export default function SignInPage() {
                 }}
                 className="mt-6 text-sm font-bold text-[#ffbf23] hover:underline"
               >
-                Use a different email
+                {t.auth.signIn.useDifferentEmail}
               </button>
             </div>
           ) : (
             /* ============================================================= */
             /* EMAIL INPUT FORM */
+            /* January 21st, 2026: Using translated labels and placeholders */
             /* ============================================================= */
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Input - NEO-BRUTALIST */}
@@ -361,7 +383,7 @@ export default function SignInPage() {
                   htmlFor="email" 
                   className="block text-sm font-bold text-gray-900 dark:text-white mb-2"
                 >
-                  Email Address
+                  {t.auth.signIn.emailLabel}
                 </label>
                 <div className="relative">
                   <Mail 
@@ -376,7 +398,7 @@ export default function SignInPage() {
                       setEmail(e.target.value);
                       if (formState === 'error') setFormState('idle');
                     }}
-                    placeholder="you@example.com"
+                    placeholder={t.auth.signIn.emailPlaceholder}
                     className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#ffbf23] transition-colors font-medium"
                     disabled={formState === 'sending'}
                     autoComplete="email"
@@ -397,6 +419,7 @@ export default function SignInPage() {
               </div>
 
               {/* Submit Button - NEO-BRUTALIST */}
+              {/* January 21st, 2026: Using translated button text */}
               <button
                 type="submit"
                 disabled={formState === 'sending' || !email}
@@ -405,12 +428,12 @@ export default function SignInPage() {
                 {formState === 'sending' ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    Sending...
+                    {t.auth.signIn.sending}
                   </>
                 ) : (
                   <>
                     <Mail size={18} />
-                    Send Magic Link
+                    {t.auth.signIn.sendMagicLink}
                   </>
                 )}
               </button>
@@ -419,20 +442,21 @@ export default function SignInPage() {
 
           {/* ============================================================= */}
           {/* FOOTER INFO - Dynamic based on mode (January 19th, 2026) */}
+          {/* January 21st, 2026: Using translated strings */}
           {/* ============================================================= */}
           <div className="mt-8 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
             <p className="text-xs text-center text-gray-500 dark:text-gray-500">
               {isSignupMode ? (
                 <>
-                  No password needed! We&apos;ll send you a secure link to get started.
+                  {t.auth.signUp.noPasswordNeeded}
                   <br />
-                  Already have an account? <a href="/sign-in" className="text-[#ffbf23] hover:underline font-bold">Sign in</a>
+                  {t.auth.signUp.alreadyHaveAccount} <a href="/sign-in" className="text-[#ffbf23] hover:underline font-bold">{t.auth.signUp.signIn}</a>
                 </>
               ) : (
                 <>
-                  No password needed! We&apos;ll send you a secure link to sign in.
+                  {t.auth.signIn.noPasswordNeeded}
                   <br />
-                  New here? <a href="/sign-up" className="text-[#ffbf23] hover:underline font-bold">Start your free trial</a>
+                  {t.auth.signIn.newHere} <a href="/sign-up" className="text-[#ffbf23] hover:underline font-bold">{t.auth.signIn.startTrial}</a>
                 </>
               )}
             </p>
@@ -442,13 +466,14 @@ export default function SignInPage() {
 
       {/* ================================================================= */}
       {/* LEGAL LINKS */}
+      {/* January 21st, 2026: Using translated strings */}
       {/* ================================================================= */}
       <div className="mt-8 flex gap-4 text-xs text-gray-500 dark:text-gray-500">
         <Link href="/privacy" className="hover:text-gray-900 dark:hover:text-white">
-          Privacy Policy
+          {t.auth.signIn.privacyPolicy}
         </Link>
         <Link href="/terms" className="hover:text-gray-900 dark:hover:text-white">
-          Terms of Service
+          {t.auth.signIn.termsOfService}
         </Link>
       </div>
     </div>

@@ -1014,6 +1014,51 @@ export const en: Dictionary = {
       title: 'Loading...',
       subtitle: 'Preparing your workspace',
     },
+    // =========================================================================
+    // SIGN-IN PAGE TRANSLATIONS - January 21st, 2026
+    // 
+    // Added per client request to support German language on auth pages.
+    // The sign-in page handles both sign-in and sign-up (magic link flow).
+    // 
+    // Mode detection:
+    // - /sign-in (no mode) → Uses 'signIn' translations (returning user)
+    // - /sign-in?mode=signup → Uses 'signUp' translations (new user)
+    // =========================================================================
+    signIn: {
+      backToHome: 'Back to Home',
+      title: 'Welcome Back',
+      subtitle: 'Enter your email to receive a magic link',
+      emailLabel: 'Email Address',
+      emailPlaceholder: 'you@example.com',
+      sendMagicLink: 'Send Magic Link',
+      sending: 'Sending...',
+      checkEmail: 'Check Your Email',
+      magicLinkSent: 'We sent a magic link to',
+      clickToSignIn: 'Click the link in the email to sign in.',
+      checkSpam: "Don't see it? Check your spam folder.",
+      useDifferentEmail: 'Use a different email',
+      noPasswordNeeded: "No password needed! We'll send you a secure link to sign in.",
+      newHere: 'New here?',
+      startTrial: 'Start your free trial',
+      privacyPolicy: 'Privacy Policy',
+      termsOfService: 'Terms of Service',
+      alreadySignedIn: 'Already signed in, redirecting...',
+      // Error messages
+      invalidEmail: 'Please enter a valid email address',
+      authFailed: 'Authentication failed. Please try again.',
+      configError: 'Configuration error. Please contact support.',
+      invalidToken: 'The magic link has expired. Please request a new one.',
+      accessDenied: 'Access denied. Please try again.',
+      genericError: 'Something went wrong. Please try again.',
+    },
+    signUp: {
+      title: 'Start Your Free Trial',
+      subtitle: 'Enter your email to get started — no credit card required',
+      clickToCreate: 'Click the link in the email to create your account.',
+      noPasswordNeeded: "No password needed! We'll send you a secure link to get started.",
+      alreadyHaveAccount: 'Already have an account?',
+      signIn: 'Sign in',
+    },
   },
 
   // =========================================================================

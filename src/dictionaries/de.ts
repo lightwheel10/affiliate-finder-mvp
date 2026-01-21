@@ -1014,6 +1014,47 @@ export const de: Dictionary = {
       title: 'Wird geladen...',
       subtitle: 'Ihr Arbeitsbereich wird vorbereitet',
     },
+    // =========================================================================
+    // SIGN-IN PAGE TRANSLATIONS - January 21st, 2026
+    // 
+    // German translations for authentication pages.
+    // Uses formal "Sie" form consistent with the rest of the app.
+    // =========================================================================
+    signIn: {
+      backToHome: 'Zurück zur Startseite',
+      title: 'Willkommen zurück',
+      subtitle: 'Geben Sie Ihre E-Mail-Adresse ein, um einen Magic Link zu erhalten',
+      emailLabel: 'E-Mail-Adresse',
+      emailPlaceholder: 'sie@beispiel.de',
+      sendMagicLink: 'Magic Link senden',
+      sending: 'Wird gesendet...',
+      checkEmail: 'Überprüfen Sie Ihre E-Mails',
+      magicLinkSent: 'Wir haben einen Magic Link gesendet an',
+      clickToSignIn: 'Klicken Sie auf den Link in der E-Mail, um sich anzumelden.',
+      checkSpam: 'Nicht gefunden? Überprüfen Sie Ihren Spam-Ordner.',
+      useDifferentEmail: 'Andere E-Mail-Adresse verwenden',
+      noPasswordNeeded: 'Kein Passwort erforderlich! Wir senden Ihnen einen sicheren Link zum Anmelden.',
+      newHere: 'Neu hier?',
+      startTrial: 'Kostenlose Testversion starten',
+      privacyPolicy: 'Datenschutzrichtlinie',
+      termsOfService: 'Nutzungsbedingungen',
+      alreadySignedIn: 'Bereits angemeldet, wird weitergeleitet...',
+      // Error messages
+      invalidEmail: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
+      authFailed: 'Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      configError: 'Konfigurationsfehler. Bitte kontaktieren Sie den Support.',
+      invalidToken: 'Der Magic Link ist abgelaufen. Bitte fordern Sie einen neuen an.',
+      accessDenied: 'Zugriff verweigert. Bitte versuchen Sie es erneut.',
+      genericError: 'Etwas ist schief gelaufen. Bitte versuchen Sie es erneut.',
+    },
+    signUp: {
+      title: 'Starten Sie Ihre kostenlose Testversion',
+      subtitle: 'Geben Sie Ihre E-Mail-Adresse ein — keine Kreditkarte erforderlich',
+      clickToCreate: 'Klicken Sie auf den Link in der E-Mail, um Ihr Konto zu erstellen.',
+      noPasswordNeeded: 'Kein Passwort erforderlich! Wir senden Ihnen einen sicheren Link zum Starten.',
+      alreadyHaveAccount: 'Bereits ein Konto?',
+      signIn: 'Anmelden',
+    },
   },
 
   // =========================================================================

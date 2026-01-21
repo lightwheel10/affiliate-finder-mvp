@@ -989,6 +989,43 @@ export interface Dictionary {
       title: string;
       subtitle: string;
     };
+    // =========================================================================
+    // SIGN-IN PAGE TRANSLATIONS - January 21st, 2026
+    // =========================================================================
+    signIn: {
+      backToHome: string;
+      title: string;
+      subtitle: string;
+      emailLabel: string;
+      emailPlaceholder: string;
+      sendMagicLink: string;
+      sending: string;
+      checkEmail: string;
+      magicLinkSent: string;
+      clickToSignIn: string;
+      checkSpam: string;
+      useDifferentEmail: string;
+      noPasswordNeeded: string;
+      newHere: string;
+      startTrial: string;
+      privacyPolicy: string;
+      termsOfService: string;
+      alreadySignedIn: string;
+      invalidEmail: string;
+      authFailed: string;
+      configError: string;
+      invalidToken: string;
+      accessDenied: string;
+      genericError: string;
+    };
+    signUp: {
+      title: string;
+      subtitle: string;
+      clickToCreate: string;
+      noPasswordNeeded: string;
+      alreadyHaveAccount: string;
+      signIn: string;
+    };
   };
 
   // =========================================================================

@@ -161,8 +161,9 @@ interface OnboardingScreenProps {
 export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1, userData, onComplete }: OnboardingScreenProps) => {
   // ==========================================================================
   // i18n TRANSLATIONS (January 9th, 2026)
+  // January 21st, 2026: Also getting 'language' for localized country/language names
   // ==========================================================================
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(initialStep);
@@ -332,79 +333,111 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
   // ==========================================================================
   // COUNTRIES & LANGUAGES (January 3rd, 2026)
+  // Updated: January 21st, 2026 - Added translations (EN/DE) per client request
+  // 
+  // CHANGES (January 21st, 2026):
+  // - Added 'nameDE' field for German translations of country names
+  // - Country names now display based on current app language
+  // - If app is in German → show German names (Deutschland, Frankreich, etc.)
+  // - If app is in English → show English names (Germany, France, etc.)
   // 
   // Expanded list of developed market countries with ISO 3166-1 alpha-2 codes.
   // Focused on markets with strong affiliate marketing potential.
-  // Excludes developing markets to focus on high-value targets.
-  // 
   // Flag images are loaded from flagcdn.com CDN using ISO country codes.
-  // This provides high-quality SVG flags with zero bundle size impact.
   // ==========================================================================
   const countries = [
     // North America
-    { name: 'United States', code: 'us' },
-    { name: 'Canada', code: 'ca' },
+    { name: 'United States', nameDE: 'Vereinigte Staaten', code: 'us' },
+    { name: 'Canada', nameDE: 'Kanada', code: 'ca' },
     // Europe - Major Markets
-    { name: 'United Kingdom', code: 'gb' },
-    { name: 'Germany', code: 'de' },
-    { name: 'France', code: 'fr' },
-    { name: 'Netherlands', code: 'nl' },
-    { name: 'Belgium', code: 'be' },
-    { name: 'Switzerland', code: 'ch' },
-    { name: 'Austria', code: 'at' },
-    { name: 'Ireland', code: 'ie' },
+    { name: 'United Kingdom', nameDE: 'Vereinigtes Königreich', code: 'gb' },
+    { name: 'Germany', nameDE: 'Deutschland', code: 'de' },
+    { name: 'France', nameDE: 'Frankreich', code: 'fr' },
+    { name: 'Netherlands', nameDE: 'Niederlande', code: 'nl' },
+    { name: 'Belgium', nameDE: 'Belgien', code: 'be' },
+    { name: 'Switzerland', nameDE: 'Schweiz', code: 'ch' },
+    { name: 'Austria', nameDE: 'Österreich', code: 'at' },
+    { name: 'Ireland', nameDE: 'Irland', code: 'ie' },
     // Nordics
-    { name: 'Denmark', code: 'dk' },
-    { name: 'Sweden', code: 'se' },
-    { name: 'Norway', code: 'no' },
-    { name: 'Finland', code: 'fi' },
+    { name: 'Denmark', nameDE: 'Dänemark', code: 'dk' },
+    { name: 'Sweden', nameDE: 'Schweden', code: 'se' },
+    { name: 'Norway', nameDE: 'Norwegen', code: 'no' },
+    { name: 'Finland', nameDE: 'Finnland', code: 'fi' },
     // Southern Europe
-    { name: 'Spain', code: 'es' },
-    { name: 'Italy', code: 'it' },
-    { name: 'Portugal', code: 'pt' },
+    { name: 'Spain', nameDE: 'Spanien', code: 'es' },
+    { name: 'Italy', nameDE: 'Italien', code: 'it' },
+    { name: 'Portugal', nameDE: 'Portugal', code: 'pt' },
     // Central/Eastern Europe
-    { name: 'Poland', code: 'pl' },
-    { name: 'Czech Republic', code: 'cz' },
+    { name: 'Poland', nameDE: 'Polen', code: 'pl' },
+    { name: 'Czech Republic', nameDE: 'Tschechien', code: 'cz' },
     // Asia-Pacific
-    { name: 'Australia', code: 'au' },
-    { name: 'New Zealand', code: 'nz' },
-    { name: 'Japan', code: 'jp' },
-    { name: 'South Korea', code: 'kr' },
-    { name: 'Singapore', code: 'sg' },
+    { name: 'Australia', nameDE: 'Australien', code: 'au' },
+    { name: 'New Zealand', nameDE: 'Neuseeland', code: 'nz' },
+    { name: 'Japan', nameDE: 'Japan', code: 'jp' },
+    { name: 'South Korea', nameDE: 'Südkorea', code: 'kr' },
+    { name: 'Singapore', nameDE: 'Singapur', code: 'sg' },
     // Middle East
-    { name: 'United Arab Emirates', code: 'ae' },
-    { name: 'Israel', code: 'il' },
-    { name: 'Saudi Arabia', code: 'sa' },
+    { name: 'United Arab Emirates', nameDE: 'Vereinigte Arabische Emirate', code: 'ae' },
+    { name: 'Israel', nameDE: 'Israel', code: 'il' },
+    { name: 'Saudi Arabia', nameDE: 'Saudi-Arabien', code: 'sa' },
   ];
   
-  // Languages with native script characters for visual distinction (January 3rd, 2026)
+  // ==========================================================================
+  // LANGUAGES (January 3rd, 2026)
+  // Updated: January 21st, 2026 - Added flags and translations per client request
+  // 
+  // CHANGES (January 21st, 2026):
+  // - Added 'code' field for country flag representing the language
+  // - Added 'nameDE' field for German translations of language names
+  // - Replaced letter symbols with country flags for visual clarity
+  // - Language names now display based on current app language
+  // 
+  // Note: Language flags use representative country codes:
+  // - English → GB (could also be US, but GB is more neutral)
+  // - Spanish → ES (Spain, not Latin America)
+  // - Portuguese → PT (Portugal, not Brazil)
+  // ==========================================================================
   const languages = [
     // Major Western Languages
-    { name: 'English', symbol: 'Aa' },
-    { name: 'Spanish', symbol: 'Ñ' },
-    { name: 'German', symbol: 'Ä' },
-    { name: 'French', symbol: 'Ç' },
-    { name: 'Portuguese', symbol: 'Ã' },
-    { name: 'Italian', symbol: 'È' },
-    { name: 'Dutch', symbol: 'IJ' },
+    { name: 'English', nameDE: 'Englisch', code: 'gb' },
+    { name: 'Spanish', nameDE: 'Spanisch', code: 'es' },
+    { name: 'German', nameDE: 'Deutsch', code: 'de' },
+    { name: 'French', nameDE: 'Französisch', code: 'fr' },
+    { name: 'Portuguese', nameDE: 'Portugiesisch', code: 'pt' },
+    { name: 'Italian', nameDE: 'Italienisch', code: 'it' },
+    { name: 'Dutch', nameDE: 'Niederländisch', code: 'nl' },
     // Nordic Languages
-    { name: 'Swedish', symbol: 'Å' },
-    { name: 'Danish', symbol: 'Ø' },
-    { name: 'Norwegian', symbol: 'Æ' },
-    { name: 'Finnish', symbol: 'Ä' },
+    { name: 'Swedish', nameDE: 'Schwedisch', code: 'se' },
+    { name: 'Danish', nameDE: 'Dänisch', code: 'dk' },
+    { name: 'Norwegian', nameDE: 'Norwegisch', code: 'no' },
+    { name: 'Finnish', nameDE: 'Finnisch', code: 'fi' },
     // Central/Eastern European
-    { name: 'Polish', symbol: 'Ł' },
-    { name: 'Czech', symbol: 'Č' },
+    { name: 'Polish', nameDE: 'Polnisch', code: 'pl' },
+    { name: 'Czech', nameDE: 'Tschechisch', code: 'cz' },
     // Asian Languages
-    { name: 'Japanese', symbol: 'あ' },
-    { name: 'Korean', symbol: '한' },
+    { name: 'Japanese', nameDE: 'Japanisch', code: 'jp' },
+    { name: 'Korean', nameDE: 'Koreanisch', code: 'kr' },
     // Middle Eastern
-    { name: 'Arabic', symbol: 'ع' },
-    { name: 'Hebrew', symbol: 'ע' },
+    { name: 'Arabic', nameDE: 'Arabisch', code: 'sa' },
+    { name: 'Hebrew', nameDE: 'Hebräisch', code: 'il' },
   ];
   
   // Helper function to get flag image URL from flagcdn.com (January 3rd, 2026)
   const getFlagUrl = (code: string) => `https://flagcdn.com/w40/${code}.png`;
+  
+  // ==========================================================================
+  // LOCALIZED NAME HELPER (January 21st, 2026)
+  // 
+  // Returns the appropriate name based on current app language.
+  // Uses the 'language' state from LanguageContext (via useLanguage hook).
+  // 
+  // Usage:
+  // - getLocalizedName(country) → "Germany" or "Deutschland"
+  // - getLocalizedName(language) → "German" or "Deutsch"
+  // ==========================================================================
+  const getLocalizedName = (item: { name: string; nameDE: string }) => {
+    return language === 'de' ? item.nameDE : item.name;
+  };
 
   // ==========================================================================
   // BRAND INPUT HANDLER (January 3rd, 2026)
@@ -1283,6 +1316,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               !targetCountry ? "text-gray-400" : "text-gray-900 dark:text-white"
             )}
           >
+            {/* January 21st, 2026: Updated to show localized country name */}
             {targetCountry ? (
               <span className="flex items-center gap-2">
                 <img 
@@ -1290,7 +1324,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   alt="" 
                   className="w-5 h-auto"
                 />
-                <span>{targetCountry}</span>
+                <span>{getLocalizedName(countries.find(c => c.name === targetCountry) || { name: targetCountry, nameDE: targetCountry })}</span>
               </span>
             ) : t.onboarding.step2.countryPlaceholder}
             <ChevronDown className={cn("text-gray-400 transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
@@ -1313,9 +1347,13 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   />
                 </div>
               </div>
-              {/* Options - Flag images from flagcdn.com */}
+              {/* Options - Flag images from flagcdn.com
+                  January 21st, 2026: Updated to show localized names and search both EN/DE */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
-                {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).map((c) => (
+                {countries.filter(c => 
+                  c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+                  c.nameDE.toLowerCase().includes(countrySearch.toLowerCase())
+                ).map((c) => (
                   <button
                     key={c.name}
                     type="button"
@@ -1328,12 +1366,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   >
                     <span className="flex items-center gap-2">
                       <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto" />
-                      <span>{c.name}</span>
+                      <span>{getLocalizedName(c)}</span>
                     </span>
                     {targetCountry === c.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
-                {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
+                {countries.filter(c => 
+                  c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+                  c.nameDE.toLowerCase().includes(countrySearch.toLowerCase())
+                ).length === 0 && (
                   <p className="px-4 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
                 )}
               </div>
@@ -1341,7 +1382,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           )}
         </div>
 
-        {/* Language Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Language Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026)
+            January 21st, 2026: Added flags and localized language names per client request */}
         <div className="space-y-1.5 relative" ref={langDropdownRef}>
           <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step2.languageLabel}</label>
           <button
@@ -1356,23 +1398,30 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               !targetLanguage ? "text-gray-400" : "text-gray-900 dark:text-white"
             )}
           >
+            {/* January 21st, 2026: Updated to show flag + localized language name */}
             {targetLanguage ? (
               <span className="flex items-center gap-2">
-                <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                  {languages.find(l => l.name === targetLanguage)?.symbol}
-                </span>
-                <span>{targetLanguage}</span>
+                <img 
+                  src={getFlagUrl(languages.find(l => l.name === targetLanguage)?.code || '')} 
+                  alt="" 
+                  className="w-5 h-auto"
+                />
+                <span>{getLocalizedName(languages.find(l => l.name === targetLanguage) || { name: targetLanguage, nameDE: targetLanguage })}</span>
               </span>
             ) : t.onboarding.step2.languagePlaceholder}
             <ChevronDown className={cn("text-gray-400 transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
           </button>
           
-          {/* Language Dropdown Menu - NEO-BRUTALIST (January 9th, 2026) */}
+          {/* Language Dropdown Menu - NEO-BRUTALIST (January 9th, 2026)
+              January 21st, 2026: Updated to show flags + localized names per client request */}
           {isLangDropdownOpen && (
             <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
-              {/* Options first (dropdown opens upward) - Native script symbols */}
+              {/* Options first (dropdown opens upward) - Now with flags instead of symbols */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
-                {languages.filter(l => l.name.toLowerCase().includes(langSearch.toLowerCase())).map((l) => (
+                {languages.filter(l => 
+                  l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
+                  l.nameDE.toLowerCase().includes(langSearch.toLowerCase())
+                ).map((l) => (
                   <button
                     key={l.name}
                     type="button"
@@ -1383,16 +1432,17 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     }}
                     className="w-full text-left px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
-                    <span className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 group-hover:bg-[#ffbf23]/30 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-400 transition-colors border border-gray-200 dark:border-gray-700">
-                        {l.symbol}
-                      </span>
-                      <span>{l.name}</span>
+                    <span className="flex items-center gap-2">
+                      <img src={getFlagUrl(l.code)} alt="" className="w-5 h-auto" />
+                      <span>{getLocalizedName(l)}</span>
                     </span>
                     {targetLanguage === l.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
-                {languages.filter(l => l.name.toLowerCase().includes(langSearch.toLowerCase())).length === 0 && (
+                {languages.filter(l => 
+                  l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
+                  l.nameDE.toLowerCase().includes(langSearch.toLowerCase())
+                ).length === 0 && (
                   <p className="px-4 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
                 )}
               </div>
