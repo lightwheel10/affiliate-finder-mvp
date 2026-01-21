@@ -68,7 +68,7 @@ const SidebarSkeleton: React.FC = () => (
         </div>
         <span className="font-black text-lg tracking-tighter leading-none">CrewCast Studio</span>
       </div>
-      <p className="text-[10px] text-gray-500 font-mono pl-8 leading-tight">backed by selecdoo AI</p>
+      {/* January 21st, 2026: Removed "backed by selecdoo AI" tagline per client request */}
     </div>
 
     {/* Navigation Skeleton */}
@@ -121,7 +121,7 @@ const SidebarSkeletonOld: React.FC = () => (
         <img src="/logo.jpg" alt="CrewCast Studio" className="w-7 h-7 rounded-lg shadow-md shadow-[#1A1D21]/10 shrink-0 object-cover" />
         <div className="flex flex-col">
           <span className="font-bold text-sm tracking-tight leading-none">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
-          <span className="text-[9px] font-medium text-slate-400 tracking-wide mt-0.5">backed by selecdoo AI</span>
+          {/* January 21st, 2026: Removed "backed by selecdoo AI" tagline per client request */}
         </div>
       </div>
     </div>
@@ -256,7 +256,7 @@ export const Sidebar: React.FC = () => {
             </div>
             <span className="font-black text-lg tracking-tighter leading-none">CrewCast Studio</span>
           </div>
-          <p className="text-[10px] text-gray-500 font-mono pl-8 leading-tight">backed by selecdoo AI</p>
+          {/* January 21st, 2026: Removed "backed by selecdoo AI" tagline per client request */}
         </div>
 
         {/* Main Navigation - Neo-brutalist style */}

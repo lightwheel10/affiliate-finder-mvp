@@ -91,9 +91,10 @@ const firaCode = Fira_Code({
   weight: ["400", "700"],
 });
 
+// January 21st, 2026: Removed "backed by selecdoo AI" per client request
 export const metadata: Metadata = {
-  title: "CrewCast Studio | backed by selecdoo AI",
-  description: "Find the best affiliates for your campaign - backed by selecdoo AI",
+  title: "CrewCast Studio",
+  description: "Find the best affiliates for your campaign",
 };
 
 // =============================================================================

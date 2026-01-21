@@ -231,8 +231,9 @@ export const en: Dictionary = {
       ctaSecondary: 'Get a Demo',
       trustNote: '7-day free trial • Cancel anytime',
     },
+    // January 21st, 2026: Removed "Backed by selecdoo AI" from brandDescription per client request
     footer: {
-      brandDescription: 'The new standard for affiliate discovery. Backed by selecdoo AI. Helping brands scale their partner networks 10x faster.',
+      brandDescription: 'The new standard for affiliate discovery. Helping brands scale their partner networks 10x faster.',
       product: 'Product',
       legal: 'Legal',
       privacyPolicy: 'Privacy Policy',
@@ -891,9 +892,10 @@ export const en: Dictionary = {
   // =========================================================================
   // SIDEBAR
   // =========================================================================
+  // January 21st, 2026: Removed selecdoo branding per client request
   sidebar: {
     brand: 'CrewCast Studio',
-    tagline: 'backed by selecdoo AI',
+    tagline: '', // Was: 'backed by selecdoo AI'
     planCard: {
       planSuffix: 'Plan',
       daysLeft: 'days left',

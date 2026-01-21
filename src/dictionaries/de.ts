@@ -230,8 +230,9 @@ export const de: Dictionary = {
       ctaSecondary: 'Demo anfordern',
       trustNote: '7 Tage kostenlos testen • Jederzeit kündbar',
     },
+    // January 21st, 2026: Removed "Unterstützt von selecdoo AI" from brandDescription per client request
     footer: {
-      brandDescription: 'Der neue Standard für Affiliate-Entdeckung. Unterstützt von selecdoo AI. Wir helfen Marken, ihre Partner-Netzwerke 10x schneller zu skalieren.',
+      brandDescription: 'Der neue Standard für Affiliate-Entdeckung. Wir helfen Marken, ihre Partner-Netzwerke 10x schneller zu skalieren.',
       product: 'Produkt',
       legal: 'Rechtliches',
       privacyPolicy: 'Datenschutzerklärung',
@@ -891,9 +892,10 @@ export const de: Dictionary = {
   // =========================================================================
   // SIDEBAR
   // =========================================================================
+  // January 21st, 2026: Removed selecdoo branding per client request
   sidebar: {
     brand: 'CrewCast Studio',
-    tagline: 'powered by selecdoo AI',
+    tagline: '', // Was: 'powered by selecdoo AI'
     planCard: {
       planSuffix: 'Plan',
       daysLeft: 'Tage übrig',
