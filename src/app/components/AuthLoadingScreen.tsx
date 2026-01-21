@@ -58,7 +58,7 @@ export const AuthLoadingScreen = () => {
             <span className="font-black text-lg tracking-tight leading-none text-gray-900 dark:text-white uppercase">
               CrewCast <span className="text-black dark:text-white">Studio</span>
             </span>
-            {/* January 21st, 2026: Removed "backed by selecdoo AI" tagline per client request */}
+            {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
           </div>
         </div>
         

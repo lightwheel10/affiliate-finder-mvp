@@ -83,7 +83,7 @@ const PageSkeleton = () => (
           />
           <div className="flex flex-col">
             <span className="font-black text-sm tracking-tight leading-none uppercase">CrewCast <span className="text-black dark:text-white">Studio</span></span>
-            {/* January 21st, 2026: Removed "backed by selecdoo AI" tagline per client request */}
+            {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
           </div>
         </div>
       </div>
