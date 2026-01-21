@@ -1011,6 +1011,16 @@ export interface Dictionary {
       privacyPolicy: string;
       termsOfService: string;
       alreadySignedIn: string;
+      // OTP (6-digit code) - January 22nd, 2026
+      enterCode: string;
+      otpLabel: string;
+      verifyCode: string;
+      verifying: string;
+      backToMagicLink: string;
+      invalidOtp: string;
+      otpExpired: string;
+      otpInvalid: string;
+      // Error messages
       invalidEmail: string;
       authFailed: string;
       configError: string;

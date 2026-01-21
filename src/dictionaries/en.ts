@@ -1045,6 +1045,15 @@ export const en: Dictionary = {
       privacyPolicy: 'Privacy Policy',
       termsOfService: 'Terms of Service',
       alreadySignedIn: 'Already signed in, redirecting...',
+      // OTP (6-digit code) - January 22nd, 2026
+      enterCode: 'Enter Code Instead',
+      otpLabel: '6-Digit Code',
+      verifyCode: 'Verify Code',
+      verifying: 'Verifying...',
+      backToMagicLink: '← Back to magic link',
+      invalidOtp: 'Please enter a valid 6-digit code',
+      otpExpired: 'Code expired. Please request a new one.',
+      otpInvalid: 'Invalid code. Please check and try again.',
       // Error messages
       invalidEmail: 'Please enter a valid email address',
       authFailed: 'Authentication failed. Please try again.',

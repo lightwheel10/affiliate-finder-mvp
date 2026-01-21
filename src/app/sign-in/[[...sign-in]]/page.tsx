@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * SIGN IN PAGE - MAGIC LINK (Supabase Auth)
+ * SIGN IN PAGE - MAGIC LINK + OTP (Supabase Auth)
  * =============================================================================
  * 
  * Created: January 9th, 2026 (Original Stack Auth version)
@@ -8,6 +8,33 @@
  * Updated: January 19th, 2026 - Performance fix: Show form immediately
  * Updated: January 19th, 2026 - Dynamic messaging based on mode (signin/signup)
  * Updated: January 21st, 2026 - Added i18n translations (EN/DE support)
+ * Updated: January 22nd, 2026 - Added OTP (6-digit code) input option
+ * 
+ * OTP ADDITION (January 22nd, 2026):
+ * ----------------------------------
+ * Client requested OTP code input as an alternative to clicking the magic link.
+ * Users coming from "revenuworks terminal" prefer typing a code.
+ * 
+ * HOW IT WORKS:
+ * - Supabase's signInWithOtp() sends an email containing BOTH:
+ *   1. A clickable magic link (existing flow)
+ *   2. A 6-digit OTP code (new flow)
+ * - User can either click the link OR enter the code
+ * - Both methods create the same valid session
+ * 
+ * FLOW WITH OTP:
+ * 1. User enters email, clicks "Send Magic Link"
+ * 2. Email is sent (contains both link AND code)
+ * 3. User sees success screen with "Enter Code" option
+ * 4. User enters 6-digit code
+ * 5. We call verifyOtp() to validate
+ * 6. Session is created, user redirected to home
+ * 
+ * WHY THIS IS SAFE:
+ * - We're NOT changing how emails are sent
+ * - We're NOT changing the magic link callback
+ * - We're just adding a UI to enter the code that's already in the email
+ * - Both flows use the same Supabase session system
  * 
  * i18n TRANSLATIONS (January 21st, 2026):
  * ---------------------------------------
@@ -63,9 +90,10 @@
  * ---------------------
  * 1. User enters their email address
  * 2. We call supabase.auth.signInWithOtp({ email })
- * 3. Supabase sends an email with a magic link
+ * 3. Supabase sends an email with a magic link + OTP code
  * 4. User clicks the link → redirected to /auth/callback
- * 5. Callback exchanges code for session → user is logged in
+ *    OR User enters OTP code → verifyOtp() called directly
+ * 5. Session is created → user is logged in
  * 
  * =============================================================================
  */
@@ -75,14 +103,14 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Sparkles, Mail, Loader2, CheckCircle, AlertCircle, KeyRound } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 // =============================================================================
-// MAGIC LINK FORM STATES
+// FORM STATES - January 22nd, 2026: Added 'verifying' for OTP
 // =============================================================================
-type FormState = 'idle' | 'sending' | 'sent' | 'error';
+type FormState = 'idle' | 'sending' | 'sent' | 'verifying' | 'error';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -96,11 +124,20 @@ export default function SignInPage() {
   
   // ===========================================================================
   // STATE - January 19th, 2026
+  // Updated: January 22nd, 2026 - Added OTP state
   // ===========================================================================
   // Form state
   const [email, setEmail] = useState('');
   const [formState, setFormState] = useState<FormState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  
+  // ===========================================================================
+  // OTP STATE - January 22nd, 2026
+  // ===========================================================================
+  // 6-digit code entered by user
+  const [otpCode, setOtpCode] = useState('');
+  // Whether to show OTP input (after magic link sent)
+  const [showOtpInput, setShowOtpInput] = useState(false);
   
   // ===========================================================================
   // MODE DETECTION - January 19th, 2026
@@ -261,6 +298,62 @@ export default function SignInPage() {
   };
 
   // ===========================================================================
+  // HANDLE OTP VERIFICATION - January 22nd, 2026
+  // ===========================================================================
+  // When user enters the 6-digit code from their email, verify it with Supabase.
+  // This creates a session directly without needing the callback route.
+  const handleOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate OTP format (6 digits)
+    if (!otpCode || otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
+      setErrorMessage(t.auth.signIn.invalidOtp || 'Please enter a valid 6-digit code');
+      setFormState('error');
+      return;
+    }
+
+    setFormState('verifying');
+    setErrorMessage('');
+
+    try {
+      // Verify the OTP code with Supabase
+      // This exchanges the code for a session (same as clicking the magic link)
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.trim().toLowerCase(),
+        token: otpCode,
+        type: 'email', // Type for email OTP verification
+      });
+
+      if (error) {
+        console.error('[Sign In] OTP verification error:', error);
+        // Handle specific error cases
+        if (error.message?.includes('expired')) {
+          setErrorMessage(t.auth.signIn.otpExpired || 'Code expired. Please request a new one.');
+        } else if (error.message?.includes('invalid')) {
+          setErrorMessage(t.auth.signIn.otpInvalid || 'Invalid code. Please check and try again.');
+        } else {
+          setErrorMessage(error.message || t.auth.signIn.genericError);
+        }
+        setFormState('error');
+        return;
+      }
+
+      // Success! Session is automatically set by Supabase
+      if (data.session) {
+        console.log('[Sign In] OTP verified successfully, user:', data.session.user.email);
+        // The auth state listener will detect the new session and redirect
+        // But we can also redirect immediately
+        router.replace('/');
+      }
+      
+    } catch (err) {
+      console.error('[Sign In] OTP verification unexpected error:', err);
+      setErrorMessage(t.auth.signIn.genericError);
+      setFormState('error');
+    }
+  };
+
+  // ===========================================================================
   // RENDER - January 19th, 2026
   // ===========================================================================
   // IMPORTANT: We render the form IMMEDIATELY without waiting for auth check.
@@ -338,8 +431,9 @@ export default function SignInPage() {
           {/* ============================================================= */}
           {/* SUCCESS STATE - Magic link sent (January 19th, 2026) */}
           {/* January 21st, 2026: Now using translated strings */}
+          {/* January 22nd, 2026: Added OTP input option */}
           {/* ============================================================= */}
-          {formState === 'sent' ? (
+          {formState === 'sent' || formState === 'verifying' || (formState === 'error' && showOtpInput) ? (
             <div className="text-center py-4">
               <div className="w-16 h-16 mx-auto mb-4 bg-[#ffbf23] border-4 border-black flex items-center justify-center">
                 <CheckCircle size={32} className="text-black" />
@@ -351,25 +445,126 @@ export default function SignInPage() {
                 {t.auth.signIn.magicLinkSent}<br />
                 <span className="font-bold text-gray-900 dark:text-white">{email}</span>
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">
-                {isSignupMode 
-                  ? t.auth.signUp.clickToCreate
-                  : t.auth.signIn.clickToSignIn
-                }
-                <br />
-                {t.auth.signIn.checkSpam}
-              </p>
               
-              {/* Send again button */}
-              <button
-                onClick={() => {
-                  setFormState('idle');
-                  setEmail('');
-                }}
-                className="mt-6 text-sm font-bold text-[#ffbf23] hover:underline"
-              >
-                {t.auth.signIn.useDifferentEmail}
-              </button>
+              {/* ========================================================= */}
+              {/* OTP INPUT SECTION - January 22nd, 2026 */}
+              {/* Users can enter the 6-digit code instead of clicking link */}
+              {/* ========================================================= */}
+              {!showOtpInput ? (
+                <>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    {isSignupMode 
+                      ? t.auth.signUp.clickToCreate
+                      : t.auth.signIn.clickToSignIn
+                    }
+                    <br />
+                    {t.auth.signIn.checkSpam}
+                  </p>
+                  
+                  {/* Divider with "or" */}
+                  <div className="flex items-center gap-3 my-6">
+                    <div className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">{t.common.or}</span>
+                    <div className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                  </div>
+                  
+                  {/* Enter code button */}
+                  <button
+                    onClick={() => setShowOtpInput(true)}
+                    className="w-full py-3 px-4 bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white font-black uppercase tracking-wide border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#333] hover:shadow-[2px_2px_0px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2"
+                  >
+                    <KeyRound size={18} />
+                    {t.auth.signIn.enterCode || 'Enter Code Instead'}
+                  </button>
+                </>
+              ) : (
+                /* OTP Input Form */
+                <form onSubmit={handleOtpVerify} className="space-y-4 text-left">
+                  <div>
+                    <label 
+                      htmlFor="otp" 
+                      className="block text-sm font-bold text-gray-900 dark:text-white mb-2"
+                    >
+                      {t.auth.signIn.otpLabel || '6-Digit Code'}
+                    </label>
+                    <input
+                      id="otp"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => {
+                        // Only allow digits
+                        const value = e.target.value.replace(/\D/g, '');
+                        setOtpCode(value);
+                        if (formState === 'error') setFormState('sent');
+                      }}
+                      placeholder="123456"
+                      className="w-full px-4 py-3 bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#ffbf23] transition-colors font-mono text-2xl text-center tracking-[0.5em]"
+                      disabled={formState === 'verifying'}
+                      autoComplete="one-time-code"
+                      autoFocus
+                    />
+                    
+                    {/* Error message */}
+                    {formState === 'error' && errorMessage && (
+                      <div className="mt-2 flex items-start gap-2 text-sm font-bold text-red-500">
+                        <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                        <span>{errorMessage}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Verify button */}
+                  <button
+                    type="submit"
+                    disabled={formState === 'verifying' || otpCode.length !== 6}
+                    className="w-full py-3 px-4 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:shadow-[2px_2px_0px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0px_0px_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+                  >
+                    {formState === 'verifying' ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        {t.auth.signIn.verifying || 'Verifying...'}
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={18} />
+                        {t.auth.signIn.verifyCode || 'Verify Code'}
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Back to magic link option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOtpInput(false);
+                      setOtpCode('');
+                      setFormState('sent');
+                      setErrorMessage('');
+                    }}
+                    className="w-full text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  >
+                    {t.auth.signIn.backToMagicLink || '← Back to magic link'}
+                  </button>
+                </form>
+              )}
+              
+              {/* Send again button - only show when not in OTP mode */}
+              {!showOtpInput && (
+                <button
+                  onClick={() => {
+                    setFormState('idle');
+                    setEmail('');
+                    setOtpCode('');
+                    setShowOtpInput(false);
+                  }}
+                  className="mt-6 text-sm font-bold text-[#ffbf23] hover:underline"
+                >
+                  {t.auth.signIn.useDifferentEmail}
+                </button>
+              )}
             </div>
           ) : (
             /* ============================================================= */

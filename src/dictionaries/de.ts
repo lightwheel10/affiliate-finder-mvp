@@ -1041,6 +1041,15 @@ export const de: Dictionary = {
       privacyPolicy: 'Datenschutzrichtlinie',
       termsOfService: 'Nutzungsbedingungen',
       alreadySignedIn: 'Bereits angemeldet, wird weitergeleitet...',
+      // OTP (6-stelliger Code) - January 22nd, 2026
+      enterCode: 'Code eingeben',
+      otpLabel: '6-stelliger Code',
+      verifyCode: 'Code bestätigen',
+      verifying: 'Wird überprüft...',
+      backToMagicLink: '← Zurück zum Magic Link',
+      invalidOtp: 'Bitte geben Sie einen gültigen 6-stelligen Code ein',
+      otpExpired: 'Code abgelaufen. Bitte fordern Sie einen neuen an.',
+      otpInvalid: 'Ungültiger Code. Bitte überprüfen und erneut versuchen.',
       // Error messages
       invalidEmail: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
       authFailed: 'Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
