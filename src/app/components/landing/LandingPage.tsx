@@ -48,6 +48,7 @@ import { Footer } from '../Footer';
 // Added i18n support for landing page - see LANGUAGE_MIGRATION.md
 // =============================================================================
 import { LanguageSwitcher } from '../LanguageSwitcher';
+import { ThemeSwitcher } from '../ThemeSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LandingPageProps {
@@ -76,7 +77,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
   }, []);
 
   return (
-    <div className="min-h-screen bg-white font-sans text-[#111827] selection:bg-[#ffbf23]/30 selection:text-[#1A1D21] overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] font-sans text-[#111827] dark:text-white selection:bg-[#ffbf23]/30 selection:text-[#1A1D21] overflow-x-hidden">
       
       {/* Background Texture */}
       <div className="fixed inset-0 pointer-events-none bg-grid-pattern opacity-[0.03]" />
@@ -92,22 +93,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           ========================================================================== */}
       <nav 
         className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-white/95 backdrop-blur-xl border-b-2 border-black py-2.5' : 'bg-transparent border-transparent py-4'
+          isScrolled ? 'bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl border-b-2 border-black dark:border-white py-2.5' : 'bg-transparent border-transparent py-4'
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          {/* Logo - NEO-BRUTALIST with original image (January 9th, 2026) */}
+          {/* Logo - NEO-BRUTALIST with original image (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
           <div className="flex items-center gap-2 font-black text-lg tracking-tight z-50">
             <img 
               src="/logo.jpg" 
               alt="CrewCast Studio" 
-              className="w-7 h-7 object-cover border-2 border-black"
+              className="w-7 h-7 object-cover border-2 border-black dark:border-white"
             />
-            <span className="text-[#111827]">CrewCast<span className="text-[#ffbf23]">Studio</span></span>
+            <span className="text-[#111827] dark:text-white">CrewCast<span className="text-[#ffbf23]">Studio</span></span>
           </div>
 
-          {/* Desktop Links - NEO-BRUTALIST (January 9th, 2026) */}
-          <div className="hidden md:flex items-center gap-1 bg-white/80 backdrop-blur-md px-1.5 py-1 border-2 border-gray-200">
+          {/* Desktop Links - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+          <div className="hidden md:flex items-center gap-1 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md px-1.5 py-1 border-2 border-gray-200 dark:border-gray-700">
             {[
               { label: t.nav.features, href: '#features' },
               { label: t.nav.howItWorks, href: '#how-it-works' },
@@ -123,7 +124,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }
                 }}
-                className="px-3.5 py-1.5 text-sm font-bold text-slate-600 hover:text-slate-900 hover:bg-[#ffbf23]/20 transition-all"
+                className="px-3.5 py-1.5 text-sm font-bold text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-[#ffbf23]/20 transition-all"
               >
                 {item.label}
               </a>
@@ -134,9 +135,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           <div className="hidden md:flex items-center gap-3">
             {/* Language Switcher (January 9th, 2026) - i18n support */}
             <LanguageSwitcher variant="navbar" />
+            {/* Theme Switcher (January 22nd, 2026) - Dark mode toggle */}
+            <ThemeSwitcher variant="navbar" />
             <button 
               onClick={onLoginClick}
-              className="text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-2 transition-colors cursor-pointer border-2 border-transparent hover:border-gray-300"
+              className="text-sm font-bold text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white px-3 py-2 transition-colors cursor-pointer border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600"
             >
               {t.nav.login}
             </button>
@@ -156,7 +159,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
         {/* Mobile Menu Dropdown - NEO-BRUTALIST (January 9th, 2026) */}
         {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-white border-b-2 border-black shadow-lg">
+          <div className="md:hidden absolute top-full left-0 w-full bg-white dark:bg-[#0a0a0a] border-b-2 border-black dark:border-white shadow-lg">
             <div className="px-6 py-4 space-y-1">
               {[
                 { label: t.nav.features, href: '#features' },
@@ -174,18 +177,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                   }}
-                  className="block px-4 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-900 hover:bg-[#ffbf23]/20 transition-all"
+                  className="block px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-[#ffbf23]/20 transition-all"
                 >
                   {item.label}
                 </a>
               ))}
-              <div className="pt-3 mt-3 border-t-2 border-gray-200 space-y-2">
+              <div className="pt-3 mt-3 border-t-2 border-gray-200 dark:border-gray-700 space-y-2">
+                {/* Language & Theme Switchers (January 22nd, 2026) */}
+                <div className="flex items-center justify-between px-4 py-2">
+                  <LanguageSwitcher variant="navbar" />
+                  <ThemeSwitcher variant="navbar" />
+                </div>
                 <button 
                   onClick={() => {
                     setMobileMenuOpen(false);
                     onLoginClick();
                   }}
-                  className="w-full px-4 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-900 hover:bg-gray-50 transition-all text-left cursor-pointer"
+                  className="w-full px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-left cursor-pointer"
                 >
                   {t.nav.login}
                 </button>
@@ -223,8 +231,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              {/* Badge - NEO-BRUTALIST (January 9th, 2026) */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-[11px] font-black uppercase tracking-wide text-[#1A1D21] mb-6 cursor-default">
+              {/* Badge - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-[11px] font-black uppercase tracking-wide text-[#1A1D21] dark:text-white mb-6 cursor-default">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full bg-[#ffbf23] opacity-75"></span>
                   <span className="relative inline-flex h-2 w-2 bg-[#ffbf23]"></span>
@@ -232,13 +240,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                 {t.landing.hero.badge}
               </div>
               
-              {/* Headline - NEO-BRUTALIST (January 9th, 2026) */}
-              <h1 className="text-5xl md:text-6xl font-black text-[#111827] tracking-tight mb-6 leading-[1]">
+              {/* Headline - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+              <h1 className="text-5xl md:text-6xl font-black text-[#111827] dark:text-white tracking-tight mb-6 leading-[1]">
                 {t.landing.hero.title} <br />
                 <span className="text-[#ffbf23]">{t.landing.hero.titleHighlight}</span>
               </h1>
 
-              <p className="text-lg text-slate-500 mb-8 leading-relaxed max-w-md">
+              <p className="text-lg text-slate-500 dark:text-gray-400 mb-8 leading-relaxed max-w-md">
                 {t.landing.hero.subtitle}
               </p>
 
@@ -254,8 +262,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                 </button>
               </div>
 
-              {/* Social Proof - NEO-BRUTALIST (January 9th, 2026) */}
-              <div className="mt-8 flex items-center gap-3 text-xs text-slate-500 font-bold">
+              {/* Social Proof - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+              <div className="mt-8 flex items-center gap-3 text-xs text-slate-500 dark:text-gray-400 font-bold">
                 <div className="flex -space-x-2">
                   {[
                     'https://randomuser.me/api/portraits/women/44.jpg',
@@ -268,7 +276,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                       key={i} 
                       src={src} 
                       alt={`Customer ${i + 1}`}
-                      className="w-7 h-7 border-2 border-white object-cover" 
+                      className="w-7 h-7 border-2 border-white dark:border-gray-800 object-cover" 
                     />
                   ))}
                 </div>
@@ -276,7 +284,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                    <div className="flex text-[#ffbf23]">
                      {[1,2,3,4,5].map(i => <Star key={i} size={12} fill="currentColor" />)}
                    </div>
-                   <span className="text-slate-700 ml-1">{t.landing.hero.socialProof}</span>
+                   <span className="text-slate-700 dark:text-gray-300 ml-1">{t.landing.hero.socialProof}</span>
                 </div>
               </div>
             </motion.div>
@@ -301,9 +309,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           - Bold border (border-y-2 border-black)
           - Sharp background (removed backdrop-blur)
           ========================================================================== */}
-      <section className="border-y-2 border-black bg-white">
+      {/* Logo Cloud - Dark mode: January 22nd, 2026 */}
+      <section className="border-y-2 border-black dark:border-white bg-white dark:bg-[#0a0a0a]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider whitespace-nowrap mr-8">{t.landing.trustedBy}</span>
+          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap mr-8">{t.landing.trustedBy}</span>
           <div className="scale-90 origin-right">
             <LogoMarquee />
           </div>
@@ -321,12 +330,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           
           Note: BentoGrid and BentoCard components handle their own styling
           ========================================================================== */}
-      <section id="features" className="py-20 bg-white border-b-2 border-black">
+      {/* Features Section - Dark mode: January 22nd, 2026 */}
+      <section id="features" className="py-20 bg-white dark:bg-[#0a0a0a] border-b-2 border-black dark:border-white">
         <div className="max-w-7xl mx-auto px-6">
-           {/* Section Header - NEO-BRUTALIST (January 9th, 2026) */}
+           {/* Section Header - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
            <div className="mb-16 max-w-2xl mx-auto text-center">
-             <h2 className="text-2xl md:text-3xl font-black text-[#111827] mb-4 tracking-tight">{t.landing.features.sectionTitle}</h2>
-             <p className="text-base text-slate-500 leading-relaxed">
+             <h2 className="text-2xl md:text-3xl font-black text-[#111827] dark:text-white mb-4 tracking-tight">{t.landing.features.sectionTitle}</h2>
+             <p className="text-base text-slate-500 dark:text-gray-400 leading-relaxed">
                {t.landing.features.sectionSubtitle}
              </p>
            </div>
@@ -375,16 +385,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           - Sharp overlay cards (removed rounded-xl)
           - Updated colors from #D4E815 to #ffbf23
           ========================================================================== */}
-      <section id="how-it-works" className="py-20 border-t-2 border-black bg-white overflow-hidden">
+      {/* How It Works Section - Dark mode: January 22nd, 2026 */}
+      <section id="how-it-works" className="py-20 border-t-2 border-black dark:border-white bg-white dark:bg-[#0a0a0a] overflow-hidden">
         <div className="max-w-5xl mx-auto px-6">
-           {/* Section Header - NEO-BRUTALIST (January 9th, 2026) */}
+           {/* Section Header - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
            <div className="text-center mb-24">
              <motion.h2 
                initial={{ opacity: 0, y: 20 }}
                whileInView={{ opacity: 1, y: 0 }}
                viewport={{ once: true }}
                transition={{ duration: 0.5 }}
-               className="text-3xl md:text-4xl font-black text-[#111827] mb-4 tracking-tight"
+               className="text-3xl md:text-4xl font-black text-[#111827] dark:text-white mb-4 tracking-tight"
              >
                {t.landing.howItWorks.sectionTitle}
              </motion.h2>
@@ -393,7 +404,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                whileInView={{ opacity: 1, y: 0 }}
                viewport={{ once: true }}
                transition={{ duration: 0.5, delay: 0.1 }}
-               className="text-slate-500 text-lg"
+               className="text-slate-500 dark:text-gray-400 text-lg"
              >
                {t.landing.howItWorks.sectionSubtitle}
              </motion.p>
@@ -438,22 +449,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                  className={`flex flex-col md:flex-row items-center gap-12 lg:gap-20 ${idx % 2 === 1 ? 'md:flex-row-reverse' : ''}`}
                >
                   <div className="flex-1 space-y-6">
-                    {/* Step Number - NEO-BRUTALIST (January 9th, 2026) */}
+                    {/* Step Number - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
                     <div className="flex items-center gap-4 mb-4">
                       <span className="flex items-center justify-center w-12 h-12 bg-[#ffbf23] text-[#1A1D21] text-lg font-black font-mono border-2 border-black shadow-[4px_4px_0px_0px_#000000]">
                         {item.step}
                       </span>
-                      <div className="h-[2px] flex-1 bg-black"></div>
+                      <div className="h-[2px] flex-1 bg-black dark:bg-white"></div>
                     </div>
                     
-                    {/* Title & Description - NEO-BRUTALIST (January 9th, 2026) */}
-                    <h3 className="text-2xl font-black text-[#111827]">{item.title}</h3>
-                    <p className="text-lg text-slate-500 leading-relaxed">{item.desc}</p>
+                    {/* Title & Description - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+                    <h3 className="text-2xl font-black text-[#111827] dark:text-white">{item.title}</h3>
+                    <p className="text-lg text-slate-500 dark:text-gray-400 leading-relaxed">{item.desc}</p>
                     
-                    {/* Bullet Points - NEO-BRUTALIST (January 9th, 2026) */}
+                    {/* Bullet Points - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
                     <ul className="space-y-3 pt-2">
                       {item.bullets.map((bullet, i) => (
-                        <li key={i} className="flex items-center gap-3 text-sm text-slate-600 font-medium">
+                        <li key={i} className="flex items-center gap-3 text-sm text-slate-600 dark:text-gray-300 font-medium">
                           <div className="w-2 h-2 bg-[#ffbf23] border border-black"></div>
                           <span>{bullet}</span>
                         </li>
@@ -469,17 +480,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                         <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/0 transition-colors duration-500" />
                         <img src={item.image} alt={item.title} className="object-cover w-full h-full" />
                         
-                        {/* Floating Overlay - NEO-BRUTALIST (January 9th, 2026) */}
-                        <div className="absolute bottom-4 left-4 right-4 p-4 bg-white border-2 border-black shadow-[4px_4px_0px_0px_#ffbf23] transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                        {/* Floating Overlay - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+                        <div className="absolute bottom-4 left-4 right-4 p-4 bg-white dark:bg-[#111] border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#ffbf23] transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
                           <div className="flex items-center gap-3">
                             <img 
                               src="/logo.jpg" 
                               alt="CrewCast Studio" 
-                              className="w-8 h-8 object-cover border border-black"
+                              className="w-8 h-8 object-cover border border-black dark:border-white"
                             />
                             <div className="flex-1">
-                              <div className="text-sm font-black text-[#111827]">{item.overlayTitle}</div>
-                              <div className="text-xs text-slate-500 font-bold">{item.overlaySubtitle}</div>
+                              <div className="text-sm font-black text-[#111827] dark:text-white">{item.overlayTitle}</div>
+                              <div className="text-xs text-slate-500 dark:text-gray-400 font-bold">{item.overlaySubtitle}</div>
                             </div>
                           </div>
                         </div>
@@ -504,9 +515,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           - Sharp checkmarks (removed rounded-full)
           - Updated colors from #D4E815 to #ffbf23
           ========================================================================== */}
-      <section id="pricing" className="py-20 px-6 bg-white border-t-2 border-black">
+      {/* Pricing Section - Dark mode: January 22nd, 2026 */}
+      <section id="pricing" className="py-20 px-6 bg-white dark:bg-[#0a0a0a] border-t-2 border-black dark:border-white">
         <div className="max-w-6xl mx-auto">
-          {/* Section Header - NEO-BRUTALIST (January 9th, 2026) */}
+          {/* Section Header - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
           <div className="text-center mb-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -514,14 +526,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <span className="inline-flex items-center gap-2 px-3 py-1 bg-[#ffbf23]/20 border-2 border-[#ffbf23] text-[11px] font-black text-[#1A1D21] mb-4 uppercase">
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-[#ffbf23]/20 border-2 border-[#ffbf23] text-[11px] font-black text-[#1A1D21] dark:text-white mb-4 uppercase">
                 <Zap size={12} fill="currentColor" />
                 {t.landing.pricing.badge}
               </span>
-              <h2 className="text-3xl md:text-4xl font-black text-[#111827] mb-4 tracking-tight">
+              <h2 className="text-3xl md:text-4xl font-black text-[#111827] dark:text-white mb-4 tracking-tight">
                 {t.landing.pricing.sectionTitle}
               </h2>
-              <p className="text-slate-500 text-lg max-w-xl mx-auto">
+              <p className="text-slate-500 dark:text-gray-400 text-lg max-w-xl mx-auto">
                 {t.landing.pricing.sectionSubtitle}
               </p>
             </motion.div>
@@ -529,13 +541,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
           {/* Pricing Cards - NEO-BRUTALIST (January 9th, 2026) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Pro Plan - Featured Card */}
+            {/* Pro Plan - Featured Card - Dark mode: January 22nd, 2026 */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0 }}
-              className="relative bg-white border-2 border-[#ffbf23] flex flex-col overflow-hidden shadow-[6px_6px_0px_0px_#ffbf23]"
+              className="relative bg-white dark:bg-[#111] border-2 border-[#ffbf23] flex flex-col overflow-hidden shadow-[6px_6px_0px_0px_#ffbf23]"
             >
               {/* Popular Badge - NEO-BRUTALIST (January 9th, 2026) */}
               <div className="bg-[#1A1D21] text-white text-xs font-black tracking-wider uppercase text-center py-2 flex items-center justify-center gap-1.5">
@@ -545,11 +557,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
 
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-black text-[#111827] mb-1">{t.landing.pricing.pro.name}</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.pro.description}</p>
+                  <h3 className="text-lg font-black text-[#111827] dark:text-white mb-1">{t.landing.pricing.pro.name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.pro.description}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-black tracking-tight text-[#1A1D21]">{t.landing.pricing.pro.price}</span>
-                    <span className="text-base font-bold text-[#333333]">{t.landing.pricing.perMonth}</span>
+                    <span className="text-3xl font-black tracking-tight text-[#1A1D21] dark:text-white">{t.landing.pricing.pro.price}</span>
+                    <span className="text-base font-bold text-[#333333] dark:text-gray-300">{t.landing.pricing.perMonth}</span>
                   </div>
                 </div>
 
@@ -561,37 +573,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                   {t.landing.pricing.pro.cta}
                 </button>
 
-                {/* Features - NEO-BRUTALIST (January 9th, 2026) */}
+                {/* Features - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
                 <div className="space-y-3 flex-1">
                   {t.landing.pricing.pro.features.map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2.5">
                       <div className="mt-0.5 w-4 h-4 bg-[#1A1D21] text-[#ffbf23] flex items-center justify-center shrink-0 border border-black">
                         <CheckCircle2 size={10} strokeWidth={3} />
                       </div>
-                      <span className="text-xs leading-relaxed text-slate-600 font-medium">{feature}</span>
+                      <span className="text-xs leading-relaxed text-slate-600 dark:text-gray-300 font-medium">{feature}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </motion.div>
 
-            {/* Growth Plan - NEO-BRUTALIST (January 9th, 2026) */}
+            {/* Growth Plan - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="relative bg-white border-2 border-black flex flex-col shadow-[4px_4px_0px_0px_#000000] hover:shadow-[6px_6px_0px_0px_#000000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-200"
+              className="relative bg-white dark:bg-[#111] border-2 border-black dark:border-white flex flex-col shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] hover:shadow-[6px_6px_0px_0px_#000000] dark:hover:shadow-[6px_6px_0px_0px_#ffffff] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-200"
             >
               {/* Spacer to align with Pro card's badge */}
               <div className="h-[34px]" />
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-black text-[#111827] mb-1">{t.landing.pricing.growth.name}</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.growth.description}</p>
+                  <h3 className="text-lg font-black text-[#111827] dark:text-white mb-1">{t.landing.pricing.growth.name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.growth.description}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-black tracking-tight text-[#111827]">{t.landing.pricing.growth.price}</span>
-                    <span className="text-base font-bold text-[#333333]">{t.landing.pricing.perMonth}</span>
+                    <span className="text-3xl font-black tracking-tight text-[#111827] dark:text-white">{t.landing.pricing.growth.price}</span>
+                    <span className="text-base font-bold text-[#333333] dark:text-gray-300">{t.landing.pricing.perMonth}</span>
                   </div>
                 </div>
 
@@ -608,35 +620,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                       <div className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#1A1D21] text-[#ffbf23] border border-black'}`}>
                         {idx !== 0 && <CheckCircle2 size={10} strokeWidth={3} />}
                       </div>
-                      <span className={`text-xs leading-relaxed ${idx === 0 ? 'font-black text-[#111827]' : 'text-slate-600 font-medium'}`}>{feature}</span>
+                      <span className={`text-xs leading-relaxed ${idx === 0 ? 'font-black text-[#111827] dark:text-white' : 'text-slate-600 dark:text-gray-300 font-medium'}`}>{feature}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </motion.div>
 
-            {/* Enterprise Plan - NEO-BRUTALIST (January 9th, 2026) */}
+            {/* Enterprise Plan - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="relative bg-white border-2 border-black flex flex-col shadow-[4px_4px_0px_0px_#000000] hover:shadow-[6px_6px_0px_0px_#000000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-200"
+              className="relative bg-white dark:bg-[#111] border-2 border-black dark:border-white flex flex-col shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] hover:shadow-[6px_6px_0px_0px_#000000] dark:hover:shadow-[6px_6px_0px_0px_#ffffff] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-200"
             >
               {/* Spacer to align with Pro card's badge */}
               <div className="h-[34px]" />
               <div className="p-6 flex-1 flex flex-col">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-black text-[#111827] mb-1">{t.landing.pricing.enterprise.name}</h3>
-                  <p className="text-xs text-slate-500 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.enterprise.description}</p>
+                  <h3 className="text-lg font-black text-[#111827] dark:text-white mb-1">{t.landing.pricing.enterprise.name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-gray-400 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.enterprise.description}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-black tracking-tight text-[#111827]">{t.landing.pricing.enterprise.price}</span>
+                    <span className="text-3xl font-black tracking-tight text-[#111827] dark:text-white">{t.landing.pricing.enterprise.price}</span>
                   </div>
                 </div>
 
                 <button
                   onClick={onLoginClick}
-                  className="w-full py-3 text-sm font-black uppercase mb-6 transition-all duration-200 bg-white text-[#111827] border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
+                  className="w-full py-3 text-sm font-black uppercase mb-6 transition-all duration-200 bg-white dark:bg-[#222] text-[#111827] dark:text-white border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] hover:shadow-[2px_2px_0px_0px_#000000] dark:hover:shadow-[2px_2px_0px_0px_#ffffff] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
                 >
                   {t.landing.pricing.enterprise.cta}
                 </button>
@@ -647,7 +659,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                       <div className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#1A1D21] text-[#ffbf23] border border-black'}`}>
                         {idx !== 0 && <CheckCircle2 size={10} strokeWidth={3} />}
                       </div>
-                      <span className={`text-xs leading-relaxed ${idx === 0 ? 'font-black text-[#111827]' : 'text-slate-600 font-medium'}`}>{feature}</span>
+                      <span className={`text-xs leading-relaxed ${idx === 0 ? 'font-black text-[#111827] dark:text-white' : 'text-slate-600 dark:text-gray-300 font-medium'}`}>{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -655,13 +667,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
             </motion.div>
           </div>
 
-          {/* Trust Note - NEO-BRUTALIST (January 9th, 2026) */}
+          {/* Trust Note - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-center text-sm text-slate-500 mt-8 font-bold"
+            className="text-center text-sm text-slate-500 dark:text-gray-400 mt-8 font-bold"
           >
             {t.landing.pricing.trustNote}
           </motion.p>
@@ -678,7 +690,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           - Neo-brutalist offset shadows
           - Updated colors from #D4E815 to #ffbf23
           ========================================================================== */}
-      <section className="py-20 px-6">
+      {/* CTA Section - Dark mode: January 22nd, 2026 */}
+      <section className="py-20 px-6 bg-white dark:bg-[#0a0a0a]">
          <div className="max-w-4xl mx-auto bg-[#1A1D21] border-2 border-black p-10 md:p-16 text-center relative overflow-hidden shadow-[8px_8px_0px_0px_#ffbf23]">
             <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[radial-gradient(#ffbf23_1px,transparent_1px)] [background-size:16px_16px]"></div>
             <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#ffbf23]/20 blur-3xl"></div>

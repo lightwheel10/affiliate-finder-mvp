@@ -50,11 +50,12 @@ export const BentoCard = ({
 }: BentoCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
+  // January 22nd, 2026: Added dark mode support
   return (
     <motion.div
       className={cn(
-        // NEO-BRUTALIST: Sharp edges, bold border (January 9th, 2026)
-        "relative overflow-hidden bg-white border-2 border-black p-6",
+        // NEO-BRUTALIST: Sharp edges, bold border (January 9th, 2026) - Dark mode: January 22nd, 2026
+        "relative overflow-hidden bg-white dark:bg-[#111] border-2 border-black dark:border-white p-6",
         "flex flex-col justify-between h-full",
         "cursor-pointer",
         className
@@ -72,6 +73,7 @@ export const BentoCard = ({
       }}
       style={{
         // NEO-BRUTALIST: Offset shadow (January 9th, 2026)
+        // Note: Dark mode shadow handled via CSS variables in globals.css
         boxShadow: isHovered 
           ? "2px 2px 0px 0px #000000" 
           : "6px 6px 0px 0px #000000",
@@ -90,17 +92,17 @@ export const BentoCard = ({
         </div>
       )}
 
-      {/* Content - NEO-BRUTALIST (Updated January 13th, 2026) */}
+      {/* Content - NEO-BRUTALIST (Updated January 13th, 2026) - Dark mode: January 22nd, 2026 */}
       {/* Removed description/subtext - title now sits alone at bottom */}
       <div className="relative z-10 flex flex-col h-full pointer-events-none">
         <div className="mt-auto">
-          <h3 className="text-lg font-black text-[#111827] leading-tight tracking-tight">
+          <h3 className="text-lg font-black text-[#111827] dark:text-white leading-tight tracking-tight">
             {title}
           </h3>
         </div>
         
         {children && (
-          <div className="mt-4 pt-4 border-t-2 border-gray-200 pointer-events-auto">
+          <div className="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700 pointer-events-auto">
             {children}
           </div>
         )}

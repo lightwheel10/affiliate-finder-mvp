@@ -51,6 +51,22 @@ import "./globals.css";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
 // =============================================================================
+// THEME PROVIDER - January 22nd, 2026
+// 
+// ThemeProvider enables dark/light mode across the entire app.
+// 
+// The provider:
+//   - Auto-detects system preference on first visit
+//   - Persists user preference to localStorage
+//   - Applies 'dark' class to <html> for Tailwind dark: variants
+// 
+// Usage in components:
+//   import { useTheme } from '@/contexts/ThemeContext';
+//   const { isDark, toggleTheme } = useTheme();
+// =============================================================================
+import { ThemeProvider } from "@/contexts/ThemeContext";
+
+// =============================================================================
 // FONT CONFIGURATION - Updated January 6th, 2026
 // 
 // Changed from Geist to Inter/Fira Code for neo-brutalist design
@@ -137,17 +153,27 @@ export default function RootLayout({
             ================================================================= */}
         <LanguageProvider>
           {/* =============================================================
-              SUPABASE AUTH (January 19th, 2026)
+              THEME PROVIDER (January 22nd, 2026)
               
-              No provider needed! Supabase auth works via:
-              1. HTTP-only cookies (set by /auth/callback)
-              2. Browser client singleton (getSupabaseBrowserClient)
-              3. useSupabaseUser hook (manages auth state)
-              
-              Children are rendered directly - auth state is managed
-              by individual components using useSupabaseUser().
+              Enables dark/light mode across the app.
+              - Detects system preference on first visit
+              - Persists to localStorage
+              - Applies 'dark' class to <html> element
               ============================================================= */}
-          {children}
+          <ThemeProvider>
+            {/* =============================================================
+                SUPABASE AUTH (January 19th, 2026)
+                
+                No provider needed! Supabase auth works via:
+                1. HTTP-only cookies (set by /auth/callback)
+                2. Browser client singleton (getSupabaseBrowserClient)
+                3. useSupabaseUser hook (manages auth state)
+                
+                Children are rendered directly - auth state is managed
+                by individual components using useSupabaseUser().
+                ============================================================= */}
+            {children}
+          </ThemeProvider>
         
           {/* =====================================================================
               GLOBAL TOAST CONTAINER (January 5th, 2026)

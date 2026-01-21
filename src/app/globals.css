@@ -4,6 +4,14 @@
 @import "tailwindcss";
 
 /* =============================================================================
+ * DARK MODE CONFIGURATION - January 22nd, 2026
+ * 
+ * Tailwind v4 uses media query for dark mode by default.
+ * This custom variant enables class-based dark mode (.dark class on <html>).
+ * ============================================================================= */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =============================================================================
  * NEUBRUTALIST DESIGN - January 6th, 2026
  * Added for DashboardDemo-style UI (client request)
  * 
@@ -131,6 +139,27 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+  }
+  
+  /* ==========================================================================
+   * SMOOTH THEME TRANSITION - January 22nd, 2026
+   * 
+   * Adds a smooth 300ms transition when switching between light/dark mode.
+   * Applies to background colors, text colors, and border colors.
+   * ========================================================================== */
+  html,
+  html *,
+  html *::before,
+  html *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Disable transition for elements that shouldn't animate (performance) */
+  html [data-no-theme-transition],
+  html [data-no-theme-transition] * {
+    transition: none !important;
   }
 
   :root {

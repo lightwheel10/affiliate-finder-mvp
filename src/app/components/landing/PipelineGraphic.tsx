@@ -79,8 +79,9 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
     }
   }, [isHovered]);
 
+  // January 22nd, 2026: Added dark mode support
   return (
-    <div className="absolute inset-0 overflow-hidden bg-white">
+    <div className="absolute inset-0 overflow-hidden bg-white dark:bg-[#111]">
       {/* Background Pattern - NEO-BRUTALIST (January 9th, 2026) */}
       <div 
         className="absolute inset-0 opacity-[0.15]" 
@@ -93,9 +94,9 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
       {/* Kanban Board Container - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="absolute inset-x-0 top-0 bottom-0 px-3 pb-2 flex">
          
-         {/* Column 1: New - 2 cards initially */}
+         {/* Column 1: New - 2 cards initially - Dark mode: January 22nd, 2026 */}
          <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 pr-1">
-            <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider">{t.landingGraphics.pipeline.new}</span>
+            <span className="text-[7px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-wider">{t.landingGraphics.pipeline.new}</span>
             
             {/* Card 1 - always visible */}
             <KanbanCard affiliate={affiliates.newCard1} />
@@ -112,8 +113,8 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
             </motion.div>
          </div>
 
-         {/* Column 2: Outreach - NEO-BRUTALIST (January 9th, 2026) */}
-         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 pl-2 pr-1">
+         {/* Column 2: Outreach - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 dark:border-gray-600 pl-2 pr-1">
             <span className="text-[7px] font-black text-[#ffbf23] uppercase tracking-wider">{t.landingGraphics.pipeline.outreach}</span>
             
             {/* Slot 1: Fixed container - swaps between Ryan C. and Maria S. */}
@@ -141,9 +142,9 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
             <KanbanCard highlight affiliate={affiliates.outreachCard2} />
          </div>
 
-         {/* Column 3: Done - NEO-BRUTALIST (January 9th, 2026) */}
-         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 pl-2">
-            <span className="text-[7px] font-black text-[#1A1D21] uppercase tracking-wider">{t.landingGraphics.pipeline.done}</span>
+         {/* Column 3: Done - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 dark:border-gray-600 pl-2">
+            <span className="text-[7px] font-black text-[#1A1D21] dark:text-white uppercase tracking-wider">{t.landingGraphics.pipeline.done}</span>
             
             {/* Card from Outreach - appears at stage 1+ */}
             <motion.div
@@ -181,6 +182,7 @@ interface KanbanCardProps {
   affiliate?: { name: string; niche: string };
 }
 
+// January 22nd, 2026: Added dark mode support
 const KanbanCard = ({ active, highlight, complete, affiliate }: KanbanCardProps) => {
   // Default affiliate if none provided (for static placeholder cards)
   const displayAffiliate = affiliate || { name: "New Lead", niche: "Pending" };
@@ -188,31 +190,31 @@ const KanbanCard = ({ active, highlight, complete, affiliate }: KanbanCardProps)
   const initials = displayAffiliate.name.split(' ').map(n => n[0]).join('');
   
   return (
-    // NEO-BRUTALIST: Sharp edges, bold borders (January 9th, 2026)
+    // NEO-BRUTALIST: Sharp edges, bold borders (January 9th, 2026) - Dark mode: January 22nd, 2026
     <div className={cn(
-      "bg-white p-2 border-2 w-full transition-all duration-300",
-      active ? "border-black" : "border-gray-200",
+      "bg-white dark:bg-[#1a1a1a] p-2 border-2 w-full transition-all duration-300",
+      active ? "border-black dark:border-white" : "border-gray-200 dark:border-gray-700",
       highlight ? "border-[#ffbf23]" : "",
       complete ? "border-[#ffbf23] bg-[#ffbf23]/10" : ""
     )}>
       <div className="flex items-center gap-1.5">
-        {/* Avatar - NEO-BRUTALIST (January 9th, 2026) */}
+        {/* Avatar - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
         <div className={cn(
           "w-5 h-5 flex items-center justify-center text-[7px] font-black shrink-0 border", 
-          highlight ? "bg-[#ffbf23]/30 text-[#1A1D21] border-[#ffbf23]" : 
-          complete ? "bg-[#ffbf23] text-[#1A1D21] border-[#ffbf23]" : "bg-slate-100 text-slate-500 border-gray-200"
+          highlight ? "bg-[#ffbf23]/30 text-[#1A1D21] dark:text-white border-[#ffbf23]" : 
+          complete ? "bg-[#ffbf23] text-[#1A1D21] border-[#ffbf23]" : "bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 border-gray-200 dark:border-gray-700"
         )}>
           {complete ? "✓" : initials}
         </div>
-        {/* Affiliate Name & Niche */}
+        {/* Affiliate Name & Niche - Dark mode: January 22nd, 2026 */}
         <div className="flex-1 min-w-0">
           <span className={cn(
             "text-[8px] font-bold truncate block",
-            complete ? "text-[#1A1D21]" : highlight ? "text-[#111827]" : "text-slate-600"
+            complete ? "text-[#1A1D21] dark:text-white" : highlight ? "text-[#111827] dark:text-white" : "text-slate-600 dark:text-gray-300"
           )}>
             {displayAffiliate.name}
           </span>
-          <span className="text-[6px] text-slate-400 truncate block font-medium">
+          <span className="text-[6px] text-slate-400 dark:text-gray-500 truncate block font-medium">
             {displayAffiliate.niche}
           </span>
         </div>
