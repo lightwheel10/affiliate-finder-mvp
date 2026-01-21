@@ -56,12 +56,12 @@ export const LoadingOnboardingScreen = () => {
           {t.loadingOnboarding.title}
         </h1>
 
-        {/* Description Text */}
+        {/* Description Text - January 22nd, 2026: Added dark mode text colors */}
         <div className="space-y-2 max-w-sm mx-auto">
-          <p className="text-gray-500 text-sm leading-relaxed font-medium">
+          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed font-medium">
             {t.loadingOnboarding.subtitle}
           </p>
-          <p className="text-gray-400 text-xs leading-relaxed">
+          <p className="text-gray-400 dark:text-gray-500 text-xs leading-relaxed">
             {t.loadingOnboarding.description}
           </p>
         </div>

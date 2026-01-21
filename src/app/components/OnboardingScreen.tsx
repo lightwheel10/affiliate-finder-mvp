@@ -1925,25 +1925,31 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   );
 
   // Translated (January 9th, 2026)
+  // January 22nd, 2026: Added dark mode support for plan selection
+  // IMPORTANT: This is billing-related UI - do not modify logic, only styling
   const renderStep6 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
       {/* Header - Translated (January 9th, 2026) */}
+      {/* January 22nd, 2026: Added dark mode text colors */}
       <div className="text-center mb-4">
-        <h1 className="text-lg text-slate-900 font-bold tracking-tight mb-1">
+        <h1 className="text-lg text-slate-900 dark:text-white font-bold tracking-tight mb-1">
           {t.onboarding.step5.title}
         </h1>
-        <p className="text-slate-500 text-xs mb-3">
+        <p className="text-slate-500 dark:text-gray-400 text-xs mb-3">
           {t.onboarding.step5.trialInfo}
         </p>
 
         {/* Billing Toggle - Translated (January 9th, 2026) */}
-        <div className="inline-flex items-center bg-slate-100 p-1 rounded-lg">
+        {/* January 22nd, 2026: Added dark mode background and text colors */}
+        <div className="inline-flex items-center bg-slate-100 dark:bg-gray-800 p-1 rounded-lg">
           <button
             type="button"
             onClick={() => setBillingInterval('monthly')}
             className={cn(
               "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-              billingInterval === 'monthly' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              billingInterval === 'monthly' 
+                ? "bg-white dark:bg-gray-700 text-slate-900 dark:text-white shadow-sm" 
+                : "text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200"
             )}
           >
             {t.onboarding.step5.monthly}
@@ -1953,17 +1959,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             onClick={() => setBillingInterval('annual')}
             className={cn(
               "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5",
-              billingInterval === 'annual' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              billingInterval === 'annual' 
+                ? "bg-white dark:bg-gray-700 text-slate-900 dark:text-white shadow-sm" 
+                : "text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200"
             )}
           >
             {t.onboarding.step5.annual}
-            <span className="bg-[#ffbf23]/20 text-[#1A1D21] text-[9px] font-extrabold px-1 py-0.5 rounded uppercase">{t.onboarding.step5.discountBadge}</span>
+            <span className="bg-[#ffbf23]/20 text-[#1A1D21] dark:text-[#ffbf23] text-[9px] font-extrabold px-1 py-0.5 rounded uppercase">{t.onboarding.step5.discountBadge}</span>
           </button>
         </div>
       </div>
 
       {/* Pricing Grid - 3 columns
-          January 17, 2026: Updated to use translated plan details */}
+          January 17, 2026: Updated to use translated plan details
+          January 22nd, 2026: Added dark mode support for all plan cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {PRICING_PLANS.map((plan) => {
           const isEnterprise = plan.id === 'enterprise';
@@ -1998,18 +2007,30 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           const planFeatures = planTranslations.features;
           const planPriceLabel = isEnterprise ? (planTranslations as { priceLabel?: string }).priceLabel : undefined;
 
-  return (
+          // =================================================================
+          // January 22nd, 2026: DARK MODE SUPPORT
+          // 
+          // Added dark: variants for all text and background colors.
+          // NO LOGIC CHANGES - only CSS classes for dark mode visibility.
+          // 
+          // Dark mode colors follow existing neo-brutalist design:
+          // - Card background: dark:bg-[#0f0f0f] (matches AffiliateRow)
+          // - Text: dark:text-white for headings, dark:text-gray-400 for muted
+          // - Borders: dark:border-gray-700
+          // - Ring offset: dark:ring-offset-black for selected state
+          // =================================================================
+          return (
             <button
               key={plan.id}
               type="button"
               onClick={() => !isEnterprise && setSelectedPlan(plan.id)}
               disabled={isEnterprise}
               className={cn(
-                "relative rounded-lg bg-white flex flex-col text-left transition-all",
+                "relative rounded-lg bg-white dark:bg-[#0f0f0f] flex flex-col text-left transition-all",
                 isPopular 
                   ? "border-2 border-[#ffbf23] shadow-md shadow-[#ffbf23]/10" 
-                  : "border border-slate-200 shadow-sm",
-                isSelected && !isEnterprise && "ring-2 ring-[#1A1D21] ring-offset-1",
+                  : "border border-slate-200 dark:border-gray-700 shadow-sm",
+                isSelected && !isEnterprise && "ring-2 ring-[#1A1D21] dark:ring-[#ffbf23] ring-offset-1 dark:ring-offset-black",
                 isEnterprise && "opacity-70 cursor-not-allowed"
               )}
             >
@@ -2023,37 +2044,44 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               )}
 
               <div className="p-3 flex-1 flex flex-col">
+                {/* Plan Name - January 22nd, 2026: Added dark mode */}
                 <div className="mb-2">
-                  <h3 className={cn("text-sm font-bold", isPopular ? "text-[#1A1D21]" : "text-slate-900")}>
+                  <h3 className={cn(
+                    "text-sm font-bold", 
+                    isPopular 
+                      ? "text-[#1A1D21] dark:text-[#ffbf23]" 
+                      : "text-slate-900 dark:text-white"
+                  )}>
                     {planName}
                   </h3>
-                  <p className="text-[10px] text-slate-500 leading-snug line-clamp-2">{planDescription}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-gray-400 leading-snug line-clamp-2">{planDescription}</p>
                 </div>
 
+                {/* Price - January 22nd, 2026: Added dark mode */}
                 <div className="mb-2">
                   <div className="flex items-baseline gap-0.5">
                     {planPriceLabel ? (
-                      <span className="text-xl font-bold text-slate-900">{planPriceLabel}</span>
+                      <span className="text-xl font-bold text-slate-900 dark:text-white">{planPriceLabel}</span>
                     ) : (
                       <>
-                        <span className="text-xl font-bold text-slate-900">{CURRENCY_SYMBOL}{price}</span>
-                        <span className="text-slate-400 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
+                        <span className="text-xl font-bold text-slate-900 dark:text-white">{CURRENCY_SYMBOL}{price}</span>
+                        <span className="text-slate-400 dark:text-gray-500 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
                       </>
                     )}
                   </div>
                   {!planPriceLabel && billingInterval === 'annual' && (
-                    <p className="text-[9px] text-[#1A1D21] font-medium">{t.onboarding.step5.billedAnnually.replace('{amount}', `${CURRENCY_SYMBOL}${price! * 12}`)}</p>
+                    <p className="text-[9px] text-[#1A1D21] dark:text-[#ffbf23] font-medium">{t.onboarding.step5.billedAnnually.replace('{amount}', `${CURRENCY_SYMBOL}${price! * 12}`)}</p>
                   )}
                 </div>
 
-                {/* Select indicator */}
+                {/* Select indicator - January 22nd, 2026: Added dark mode */}
                 <div className={cn(
                   "w-full py-1.5 rounded-md text-[10px] font-bold mb-2 transition-all flex items-center justify-center gap-1",
                   isSelected && !isEnterprise
                     ? "bg-[#ffbf23] text-[#1A1D21]"
                     : isPopular 
-                      ? "bg-[#1A1D21]/10 text-[#1A1D21]"
-                      : "bg-slate-100 text-slate-600"
+                      ? "bg-[#1A1D21]/10 dark:bg-[#ffbf23]/10 text-[#1A1D21] dark:text-[#ffbf23]"
+                      : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300"
                 )}>
                   {isEnterprise ? (
                     t.onboarding.step5.contactSales
@@ -2067,17 +2095,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   )}
                 </div>
 
+                {/* Features List - January 22nd, 2026: Added dark mode */}
                 <div className="space-y-1 flex-1">
-                  <p className="text-[9px] font-bold text-slate-900 uppercase tracking-wider mb-1">{t.onboarding.step5.included}</p>
+                  <p className="text-[9px] font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">{t.onboarding.step5.included}</p>
                   {planFeatures.slice(0, 5).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-1.5">
                       <div className={cn(
                         "mt-0.5 w-3 h-3 rounded-full flex items-center justify-center shrink-0",
-                        isPopular ? "bg-[#1A1D21] text-[#ffbf23]" : "bg-slate-100 text-slate-600"
+                        isPopular 
+                          ? "bg-[#1A1D21] text-[#ffbf23]" 
+                          : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300"
                       )}>
                         <Check size={6} strokeWidth={4} />
                       </div>
-                      <span className="text-[10px] text-slate-600 leading-tight">
+                      <span className="text-[10px] text-slate-600 dark:text-gray-400 leading-tight">
                         {feature}
                       </span>
                     </div>
