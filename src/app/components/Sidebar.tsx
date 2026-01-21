@@ -48,11 +48,15 @@ import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffilia
 import { useSupabaseUser } from '../hooks/useSupabaseUser';
 import { useSubscription } from '../hooks/useSubscription';
 // =============================================================================
-// LANGUAGE SWITCHER (January 9th, 2026)
+// LANGUAGE CONTEXT (January 9th, 2026)
 // Added i18n support - see LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
-import { LanguageSwitcher } from './LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
+// =============================================================================
+// THEME SWITCHER (January 22nd, 2026)
+// Added dark mode toggle for dashboard - see ThemeContext for implementation
+// =============================================================================
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 // =============================================================================
 // SKELETON COMPONENT - NEW DESIGN (January 6th, 2026)
@@ -163,7 +167,8 @@ OLD_DESIGN_END */
 
 export const Sidebar: React.FC = () => {
   // Translation hook (January 9th, 2026)
-  const { t } = useLanguage();
+  // January 22nd, 2026: Added language and setLanguage for inline switcher
+  const { t, language, setLanguage } = useLanguage();
   // January 19th, 2026: Migrated from Stack Auth useUser() + useNeonUser() to useSupabaseUser()
   // const user = useUser(); // Removed - Stack Auth
   const { userId, user, supabaseUser, userName: hookUserName, isLoading: userLoading, signOut } = useSupabaseUser();
@@ -308,15 +313,49 @@ export const Sidebar: React.FC = () => {
         </nav>
 
         {/* =================================================================
-            LANGUAGE SWITCHER & PLAN CARD (January 10th, 2026)
+            LANGUAGE & THEME SWITCHERS + PLAN CARD (January 10th, 2026)
             Moved above the black divider line per client request.
             These should appear above the profile section separator.
             See LANGUAGE_MIGRATION.md for i18n documentation.
+            
+            January 22nd, 2026: Added ThemeSwitcher for dark mode toggle
+            - Combined into single row with matching styles
             ================================================================= */}
         <div className="px-4 pb-4">
-          {/* Language Switcher */}
-          <div className="mb-4">
-            <LanguageSwitcher variant="sidebar" />
+          {/* Language & Theme Switchers - Full width row */}
+          <div className="mb-4 flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+            {/* Language toggle */}
+            <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 p-0.5 border border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setLanguage('en')}
+                className={cn(
+                  "px-2.5 py-1 text-[10px] font-black uppercase transition-all",
+                  language === 'en'
+                    ? "bg-[#ffbf23] text-black border border-black"
+                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                )}
+                aria-label="Switch to English"
+                title="English"
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLanguage('de')}
+                className={cn(
+                  "px-2.5 py-1 text-[10px] font-black uppercase transition-all",
+                  language === 'de'
+                    ? "bg-[#ffbf23] text-black border border-black"
+                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                )}
+                aria-label="Switch to German"
+                title="Deutsch"
+              >
+                DE
+              </button>
+            </div>
+            
+            {/* Theme toggle */}
+            <ThemeSwitcher variant="compact" />
           </div>
 
           {/* Plan Card - Neo-brutalist style - Translated (January 9th, 2026) */}

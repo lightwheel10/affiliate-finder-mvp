@@ -31,7 +31,7 @@ import { Monitor } from 'lucide-react';
 // =============================================================================
 
 interface ThemeSwitcherProps {
-  variant?: 'sidebar' | 'navbar' | 'minimal';
+  variant?: 'sidebar' | 'navbar' | 'minimal' | 'compact';
   className?: string;
 }
 
@@ -208,6 +208,37 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({
       >
         <ThemeIcon isDark={isDark} size={16} />
       </motion.button>
+    );
+  }
+
+  // =========================================================================
+  // COMPACT VARIANT - Just icons, no label, for tight spaces
+  // January 22nd, 2026: Added for sidebar combined row
+  // =========================================================================
+  if (variant === 'compact') {
+    return (
+      <div className={cn("flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 p-0.5 border border-gray-200 dark:border-gray-700", className)}>
+        {[
+          { key: 'light', icon: <ThemeIcon isDark={false} size={12} /> },
+          { key: 'dark', icon: <ThemeIcon isDark={true} size={12} /> },
+        ].map(({ key, icon }) => (
+          <motion.button
+            key={key}
+            onClick={() => setTheme(key as 'light' | 'dark')}
+            className={cn(
+              "p-1.5 transition-colors",
+              theme === key || (theme === 'system' && key === (isDark ? 'dark' : 'light'))
+                ? "bg-[#ffbf23] text-black border border-black"
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            )}
+            whileTap={{ scale: 0.9 }}
+            aria-label={`${key} mode`}
+            title={key.charAt(0).toUpperCase() + key.slice(1)}
+          >
+            {icon}
+          </motion.button>
+        ))}
+      </div>
     );
   }
 

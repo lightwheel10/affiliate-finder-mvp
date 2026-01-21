@@ -230,8 +230,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     switch(source.toLowerCase()) {
       case 'youtube': return <Youtube size={size} className="text-red-600" />;
       case 'instagram': return <Instagram size={size} className="text-pink-600" />;
-      case 'tiktok': return <TikTokIcon size={size} className="text-slate-900" />;
-      default: return <Globe size={size} className="text-[#1A1D21]" />;
+      case 'tiktok': return <TikTokIcon size={size} className="text-slate-900 dark:text-white" />;
+      default: return <Globe size={size} className="text-[#1A1D21] dark:text-white" />;
     }
   };
 
@@ -1131,9 +1131,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           
           <div className="min-w-0 flex-1">
             {/* Row 1: Creator/Channel Name + badges */}
+            {/* January 22nd, 2026: Fixed dark mode text visibility */}
             <div className="flex items-center gap-2">
               {getSourceIcon(14)}
-              <h4 className="font-bold text-sm text-slate-900 truncate">
+              <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
                 {channel?.name || personName || domain}
               </h4>
               {channel?.verified && (
