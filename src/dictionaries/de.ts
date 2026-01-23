@@ -611,6 +611,7 @@ export const de: Dictionary = {
       bulkActions: {
         findEmails: 'E-Mails finden',
         emailProgress: 'E-Mails werden gesucht...',
+        alreadyHaveEmails: 'haben bereits E-Mails',
       },
       emailStatus: {
         found: 'Gefunden',

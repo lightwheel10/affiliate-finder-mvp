@@ -585,6 +585,7 @@ export interface Dictionary {
       bulkActions: {
         findEmails: string;
         emailProgress: string;
+        alreadyHaveEmails: string;
       };
       emailStatus: {
         found: string;

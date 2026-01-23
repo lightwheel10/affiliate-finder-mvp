@@ -618,6 +618,12 @@ export default function SavedPage() {
                 <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
                   {visibleSelectedLinks.size} {t.common.selected}
                 </span>
+                {/* Show breakdown: how many need email lookup vs already have emails */}
+                {visibleSelectedLinks.size !== selectedNeedingEmailLookup && selectedNeedingEmailLookup > 0 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    ({visibleSelectedLinks.size - selectedNeedingEmailLookup} {t.dashboard.saved.bulkActions.alreadyHaveEmails || 'already have emails'})
+                  </span>
+                )}
               </div>
               <div className="h-4 w-0.5 bg-black dark:bg-gray-600"></div>
               <button
