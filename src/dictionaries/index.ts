@@ -457,6 +457,32 @@ export interface Dictionary {
       action: string;
       creator: string;  // January 17, 2026: Added for outreach page table header
     };
+    // =========================================================================
+    // DISCOVERY REASONS - January 22, 2026
+    // Updated: January 22, 2026 - Simplified structure with more categories
+    // CLIENT REQUEST: Transparency feature showing WHY affiliates appear.
+    // =========================================================================
+    discoveryReasons: {
+      title: string;
+      emptyState: string;
+      categories: {
+        platform: string;
+        searchKeyword: string;
+        competitor: string;
+        subscribers: string;
+        followers: string;
+        views: string;
+        likes: string;
+        comments: string;
+        monthlyVisits: string;
+        globalRank: string;
+        category: string;
+        topTrafficSource: string;
+        matchedTerms: string;
+        mentionsCompetitor: string;
+        searchRank: string;
+      };
+    };
     // Find New page
     find: {
       pageTitle: string;

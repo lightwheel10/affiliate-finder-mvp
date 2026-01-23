@@ -478,6 +478,40 @@ export const de: Dictionary = {
       action: 'Aktion',
       creator: 'Creator',  // January 17, 2026: Added for outreach page table header
     },
+    // =========================================================================
+    // DISCOVERY REASONS - January 22, 2026
+    // Updated: January 22, 2026 - More useful insights, not just thresholds
+    // 
+    // CLIENT REQUEST: Transparency feature showing WHY affiliates appear.
+    // Used by DiscoveryReasonsPopover component in AffiliateRow.
+    // =========================================================================
+    discoveryReasons: {
+      title: 'Warum dieses Ergebnis angezeigt wurde',
+      emptyState: 'Keine weiteren Match-Details',
+      categories: {
+        // Platform
+        platform: 'Gefunden auf',
+        // Search
+        searchKeyword: 'Keyword-Match',
+        competitor: 'Konkurrenten-Match',
+        // Audience
+        subscribers: 'Abonnenten',
+        followers: 'Follower',
+        // Engagement
+        views: 'Aufrufe',
+        likes: 'Likes',
+        comments: 'Kommentare',
+        // Traffic (Web)
+        monthlyVisits: 'Monatliche Besuche',
+        globalRank: 'Globaler Rang',
+        category: 'Kategorie',
+        topTrafficSource: 'Haupt-Traffic',
+        // Content
+        matchedTerms: 'Passende Begriffe',
+        mentionsCompetitor: 'Erwähnt Konkurrent',
+        searchRank: 'Suchrang',
+      },
+    },
     find: {
       pageTitle: 'Neu suchen',
       emptyState: {

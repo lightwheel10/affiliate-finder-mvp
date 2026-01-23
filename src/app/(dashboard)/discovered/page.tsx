@@ -605,6 +605,8 @@ export default function DiscoveredPage() {
                 isSaving={savingLinks.has(item.link)}
                 onDelete={() => handleSingleDelete(item.link)}
                 affiliateData={item}
+                // Match reasons in View Modal (Discovered page) - January 22, 2026
+                currentUser={user}
               />
             ))
           ) : (

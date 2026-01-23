@@ -769,6 +769,8 @@ export default function SavedPage() {
                 onSelect={toggleSelectItem}
                 onDelete={() => handleRemove(item.link)}
                 affiliateData={item}
+                // Match reasons in View Modal (Saved page) - January 22, 2026
+                currentUser={user}
               />
             ))
           ) : (

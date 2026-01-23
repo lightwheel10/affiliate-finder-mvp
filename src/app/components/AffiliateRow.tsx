@@ -12,10 +12,12 @@
  */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User, BarChart2, TrendingUp, MapPin, Clock, MousePointer, FileText, ArrowUpRight } from 'lucide-react';
+import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User, BarChart2, TrendingUp, MapPin, Clock, MousePointer, FileText, ArrowUpRight, Info } from 'lucide-react';
 import { Modal } from './Modal';
 import { ResultItem, YouTubeChannelInfo } from '../types';
 import { useLanguage } from '@/contexts/LanguageContext';
+import type { SupabaseUserData } from '../hooks/useSupabaseUser';
+import { getDiscoveryReasons } from '../utils/discovery';
 
 // TikTok icon component
 const TikTokIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
@@ -113,6 +115,11 @@ interface AffiliateRowProps {
   // For Saved page - shows "SAVED" status badge instead of date
   // ============================================================================
   showStatusInsteadOfDate?: boolean;
+  // ============================================================================
+  // MATCH REASONS (View Modal) - January 22, 2026
+  // Used only inside View Modal actions for Find/Discovered/Saved pages.
+  // ============================================================================
+  currentUser?: SupabaseUserData | null;
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
@@ -149,13 +156,22 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   onDelete,          // Added Dec 2025: Single item delete callback
   affiliateData,     // Added Dec 2025: Full data for View modal
   showStatusInsteadOfDate = false,  // Added Jan 2026: Show "SAVED" status instead of date
+  currentUser,                    // Added Jan 22, 2026: User data for match reasons
 }) => {
   // i18n translation hook (January 10th, 2026)
   const { t } = useLanguage();
   
+  // =============================================================================
+  // MATCH REASONS IN VIEW MODAL - January 22, 2026
+  //
+  // Client request: explain why this result matched (keyword/competitor/terms).
+  // This is now shown ONLY inside the View Modal (not inline in rows).
+  // =============================================================================
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);  // Added Dec 2025: View modal state
+  const [showMatchReasons, setShowMatchReasons] = useState(false); // Added Jan 22, 2026
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
   
   // Fixed January 16, 2026: Portal state for View Modal to escape parent stacking context
@@ -164,6 +180,48 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   useEffect(() => {
     setPortalTarget(document.body);
   }, []);
+
+  // Reset match reasons panel when modal closes
+  useEffect(() => {
+    if (!isViewModalOpen) {
+      setShowMatchReasons(false);
+    }
+  }, [isViewModalOpen]);
+
+  // ============================================================================
+  // MATCH REASONS DATA (View Modal) - January 22, 2026
+  // Builds a minimal ResultItem for match-reason computation when needed.
+  // ============================================================================
+  const matchReasonSource = React.useMemo<ResultItem>(() => {
+    return (
+      affiliateData || {
+        title: title || '',
+        snippet: snippet || '',
+        keyword,
+        highlightedWords,
+        discoveryMethod,
+        link: link || '',
+        domain: domain || '',
+        source: source || '',
+      }
+    );
+  }, [
+    affiliateData,
+    title,
+    snippet,
+    keyword,
+    highlightedWords,
+    discoveryMethod,
+        rank,
+    link,
+    domain,
+    source,
+  ]);
+
+  const matchReasons = React.useMemo(() => {
+    if (!isViewModalOpen) return [];
+    return getDiscoveryReasons(matchReasonSource, currentUser);
+  }, [isViewModalOpen, matchReasonSource, currentUser]);
   
   // ============================================================================
   // SINGLE ITEM DELETE CONFIRMATION STATE (Added Dec 2025)
@@ -1284,6 +1342,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
       {/* Discovery Method - col-span-2 (NEW DESIGN January 6th, 2026) */}
       {/* Updated January 16, 2026: Added h-8 flex items-center for consistent height */}
+      {/* Updated January 22, 2026: DiscoveryReasonsPopover removed (feature rollback) */}
       <div className="col-span-2 h-8 flex items-center">
          {renderDiscoveryMethod()}
       </div>
@@ -1767,21 +1826,66 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+              {/* ===============================================================
+                  MATCH REASONS PANEL - January 22, 2026
+                  Shows why the result matched (keyword/competitor/terms).
+                  =============================================================== */}
+              {showMatchReasons && (
+                <div className="mb-4 border-2 border-black dark:border-gray-600">
+                  <div className="px-3 py-2 bg-[#ffbf23] border-b-2 border-black dark:border-gray-600">
+                    <h4 className="text-xs font-black text-black uppercase tracking-wide">
+                      {t.dashboard.discoveryReasons?.title || 'Why This Result Was Shown'}
+                    </h4>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    {matchReasons.length > 0 ? (
+                      matchReasons.map((reason, index) => (
+                        <div
+                          key={`${reason.key}-${index}`}
+                          className="flex items-start justify-between gap-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-2 py-1.5"
+                        >
+                          <span className="text-[10px] font-black text-gray-900 dark:text-gray-100 uppercase">
+                            {t.dashboard.discoveryReasons?.categories?.[reason.key] || reason.key}
+                          </span>
+                          <span className="text-[10px] text-gray-700 dark:text-gray-300 text-right">
+                            {reason.value}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
+                        {t.dashboard.discoveryReasons?.emptyState || 'No additional match details'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {renderViewModalContent()}
             </div>
 
             {/* Footer Actions - NEO-BRUTALIST */}
             <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex items-center justify-between">
               {/* Visit Button - Platform-specific */}
-              <a
-                href={getVisitButtonConfig().link}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black text-white text-xs font-black uppercase border-2 border-black hover:bg-white hover:text-black transition-colors"
-              >
-                {getVisitButtonConfig().icon}
-                {getVisitButtonConfig().text}
-              </a>
+              <div className="flex items-center gap-2">
+                <a
+                  href={getVisitButtonConfig().link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-black text-white text-xs font-black uppercase border-2 border-black hover:bg-white hover:text-black transition-colors"
+                >
+                  {getVisitButtonConfig().icon}
+                  {getVisitButtonConfig().text}
+                </a>
+                <button
+                  onClick={() => setShowMatchReasons((prev) => !prev)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-black text-xs font-black uppercase border-2 border-black hover:bg-[#ffbf23] transition-colors"
+                  title={t.dashboard.discoveryReasons?.title || 'Why This Result Was Shown'}
+                >
+                  <Info size={12} />
+                  {t.dashboard.discoveryReasons?.title || 'Why This Result Was Shown'}
+                </button>
+              </div>
 
               {/* Save & Delete Buttons */}
               <div className="flex items-center gap-2">

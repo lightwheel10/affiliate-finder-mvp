@@ -1273,6 +1273,8 @@ export default function FindNewPage() {
                         isSaving={savingLinks.has(group.main.link)}
                         onDelete={() => handleSingleDelete(group.main.link)}
                         affiliateData={group.main}
+                        // Match reasons in View Modal (Find page) - January 22, 2026
+                        currentUser={user}
                       />
                     </div>
                   ))}
@@ -1322,6 +1324,8 @@ export default function FindNewPage() {
                       isSaving={savingLinks.has(group.main.link)}
                       onDelete={() => handleSingleDelete(group.main.link)}
                       affiliateData={group.main}
+                      // Match reasons in View Modal (Find page) - January 22, 2026
+                      currentUser={user}
                     />
                   </div>
                 ))
