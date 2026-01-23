@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { DbSubscription } from '@/lib/db';
+import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
 
 // =============================================================================
 // useSubscription Hook
@@ -97,7 +98,7 @@ export function useSubscription(userId: number | null) {
         // Format price
         const planPrices = PLAN_PRICES[sub.plan as keyof typeof PLAN_PRICES] || { monthly: 0, annual: 0 };
         const price = sub.billing_interval === 'annual' ? planPrices.annual : planPrices.monthly;
-        const formattedPrice = sub.plan === 'enterprise' ? 'Custom' : `$${price}/mo`;
+        const formattedPrice = sub.plan === 'enterprise' ? 'Custom' : `${CURRENCY_SYMBOL}${price}/mo`;
 
         // Format next billing date
         let nextBillingDate: string | null = null;

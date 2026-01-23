@@ -183,7 +183,7 @@ export const en: Dictionary = {
       pro: {
         name: 'Pro',
         description: 'For growing SaaS & e-commerce brands',
-        price: '$99',
+        price: '€99',
         cta: 'Start 7-Day Free Trial',
         features: [
           'Unlimited affiliate discovery (500+ matches)',
@@ -197,7 +197,7 @@ export const en: Dictionary = {
       growth: {
         name: 'Growth',
         description: 'For agencies & multi-brand companies',
-        price: '$249',
+        price: '€249',
         cta: 'Start 7-Day Free Trial',
         features: [
           'Everything in Pro +',
