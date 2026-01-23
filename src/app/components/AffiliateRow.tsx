@@ -58,8 +58,12 @@ interface AffiliateRowProps {
   emailStatus?: 'not_searched' | 'searching' | 'found' | 'not_found' | 'error';
   onFindEmail?: () => void;  // Callback to trigger email search
   isPipelineView?: boolean;
+  // ==========================================================================
+  // DISCOVERY METHOD - Updated January 23, 2026
+  // Added 'brand' type for brand search results (existing affiliates)
+  // ==========================================================================
   discoveryMethod?: {
-    type: 'competitor' | 'keyword' | 'topic' | 'tagged';
+    type: 'competitor' | 'keyword' | 'topic' | 'tagged' | 'brand';
     value: string;
   };
   isAlreadyAffiliate?: boolean;

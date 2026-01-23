@@ -530,14 +530,22 @@ export default function SavedPage() {
 
       {/* =============================================================================
           CONTENT AREA - NEW DESIGN (January 6th, 2026)
+          
+          OVERFLOW FIX - January 23, 2026
+          Added overflow-x-hidden to prevent horizontal scrolling when results table
+          renders with long content. This ensures the filter bar stays visible.
           ============================================================================= */}
-      <div className="flex-1 p-8 overflow-y-auto">
+      <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
 
         {/* =============================================================================
             FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            
+            LAYOUT FIX - January 23, 2026
+            FilterPanel now uses a dropdown approach so filter pills don't take 
+            up horizontal space.
             ============================================================================= */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div className="flex items-center gap-4 w-full md:w-auto">
+        <div className="flex flex-row justify-between items-center gap-4 mb-8">
+          <div className="flex items-center gap-4">
             {/* Search Input - Translated (January 9th, 2026) */}
             <div className="relative w-full md:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
@@ -581,6 +589,7 @@ export default function SavedPage() {
 
           {/* Right: Advanced Filter */}
           {/* January 13th, 2026: Pass onboarding data for filter options */}
+          {/* January 23, 2026: Filter pills now render in dropdown, not inline */}
           <div className="flex items-center gap-3">
             <FilterPanel
               affiliates={savedAffiliates}

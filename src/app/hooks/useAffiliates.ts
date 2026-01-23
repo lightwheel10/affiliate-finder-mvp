@@ -101,8 +101,9 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     discoveredAt: dbAffiliate.discovered_at,
     searchKeyword: dbAffiliate.search_keyword,
     highlightedWords: dbAffiliate.highlighted_words,
+    // Updated January 23, 2026: Added 'brand' type for brand searches
     discoveryMethod: dbAffiliate.discovery_method_type ? {
-      type: dbAffiliate.discovery_method_type as 'competitor' | 'keyword' | 'topic' | 'tagged',
+      type: dbAffiliate.discovery_method_type as 'competitor' | 'keyword' | 'topic' | 'tagged' | 'brand',
       value: dbAffiliate.discovery_method_value || '',
     } : undefined,
     isAlreadyAffiliate: dbAffiliate.is_already_affiliate,

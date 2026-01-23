@@ -459,7 +459,7 @@ export interface Dictionary {
     };
     // =========================================================================
     // DISCOVERY REASONS - January 22, 2026
-    // Updated: January 22, 2026 - Simplified structure with more categories
+    // Updated: January 23, 2026 - Added 'brand' for brand search results
     // CLIENT REQUEST: Transparency feature showing WHY affiliates appear.
     // =========================================================================
     discoveryReasons: {
@@ -468,6 +468,7 @@ export interface Dictionary {
       categories: {
         platform: string;
         searchKeyword: string;
+        brand: string;        // January 23, 2026: Added for brand search results
         competitor: string;
         subscribers: string;
         followers: string;
@@ -1358,6 +1359,7 @@ export interface Dictionary {
   // Added: January 10th, 2026 - Priority 5: Shared Components
   // =========================================================================
   filterPanel: {
+    title: string;
     competitors: string;
     topics: string;
     followers: string;
@@ -1375,6 +1377,9 @@ export interface Dictionary {
     days30: string;
     days90: string;
     year1: string;
+    // Overlay additions - January 23, 2026
+    noFiltersActive: string;
+    apply: string;
   };
 
   // =========================================================================

@@ -467,23 +467,37 @@ export default function FindNewPage() {
                   }
                   
                   // Regular affiliate result processing
-                  const isCompetitor = kw.toLowerCase().includes('alternative') || 
-                                     kw.toLowerCase().includes('vs') || 
-                                     kw.toLowerCase().includes('competitor');
+                  // ================================================================
+                  // DISCOVERY METHOD - January 23, 2026
+                  // 
+                  // IMPORTANT: Use the server's discoveryMethod if present!
+                  // The scout route sends pre-tagged results with accurate
+                  // discoveryMethod (brand, competitor, keyword).
+                  // 
+                  // Only fall back to keyword heuristics if server didn't provide one.
+                  // ================================================================
+                  let discoveryMethod = result.discoveryMethod;
                   
-                  let methodValue = kw;
-                  if (isCompetitor) {
-                    methodValue = kw.replace(/alternative|vs|competitor/gi, '').trim();
+                  if (!discoveryMethod) {
+                    // Fallback: Use keyword-based heuristic (legacy behavior)
+                    const isCompetitor = kw.toLowerCase().includes('alternative') || 
+                                       kw.toLowerCase().includes('vs') || 
+                                       kw.toLowerCase().includes('competitor');
+                    let methodValue = kw;
+                    if (isCompetitor) {
+                      methodValue = kw.replace(/alternative|vs|competitor/gi, '').trim();
+                    }
+                    discoveryMethod = {
+                      type: isCompetitor ? 'competitor' as const : 'keyword' as const,
+                      value: methodValue || kw
+                    };
                   }
 
                   const enhancedResult: ResultItem = {
                     ...result,
                     rank: result.rank || streamedResults.length + 1,
                     keyword: result.keyword || kw,
-                    discoveryMethod: {
-                      type: isCompetitor ? 'competitor' as const : 'keyword' as const,
-                      value: methodValue || kw
-                    },
+                    discoveryMethod,
                     date: result.date || undefined
                   };
 
@@ -505,23 +519,31 @@ export default function FindNewPage() {
           const data = await res.json();
           if (data.results) {
             data.results.forEach((r: ResultItem, i: number) => {
-              const isCompetitor = kw.toLowerCase().includes('alternative') || 
-                                 kw.toLowerCase().includes('vs') || 
-                                 kw.toLowerCase().includes('competitor');
+              // ================================================================
+              // DISCOVERY METHOD - January 23, 2026
+              // Use server's discoveryMethod if present, else fallback to heuristic
+              // ================================================================
+              let discoveryMethod = r.discoveryMethod;
               
-              let methodValue = kw;
-              if (isCompetitor) {
-                methodValue = kw.replace(/alternative|vs|competitor/gi, '').trim();
+              if (!discoveryMethod) {
+                const isCompetitor = kw.toLowerCase().includes('alternative') || 
+                                   kw.toLowerCase().includes('vs') || 
+                                   kw.toLowerCase().includes('competitor');
+                let methodValue = kw;
+                if (isCompetitor) {
+                  methodValue = kw.replace(/alternative|vs|competitor/gi, '').trim();
+                }
+                discoveryMethod = {
+                  type: isCompetitor ? 'competitor' as const : 'keyword' as const,
+                  value: methodValue || kw
+                };
               }
 
               const enhancedResult: ResultItem = {
                 ...r,
                 rank: r.rank || i + 1,
                 keyword: r.keyword || kw,
-                discoveryMethod: {
-                  type: isCompetitor ? 'competitor' as const : 'keyword' as const,
-                  value: methodValue || kw
-                },
+                discoveryMethod,
                 date: r.date || undefined
               };
               
@@ -992,8 +1014,12 @@ export default function FindNewPage() {
 
       {/* =============================================================================
           CONTENT AREA - NEW DESIGN (January 6th, 2026)
+          
+          OVERFLOW FIX - January 23, 2026
+          Added overflow-x-hidden to prevent horizontal scrolling when results table
+          renders with long content. This ensures the filter bar stays visible.
           ============================================================================= */}
-      <div className="flex-1 p-8 overflow-y-auto">
+      <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
         
         {/* Previous Results Warning - Neo-brutalist style - Translated (January 9th, 2026) */}
         {showWarning && (
@@ -1019,9 +1045,13 @@ export default function FindNewPage() {
 
         {/* =============================================================================
             FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            
+            LAYOUT FIX - January 23, 2026
+            Restored justify-between layout. FilterPanel now uses a dropdown approach
+            so filter pills don't take up horizontal space.
             ============================================================================= */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div className="flex items-center gap-4 w-full md:w-auto">
+        <div className="flex flex-row justify-between items-center gap-4 mb-8">
+          <div className="flex items-center gap-4">
             {/* Search Input - DashboardDemo exact:
                 border-2 border-brandBlack dark:border-gray-700 rounded bg-white dark:bg-gray-900 
                 focus:border-brandYellow */}
@@ -1070,6 +1100,7 @@ export default function FindNewPage() {
 
           {/* Right: Advanced Filter */}
           {/* January 13th, 2026: Pass onboarding data for filter options */}
+          {/* January 23, 2026: Filter pills now render in dropdown, not inline */}
           <div className="flex items-center gap-3">
             <FilterPanel
               affiliates={results}
@@ -1185,8 +1216,12 @@ export default function FindNewPage() {
             TABLE AREA - DashboardDemo.tsx EXACT STYLING
             bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 
             rounded-lg min-h-[500px] flex flex-col
+            
+            OVERFLOW FIX - January 23, 2026
+            Added max-w-full and overflow-hidden to prevent long content (URLs, titles)
+            from causing horizontal expansion that pushes filters off-screen.
             ============================================================================= */}
-        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
+        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col max-w-full overflow-hidden">
           {/* Table Header - Translated (January 9th, 2026) */}
           <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
             <div className="col-span-1 flex justify-center">

@@ -51,8 +51,13 @@ export default function DashboardLayout({
             Main Content Area - NEW DESIGN
             - ml-64 matches the new Sidebar width (w-64 = 256px)
             - White background with dark mode support
+            
+            OVERFLOW FIX - January 23, 2026
+            Added overflow-x-hidden to prevent horizontal scrolling when table
+            content (like long URLs or titles) causes the grid to expand.
+            Without this, the filter bar gets pushed off-screen when results load.
           */}
-          <main className="flex-1 flex flex-col min-h-screen ml-64 bg-white dark:bg-[#050505]">
+          <main className="flex-1 flex flex-col min-h-screen ml-64 bg-white dark:bg-[#050505] overflow-x-hidden">
             {children}
           </main>
         </div>

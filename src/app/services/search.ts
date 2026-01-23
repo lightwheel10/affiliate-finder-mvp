@@ -335,6 +335,21 @@ function cleanKeywordForSearch(keyword: string): string {
     .trim();
 }
 
+// =============================================================================
+// LOCALIZED SEARCH TERMS - January 23, 2026
+//
+// Maps target languages to their localized search terms.
+// Only includes European languages for now (most common non-English markets).
+// =============================================================================
+const LOCALIZED_TERMS: Record<string, { review: string; discount: string }> = {
+  'German': { review: 'erfahrung', discount: 'rabatt' },
+  'Spanish': { review: 'reseña', discount: 'descuento' },
+  'French': { review: 'avis', discount: 'réduction' },
+  'Portuguese': { review: 'avaliação', discount: 'desconto' },
+  'Italian': { review: 'recensione', discount: 'sconto' },
+  'Dutch': { review: 'ervaring', discount: 'korting' },
+};
+
 /**
  * Build an optimized search query based on keyword type
  * 
@@ -344,7 +359,7 @@ function cleanKeywordForSearch(keyword: string): string {
  * 
  * BRAND SEARCHES (keyword contains TLD like .de, .com):
  *   → Find BLOGS already promoting this brand
- *   → Query: "brand review" OR "brand erfahrung" OR "brand rabatt"
+ *   → Query: "brand review" + localized terms based on user's target language
  *   → Expected: Bloggers with discount codes, review sites, coupon sites
  * 
  * NICHE SEARCHES (product category, ingredient, etc.):
@@ -352,59 +367,63 @@ function cleanKeywordForSearch(keyword: string): string {
  *   → Query: "niche blog" OR "niche blogger" OR "niche review"
  *   → Expected: Personal blogs, niche review sites
  * 
- * German terms included because many clients are German (erfahrung = experience)
+ * Updated: January 23, 2026 - Language-aware queries
+ * Only includes localized terms when user's target language is non-English.
+ * 
+ * @param keyword - The search keyword
+ * @param targetLanguage - User's target language from onboarding (optional)
  */
-function buildAffiliateSearchQuery(keyword: string): string {
+function buildAffiliateSearchQuery(keyword: string, targetLanguage?: string | null): string {
   const cleanKeyword = cleanKeywordForSearch(keyword);
+  const localizedTerms = targetLanguage ? LOCALIZED_TERMS[targetLanguage] : null;
   
   if (isBrandKeyword(keyword)) {
     // ==========================================================================
     // BRAND SEARCH QUERY - January 16, 2026
+    // Updated: January 23, 2026 - Language-aware queries
     // 
     // For brand/domain keywords, find BLOGS that already mention this brand:
     // 1. Review blogs that tested/reviewed this brand
-    // 2. Coupon/deal blogs with discount codes
+    // 2. Coupon/deal blogs with discount codes (if language matches)
     // 3. Affiliate sites promoting this brand
-    // 
-    // German terms:
-    // - "erfahrung" = experience/review
-    // - "test" = test/review  
-    // - "rabatt" = discount
-    // - "gutschein" = coupon
-    // 
-    // Tested: 55% useful (joyce-huebner.com, golden-shopping-days.de)
     // ==========================================================================
     const brandName = cleanKeyword.split('.')[0]; // "bedrop.de" → "bedrop"
     
-    // 4 OR clauses - tested and worked in PowerShell terminal test
-    return `"${brandName} review" OR "${brandName} erfahrung" OR "${brandName} test" OR "${brandName} rabatt" -site:amazon.com -site:ebay.com`;
+    // Base queries (universal)
+    const queries = [
+      `"${brandName} review"`,
+      `"${brandName} test"`,
+    ];
+    
+    // Add localized terms only if user's target language has them
+    if (localizedTerms) {
+      queries.push(`"${brandName} ${localizedTerms.review}"`);
+      queries.push(`"${brandName} ${localizedTerms.discount}"`);
+    }
+    
+    return `${queries.join(' OR ')} -site:amazon.com -site:ebay.com`;
   } else {
     // ==========================================================================
     // NICHE SEARCH QUERY - January 16, 2026
+    // Updated: January 23, 2026 - Language-aware queries
     // 
     // For niche/product keywords, find PERSONAL BLOGS (not social media):
     // 1. Personal blogs with first-person review content
     // 2. Individual reviewers sharing their experience
     // 3. Small niche blogs (not major publications)
-    // 
-    // NOTE: Do NOT include "youtube", "instagram", "tiktok" - those platforms
-    // are searched via dedicated Apify scrapers.
-    // 
-    // STRATEGY: Use personal language indicators like:
-    // - "I tried" → Personal experience
-    // - "my review" → Personal review  
-    // - "my experience" → First-person account
-    // - "honest review" → Individual reviewer
-    // 
-    // German terms:
-    // - "meine erfahrung" = my experience
-    // - "ich habe getestet" = I tested
-    // 
-    // Tested: Found personal blogs like btyaly.com, simplysaima.wordpress.com,
-    // ellennoir.co.uk - real individual bloggers!
     // ==========================================================================
-    // 4 OR clauses, 2 -site: exclusions (social platforms filtered post-search)
-    return `"${cleanKeyword} review" OR "${cleanKeyword} blog" OR "${cleanKeyword} blogger" OR "${cleanKeyword} erfahrung" -site:amazon.com -site:ebay.com`;
+    const queries = [
+      `"${cleanKeyword} review"`,
+      `"${cleanKeyword} blog"`,
+      `"${cleanKeyword} blogger"`,
+    ];
+    
+    // Add localized review term only if user's target language has it
+    if (localizedTerms) {
+      queries.push(`"${cleanKeyword} ${localizedTerms.review}"`);
+    }
+    
+    return `${queries.join(' OR ')} -site:amazon.com -site:ebay.com`;
   }
 }
 
@@ -602,6 +621,18 @@ export interface WebSearchOptions {
   targetCountry?: string | null;
   /** Target language from onboarding (e.g., "German", "English") */
   targetLanguage?: string | null;
+  // ==========================================================================
+  // RAW QUERY MODE - January 23, 2026
+  // 
+  // When true, the keyword is used DIRECTLY as the search query without
+  // any transformation via buildAffiliateSearchQuery().
+  // 
+  // USE CASE: Brand/competitor searches already have pre-built queries
+  // like '"guffles review"' that should go directly to Serper.
+  // Without this flag, we get double-quoting bugs like '""guffles review" review"'.
+  // ==========================================================================
+  /** If true, use keyword as raw query without transformation */
+  rawQuery?: boolean;
 }
 
 /**
@@ -764,6 +795,7 @@ export async function searchWeb(
 ): Promise<SearchResult[]> {
   // ==========================================================================
   // SMART AFFILIATE SEARCH QUERY - January 16, 2026
+  // Updated: January 23, 2026 - Added rawQuery support for brand/competitor searches
   // 
   // Uses buildAffiliateSearchQuery() to create optimized queries based on
   // keyword type (brand vs niche).
@@ -778,16 +810,26 @@ export async function searchWeb(
   //   → Finds: Potential new affiliates in the space
   //   → Tested: 50% useful results
   // 
+  // RAW QUERY MODE (January 23, 2026):
+  //   When options.rawQuery is true, the keyword is used DIRECTLY without
+  //   transformation. This is needed for brand/competitor searches that
+  //   already have pre-built queries like '"guffles review"'.
+  // 
   // Post-search filtering via filterAndPrioritizeResults() handles:
   //   - E-commerce domain exclusion (Amazon, eBay, etc.)
   //   - Major publication exclusion (TechRadar, Wirecutter, etc.)
   //   - User's own domain exclusion
   //   - Shop URL pattern detection
   // ==========================================================================
-  const query = buildAffiliateSearchQuery(keyword);
-  const isBrand = isBrandKeyword(keyword);
+  
+  // January 23, 2026: Support raw queries for brand/competitor searches
+  // When rawQuery is true, use keyword directly without transformation
+  // Also pass targetLanguage for localized search terms (e.g., "erfahrung" only for German)
+  const query = options.rawQuery ? keyword : buildAffiliateSearchQuery(keyword, options.targetLanguage);
+  const isBrand = options.rawQuery ? false : isBrandKeyword(keyword);
+  const modeLabel = options.rawQuery ? 'RAW' : (isBrand ? 'BRAND' : 'NICHE');
 
-  console.log(`🔍 Web search (${isBrand ? 'BRAND' : 'NICHE'} mode): "${query}"`);
+  console.log(`🔍 Web search (${modeLabel} mode, lang: ${options.targetLanguage || 'en'}): "${query}"`);
 
   // ==========================================================================
   // LOCATION-BASED FILTERING - January 16, 2026

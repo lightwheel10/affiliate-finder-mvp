@@ -491,8 +491,9 @@ export const de: Dictionary = {
       categories: {
         // Platform
         platform: 'Gefunden auf',
-        // Search
+        // Search - Updated January 23, 2026: Added brand for brand search results
         searchKeyword: 'Keyword-Match',
+        brand: 'Ihre Marken-Match',
         competitor: 'Konkurrenten-Match',
         // Audience
         subscribers: 'Abonnenten',
@@ -1394,6 +1395,7 @@ export const de: Dictionary = {
   // Added: January 10th, 2026 - Priority 5: Shared Components
   // =========================================================================
   filterPanel: {
+    title: 'Filter',
     competitors: 'Wettbewerber',
     topics: 'Themen',
     followers: 'Follower',
@@ -1410,6 +1412,8 @@ export const de: Dictionary = {
     days30: '30 Tage',
     days90: '90 Tage',
     year1: '1 Jahr',
+    noFiltersActive: 'Keine Filter aktiv',
+    apply: 'Anwenden',
   },
 
   // =========================================================================

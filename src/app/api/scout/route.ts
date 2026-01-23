@@ -11,6 +11,15 @@ import {
 import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 import { sql } from '@/lib/db';
 import { checkCredits, consumeCredits } from '@/lib/credits';
+// =============================================================================
+// BRAND & COMPETITOR SEARCH - January 23, 2026
+// 
+// Import utilities to build brand/competitor search queries.
+// When user searches, we also search for:
+// 1. People already promoting their brand (existing affiliates)
+// 2. People promoting competitors (potential recruits)
+// =============================================================================
+import { buildAllBrandCompetitorQueries, TaggedSearchQuery } from '../../utils/search-queries';
 
 // ============================================================================
 // VERCEL FUNCTION CONFIGURATION (December 16, 2025)
@@ -146,6 +155,26 @@ export async function POST(req: Request) {
     console.log(`[Scout] User ${userId} - Brand: ${userBrand || 'not set'}, Competitors: ${userCompetitors?.length || 0}, Country: ${targetCountry || 'not set'}, Language: ${targetLanguage || 'not set'}`);
 
     // ==========================================================================
+    // BRAND & COMPETITOR SEARCH QUERIES - January 23, 2026
+    // Updated: January 23, 2026 - Pass targetLanguage for localized queries
+    // 
+    // Build additional search queries to find:
+    // 1. Existing affiliates of the user's brand (people already promoting them)
+    // 2. Affiliates of competitors (potential recruits to switch)
+    // 
+    // These queries run alongside the main keyword search and results are
+    // tagged with the appropriate discoveryMethod type.
+    // 
+    // LANGUAGE-AWARE: Queries now include localized terms based on user's
+    // target language (e.g., "erfahrung" only for German users).
+    // 
+    // COST NOTE: Each brand/competitor generates 2-3 queries. With 1 brand + 
+    // 3 competitors, this adds ~8-12 additional search queries per platform.
+    // ==========================================================================
+    const brandCompetitorQueries = buildAllBrandCompetitorQueries(userBrand, userCompetitors, targetLanguage);
+    console.log(`[Scout] Brand/Competitor queries: ${brandCompetitorQueries.length} (brand: ${userBrand ? 2 : 0}, competitors: ${(userCompetitors?.length || 0) * 3}, language: ${targetLanguage || 'en'})`);
+
+    // ==========================================================================
     // CREDIT CHECK (December 2025)
     // Verify user has topic_search credits before proceeding
     // ==========================================================================
@@ -212,6 +241,15 @@ export async function POST(req: Request) {
       // Track Web domains for SimilarWeb batch enrichment
       const webDomains: string[] = [];
       
+      // ======================================================================
+      // DEDUPLICATION SET - January 23, 2026
+      // 
+      // Track URLs that have been streamed to avoid sending duplicates.
+      // A result might appear from both keyword search AND competitor search.
+      // We only stream each unique URL once.
+      // ======================================================================
+      const streamedUrls = new Set<string>();
+      
       try {
         console.log(`🔍 Starting STREAMING search for "${keyword}" on: ${activeSources.join(', ')}`);
         
@@ -228,16 +266,34 @@ export async function POST(req: Request) {
         // ======================================================================
         // HELPER FUNCTION: Stream results from a single platform
         // Called when each platform's search completes - streams immediately
+        // 
+        // Updated January 23, 2026: Added discoveryMethod parameter for
+        // brand/competitor search tagging.
         // ======================================================================
         const streamPlatformResults = async (
           platform: Platform,
           results: SearchResult[],
-          includeEnrichingFlag: boolean = false
+          includeEnrichingFlag: boolean = false,
+          discoveryMethodOverride?: { type: 'brand' | 'competitor' | 'keyword'; value: string }
         ): Promise<number> => {
           let streamedCount = 0;
           
           for (const item of results) {
             if (isStreamClosed) break;
+            
+            // ================================================================
+            // DEDUPLICATION CHECK - January 23, 2026
+            // Skip if this URL was already streamed from a previous search
+            // ================================================================
+            if (item.link && streamedUrls.has(item.link)) {
+              console.log(`⏭️ Skipped duplicate: ${item.link.substring(0, 50)}...`);
+              continue;
+            }
+            
+            // Mark as streamed
+            if (item.link) {
+              streamedUrls.add(item.link);
+            }
             
             // Build the result object with standard fields
             const result: any = {
@@ -246,7 +302,13 @@ export async function POST(req: Request) {
               summary: `Found via ${item.source} search`,
               // For Web results, mark as "enriching" so UI can show loading state
               // SimilarWeb data will arrive later via enrichment_update event
-              ...(includeEnrichingFlag ? { isEnriching: true } : {})
+              ...(includeEnrichingFlag ? { isEnriching: true } : {}),
+              // ================================================================
+              // DISCOVERY METHOD TAGGING - January 23, 2026
+              // Override the discovery method if provided (for brand/competitor)
+              // Otherwise keep the existing discoveryMethod or default to keyword
+              // ================================================================
+              ...(discoveryMethodOverride ? { discoveryMethod: discoveryMethodOverride } : {})
             };
             
             try {
@@ -325,8 +387,10 @@ export async function POST(req: Request) {
             
             // STREAM IMMEDIATELY - Don't wait for other platforms!
             // Web results are marked with isEnriching: true since SimilarWeb data comes later
+            // Updated January 23, 2026: Tag with keyword discovery method
             const isWeb = platform === 'Web';
-            const streamedCount = await streamPlatformResults(platform, results, isWeb);
+            const keywordDiscoveryMethod = { type: 'keyword' as const, value: keyword };
+            const streamedCount = await streamPlatformResults(platform, results, isWeb, keywordDiscoveryMethod);
             totalResultsStreamed += streamedCount;
             
             // Track results for final summary
@@ -340,14 +404,87 @@ export async function POST(req: Request) {
           }
         });
 
-        // Wait for all platform searches to complete (they stream as they finish)
+        // Wait for all keyword platform searches to complete (they stream as they finish)
         await Promise.all(platformPromises);
         
-        console.log(`📊 All platform searches complete. Total streamed: ${totalResultsStreamed}`);
+        console.log(`📊 Keyword platform searches complete. Total streamed: ${totalResultsStreamed}`);
+
+        // ======================================================================
+        // BRAND & COMPETITOR SEARCHES - January 23, 2026
+        // 
+        // Run additional searches for user's brand and competitors.
+        // These find:
+        // 1. People already promoting the brand (existing affiliates)
+        // 2. People promoting competitors (potential recruits)
+        // 
+        // Results are tagged with appropriate discoveryMethod type.
+        // Duplicates are automatically filtered by streamedUrls set.
+        // 
+        // NOTE: We only run Web searches for brand/competitor to control costs.
+        // Social platforms are expensive and keyword search already covers them.
+        // ======================================================================
+        if (brandCompetitorQueries.length > 0 && !isStreamClosed) {
+          console.log(`🔍 Starting brand/competitor searches: ${brandCompetitorQueries.length} queries`);
+          
+          const brandCompetitorPromises = brandCompetitorQueries.map(async (taggedQuery: TaggedSearchQuery) => {
+            if (isStreamClosed) return { query: taggedQuery.query, results: [], success: false };
+            
+            const startTime = Date.now();
+            
+            try {
+              // =============================================================
+              // BRAND/COMPETITOR WEB SEARCH - January 23, 2026
+              // 
+              // IMPORTANT: Use rawQuery: true to bypass query transformation!
+              // 
+              // Brand/competitor queries are pre-built (e.g., '"guffles review"')
+              // and should go DIRECTLY to Serper. Without rawQuery: true, the
+              // query gets double-transformed into '""guffles review" review"'.
+              // =============================================================
+              const results = await searchWeb(taggedQuery.query, {
+                ...webSearchOptions,
+                rawQuery: true,  // January 23, 2026: Use query directly, no transformation
+              });
+              totalCost += API_COSTS.serper;
+              
+              // Collect domains for SimilarWeb enrichment
+              results.forEach(r => {
+                if (r.domain && !webDomains.includes(r.domain)) {
+                  webDomains.push(r.domain);
+                }
+              });
+              
+              const duration = Date.now() - startTime;
+              console.log(`📊 ${taggedQuery.type} search "${taggedQuery.query}" completed: ${results.length} results in ${duration}ms`);
+              
+              // Stream with proper discovery method tagging
+              const discoveryMethod = { 
+                type: taggedQuery.type, 
+                value: taggedQuery.sourceValue 
+              };
+              const streamedCount = await streamPlatformResults('Web', results, true, discoveryMethod);
+              totalResultsStreamed += streamedCount;
+              
+              // Track results
+              allResults.push(...results);
+              
+              return { query: taggedQuery.query, results, success: true };
+              
+            } catch (error: any) {
+              console.error(`❌ ${taggedQuery.type} search "${taggedQuery.query}" failed:`, error.message);
+              return { query: taggedQuery.query, results: [], success: false, error: error.message };
+            }
+          });
+          
+          // Wait for all brand/competitor searches to complete
+          await Promise.all(brandCompetitorPromises);
+          
+          console.log(`📊 Brand/competitor searches complete. Total streamed now: ${totalResultsStreamed}`);
+        }
 
         // Handle case where no results were found
         if (totalResultsStreamed === 0 && !isStreamClosed) {
-          console.log('⚠️ No results found across any platform');
+          console.log('⚠️ No results found across any search');
         }
 
         // ======================================================================

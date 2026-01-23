@@ -4,12 +4,22 @@
  * =============================================================================
  *
  * Created: January 22, 2026
+ * Updated: January 23, 2026 - Added 'brand' discovery method support
+ * 
  * Purpose: [CLIENT REQUEST] Explain WHY a result was shown
  *
  * CLIENT CONTEXT:
  * ---------------
- * The client wants transparency about match logic (keyword + competitor).
+ * The client wants transparency about match logic (keyword + competitor + brand).
  * This helper focuses ONLY on match reasons, not stats or engagement.
+ *
+ * DISCOVERY METHOD TYPES:
+ * -----------------------
+ * - keyword: Found via user's search keyword
+ * - brand: Found via brand search (existing affiliates of user's brand)
+ * - competitor: Found via competitor search (affiliates of competitors)
+ * - topic: Found via onboarding topic
+ * - tagged: Manually tagged
  *
  * =============================================================================
  */
@@ -17,8 +27,13 @@
 import type { SupabaseUserData } from '../hooks/useSupabaseUser';
 import type { ResultItem } from '../types';
 
+// =============================================================================
+// DISCOVERY REASON KEYS - Updated January 23, 2026
+// Added 'brand' for brand search results (existing affiliates)
+// =============================================================================
 export type DiscoveryReasonKey =
   | 'searchKeyword'
+  | 'brand'
   | 'competitor'
   | 'matchedTerms'
   | 'mentionsCompetitor'
@@ -80,18 +95,36 @@ export function getDiscoveryReasons(
     });
   };
 
-  // 1) Primary discovery method (keyword or competitor)
+  // ==========================================================================
+  // 1) Primary discovery method - January 23, 2026
+  // 
+  // Shows the main reason why this result was found:
+  // - 'keyword': User's search keyword
+  // - 'brand': Brand search (existing affiliates of user's brand)
+  // - 'competitor': Competitor search (affiliates of competitors)
+  // - 'topic' / 'tagged': Other discovery methods
+  // ==========================================================================
   if (affiliate.discoveryMethod) {
     const { type, value } = affiliate.discoveryMethod;
-    if (type === 'competitor') {
+    if (type === 'brand') {
+      // Brand search: Found someone already promoting the user's brand
+      addReason('brand', value, 1);
+    } else if (type === 'competitor') {
+      // Competitor search: Found someone promoting a competitor
       addReason('competitor', value, 1);
     } else {
+      // Keyword/topic/tagged: Show as search keyword
       addReason('searchKeyword', value, 1);
     }
   }
 
-  // 2) If competitor was used, also show keyword when present
-  if (affiliate.discoveryMethod?.type === 'competitor' && affiliate.keyword) {
+  // ==========================================================================
+  // 2) If brand/competitor was used, also show the search query - January 23, 2026
+  // 
+  // For brand/competitor searches, the actual search query (e.g., "guffles review")
+  // is stored in affiliate.keyword. Show it as secondary context.
+  // ==========================================================================
+  if ((affiliate.discoveryMethod?.type === 'competitor' || affiliate.discoveryMethod?.type === 'brand') && affiliate.keyword) {
     addReason('searchKeyword', affiliate.keyword, 2);
   }
 

@@ -485,122 +485,42 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     setOpenDropdown(null);
   };
 
+  // ==========================================================================
+  // OVERLAY APPROACH - January 23, 2026
+  // 
+  // Filter panel renders as a slide-out overlay from the right side.
+  // Uses a semi-transparent backdrop. Clean and professional.
+  // ==========================================================================
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Prevent body scroll when overlay is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  const handleClose = () => {
+    onClose();
+    setOpenDropdown(null);
+  };
+
   return (
-    <div className="flex items-center gap-2">
-      {/* Expanded Filter Pills - Only show when isOpen */}
-      {/* Updated January 10th, 2026 - i18n migration */}
-      {isOpen && (
-        <div className="flex items-center gap-2">
-          {/* Competitors Filter */}
-          <FilterPill
-            label={t.filterPanel.competitors}
-            icon={<Users size={12} />}
-            isActive={activeFilters.competitors.length > 0}
-            activeCount={activeFilters.competitors.length}
-            isDropdownOpen={openDropdown === 'competitors'}
-            onToggleDropdown={() => toggleDropdown('competitors')}
-            onCloseDropdown={closeDropdown}
-          >
-            <MultiSelect
-              options={filterOptions.competitors}
-              selected={activeFilters.competitors}
-              onChange={competitors => onFilterChange({ ...activeFilters, competitors })}
-              emptyMessage={t.filterPanel.noCompetitorsFound}
-              t={t.filterPanel}
-            />
-          </FilterPill>
-
-          {/* Topics Filter */}
-          <FilterPill
-            label={t.filterPanel.topics}
-            icon={<Tag size={12} />}
-            isActive={activeFilters.topics.length > 0}
-            activeCount={activeFilters.topics.length}
-            isDropdownOpen={openDropdown === 'topics'}
-            onToggleDropdown={() => toggleDropdown('topics')}
-            onCloseDropdown={closeDropdown}
-          >
-            <MultiSelect
-              options={filterOptions.topics}
-              selected={activeFilters.topics}
-              onChange={topics => onFilterChange({ ...activeFilters, topics })}
-              emptyMessage={t.filterPanel.noTopicsFound}
-              t={t.filterPanel}
-            />
-          </FilterPill>
-
-          {/* Subscribers Filter */}
-          <FilterPill
-            label={t.filterPanel.followers}
-            icon={<Users size={12} />}
-            isActive={activeFilters.subscribers !== null}
-            isDropdownOpen={openDropdown === 'subscribers'}
-            onToggleDropdown={() => toggleDropdown('subscribers')}
-            onCloseDropdown={closeDropdown}
-          >
-            <RangePresets
-              value={activeFilters.subscribers}
-              onChange={subscribers => onFilterChange({ ...activeFilters, subscribers })}
-              presets={subscriberPresets}
-              clearLabel={t.filterPanel.clear}
-            />
-          </FilterPill>
-
-          {/* Date Published Filter */}
-          <FilterPill
-            label={t.filterPanel.date}
-            icon={<Calendar size={12} />}
-            isActive={activeFilters.datePublished !== null}
-            isDropdownOpen={openDropdown === 'datePublished'}
-            onToggleDropdown={() => toggleDropdown('datePublished')}
-            onCloseDropdown={closeDropdown}
-          >
-            <DatePresets
-              value={activeFilters.datePublished}
-              onChange={datePublished => onFilterChange({ ...activeFilters, datePublished })}
-              t={t.filterPanel}
-            />
-          </FilterPill>
-
-          {/* Content Count Filter */}
-          <FilterPill
-            label={t.filterPanel.posts}
-            icon={<Hash size={12} />}
-            isActive={activeFilters.contentCount !== null}
-            isDropdownOpen={openDropdown === 'contentCount'}
-            onToggleDropdown={() => toggleDropdown('contentCount')}
-            onCloseDropdown={closeDropdown}
-          >
-            <RangePresets
-              value={activeFilters.contentCount}
-              onChange={contentCount => onFilterChange({ ...activeFilters, contentCount })}
-              presets={contentPresets}
-              clearLabel={t.filterPanel.clear}
-            />
-          </FilterPill>
-
-          {/* Clear All Button - Only show if filters are active */}
-          {activeFilterCount > 0 && (
-            <button
-              onClick={handleClearAll}
-              className="flex items-center gap-1 px-2 py-2 text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-black uppercase tracking-wide"
-            >
-              <X size={10} strokeWidth={3} />
-              <span>{t.filterPanel.clearAll}</span>
-            </button>
-          )}
-
-          {/* Divider - Industrial style */}
-          <div className="h-8 w-0.5 bg-black dark:bg-gray-600" />
-        </div>
-      )}
-
+    <>
       {/* Main Filter Toggle Button - Neo-brutalist style */}
       <button
         onClick={() => {
           if (isOpen) {
-            onClose();
-            setOpenDropdown(null);
+            handleClose();
           } else {
             onOpen();
           }
@@ -614,7 +534,153 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       >
         <SlidersHorizontal size={16} strokeWidth={2.5} />
       </button>
-    </div>
+
+      {/* Filter Overlay - Slide-out panel from right */}
+      {isOpen && isMounted && createPortal(
+        <>
+          {/* Backdrop - Starts below header (64px) and after sidebar (256px) */}
+          <div 
+            className="fixed top-16 left-64 right-0 bottom-0 bg-black/50 z-[9997] animate-in fade-in duration-200"
+            onClick={handleClose}
+          />
+          
+          {/* Slide-out Panel - Starts below header (h-16 = 64px) */}
+          <div 
+            className="fixed top-16 right-0 h-[calc(100vh-64px)] w-80 bg-white dark:bg-[#0a0a0a] border-l-4 border-black dark:border-[#ffbf23] shadow-[-4px_0_20px_rgba(0,0,0,0.3)] z-[9998] animate-in slide-in-from-right duration-300"
+          >
+            {/* Panel Header */}
+            <div className="flex items-center justify-between p-4 border-b-2 border-black dark:border-gray-700">
+              <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
+                <SlidersHorizontal size={16} />
+                {t.filterPanel.title || 'Filters'}
+              </h3>
+              <button
+                onClick={handleClose}
+                className="w-8 h-8 flex items-center justify-center border-2 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X size={16} strokeWidth={2.5} />
+              </button>
+            </div>
+
+            {/* Filter Options */}
+            <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-120px)]">
+              {/* Competitors Filter */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <Users size={12} />
+                  {t.filterPanel.competitors}
+                  {activeFilters.competitors.length > 0 && (
+                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">
+                      {activeFilters.competitors.length}
+                    </span>
+                  )}
+                </label>
+                <MultiSelect
+                  options={filterOptions.competitors}
+                  selected={activeFilters.competitors}
+                  onChange={competitors => onFilterChange({ ...activeFilters, competitors })}
+                  emptyMessage={t.filterPanel.noCompetitorsFound}
+                  t={t.filterPanel}
+                />
+              </div>
+
+              {/* Topics Filter */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <Tag size={12} />
+                  {t.filterPanel.topics}
+                  {activeFilters.topics.length > 0 && (
+                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">
+                      {activeFilters.topics.length}
+                    </span>
+                  )}
+                </label>
+                <MultiSelect
+                  options={filterOptions.topics}
+                  selected={activeFilters.topics}
+                  onChange={topics => onFilterChange({ ...activeFilters, topics })}
+                  emptyMessage={t.filterPanel.noTopicsFound}
+                  t={t.filterPanel}
+                />
+              </div>
+
+              {/* Subscribers Filter */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <Users size={12} />
+                  {t.filterPanel.followers}
+                  {activeFilters.subscribers && (
+                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                  )}
+                </label>
+                <RangePresets
+                  value={activeFilters.subscribers}
+                  onChange={subscribers => onFilterChange({ ...activeFilters, subscribers })}
+                  presets={subscriberPresets}
+                  clearLabel={t.filterPanel.clear}
+                />
+              </div>
+
+              {/* Date Published Filter */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <Calendar size={12} />
+                  {t.filterPanel.date}
+                  {activeFilters.datePublished && (
+                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                  )}
+                </label>
+                <DatePresets
+                  value={activeFilters.datePublished}
+                  onChange={datePublished => onFilterChange({ ...activeFilters, datePublished })}
+                  t={t.filterPanel}
+                />
+              </div>
+
+              {/* Content Count Filter */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <Hash size={12} />
+                  {t.filterPanel.posts}
+                  {activeFilters.contentCount && (
+                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                  )}
+                </label>
+                <RangePresets
+                  value={activeFilters.contentCount}
+                  onChange={contentCount => onFilterChange({ ...activeFilters, contentCount })}
+                  presets={contentPresets}
+                  clearLabel={t.filterPanel.clear}
+                />
+              </div>
+            </div>
+
+            {/* Panel Footer */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-black dark:border-gray-700 bg-white dark:bg-[#0a0a0a]">
+              <div className="flex items-center justify-between">
+                {activeFilterCount > 0 ? (
+                  <button
+                    onClick={handleClearAll}
+                    className="text-xs font-black uppercase tracking-wide text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                  >
+                    {t.filterPanel.clearAll} ({activeFilterCount})
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-400">{t.filterPanel.noFiltersActive || 'No filters active'}</span>
+                )}
+                <button
+                  onClick={handleClose}
+                  className="px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                >
+                  {t.filterPanel.apply || 'Apply'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
   );
 };
 

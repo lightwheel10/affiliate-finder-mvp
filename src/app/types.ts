@@ -69,8 +69,18 @@ export interface ResultItem {
   highlightedWords?: string[];
   rank?: number;
   keyword?: string;
+  // ==========================================================================
+  // DISCOVERY METHOD - Updated January 23, 2026
+  //
+  // Tracks HOW this affiliate was discovered:
+  // - 'keyword': Found via user's search keyword
+  // - 'brand': Found via brand search (existing affiliates)
+  // - 'competitor': Found via competitor search (potential recruits)
+  // - 'topic': Found via onboarding topic
+  // - 'tagged': Manually tagged
+  // ==========================================================================
   discoveryMethod?: {
-    type: 'competitor' | 'keyword' | 'topic' | 'tagged';
+    type: 'competitor' | 'keyword' | 'topic' | 'tagged' | 'brand';
     value: string;
   };
   isAlreadyAffiliate?: boolean;
