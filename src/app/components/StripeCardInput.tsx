@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { 
   CardNumberElement, 
   CardExpiryElement, 
@@ -21,14 +21,14 @@ import { cn } from '@/lib/utils';
  * STRIPE CARD INPUT COMPONENT (Split Elements) - NEO-BRUTALIST
  * =============================================================================
  * 
- * Updated: January 8th, 2026
+ * Updated: January 24th, 2026
  *
  * NEO-BRUTALIST DESIGN UPDATE:
  * - Sharp edges (no rounded corners)
  * - Bold borders (border-2 with black)
  * - Yellow accent color (#ffbf23)
  * - Bold typography (font-black uppercase labels)
- * - Dark mode support
+ * - Dark mode support (Stripe Elements now adapt to dark mode)
  *
  * A secure card input component using separate Stripe Elements for:
  * - Card Number
@@ -63,29 +63,31 @@ interface StripeCardInputProps {
   showSecurityBadge?: boolean;
 }
 
-// Element styling options to match app design
-const ELEMENT_STYLES = {
+// Element styling options to match app design - now supports dark mode
+// Stripe Elements use iframes so they don't inherit CSS dark mode classes
+// We need to detect dark mode and pass explicit color values
+const getElementStyles = (isDarkMode: boolean) => ({
   style: {
     base: {
       fontSize: '14px',
-      color: '#1e293b',
+      color: isDarkMode ? '#f1f5f9' : '#1e293b', // Light text in dark mode, dark in light mode
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSmoothing: 'antialiased',
       '::placeholder': {
-        color: '#94a3b8',
+        color: isDarkMode ? '#64748b' : '#94a3b8', // Slightly darker placeholder in dark mode
       },
-      iconColor: '#64748b',
+      iconColor: isDarkMode ? '#94a3b8' : '#64748b',
     },
     invalid: {
       color: '#ef4444',
       iconColor: '#ef4444',
     },
     complete: {
-      color: '#1e293b',
+      color: isDarkMode ? '#f1f5f9' : '#1e293b', // Match base color
       iconColor: '#22c55e',
     },
   },
-};
+});
 
 // Card brand display component - NEO-BRUTALIST (Updated January 8th, 2026)
 const CardBrandBadge: React.FC<{ brand: string | null }> = ({ brand }) => {
@@ -137,6 +139,35 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
   const [cardNumberFocused, setCardNumberFocused] = useState(false);
   const [cardExpiryFocused, setCardExpiryFocused] = useState(false);
   const [cardCvcFocused, setCardCvcFocused] = useState(false);
+  
+  // Dark mode detection for Stripe Elements
+  // Stripe iframes don't inherit CSS classes, so we need to detect and pass explicit colors
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  useEffect(() => {
+    // Check initial dark mode state
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDarkMode();
+    
+    // Watch for dark mode changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          checkDarkMode();
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
+    
+    return () => observer.disconnect();
+  }, []);
+  
+  // Get Stripe Element styles based on dark mode
+  const elementStyles = useMemo(() => getElementStyles(isDarkMode), [isDarkMode]);
 
   // Check if all fields are complete
   const allComplete = cardNumberComplete && cardExpiryComplete && cardCvcComplete;
@@ -233,7 +264,7 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
         )}>
           <CardNumberElement
             options={{
-              ...ELEMENT_STYLES,
+              ...elementStyles,
               disabled,
               showIcon: true,
             }}
@@ -265,7 +296,7 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
           <div className={getInputContainerClass(cardExpiryFocused, cardExpiryError, cardExpiryComplete)}>
             <CardExpiryElement
               options={{
-                ...ELEMENT_STYLES,
+                ...elementStyles,
                 disabled,
               }}
               onChange={handleExpiryChange}
@@ -289,7 +320,7 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
           <div className={getInputContainerClass(cardCvcFocused, cardCvcError, cardCvcComplete)}>
             <CardCvcElement
               options={{
-                ...ELEMENT_STYLES,
+                ...elementStyles,
                 disabled,
               }}
               onChange={handleCvcChange}
