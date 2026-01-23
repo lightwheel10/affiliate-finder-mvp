@@ -9,8 +9,8 @@
  *
  * LANGUAGE STYLE:
  * ---------------
- * - Uses formal "Sie" form (not informal "du")
- * - B2B professional tone
+ * - Uses informal "du" form (not formal "Sie")
+ * - Friendly, approachable tone
  * - Industry-standard terminology where applicable
  *
  * TRANSLATOR NOTES:
@@ -107,9 +107,9 @@ export const de: Dictionary = {
   landing: {
     hero: {
       badge: 'Vertraut von über 1.300 Marken',
-      title: 'Entdecken Sie Affiliates',
+      title: 'Entdecke Affiliates',
       titleHighlight: 'die Wettbewerber bewerben',
-      subtitle: 'Finden Sie über 500 aktive Affiliates mit verifizierten Kontaktdaten sofort. Überspringen Sie wochenlange manuelle Recherche.',
+      subtitle: 'Finde über 500 aktive Affiliates mit verifizierten Kontaktdaten sofort. Überspringe wochenlange manuelle Recherche.',
       ctaPrimary: 'Kostenlos testen',
       ctaSecondary: 'Demo anfordern',
       socialProof: 'Beliebt bei über 1.300 SaaS- und E-Commerce-Marken',
@@ -117,10 +117,10 @@ export const de: Dictionary = {
     trustedBy: 'Vertraut von Plattformen',
     features: {
       sectionTitle: 'Wie clevere Marken ihr Affiliate-Wachstum verdreifachen',
-      sectionSubtitle: 'Verschwenden Sie keine 20+ Stunden pro Woche mit manueller Affiliate-Suche. Finden Sie alle Creator und Publisher in Ihrer Nische in wenigen Minuten.',
+      sectionSubtitle: 'Verschwende keine 20+ Stunden pro Woche mit manueller Affiliate-Suche. Finde alle Creator und Publisher in deiner Nische in wenigen Minuten.',
       mainFeature: {
-        title: 'Analysieren Sie Wettbewerber-Programme',
-        description: 'Finden Sie alle Top-Affiliates über 100+ Netzwerke.',
+        title: 'Analysiere Wettbewerber-Programme',
+        description: 'Finde alle Top-Affiliates über 100+ Netzwerke.',
         badge1: '500+ sofortige Treffer',
         badge2: 'Wöchentlich neue Leads',
       },
@@ -135,11 +135,11 @@ export const de: Dictionary = {
     },
     howItWorks: {
       sectionTitle: 'Von null auf über 500 Affiliates in Minuten',
-      sectionSubtitle: 'Beobachten Sie, wie sich Ihr Dashboard mit qualifizierten Partnern füllt, die bereit sind, Ihre Marke zu bewerben.',
+      sectionSubtitle: 'Beobachte, wie sich dein Dashboard mit qualifizierten Partnern füllt, die bereit sind, deine Marke zu bewerben.',
       step1: {
         number: '01',
-        title: 'Finden Sie die Top-Affiliates Ihrer Wettbewerber',
-        description: 'Geben Sie Ihre Wettbewerber ein und wir analysieren deren Affiliate-Programme über 100+ Netzwerke, um alle Top-Affiliates zu finden — auch die versteckten.',
+        title: 'Finde die Top-Affiliates deiner Wettbewerber',
+        description: 'Gib deine Wettbewerber ein und wir analysieren deren Affiliate-Programme über 100+ Netzwerke, um alle Top-Affiliates zu finden — auch die versteckten.',
         overlayTitle: 'Wettbewerber-Analyse',
         overlaySubtitle: '1.243 Affiliates gefunden',
         bullets: [
@@ -151,7 +151,7 @@ export const de: Dictionary = {
       step2: {
         number: '02',
         title: '500-2.500 qualifizierte Prospects erhalten',
-        description: 'Beobachten Sie, wie sich Ihr Dashboard mit qualifizierten Affiliates füllt. Sortieren Sie nach Traffic-Volumen, Google-Rankings, Follower-Anzahl oder Engagement-Raten, um schnell Ihre perfekten Partner zu finden.',
+        description: 'Beobachte, wie sich dein Dashboard mit qualifizierten Affiliates füllt. Sortiere nach Traffic-Volumen, Google-Rankings, Follower-Anzahl oder Engagement-Raten, um schnell deine perfekten Partner zu finden.',
         overlayTitle: 'Hochwertige Treffer',
         overlaySubtitle: 'Sortiert nach Engagement-Rate',
         bullets: [
@@ -163,7 +163,7 @@ export const de: Dictionary = {
       step3: {
         number: '03',
         title: 'Sofort mit der Rekrutierung beginnen',
-        description: 'Exportieren Sie verifizierte E-Mails, nutzen Sie unsere bewährten Vorlagen und starten Sie noch heute mit dem Aufbau von Partnerschaften. Erhalten Sie wöchentlich über 150 neue Leads.',
+        description: 'Exportiere verifizierte E-Mails, nutze unsere bewährten Vorlagen und starte noch heute mit dem Aufbau von Partnerschaften. Erhalte wöchentlich über 150 neue Leads.',
         overlayTitle: 'Bereit zur Kontaktaufnahme',
         overlaySubtitle: '150+ neue Leads wöchentlich',
         bullets: [
@@ -175,8 +175,8 @@ export const de: Dictionary = {
     },
     pricing: {
       badge: 'Einfache, transparente Preise',
-      sectionTitle: 'Finden Sie den perfekten Plan für Ihr Wachstum',
-      sectionSubtitle: 'Alle Pläne beinhalten wöchentliche Affiliate-Entdeckung, um Ihre Pipeline voll zu halten. Starten Sie mit einer 7-tägigen kostenlosen Testversion.',
+      sectionTitle: 'Finde den perfekten Plan für dein Wachstum',
+      sectionSubtitle: 'Alle Pläne beinhalten wöchentliche Affiliate-Entdeckung, um deine Pipeline voll zu halten. Starte mit einer 7-tägigen kostenlosen Testversion.',
       mostPopular: 'Am beliebtesten',
       perMonth: '/Monat',
       pro: {
@@ -224,9 +224,9 @@ export const de: Dictionary = {
       trustNote: '✨ 7 Tage kostenlos testen • Jederzeit kündbar • 30 Tage Geld-zurück-Garantie',
     },
     cta: {
-      title: 'Bereit, Ihre perfekten Affiliates zu finden?',
-      subtitle: 'Schließen Sie sich über 1.300 Marken an, die ihre idealen Affiliate-Partner in Minuten statt Monaten gefunden haben.',
-      ctaPrimary: 'Ihre 7-Tage-Testversion starten',
+      title: 'Bereit, deine perfekten Affiliates zu finden?',
+      subtitle: 'Schließ dich über 1.300 Marken an, die ihre idealen Affiliate-Partner in Minuten statt Monaten gefunden haben.',
+      ctaPrimary: 'Deine 7-Tage-Testversion starten',
       ctaSecondary: 'Demo anfordern',
       trustNote: '7 Tage kostenlos testen • Jederzeit kündbar',
     },
@@ -249,7 +249,7 @@ export const de: Dictionary = {
       scoutButton: 'Suchen',
       scanning: 'Scanne...',
       analyzing: 'Analysiere...',
-      emptyState: 'Geben Sie eine Nische ein, um Affiliates zu finden',
+      emptyState: 'Gib eine Nische ein, um Affiliates zu finden',
       emailFound: 'Gefunden',
       noEmail: 'Keine E-Mail',
       resultsVisible: 'Ergebnisse sichtbar',
@@ -261,7 +261,7 @@ export const de: Dictionary = {
   // =========================================================================
   // ONBOARDING (Updated January 9th, 2026)
   // Restructured to match actual OnboardingScreen.tsx component
-  // Uses formal "Sie" form throughout
+  // Uses informal "du" form throughout
   // =========================================================================
   onboarding: {
     // Common strings used across onboarding steps
@@ -272,11 +272,11 @@ export const de: Dictionary = {
     // Step 1: Name, Role, Brand (combined step)
     step1: {
       header: 'Willkommen bei CrewCast Studio',
-      title: 'Lernen wir uns kennen',
+      title: 'Lass uns kennenlernen',
       nameLabel: 'Name',
-      namePlaceholder: 'Geben Sie Ihren vollständigen Namen ein',
-      roleLabel: 'Was ist Ihre Rolle',
-      rolePlaceholder: 'Wählen Sie Ihre Rolle',
+      namePlaceholder: 'Gib deinen vollständigen Namen ein',
+      roleLabel: 'Was ist deine Rolle',
+      rolePlaceholder: 'Wähle deine Rolle',
       roles: {
         brandOwner: 'Markeninhaber',
         affiliateManager: 'Affiliate Manager',
@@ -285,46 +285,46 @@ export const de: Dictionary = {
         contentCreator: 'Content Creator',
         other: 'Andere',
       },
-      brandLabel: 'Für welche Marke möchten Sie Affiliates finden?',
+      brandLabel: 'Für welche Marke möchtest du Affiliates finden?',
       brandPlaceholder: 'z.B. guffles.de',
-      helpText: 'Für Agenturen: Geben Sie hier die Website Ihres Kunden an, nicht Ihre eigene.',
+      helpText: 'Für Agenturen: Gib hier die Website deines Kunden an, nicht deine eigene.',
       validation: {
-        invalidFormat: 'Geben Sie ein gültiges Domain-Format ein (z.B. beispiel.de)',
+        invalidFormat: 'Gib ein gültiges Domain-Format ein (z.B. beispiel.de)',
         domainNotReachable: 'Domain ist nicht erreichbar',
-        failedToValidate: 'Domain-Validierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+        failedToValidate: 'Domain-Validierung fehlgeschlagen. Bitte versuch es erneut.',
       },
     },
     // Step 2: Target Market (Country + Language)
     step2: {
       title: 'Zielmarkt',
       countryLabel: 'Land',
-      countryPlaceholder: 'Wählen Sie Ihr Zielland...',
+      countryPlaceholder: 'Wähle dein Zielland...',
       languageLabel: 'Zielsprache',
-      languagePlaceholder: 'Wählen Sie Ihre Zielsprache...',
+      languagePlaceholder: 'Wähle deine Zielsprache...',
     },
     // Step 3: Competitors
     step3: {
-      title: 'Fügen Sie Ihre Top 5 Wettbewerber hinzu',
+      title: 'Füge deine Top 5 Wettbewerber hinzu',
       inputPlaceholder: 'z.B. wettbewerber.de',
       count: '{count}/5 hinzugefügt',
-      suggestionsTitle: 'Vorschläge für Sie:',
-      yourCompetitors: 'Ihre Wettbewerber:',
-      emptyState: 'Geben Sie oben Wettbewerber-Domains ein (z.B. wettbewerber.de)',
+      suggestionsTitle: 'Vorschläge für dich:',
+      yourCompetitors: 'Deine Wettbewerber:',
+      emptyState: 'Gib oben Wettbewerber-Domains ein (z.B. wettbewerber.de)',
     },
     // Step 4: Topics
     // Max topics reduced from 10 to 5 - January 15th, 2026
     step4: {
-      title: 'Welche Themen behandeln Sie?',
+      title: 'Welche Themen behandelst du?',
       inputPlaceholder: 'z.B. beste CRMs, Hautpflege...',
       count: '{count}/5 hinzugefügt',
-      suggestionsTitle: 'Vorschläge für Sie:',
-      yourTopics: 'Ihre Themen:',
-      emptyState: 'Geben Sie oben Themen ein (z.B. "beste CRMs", "Hautpflege-Routinen")',
+      suggestionsTitle: 'Vorschläge für dich:',
+      yourTopics: 'Deine Themen:',
+      emptyState: 'Gib oben Themen ein (z.B. "beste CRMs", "Hautpflege-Routinen")',
     },
     // Step 5: Pricing / Plan Selection
     step5: {
-      title: 'Wählen Sie Ihren Plan',
-      trialInfo: 'Starten Sie mit einer 3-tägigen kostenlosen Testversion • Jederzeit kündbar',
+      title: 'Wähle deinen Plan',
+      trialInfo: 'Starte mit einer 3-tägigen kostenlosen Testversion • Jederzeit kündbar',
       monthly: 'Monatlich',
       annual: 'Jährlich',
       discountBadge: '-20%',
@@ -379,7 +379,7 @@ export const de: Dictionary = {
     },
     // Step 6: Affiliate Types
     step6: {
-      title: 'Welche Arten von Affiliates möchten Sie?',
+      title: 'Welche Arten von Affiliates möchtest du?',
       types: {
         publishersBloggers: 'Publisher/Blogger',
         instagram: 'Instagram',
@@ -394,8 +394,8 @@ export const de: Dictionary = {
     // Step 7: Payment / Card Details (Step7CardForm)
     step7: {
       secureCheckout: 'Sichere Zahlung',
-      title: 'Starten Sie Ihre 3-tägige kostenlose Testversion',
-      subtitle: 'Geben Sie Ihre Kartendaten ein • Heute wird nichts berechnet',
+      title: 'Starte deine 3-tägige kostenlose Testversion',
+      subtitle: 'Gib deine Kartendaten ein • Heute wird nichts berechnet',
       selectedPlan: 'Ausgewählter Plan',
       perMonth: '/Monat',
       billedAnnually: 'Jährlich abgerechnet',
@@ -406,25 +406,25 @@ export const de: Dictionary = {
       applied: 'Angewendet',
       processing: 'Wird verarbeitet...',
       startTrial: '3-Tage-Testversion starten',
-      discountApplied: '% Rabatt angewendet! Sie sparen',
+      discountApplied: '% Rabatt angewendet! Du sparst',
       cardholderName: 'Name des Karteninhabers',
       cardDetails: 'Kartendaten',
       nameOnCard: 'Name auf der Karte',
     },
     // Analyzing Screen (between step 1 and 2)
     analyzing: {
-      title: 'Ihre Marke wird analysiert',
+      title: 'Deine Marke wird analysiert',
       titleError: 'Analyse abgeschlossen',
       gettingInsightsFor: 'Einblicke werden geholt für',
       errorTitle: 'Wir konnten keine automatischen Vorschläge finden',
       continueManually: 'Manuell fortfahren',
       timeEstimate: 'Dies dauert normalerweise 10-15 Sekunden',
       steps: {
-        step1Label: 'Ihre Website wird analysiert',
+        step1Label: 'Deine Website wird analysiert',
         step1Desc: 'Inhalt und Struktur werden gelesen',
-        step2Label: 'Ihre Produkte werden verstanden',
-        step2Desc: 'Ihr Angebot wird identifiziert',
-        step3Label: 'Ihre Wettbewerber werden gefunden',
+        step2Label: 'Deine Produkte werden verstanden',
+        step2Desc: 'Dein Angebot wird identifiziert',
+        step3Label: 'Deine Wettbewerber werden gefunden',
         step3Desc: 'Ähnliche Unternehmen werden entdeckt',
       },
     },
@@ -493,7 +493,7 @@ export const de: Dictionary = {
         platform: 'Gefunden auf',
         // Search - Updated January 23, 2026: Added brand for brand search results
         searchKeyword: 'Keyword-Match',
-        brand: 'Ihre Marken-Match',
+        brand: 'Dein Marken-Match',
         competitor: 'Konkurrenten-Match',
         // Audience
         subscribers: 'Abonnenten',
@@ -517,7 +517,7 @@ export const de: Dictionary = {
       pageTitle: 'Neu suchen',
       emptyState: {
         title: 'Noch keine Affiliates gefunden',
-        subtitle: 'Starten Sie eine Suche, um Ergebnisse zu sehen',
+        subtitle: 'Starte eine Suche, um Ergebnisse zu sehen',
       },
       loading: {
         scanning: 'Das Web wird nach Affiliates durchsucht...',
@@ -533,7 +533,7 @@ export const de: Dictionary = {
         progressTitles: {
           title1: 'Tolle Funde kommen rein!',
           title2: 'Potenzielle Partner werden entdeckt...',
-          title3: 'Ihre Affiliate-Liste wird erstellt...',
+          title3: 'Deine Affiliate-Liste wird erstellt...',
           title4: 'Versteckte Perlen werden aufgedeckt...',
         },
       },
@@ -549,7 +549,7 @@ export const de: Dictionary = {
       },
       modal: {
         title: 'Affiliates finden',
-        subtitle: 'Fügen Sie bis zu 5 Keywords hinzu, um relevante Creator zu entdecken',
+        subtitle: 'Füge bis zu 5 Keywords hinzu, um relevante Creator zu entdecken',
         keywordsLabel: 'Keywords',
         keywordsPlaceholder: 'Keyword eingeben + Enter...',
         addButton: 'Hinzufügen',
@@ -562,7 +562,7 @@ export const de: Dictionary = {
         noKeywordsYet: 'Noch keine Keywords hinzugefügt',
         ctaButton: 'Affiliates finden',
         searching: 'Suche läuft...',
-        tip: '💡 Tipp: Verwenden Sie spezifische Keywords wie "beste CRM-Software" anstatt nur "CRM"',
+        tip: '💡 Tipp: Verwende spezifische Keywords wie "beste CRM-Software" anstatt nur "CRM"',
       },
       bulkActions: {
         selected: 'ausgewählt',
@@ -580,7 +580,7 @@ export const de: Dictionary = {
       creditError: {
         title: 'Keine Themen-Such-Credits mehr',
         message: 'Unzureichende Themen-Such-Credits',
-        upgradeHint: 'Upgraden Sie Ihren Plan für mehr Suchen, oder warten Sie, bis Ihre Credits aktualisiert werden.',
+        upgradeHint: 'Upgrade deinen Plan für mehr Suchen, oder warte, bis deine Credits aktualisiert werden.',
       },
       noResults: 'Keine Ergebnisse für diesen Filter gefunden.',
     },
@@ -597,7 +597,7 @@ export const de: Dictionary = {
       pageTitle: 'Alle entdeckten',
       emptyState: {
         title: 'Keine entdeckten Affiliates',
-        subtitle: 'Affiliates aus Ihren Suchen werden hier angezeigt',
+        subtitle: 'Affiliates aus deinen Suchen werden hier angezeigt',
       },
       // January 17, 2026: Added loading message
       loading: 'Entdeckte Affiliates werden geladen...',
@@ -606,7 +606,7 @@ export const de: Dictionary = {
       pageTitle: 'Gespeicherte Affiliates',
       emptyState: {
         title: 'Keine gespeicherten Affiliates',
-        subtitle: 'Affiliates, die Sie speichern, werden hier angezeigt',
+        subtitle: 'Affiliates, die du speicherst, werden hier angezeigt',
       },
       bulkActions: {
         findEmails: 'E-Mails finden',
@@ -630,7 +630,7 @@ export const de: Dictionary = {
       toasts: {
         affiliateRemoved: 'Affiliate entfernt',
         affiliatesRemoved: 'Affiliates entfernt',
-        removedFromPipeline: 'Erfolgreich aus Ihrer Pipeline entfernt.',
+        removedFromPipeline: 'Erfolgreich aus deiner Pipeline entfernt.',
         emailLookupFailed: 'E-Mail-Suche fehlgeschlagen',
         errors: 'Fehler',
         // Email lookup result messages
@@ -651,12 +651,12 @@ export const de: Dictionary = {
       loading: 'Affiliates werden geladen...',
       // Empty & No Results states
       emptyState: {
-        title: 'Beginnen Sie mit dem Aufbau von Verbindungen',
-        subtitle: 'Speichern Sie Affiliates, um KI-gestützte Outreach-Nachrichten zu generieren.',
+        title: 'Beginne mit dem Aufbau von Verbindungen',
+        subtitle: 'Speichere Affiliates, um KI-gestützte Outreach-Nachrichten zu generieren.',
       },
       noResults: {
         title: 'Keine Ergebnisse gefunden',
-        subtitle: 'Versuchen Sie, Ihre Suche oder den Filter anzupassen.',
+        subtitle: 'Versuch, deine Suche oder den Filter anzupassen.',
       },
       // Selection actions (January 17, 2026)
       selected: 'Ausgewählt',
@@ -676,7 +676,7 @@ export const de: Dictionary = {
       // Contact Picker Modal (January 17, 2026: Comprehensive translations)
       contactPicker: {
         title: 'Kontakte auswählen',
-        subtitle: 'Wählen Sie die Kontakte aus, für die Sie personalisierte E-Mails generieren möchten:',
+        subtitle: 'Wähle die Kontakte aus, für die du personalisierte E-Mails generieren möchtest:',
         creditsUsed: 'Verbraucht',
         credit: 'Credit',
         credits: 'Credits',
@@ -698,7 +698,7 @@ export const de: Dictionary = {
         redo: 'Neu erstellen',
         regenerating: 'Neu generieren...',
         edit: 'Bearbeiten',
-        editPlaceholder: 'Bearbeiten Sie Ihre Nachricht...',
+        editPlaceholder: 'Bearbeite deine Nachricht...',
         save: 'Speichern',
         saving: 'Speichern...',
         cancel: 'Abbrechen',
@@ -709,26 +709,26 @@ export const de: Dictionary = {
       // Toast notifications (January 10th, 2026)
       email: 'E-Mail',
       emails: 'E-Mails',
-      failedRetry: 'fehlgeschlagen - klicken Sie auf "Erneut versuchen".',
+      failedRetry: 'fehlgeschlagen - klick auf "Erneut versuchen".',
     },
     settings: {
       pageTitle: 'Einstellungen',
       tabs: {
         profile: {
           label: 'Mein Profil',
-          description: 'Verwalten Sie Ihre persönlichen Informationen',
+          description: 'Verwalte deine persönlichen Informationen',
         },
         plan: {
           label: 'Abo & Abrechnung',
-          description: 'Verwalten Sie Ihr Abonnement und die Abrechnung',
+          description: 'Verwalte dein Abonnement und die Abrechnung',
         },
         notifications: {
           label: 'Benachrichtigungen',
-          description: 'Konfigurieren Sie, wie Sie benachrichtigt werden möchten',
+          description: 'Lege fest, wie du benachrichtigt werden möchtest',
         },
         security: {
           label: 'Sicherheit',
-          description: 'Schützen Sie Ihr Konto',
+          description: 'Schütze dein Konto',
         },
       },
       // =======================================================================
@@ -737,7 +737,7 @@ export const de: Dictionary = {
       // =======================================================================
       profile: {
         photoTitle: 'Profilfoto',
-        photoDescription: 'Aktualisieren Sie Ihr Profilbild in den Kontoeinstellungen.',
+        photoDescription: 'Aktualisiere dein Profilbild in den Kontoeinstellungen.',
         fullName: 'Vollständiger Name',
         emailAddress: 'E-Mail-Adresse',
         editProfile: 'Profil bearbeiten',
@@ -749,9 +749,9 @@ export const de: Dictionary = {
         selectLanguage: 'Sprache auswählen',
         notSet: 'Nicht festgelegt',
         emailCannotChange: 'E-Mail kann hier nicht geändert werden.',
-        enterYourName: 'Geben Sie Ihren Namen ein',
+        enterYourName: 'Gib deinen Namen ein',
         nameCannotBeEmpty: 'Name darf nicht leer sein',
-        failedToSave: 'Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.',
+        failedToSave: 'Speichern fehlgeschlagen. Bitte versuch es erneut.',
         failedToUpdateDatabase: 'Datenbank konnte nicht aktualisiert werden',
         saveChanges: 'Änderungen speichern',
         saving: 'Speichern...',
@@ -774,14 +774,14 @@ export const de: Dictionary = {
         upgradePlan: 'Plan upgraden',
         managePlan: 'Plan verwalten',
         trialEndingSoon: {
-          title: 'Ihre Testversion endet bald',
-          subtitle: 'Fügen Sie eine Zahlungsmethode hinzu, um alle Funktionen weiter nutzen zu können.',
+          title: 'Deine Testversion endet bald',
+          subtitle: 'Füge eine Zahlungsmethode hinzu, um alle Funktionen weiter nutzen zu können.',
         },
         paymentMethod: 'Zahlungsmethode',
         noPaymentMethod: {
           title: 'Keine Zahlungsmethode hinzugefügt',
-          trialSubtitle: 'Fügen Sie eine Karte hinzu, um alle Funktionen nach Ablauf Ihrer Testversion weiter nutzen zu können.',
-          defaultSubtitle: 'Fügen Sie eine Zahlungsmethode hinzu, um Ihren Plan zu upgraden.',
+          trialSubtitle: 'Füge eine Karte hinzu, um alle Funktionen nach Ablauf deiner Testversion weiter nutzen zu können.',
+          defaultSubtitle: 'Füge eine Zahlungsmethode hinzu, um deinen Plan zu upgraden.',
         },
         addPaymentMethod: 'Zahlungsmethode hinzufügen',
         updatePaymentMethod: 'Aktualisieren',
@@ -790,7 +790,7 @@ export const de: Dictionary = {
         loadingInvoices: 'Rechnungen werden geladen...',
         noInvoicesYet: {
           title: 'Noch keine Rechnungen',
-          subtitle: 'Rechnungen werden hier nach Ihrem ersten Abrechnungszyklus angezeigt',
+          subtitle: 'Rechnungen werden hier nach deinem ersten Abrechnungszyklus angezeigt',
         },
         invoiceColumns: {
           invoice: 'Rechnung',
@@ -814,18 +814,18 @@ export const de: Dictionary = {
         viewInvoice: 'Rechnung anzeigen',
         downloadPdf: 'PDF herunterladen',
         retry: 'Erneut versuchen',
-        subscriptionWillRemainActive: 'Ihr Abonnement bleibt bis zum Ende Ihres aktuellen Abrechnungszeitraums aktiv. Sie können es jederzeit vorher fortsetzen.',
+        subscriptionWillRemainActive: 'Dein Abonnement bleibt bis zum Ende deines aktuellen Abrechnungszeitraums aktiv. Du kannst es jederzeit vorher fortsetzen.',
         cancelSubscription: {
           title: 'Abonnement kündigen',
-          subtitle: 'Wenn Sie kündigen, haben Sie bis zum Ende Ihres aktuellen Abrechnungszeitraums weiterhin Zugang zu Ihrem Plan.',
+          subtitle: 'Wenn du kündigst, hast du bis zum Ende deines aktuellen Abrechnungszeitraums weiterhin Zugang zu deinem Plan.',
           button: 'Plan kündigen',
         },
         cancelModal: {
           cancelTitle: 'Abonnement kündigen',
           resumeTitle: 'Abonnement fortsetzen',
-          cancelWarning: 'Sind Sie sicher, dass Sie kündigen möchten?',
-          cancelMessage: 'Sie verlieren den Zugang zu Premium-Funktionen am Ende Ihres aktuellen Abrechnungszeitraums.',
-          resumeMessage: 'Möchten Sie Ihr Abonnement fortsetzen? Ihr Plan wird wie gewohnt fortgesetzt und Sie werden zum nächsten Abrechnungszyklus belastet.',
+          cancelWarning: 'Bist du sicher, dass du kündigen möchtest?',
+          cancelMessage: 'Du verlierst den Zugang zu Premium-Funktionen am Ende deines aktuellen Abrechnungszeitraums.',
+          resumeMessage: 'Möchtest du dein Abonnement fortsetzen? Dein Plan wird wie gewohnt fortgesetzt und du wirst zum nächsten Abrechnungszyklus belastet.',
           keepSubscription: 'Abonnement behalten',
           keepCanceled: 'Gekündigt lassen',
           confirmCancel: 'Abonnement kündigen',
@@ -833,7 +833,7 @@ export const de: Dictionary = {
         },
         cancellationPending: {
           title: 'Abonnement wird gekündigt',
-          subtitle: 'Ihr Plan wird am Ende des aktuellen Abrechnungszeitraums gekündigt. Sie haben bis dahin weiterhin Zugang.',
+          subtitle: 'Dein Plan wird am Ende des aktuellen Abrechnungszeitraums gekündigt. Du hast bis dahin weiterhin Zugang.',
           resumeButton: 'Abonnement fortsetzen',
         },
       },
@@ -843,11 +843,11 @@ export const de: Dictionary = {
         options: {
           newMatches: {
             label: 'Neue Affiliate-Treffer gefunden',
-            description: 'Werden Sie benachrichtigt, wenn wir neue vielversprechende Affiliates finden.',
+            description: 'Werde benachrichtigt, wenn wir neue vielversprechende Affiliates finden.',
           },
           weeklyReport: {
             label: 'Wöchentlicher Leistungsbericht',
-            description: 'Zusammenfassung Ihrer Kampagnen-Performance und Outreach-Statistiken.',
+            description: 'Zusammenfassung deiner Kampagnen-Performance und Outreach-Statistiken.',
           },
           productUpdates: {
             label: 'Produkt-Updates',
@@ -855,11 +855,11 @@ export const de: Dictionary = {
           },
           successfulReplies: {
             label: 'Erfolgreiche Outreach-Antworten',
-            description: 'Benachrichtigen Sie mich, wenn ein Affiliate auf meine E-Mail antwortet.',
+            description: 'Benachrichtige mich, wenn ein Affiliate auf meine E-Mail antwortet.',
           },
           taskReminders: {
             label: 'Aufgaben-Erinnerungen',
-            description: 'Erinnern Sie mich an Follow-ups und geplante Aufgaben.',
+            description: 'Erinnere mich an Follow-ups und geplante Aufgaben.',
           },
         },
       },
@@ -869,10 +869,10 @@ export const de: Dictionary = {
       // =======================================================================
       security: {
         passwordSecurity: 'Passwort & Sicherheit',
-        securityDescription: 'Ändern Sie Ihr Passwort, um Ihr Konto zu schützen.',
+        securityDescription: 'Ändere dein Passwort, um dein Konto zu schützen.',
         changePassword: 'Passwort ändern',
         dangerZone: 'Gefahrenzone',
-        dangerZoneWarning: 'Sobald Sie Ihr Konto löschen, gibt es kein Zurück. Bitte seien Sie sich sicher.',
+        dangerZoneWarning: 'Sobald du dein Konto löschst, gibt es kein Zurück. Bitte sei dir sicher.',
         deleteAccount: 'Konto löschen',
         // Password Modal
         passwordModal: {
@@ -901,17 +901,17 @@ export const de: Dictionary = {
         deleteModal: {
           title: 'Konto löschen',
           warning: 'Diese Aktion kann nicht rückgängig gemacht werden',
-          warningDetail: 'Ihr Konto und alle zugehörigen Daten werden dauerhaft gelöscht.',
+          warningDetail: 'Dein Konto und alle zugehörigen Daten werden dauerhaft gelöscht.',
           willBeDeleted: 'Folgendes wird dauerhaft gelöscht:',
           items: {
-            subscription: 'Ihr Abonnement (sofort gekündigt)',
+            subscription: 'Dein Abonnement (sofort gekündigt)',
             savedAffiliates: 'Alle gespeicherten Affiliates',
             discoveredAffiliates: 'Alle entdeckten Affiliates',
             searchHistory: 'Gesamter Suchverlauf',
-            account: 'Ihr Konto und Anmeldedaten',
+            account: 'Dein Konto und Anmeldedaten',
           },
-          typeToConfirm: 'Geben Sie DELETE zur Bestätigung ein',
-          confirmError: 'Bitte geben Sie DELETE zur Bestätigung ein',
+          typeToConfirm: 'Gib DELETE zur Bestätigung ein',
+          confirmError: 'Bitte gib DELETE zur Bestätigung ein',
           userIdError: 'Benutzer-ID nicht gefunden. Bitte aktualisieren und erneut versuchen.',
           genericError: 'Konto konnte nicht gelöscht werden. Bitte erneut versuchen oder Support kontaktieren.',
           // Buttons
@@ -946,7 +946,7 @@ export const de: Dictionary = {
     },
     logoutModal: {
       title: 'Abmelden',
-      message: 'Sind Sie sicher, dass Sie sich abmelden möchten? Sie müssen sich erneut anmelden, um auf Ihren Arbeitsbereich zuzugreifen.',
+      message: 'Bist du sicher, dass du dich abmelden möchtest? Du musst dich erneut anmelden, um auf deinen Arbeitsbereich zuzugreifen.',
       cancel: 'Abbrechen',
       confirm: 'Abmelden',
     },
@@ -958,7 +958,7 @@ export const de: Dictionary = {
   modals: {
     confirmDelete: {
       title: 'Löschen',
-      message: 'Sind Sie sicher, dass Sie löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.',
+      message: 'Bist du sicher, dass du löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.',
       deleteButton: 'Löschen',
       deleting: 'Wird gelöscht...',
       deleteCount: 'Löschen',
@@ -969,7 +969,7 @@ export const de: Dictionary = {
     },
     addCard: {
       title: 'Zahlungsmethode hinzufügen',
-      subtitle: 'Ihre Karte wird sicher gespeichert',
+      subtitle: 'Deine Karte wird sicher gespeichert',
       saveButton: 'Zahlungsmethode speichern',
       saving: 'Wird gespeichert...',
       discountLabel: 'Rabattcode (Optional)',
@@ -978,9 +978,9 @@ export const de: Dictionary = {
       applied: 'Angewendet',
       discountComingSoon: 'Rabattcodes bald verfügbar',
       failedToValidate: 'Code konnte nicht validiert werden',
-      discountApplied: '% Rabatt wird auf Ihren nächsten Abrechnungszeitraum angewendet',
-      completeCardDetails: 'Bitte füllen Sie alle Kartendetails aus',
-      securityNote: 'Ihre Kartendaten werden sicher von Stripe gespeichert. Wir sehen niemals Ihre vollständige Kartennummer.',
+      discountApplied: '% Rabatt wird auf deinen nächsten Abrechnungszeitraum angewendet',
+      completeCardDetails: 'Bitte fülle alle Kartendetails aus',
+      securityNote: 'Deine Kartendaten werden sicher von Stripe gespeichert. Wir sehen niemals deine vollständige Kartennummer.',
       processing: 'Wird verarbeitet...',
     },
   },
@@ -1010,33 +1010,33 @@ export const de: Dictionary = {
       messageSaved: 'Nachricht gespeichert!',  // January 17, 2026: Added for edit message feature
     },
     error: {
-      genericError: 'Etwas ist schief gelaufen. Bitte versuchen Sie es erneut.',
-      searchFailed: 'Suche fehlgeschlagen. Bitte versuchen Sie es erneut.',
-      saveFailed: 'Affiliates konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.',
-      deleteFailed: 'Affiliates konnten nicht gelöscht werden. Bitte versuchen Sie es erneut.',
-      emailLookupFailed: 'E-Mail-Suche fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      genericError: 'Etwas ist schief gelaufen. Bitte versuch es erneut.',
+      searchFailed: 'Suche fehlgeschlagen. Bitte versuch es erneut.',
+      saveFailed: 'Affiliates konnten nicht gespeichert werden. Bitte versuch es erneut.',
+      deleteFailed: 'Affiliates konnten nicht gelöscht werden. Bitte versuch es erneut.',
+      emailLookupFailed: 'E-Mail-Suche fehlgeschlagen. Bitte versuch es erneut.',
       emailLookupFailedCount: 'E-Mail-Suche fehlgeschlagen für',
       aiGenerationFailed: 'Nachrichtengenerierung fehlgeschlagen',
-      aiServiceNotConfigured: 'KI-Dienst nicht konfiguriert. Bitte kontaktieren Sie den Support.',
-      aiConnectionFailed: 'Verbindung zum KI-Dienst fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      aiServiceNotConfigured: 'KI-Dienst nicht konfiguriert. Bitte kontaktiere den Support.',
+      aiConnectionFailed: 'Verbindung zum KI-Dienst fehlgeschlagen. Bitte versuch es erneut.',
       bulkGenerationFailed: 'Generierung fehlgeschlagen für',
       exportFailed: 'Export fehlgeschlagen',
-      paymentFailed: 'Zahlung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      paymentFailed: 'Zahlung fehlgeschlagen. Bitte versuch es erneut.',
       messageSaveFailed: 'Nachricht konnte nicht gespeichert werden',  // January 17, 2026: Added for edit message feature
       messageEmpty: 'Nachricht darf nicht leer sein',  // January 17, 2026: Added for edit message validation
     },
     warning: {
-      insufficientCredits: 'Unzureichende Such-Credits. Bitte upgraden Sie Ihren Plan.',
-      insufficientAICredits: 'Unzureichende KI-Credits. Bitte upgraden Sie Ihren Plan.',
+      insufficientCredits: 'Unzureichende Such-Credits. Bitte upgrade deinen Plan.',
+      insufficientAICredits: 'Unzureichende KI-Credits. Bitte upgrade deinen Plan.',
       insufficientEmailCredits: 'E-Mail-Credits aufgebraucht',
       noEmailsFound: 'Keine E-Mails gefunden für',
       partialBulkFailure: 'von',
-      invalidThreshold: 'Bitte geben Sie einen gültigen Schwellenwert ein',
-      trialEnding: 'Ihre Testversion endet bald. Fügen Sie eine Zahlungsmethode hinzu, um fortzufahren.',
+      invalidThreshold: 'Bitte gib einen gültigen Schwellenwert ein',
+      trialEnding: 'Deine Testversion endet bald. Füge eine Zahlungsmethode hinzu, um fortzufahren.',
       allAlreadyHaveEmails: 'Alle ausgewählten Affiliates haben bereits E-Mails',
     },
     info: {
-      allAlreadyInPipeline: 'Affiliates sind bereits in Ihrer Pipeline',
+      allAlreadyInPipeline: 'Affiliates sind bereits in deiner Pipeline',
       allAlreadyHaveEmails: 'Alle ausgewählten Affiliates haben bereits E-Mails',
       mixedEmailResults: 'nicht gefunden',
       mixedResults: 'Einige Vorgänge wurden mit Warnungen abgeschlossen',
@@ -1050,7 +1050,7 @@ export const de: Dictionary = {
   auth: {
     loading: {
       title: 'Wird geladen...',
-      subtitle: 'Ihr Arbeitsbereich wird vorbereitet',
+      subtitle: 'Dein Arbeitsbereich wird vorbereitet',
     },
     // =========================================================================
     // SIGN-IN PAGE TRANSLATIONS - January 21st, 2026
@@ -1061,17 +1061,17 @@ export const de: Dictionary = {
     signIn: {
       backToHome: 'Zurück zur Startseite',
       title: 'Willkommen zurück',
-      subtitle: 'Geben Sie Ihre E-Mail-Adresse ein, um einen Magic Link zu erhalten',
+      subtitle: 'Gib deine E-Mail-Adresse ein, um einen Magic Link zu erhalten',
       emailLabel: 'E-Mail-Adresse',
       emailPlaceholder: 'sie@beispiel.de',
       sendMagicLink: 'Magic Link senden',
       sending: 'Wird gesendet...',
-      checkEmail: 'Überprüfen Sie Ihre E-Mails',
+      checkEmail: 'Überprüfe deine E-Mails',
       magicLinkSent: 'Wir haben einen Magic Link gesendet an',
-      clickToSignIn: 'Klicken Sie auf den Link in der E-Mail, um sich anzumelden.',
-      checkSpam: 'Nicht gefunden? Überprüfen Sie Ihren Spam-Ordner.',
+      clickToSignIn: 'Klick auf den Link in der E-Mail, um dich anzumelden.',
+      checkSpam: 'Nicht gefunden? Überprüfe deinen Spam-Ordner.',
       useDifferentEmail: 'Andere E-Mail-Adresse verwenden',
-      noPasswordNeeded: 'Kein Passwort erforderlich! Wir senden Ihnen einen sicheren Link zum Anmelden.',
+      noPasswordNeeded: 'Kein Passwort erforderlich! Wir senden dir einen sicheren Link zum Anmelden.',
       newHere: 'Neu hier?',
       startTrial: 'Kostenlose Testversion starten',
       privacyPolicy: 'Datenschutzrichtlinie',
@@ -1083,22 +1083,22 @@ export const de: Dictionary = {
       verifyCode: 'Code bestätigen',
       verifying: 'Wird überprüft...',
       backToMagicLink: '← Zurück zum Magic Link',
-      invalidOtp: 'Bitte geben Sie einen gültigen 6-stelligen Code ein',
-      otpExpired: 'Code abgelaufen. Bitte fordern Sie einen neuen an.',
-      otpInvalid: 'Ungültiger Code. Bitte überprüfen und erneut versuchen.',
+      invalidOtp: 'Bitte gib einen gültigen 6-stelligen Code ein',
+      otpExpired: 'Code abgelaufen. Bitte fordere einen neuen an.',
+      otpInvalid: 'Ungültiger Code. Bitte überprüfe und versuche es erneut.',
       // Error messages
-      invalidEmail: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
-      authFailed: 'Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
-      configError: 'Konfigurationsfehler. Bitte kontaktieren Sie den Support.',
-      invalidToken: 'Der Magic Link ist abgelaufen. Bitte fordern Sie einen neuen an.',
-      accessDenied: 'Zugriff verweigert. Bitte versuchen Sie es erneut.',
-      genericError: 'Etwas ist schief gelaufen. Bitte versuchen Sie es erneut.',
+      invalidEmail: 'Bitte gib eine gültige E-Mail-Adresse ein',
+      authFailed: 'Authentifizierung fehlgeschlagen. Bitte versuch es erneut.',
+      configError: 'Konfigurationsfehler. Bitte kontaktiere den Support.',
+      invalidToken: 'Der Magic Link ist abgelaufen. Bitte fordere einen neuen an.',
+      accessDenied: 'Zugriff verweigert. Bitte versuch es erneut.',
+      genericError: 'Etwas ist schief gelaufen. Bitte versuch es erneut.',
     },
     signUp: {
-      title: 'Starten Sie Ihre kostenlose Testversion',
-      subtitle: 'Geben Sie Ihre E-Mail-Adresse ein — keine Kreditkarte erforderlich',
-      clickToCreate: 'Klicken Sie auf den Link in der E-Mail, um Ihr Konto zu erstellen.',
-      noPasswordNeeded: 'Kein Passwort erforderlich! Wir senden Ihnen einen sicheren Link zum Starten.',
+      title: 'Starte deine kostenlose Testversion',
+      subtitle: 'Gib deine E-Mail-Adresse ein — keine Kreditkarte erforderlich',
+      clickToCreate: 'Klick auf den Link in der E-Mail, um dein Konto zu erstellen.',
+      noPasswordNeeded: 'Kein Passwort erforderlich! Wir senden dir einen sicheren Link zum Starten.',
       alreadyHaveAccount: 'Bereits ein Konto?',
       signIn: 'Anmelden',
     },
@@ -1109,9 +1109,9 @@ export const de: Dictionary = {
   // Added: January 10th, 2026 - Remaining Components
   // =========================================================================
   loadingOnboarding: {
-    title: 'Ihr Arbeitsbereich wird eingerichtet!',
-    subtitle: 'Einen Moment, während wir Ihr Dashboard vorbereiten...',
-    description: 'Ihre Affiliate-Discovery-Tools werden konfiguriert.',
+    title: 'Dein Arbeitsbereich wird eingerichtet!',
+    subtitle: 'Einen Moment, während wir dein Dashboard vorbereiten...',
+    description: 'Deine Affiliate-Discovery-Tools werden konfiguriert.',
   },
 
   // =========================================================================
@@ -1139,8 +1139,8 @@ export const de: Dictionary = {
     estimatedTime: 'Geschätzte Zeit: ~3 Minuten',
     // Legacy fields kept for backwards compatibility
     thankYou: 'Vielen Dank!',
-    preparingDashboard: 'Ihr Dashboard wird vorbereitet...',
-    pleaseWait: 'Bitte warten Sie einen Moment',
+    preparingDashboard: 'Dein Dashboard wird vorbereitet...',
+    pleaseWait: 'Bitte warte einen Moment',
     title: 'Affiliates werden gesucht',
     subtitle: 'Partner für {brand} werden entdeckt',
     timeEstimate: 'Dies dauert normalerweise 20-30 Sekunden',
@@ -1176,7 +1176,7 @@ export const de: Dictionary = {
   // =========================================================================
   errorBoundary: {
     title: 'Etwas ist schiefgelaufen',
-    message: 'Bitte versuchen Sie es später erneut. Wenn das Problem weiterhin besteht, kontaktieren Sie uns unter',
+    message: 'Bitte versuch es später erneut. Wenn das Problem weiterhin besteht, kontaktiere uns unter',
     contactPrefix: 'support@crewcast.studio',
     tryAgain: 'Erneut versuchen',
   },
@@ -1194,20 +1194,20 @@ export const de: Dictionary = {
     },
     privacy: {
       title: 'Datenschutzerklärung',
-      comingSoonMessage: 'Diese Datenschutzerklärung wird derzeit von unserem Rechtsteam erstellt. Die endgültige Version wird beschreiben, wie wir Ihre personenbezogenen Daten erheben, verwenden und schützen.',
+      comingSoonMessage: 'Diese Datenschutzerklärung wird derzeit von unserem Rechtsteam erstellt. Die endgültige Version wird beschreiben, wie wir deine personenbezogenen Daten erheben, verwenden und schützen.',
       sections: {
         informationWeCollect: '1. Von uns erhobene Informationen',
         informationWeCollectPlaceholder: '[Platzhalter: Details zu personenbezogenen Daten, Nutzungsdaten, Cookies und Drittanbieter-Integrationen werden hier hinzugefügt.]',
-        howWeUseInfo: '2. Wie wir Ihre Informationen verwenden',
+        howWeUseInfo: '2. Wie wir deine Informationen verwenden',
         howWeUseInfoPlaceholder: '[Platzhalter: Informationen darüber, wie wir erhobene Daten für die Bereitstellung, Verbesserung und Kommunikation unserer Dienste verwenden, werden hier hinzugefügt.]',
         dataSharing: '3. Datenweitergabe und Offenlegung',
         dataSharingPlaceholder: '[Platzhalter: Details zu Drittanbieterdiensten, rechtlichen Anforderungen und Geschäftsübertragungen werden hier hinzugefügt.]',
         dataSecurity: '4. Datensicherheit',
         dataSecurityPlaceholder: '[Platzhalter: Informationen zu unseren Sicherheitsmaßnahmen, Verschlüsselung und Datenschutzpraktiken werden hier hinzugefügt.]',
-        yourRights: '5. Ihre Rechte',
+        yourRights: '5. Deine Rechte',
         yourRightsPlaceholder: '[Platzhalter: Details zu DSGVO-Rechten, Datenzugriff, Löschanfragen und Opt-out-Optionen werden hier hinzugefügt.]',
         contactUs: '6. Kontakt',
-        contactUsText: 'Wenn Sie Fragen zu dieser Datenschutzerklärung haben, kontaktieren Sie uns bitte unter',
+        contactUsText: 'Wenn du Fragen zu dieser Datenschutzerklärung hast, kontaktiere uns bitte unter',
       },
     },
     terms: {
@@ -1229,7 +1229,7 @@ export const de: Dictionary = {
         limitationOfLiability: '7. Haftungsbeschränkung',
         limitationOfLiabilityPlaceholder: '[Platzhalter: Informationen zu Haftungsbeschränkungen, Haftungsausschlüssen und Freistellung werden hier hinzugefügt.]',
         contactUs: '8. Kontakt',
-        contactUsText: 'Wenn Sie Fragen zu diesen Bedingungen haben, kontaktieren Sie uns bitte unter',
+        contactUsText: 'Wenn du Fragen zu diesen Bedingungen hast, kontaktiere uns bitte unter',
       },
     },
     cookies: {
@@ -1249,13 +1249,13 @@ export const de: Dictionary = {
         managingCookies: '6. Cookies verwalten',
         managingCookiesPlaceholder: '[Platzhalter: Anweisungen zum Kontrollieren, Deaktivieren oder Löschen von Cookies über Browsereinstellungen werden hier hinzugefügt.]',
         contactUs: '7. Kontakt',
-        contactUsText: 'Wenn Sie Fragen zu unserer Cookie-Richtlinie haben, kontaktieren Sie uns bitte unter',
+        contactUsText: 'Wenn du Fragen zu unserer Cookie-Richtlinie hast, kontaktiere uns bitte unter',
       },
     },
     security: {
       title: 'Sicherheit',
-      subtitle: 'Wie wir Ihre Daten schützen',
-      comingSoonMessage: 'Unsere umfassende Sicherheitsdokumentation wird derzeit vorbereitet. Sie wird unsere Sicherheitspraktiken, Zertifizierungen und Datenschutzmaßnahmen detailliert beschreiben.',
+      subtitle: 'Wie wir deine Daten schützen',
+      comingSoonMessage: 'Unsere umfassende Sicherheitsdokumentation wird derzeit vorbereitet. Diese wird unsere Sicherheitspraktiken, Zertifizierungen und Datenschutzmaßnahmen detailliert beschreiben.',
       highlights: {
         soc2Title: 'SOC 2-konform',
         soc2Description: 'Unternehmenstaugliche Sicherheitsstandards',
@@ -1278,7 +1278,7 @@ export const de: Dictionary = {
         vulnerabilityManagement: '5. Schwachstellenmanagement',
         vulnerabilityManagementPlaceholder: '[Platzhalter: Details zu Sicherheitstests, Bug-Bounty-Programmen und Reaktion auf Vorfälle werden hier hinzugefügt.]',
         reportVulnerability: '6. Schwachstelle melden',
-        reportVulnerabilityText: 'Wenn Sie eine Sicherheitslücke entdecken, melden Sie diese bitte verantwortungsvoll an',
+        reportVulnerabilityText: 'Wenn du eine Sicherheitslücke entdeckst, melde diese bitte verantwortungsvoll an',
       },
     },
   },
@@ -1332,7 +1332,7 @@ export const de: Dictionary = {
       found: 'Gefunden',
       emailAddresses: 'E-Mail-Adressen',
       noEmailsFound: 'Keine E-Mails gefunden',
-      trySearchingAgain: 'Versuchen Sie es erneut',
+      trySearchingAgain: 'Versuch es erneut',
       email: 'E-Mail',
       emails: 'E-Mails',
       copy: 'Kopieren',
@@ -1436,10 +1436,10 @@ export const de: Dictionary = {
   // =========================================================================
   pricingModal: {
     manageYourPlan: 'Plan verwalten',
-    superchargeYour: 'Beschleunigen Sie Ihr',
+    superchargeYour: 'Beschleunige dein',
     affiliateGrowth: 'Affiliate-Wachstum',
-    manageSubtitle: 'Upgraden Sie, um mehr Funktionen freizuschalten, oder passen Sie Ihre Abrechnungseinstellungen an.',
-    newSubtitle: 'Verschwenden Sie keine Stunden mit manueller Suche. Erhalten Sie sofortigen Zugang zu Tausenden von leistungsstarken Affiliates, die auf Ihre Nische zugeschnitten sind.',
+    manageSubtitle: 'Upgrade, um mehr Funktionen freizuschalten, oder passe deine Abrechnungseinstellungen an.',
+    newSubtitle: 'Verschwende keine Stunden mit manueller Suche. Erhalte sofortigen Zugang zu Tausenden von leistungsstarken Affiliates, die auf deine Nische zugeschnitten sind.',
     currentPlan: 'Aktueller Plan',
     trial: 'Testversion',
     monthly: 'Monatlich',
@@ -1457,8 +1457,8 @@ export const de: Dictionary = {
     switchToAnnual: 'Zu jährlich wechseln',
     switchToMonthly: 'Zu monatlich wechseln',
     getStarted: 'Jetzt starten',
-    trialTitle: 'Sie sind derzeit in einer Testversion',
-    trialMessage: 'Möchten Sie Ihre Testversion jetzt beenden und die Abrechnung sofort starten, oder Ihre Testversion behalten und nur den Plan ändern?',
+    trialTitle: 'Du bist derzeit in einer Testversion',
+    trialMessage: 'Möchtest du deine Testversion jetzt beenden und die Abrechnung sofort starten, oder deine Testversion behalten und nur den Plan ändern?',
     keepTrialChangePlan: 'Testversion behalten, Plan ändern',
     endTrialStartBilling: 'Testversion beenden & Abrechnung starten',
     immediateUpgrade: '⬆️ Sofortiges Upgrade mit anteiliger Berechnung',
@@ -1467,7 +1467,7 @@ export const de: Dictionary = {
     securePayment: 'Sichere SSL-Zahlung',
     cancelAnytime: 'Jederzeit kündbar',
     upgradeDowngradeNote: 'Upgrades werden sofort wirksam. Downgrades werden am Ende des aktuellen Abrechnungszeitraums wirksam.',
-    signInRequired: 'Bitte melden Sie sich an, um Ihren Plan zu ändern.',
+    signInRequired: 'Bitte melde dich an, um deinen Plan zu ändern.',
   },
 };
 
