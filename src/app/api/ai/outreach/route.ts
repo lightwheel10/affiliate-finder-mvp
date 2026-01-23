@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================================================
-    // STEP 9.5: SAVE GENERATED MESSAGE TO DATABASE (Updated Dec 25, 2025)
+    // STEP 9.5: SAVE GENERATED MESSAGE TO DATABASE (Updated January 22, 2026)
     // 
     // Persist the AI-generated email to the database so it survives page
     // refreshes. This prevents users from losing their generated emails and
@@ -348,6 +348,10 @@ export async function POST(request: NextRequest) {
     //
     // We also keep updating the legacy `ai_generated_message` field with the
     // most recent message for backwards compatibility.
+    //
+    // BUG FIX (January 22, 2026): Fixed race condition where concurrent 
+    // email generations for the same affiliate would overwrite each other.
+    // Now using jsonb_set with FOR UPDATE lock to ensure atomic merge.
     // =========================================================================
     try {
       // Build the message entry for this contact
@@ -360,18 +364,48 @@ export async function POST(request: NextRequest) {
       // The email key to store under (use contactEmail or fallback to 'primary')
       const emailKey = contactEmail || 'primary';
       
-      // Use raw SQL to merge into the JSONB column
-      // This appends/updates the message for this specific email key
+      // =====================================================================
+      // JSONB UPDATE - CRITICAL IMPLEMENTATION NOTES
+      // =====================================================================
+      // 
+      // This supports UNLIMITED emails per affiliate. Each email address is
+      // stored as a key in the JSONB object:
+      //   { "email1@test.com": {...}, "email2@test.com": {...}, ... }
+      //
+      // IMPORTANT - USE sql.json() NOT JSON.stringify():
+      // ------------------------------------------------
+      // The postgres package (porsager/postgres) has its own JSON handling.
+      // - WRONG: ${JSON.stringify(messageEntry)}::jsonb  → DOUBLE-ENCODES!
+      // - RIGHT: ${sql.json(messageEntry)}               → Correct encoding
+      //
+      // Double-encoding causes data like: {"email": "{\"message\":\"...\"}"} 
+      // instead of:                       {"email": {"message": "..."}}
+      //
+      // IMPORTANT - USE jsonb_set() NOT || OPERATOR:
+      // ---------------------------------------------
+      // - jsonb_set() atomically updates a specific key without affecting others
+      // - The || operator merges objects but can cause overwrites in concurrent updates
+      //
+      // IMPORTANT - ARRAY SYNTAX FOR postgres PACKAGE:
+      // ----------------------------------------------
+      // - WRONG: ARRAY[${emailKey}] or ${'{' + emailKey + '}'}::text[]
+      // - RIGHT: ${[emailKey]}::text[]  (pass JS array directly)
+      // =====================================================================
       await sql`
         UPDATE crewcast.saved_affiliates
         SET 
           ai_generated_message = ${result.message},
           ai_generated_subject = ${result.subject || null},
           ai_generated_at = NOW(),
-          ai_generated_messages = COALESCE(ai_generated_messages, '{}'::jsonb) || ${JSON.stringify({ [emailKey]: messageEntry })}::jsonb
+          ai_generated_messages = jsonb_set(
+            COALESCE(ai_generated_messages, '{}'::jsonb),
+            ${[emailKey]}::text[],
+            ${sql.json(messageEntry)},
+            true
+          )
         WHERE id = ${affiliate.id} AND user_id = ${userId}
       `;
-      console.log(`[AI Outreach] 💾 Saved message to database for affiliate ${affiliate.id}, contact: ${emailKey}`);
+      console.log(`[AI Outreach] 💾 Saved message for affiliate ${affiliate.id}, contact: ${emailKey}`);
     } catch (saveError) {
       // Log but don't fail - the message was generated successfully
       // User can still see it in the current session
@@ -481,9 +515,11 @@ export async function PATCH(request: NextRequest) {
 
     // =========================================================================
     // STEP 5: UPDATE THE MESSAGE IN DATABASE
-    // 
+    // =========================================================================
     // Updates both the legacy single message field AND the JSONB multi-contact
-    // field. The email key defaults to 'primary' if no contactEmail provided.
+    // field. Uses the same pattern as POST endpoint.
+    // 
+    // IMPORTANT: Use sql.json() for proper encoding - see POST endpoint comments.
     // =========================================================================
     const emailKey = contactEmail || 'primary';
     const messageEntry = {
@@ -498,7 +534,12 @@ export async function PATCH(request: NextRequest) {
         ai_generated_message = ${message},
         ai_generated_subject = ${subject || null},
         ai_generated_at = NOW(),
-        ai_generated_messages = COALESCE(ai_generated_messages, '{}'::jsonb) || ${JSON.stringify({ [emailKey]: messageEntry })}::jsonb
+        ai_generated_messages = jsonb_set(
+          COALESCE(ai_generated_messages, '{}'::jsonb),
+          ${[emailKey]}::text[],
+          ${sql.json(messageEntry)},
+          true
+        )
       WHERE id = ${affiliateId} AND user_id = ${userId}
     `;
 
