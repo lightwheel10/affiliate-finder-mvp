@@ -258,7 +258,7 @@ export default function OutreachPage() {
   const { savedAffiliates, isLoading: loading } = useSavedAffiliates();
   
   // =========================================================================
-  // LOAD SAVED AI-GENERATED MESSAGES ON MOUNT (Updated December 25, 2025)
+  // LOAD SAVED AI-GENERATED MESSAGES ON MOUNT (Updated January 22, 2026)
   // 
   // When affiliates are loaded from the database, populate the generatedMessages
   // state with any previously saved AI-generated messages. This ensures that
@@ -268,6 +268,11 @@ export default function OutreachPage() {
   // support multiple messages per affiliate. We load both:
   // 1. Per-contact messages from aiGeneratedMessages JSONB
   // 2. Legacy single message from aiGeneratedMessage (backwards compatibility)
+  //
+  // BUG FIX (January 22, 2026): Fixed race condition where SWR revalidation
+  // could overwrite newly generated messages with stale/empty DB data.
+  // Now properly validates that messages are non-empty strings before storing,
+  // and only overwrites if the DB message is valid.
   // =========================================================================
   useEffect(() => {
     if (savedAffiliates.length > 0) {
@@ -276,16 +281,25 @@ export default function OutreachPage() {
       savedAffiliates.forEach((affiliate) => {
         if (affiliate.id) {
           // Load per-contact messages from JSONB column (December 25, 2025)
-          if (affiliate.aiGeneratedMessages) {
+          // BUG FIX (January 22, 2026): Validate message is a non-empty string
+          if (affiliate.aiGeneratedMessages && typeof affiliate.aiGeneratedMessages === 'object') {
             Object.entries(affiliate.aiGeneratedMessages).forEach(([email, data]) => {
-              const key = `${affiliate.id}:${email}`;
-              savedMessages.set(key, data.message);
+              // Type guard: ensure data is an object with a message property
+              if (data && typeof data === 'object' && 'message' in data) {
+                const messageData = data as { message?: string };
+                // Only store if message is a non-empty string
+                if (messageData.message && typeof messageData.message === 'string' && messageData.message.trim()) {
+                  const key = `${affiliate.id}:${email}`;
+                  savedMessages.set(key, messageData.message);
+                }
+              }
             });
           }
           
           // Load legacy single message (backwards compatibility)
           // Only if we haven't already loaded a per-contact message for this email
-          if (affiliate.aiGeneratedMessage) {
+          // BUG FIX (January 22, 2026): Validate message is a non-empty string
+          if (affiliate.aiGeneratedMessage && typeof affiliate.aiGeneratedMessage === 'string' && affiliate.aiGeneratedMessage.trim()) {
             const key = affiliate.email 
               ? `${affiliate.id}:${affiliate.email}` 
               : `${affiliate.id}`;
@@ -297,18 +311,34 @@ export default function OutreachPage() {
         }
       });
       
-      // Only update if we found saved messages
-      if (savedMessages.size > 0) {
-        setGeneratedMessages(prev => {
-          // Merge saved messages with any new ones (new ones take precedence)
-          const merged = new Map(savedMessages);
-          prev.forEach((value, key) => {
-            merged.set(key, value);
-          });
-          return merged;
+      // Always run the merge to ensure current state is preserved
+      // BUG FIX (January 22, 2026): Previously, if savedMessages was empty,
+      // we skipped the merge entirely. This could cause issues when SWR 
+      // revalidates with stale data. Now we always merge, with current state
+      // taking precedence for non-empty values.
+      setGeneratedMessages(prev => {
+        // Start with previous state to preserve any newly generated messages
+        const merged = new Map(prev);
+        
+        // Add saved messages from DB, but ONLY if the key doesn't already have a value
+        // OR if the DB value is a valid non-empty string and current value is empty
+        savedMessages.forEach((dbMessage, key) => {
+          const currentValue = merged.get(key);
+          // Only use DB value if:
+          // 1. Current value doesn't exist or is empty
+          // 2. AND DB value is a valid non-empty string
+          if ((!currentValue || !currentValue.trim()) && dbMessage && dbMessage.trim()) {
+            merged.set(key, dbMessage);
+          }
         });
-        console.log(`[Outreach] Loaded ${savedMessages.size} saved AI messages from database`);
-      }
+        
+        // Log for debugging (can be removed in production)
+        if (savedMessages.size > 0 || prev.size > 0) {
+          console.log(`[Outreach] Merged messages: ${merged.size} total (${savedMessages.size} from DB, ${prev.size} in state)`);
+        }
+        
+        return merged;
+      });
     }
   }, [savedAffiliates]);
   
@@ -453,13 +483,18 @@ export default function OutreachPage() {
   //
   // Checks if the affiliate has at least one generated message.
   // Looks for any key that starts with "affiliateId:"
+  //
+  // BUG FIX (January 22, 2026): Only counts non-empty messages
   // =========================================================================
   const hasAnyMessage = (affiliateId: number): boolean => {
     const prefix = `${affiliateId}:`;
     // Check for keys with email or just the ID
-    for (const key of generatedMessages.keys()) {
+    for (const [key, message] of generatedMessages.entries()) {
       if (key === `${affiliateId}` || key.startsWith(prefix)) {
-        return true;
+        // BUG FIX: Only count if message is non-empty
+        if (message && typeof message === 'string' && message.trim()) {
+          return true;
+        }
       }
     }
     return false;
@@ -469,13 +504,18 @@ export default function OutreachPage() {
   // HELPER: GET MESSAGE COUNT FOR AFFILIATE (December 25, 2025)
   //
   // Returns the number of generated messages for an affiliate
+  //
+  // BUG FIX (January 22, 2026): Only counts non-empty messages
   // =========================================================================
   const getMessageCount = (affiliateId: number): number => {
     const prefix = `${affiliateId}:`;
     let count = 0;
-    for (const key of generatedMessages.keys()) {
+    for (const [key, message] of generatedMessages.entries()) {
       if (key === `${affiliateId}` || key.startsWith(prefix)) {
-        count++;
+        // BUG FIX: Only count if message is non-empty
+        if (message && typeof message === 'string' && message.trim()) {
+          count++;
+        }
       }
     }
     return count;
@@ -522,6 +562,10 @@ export default function OutreachPage() {
   //
   // Returns an array of { email, message } objects for all generated messages
   // belonging to this affiliate. Used by the multi-message viewing modal.
+  //
+  // BUG FIX (January 22, 2026): Added defensive filtering to exclude any
+  // entries with empty/undefined messages. This prevents displaying blank
+  // messages in the UI.
   // =========================================================================
   const getAllMessagesForAffiliate = (affiliateId: number): Array<{ email: string; message: string }> => {
     const prefix = `${affiliateId}:`;
@@ -529,11 +573,16 @@ export default function OutreachPage() {
     
     generatedMessages.forEach((message, key) => {
       if (key === `${affiliateId}` || key.startsWith(prefix)) {
-        // Extract email from key (format: "affiliateId:email" or just "affiliateId")
-        const email = key.includes(':') 
-          ? key.split(':').slice(1).join(':') // Handle emails with colons
-          : ''; // Legacy key format without email
-        messages.push({ email, message });
+        // BUG FIX: Only include messages that are non-empty strings
+        if (message && typeof message === 'string' && message.trim()) {
+          // Extract email from key (format: "affiliateId:email" or just "affiliateId")
+          const email = key.includes(':') 
+            ? key.split(':').slice(1).join(':') // Handle emails with colons
+            : ''; // Legacy key format without email
+          messages.push({ email, message });
+        } else {
+          console.warn(`[Outreach] ⚠️ Found empty message for key: ${key}, skipping`);
+        }
       }
     });
     
@@ -651,16 +700,28 @@ export default function OutreachPage() {
         // =====================================================================
         // SUCCESS: Store the generated message
         // January 5th, 2026: Added success toast notification
+        // BUG FIX (January 22, 2026): Validate message is non-empty before storing
         // =====================================================================
-        setGeneratedMessages(prev => {
-          const next = new Map(prev);
-          next.set(messageKey, data.message);
-          return next;
-        });
+        const messageContent = data.message;
         
-        // Show success notification
-        // i18n: January 10th, 2026
-        showToast('success', t.toasts.success.emailGenerated);
+        if (messageContent && typeof messageContent === 'string' && messageContent.trim()) {
+          setGeneratedMessages(prev => {
+            const next = new Map(prev);
+            next.set(messageKey, messageContent);
+            console.log(`[Outreach] ✅ Stored message for key: ${messageKey}, length: ${messageContent.length}`);
+            return next;
+          });
+          
+          // Show success notification
+          // i18n: January 10th, 2026
+          showToast('success', t.toasts.success.emailGenerated);
+        } else {
+          // API returned success but message is empty - treat as error
+          console.error('[Outreach] ❌ API returned success but message is empty:', data);
+          setFailedIds(prev => new Set(prev).add(messageKey));
+          showToast('error', t.toasts.error.aiGenerationFailed);
+          return; // Exit early to skip credits refresh
+        }
 
         // =====================================================================
         // CREDITS REFRESH - January 4th, 2026
@@ -791,12 +852,23 @@ export default function OutreachPage() {
 
         if (response.ok && data.success) {
           // SUCCESS: Store message and update UI progressively
-          setGeneratedMessages(prev => {
-            const next = new Map(prev);
-            next.set(messageKey, data.message);
-            return next;
-          });
-          successCount++;
+          // BUG FIX (January 22, 2026): Validate message is non-empty before storing
+          const messageContent = data.message;
+          
+          if (messageContent && typeof messageContent === 'string' && messageContent.trim()) {
+            setGeneratedMessages(prev => {
+              const next = new Map(prev);
+              next.set(messageKey, messageContent);
+              console.log(`[Outreach] ✅ Bulk: Stored message for key: ${messageKey}, length: ${messageContent.length}`);
+              return next;
+            });
+            successCount++;
+          } else {
+            // API returned success but message is empty - treat as error
+            console.error(`[Outreach] ❌ Bulk: API returned success but message is empty for ${affiliate.domain}`);
+            setFailedIds(prev => new Set(prev).add(messageKey));
+            failCount++;
+          }
         } else {
           // FAILURE: Mark as failed
           console.error(`Failed to generate for ${affiliate.domain}:`, data.error);

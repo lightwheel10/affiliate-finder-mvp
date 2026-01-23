@@ -298,6 +298,21 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================================================
+    // STEP 8.5: VALIDATE MESSAGE CONTENT (Added January 22, 2026)
+    // 
+    // BUG FIX: Ensure the message is a non-empty string before proceeding.
+    // This prevents storing empty messages in the database and displaying
+    // blank content in the UI.
+    // =========================================================================
+    if (!result.message || typeof result.message !== 'string' || !result.message.trim()) {
+      console.error(`[AI Outreach] ❌ Empty message returned from n8n for ${affiliate.domain}`);
+      return NextResponse.json(
+        { error: 'AI returned an empty message. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // =========================================================================
     // STEP 9: CONSUME AI CREDIT
     // Only consume on successful generation
     // =========================================================================
