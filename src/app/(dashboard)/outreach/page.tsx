@@ -1542,6 +1542,28 @@ export default function OutreachPage() {
               const hasFailed = hasAnyFailed(item.id!);
               const multipleContacts = getAffiliateContacts(item);
               const hasMultipleContacts = multipleContacts !== null && multipleContacts.length >= 2;
+              
+              // =========================================================================
+              // REMAINING CONTACTS CHECK (January 24th, 2026)
+              // 
+              // PROBLEM: Once user generates email for 1+ contacts, the "View Messages"
+              // button takes priority and the contact picker becomes inaccessible.
+              // User cannot generate emails for remaining contacts.
+              //
+              // SOLUTION: Check if there are contacts WITHOUT messages yet.
+              // If yes, show contact picker button (with progress indicator).
+              // Only show "View Messages" when ALL contacts have messages.
+              //
+              // contactCount: Total number of available contacts (from enrichment)
+              // hasRemainingContacts: true if some contacts still need email generation
+              //
+              // Example scenarios:
+              // - 5 contacts, 0 messages → hasRemainingContacts = true → "5 Contacts"
+              // - 5 contacts, 3 messages → hasRemainingContacts = true → "3/5 Messages"
+              // - 5 contacts, 5 messages → hasRemainingContacts = false → "View 5 Messages"
+              // =========================================================================
+              const contactCount = multipleContacts?.length || 0;
+              const hasRemainingContacts = hasMultipleContacts && messageCount < contactCount;
 
               return (
                 <div
@@ -1688,14 +1710,23 @@ export default function OutreachPage() {
                   </div>
 
                   {/* ============================================================
-                      MESSAGE ACTION BUTTON - NEO-BRUTALIST (Updated January 6th, 2026)
+                      MESSAGE ACTION BUTTON - NEO-BRUTALIST
+                      
+                      Updated: January 24th, 2026 - Added hasRemainingContacts check
                       
                       Shows different states based on generation status:
                       1. isGenerating → Spinner + "Generating..." (HIGHEST PRIORITY)
-                      2. hasMessage → "View Message(s)" (success state)
-                      3. hasFailed → Red "Failed - Retry" button
-                      4. hasMultipleContacts → Yellow "Select Contacts" button
-                      5. default → Yellow "Generate" button
+                      2. hasRemainingContacts → Contact picker with progress (e.g., "3/5 Messages")
+                      3. hasMessage → "View Message(s)" (ALL contacts done)
+                      4. hasFailed → Red "Failed - Retry" button
+                      5. hasMultipleContacts → Yellow "Select Contacts" button (no messages yet)
+                      6. default → Yellow "Generate" button (single contact)
+                      
+                      KEY CHANGE (January 24th, 2026):
+                      Previously, hasMessage took priority over hasMultipleContacts,
+                      so once ANY message existed, user couldn't access contact picker
+                      to generate for remaining contacts. Now hasRemainingContacts
+                      is checked BEFORE hasMessage to keep contact picker accessible.
                       ============================================================ */}
                   <div className="col-span-2 flex justify-end">
                     {/* January 17, 2026: All button labels now use i18n translations */}
@@ -1708,8 +1739,61 @@ export default function OutreachPage() {
                         <Loader2 size={12} className="animate-spin" />
                         {t.dashboard.outreach.generating}
                       </button>
+                    ) : hasRemainingContacts ? (
+                      // =========================================================================
+                      // MULTI-CONTACT WITH REMAINING (January 24th, 2026)
+                      // 
+                      // Affiliate has multiple contacts, but NOT all have messages yet.
+                      //
+                      // TWO SCENARIOS:
+                      // 1. messageCount = 0 → Show single button "5 Contacts" → opens contact picker
+                      // 2. messageCount > 0 → Show TWO buttons:
+                      //    a. "View X" button → opens message viewing modal (to see existing)
+                      //    b. "X/Y" button → opens contact picker (to generate more)
+                      //
+                      // This ensures user can BOTH view existing messages AND generate more.
+                      // Previously, only the contact picker was accessible, leaving user unable
+                      // to view already-generated messages.
+                      // =========================================================================
+                      messageCount > 0 ? (
+                        // PARTIAL GENERATION: Show both View and Add More buttons
+                        <div className="flex items-center gap-1.5">
+                          {/* VIEW EXISTING MESSAGES BUTTON */}
+                          <button
+                            onClick={() => {
+                              setCurrentMessageIndex(0);
+                              setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey);
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-black uppercase bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                            title={`View ${messageCount} generated message${messageCount > 1 ? 's' : ''}`}
+                          >
+                            <MessageSquare size={11} />
+                            <span className="text-[10px]">{messageCount}</span>
+                          </button>
+                          
+                          {/* GENERATE MORE BUTTON - Opens contact picker */}
+                          <button
+                            onClick={() => openContactPicker(item)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                            title={`Generate for ${contactCount - messageCount} more contact${contactCount - messageCount > 1 ? 's' : ''}`}
+                          >
+                            <Users size={12} />
+                            {messageCount}/{contactCount}
+                          </button>
+                        </div>
+                      ) : (
+                        // NO MESSAGES YET: Single button to open contact picker
+                        <button
+                          onClick={() => openContactPicker(item)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                        >
+                          <Users size={12} />
+                          {contactCount} {t.dashboard.outreach.contacts}
+                        </button>
+                      )
                     ) : hasMessage ? (
                       // SUCCESS STATE: Show "View Message" button
+                      // Only reached when: single contact with message, OR multi-contact with ALL messages
                       <button
                         onClick={() => {
                           setCurrentMessageIndex(0); // Reset to first message
@@ -1730,7 +1814,9 @@ export default function OutreachPage() {
                         {t.dashboard.outreach.retry}
                       </button>
                     ) : hasMultipleContacts ? (
-                      // MULTI-CONTACT STATE: Show "Select Contacts" button
+                      // MULTI-CONTACT STATE (no messages yet): Show "Select Contacts" button
+                      // Note: This branch may be redundant now since hasRemainingContacts
+                      // catches this case. Kept as safety fallback. (January 24th, 2026)
                       <button
                         onClick={() => openContactPicker(item)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
@@ -1739,7 +1825,7 @@ export default function OutreachPage() {
                         {multipleContacts!.length} {t.dashboard.outreach.contacts}
                       </button>
                     ) : (
-                      // DEFAULT STATE: Show yellow "Generate" button
+                      // DEFAULT STATE: Show yellow "Generate" button (single contact)
                       <button
                         onClick={() => handleGenerateForSingle(item.id!)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
