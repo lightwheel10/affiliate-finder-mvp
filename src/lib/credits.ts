@@ -380,6 +380,109 @@ export async function consumeCredits(
 }
 
 // =============================================================================
+// REFUND CREDITS (January 24th, 2026)
+// 
+// PURPOSE: Refund credits when an operation fails AFTER credits were consumed.
+// 
+// USE CASE: AI email generation now consumes credits BEFORE calling n8n.
+// If n8n fails or returns empty message, we need to refund the credit.
+// 
+// This prevents the TOCTOU (Time-of-Check to Time-of-Use) vulnerability where:
+// 1. Check: User has 1 credit, 2 requests both pass check
+// 2. Use: Both generate emails
+// 3. Consume: Only 1 succeeds (atomic UPDATE), but 2 emails were generated!
+// 
+// By consuming FIRST and refunding on failure, we guarantee 1 credit = 1 email.
+// =============================================================================
+
+/**
+ * Refund credits that were previously consumed
+ * 
+ * @param userId - The user's database ID
+ * @param creditType - Type of credit to refund
+ * @param amount - Number of credits to refund (default: 1)
+ * @param referenceId - ID of the related resource (for audit trail)
+ * @param referenceType - Type of reference (e.g., 'outreach_refund')
+ */
+export async function refundCredits(
+  userId: number,
+  creditType: CreditType,
+  amount: number = 1,
+  referenceId?: string,
+  referenceType?: string
+): Promise<{ success: boolean; newBalance: number }> {
+  try {
+    // SECURITY: Validate amount is positive
+    if (amount <= 0 || !Number.isInteger(amount)) {
+      console.error(`[Credits] SECURITY: Invalid refund amount ${amount} rejected for user ${userId}`);
+      return { success: false, newBalance: 0 };
+    }
+
+    let updateResult;
+    
+    // Refund by DECREMENTING credits_used (opposite of consume)
+    switch (creditType) {
+      case 'topic_search':
+        updateResult = await sql`
+          UPDATE crewcast.user_credits
+          SET 
+            topic_search_credits_used = GREATEST(0, topic_search_credits_used - ${amount}),
+            updated_at = NOW()
+          WHERE user_id = ${userId}
+          RETURNING topic_search_credits_total as total, topic_search_credits_used as used
+        `;
+        break;
+      case 'email':
+        updateResult = await sql`
+          UPDATE crewcast.user_credits
+          SET 
+            email_credits_used = GREATEST(0, email_credits_used - ${amount}),
+            updated_at = NOW()
+          WHERE user_id = ${userId}
+          RETURNING email_credits_total as total, email_credits_used as used
+        `;
+        break;
+      case 'ai':
+        updateResult = await sql`
+          UPDATE crewcast.user_credits
+          SET 
+            ai_credits_used = GREATEST(0, ai_credits_used - ${amount}),
+            updated_at = NOW()
+          WHERE user_id = ${userId}
+          RETURNING ai_credits_total as total, ai_credits_used as used
+        `;
+        break;
+      default:
+        return { success: false, newBalance: 0 };
+    }
+
+    if (updateResult.length === 0) {
+      console.error('[Credits] Failed to refund credits - no record found');
+      return { success: false, newBalance: 0 };
+    }
+
+    const { total, used } = updateResult[0];
+    const newBalance = total === -1 ? -1 : Math.max(0, total - used);
+
+    // Log the refund transaction (positive amount to show credit returned)
+    await sql`
+      INSERT INTO crewcast.credit_transactions (
+        user_id, credit_type, amount, balance_after, reason, reference_id, reference_type
+      ) VALUES (
+        ${userId}, ${creditType}, ${amount}, ${newBalance}, 'refund', ${referenceId || null}, ${referenceType || null}
+      )
+    `;
+
+    console.log(`[Credits] ↩️ Refunded ${amount} ${creditType} credit(s) for user ${userId}. New balance: ${newBalance}`);
+    
+    return { success: true, newBalance };
+  } catch (error) {
+    console.error('[Credits] Error refunding credits:', error);
+    return { success: false, newBalance: 0 };
+  }
+}
+
+// =============================================================================
 // INITIALIZE CREDITS (For new users starting trial)
 // =============================================================================
 

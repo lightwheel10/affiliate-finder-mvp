@@ -39,7 +39,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
-import { checkCredits, consumeCredits } from '@/lib/credits';
+import { checkCredits, consumeCredits, refundCredits } from '@/lib/credits';
 import { 
   generateOutreachEmail, 
   generateRequestId,
@@ -154,6 +154,12 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     const requestedAffiliateId = affiliateId || affiliateData?.id;
     
+    // =========================================================================
+    // STEP 3.5a: CHECK IF GENERATION IS IN PROGRESS (January 24th, 2026)
+    // 
+    // Only performs the CHECK here. The lock UPDATE is moved to AFTER credit
+    // consumption (STEP 4.5) to prevent blocking retries if credits fail.
+    // =========================================================================
     if (requestedAffiliateId) {
       try {
         // Check if generation is currently in progress
@@ -198,14 +204,8 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // Mark generation as STARTED (creates a "lock")
-        // This happens BEFORE calling n8n, so subsequent requests will see it
-        await sql`
-          UPDATE crewcast.saved_affiliates
-          SET ai_generation_started_at = NOW()
-          WHERE id = ${requestedAffiliateId} AND user_id = ${userId}
-        `;
-        console.log(`[AI Outreach] 🔒 Marked generation as started for affiliate ${requestedAffiliateId}`);
+        // NOTE: Lock UPDATE moved to STEP 4.5 (after credit consumption)
+        // This prevents setting lock when credits are insufficient
         
       } catch (lockError) {
         // Log but don't fail - proceed with generation if lock check fails
@@ -214,9 +214,29 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================================================
-    // STEP 4: CHECK AI CREDITS
+    // STEP 4: CHECK AND CONSUME AI CREDITS UPFRONT (Updated January 24th, 2026)
+    // 
+    // CRITICAL FIX: Previously we checked credits here but consumed AFTER n8n.
+    // This caused a TOCTOU (Time-of-Check to Time-of-Use) race condition:
+    // 
+    // BEFORE (Bug):
+    // 1. Check: User has 1 credit, 2 concurrent requests both pass
+    // 2. Both call n8n and generate emails (~20 seconds)
+    // 3. Consume: Only 1st succeeds (atomic UPDATE), 2nd fails silently
+    // Result: 2 emails generated, 1 credit consumed!
+    // 
+    // AFTER (Fixed):
+    // 1. Check: User has 1 credit
+    // 2. Consume IMMEDIATELY after check (atomic reservation)
+    // 3. Call n8n to generate email
+    // 4. If n8n fails → REFUND the credit
+    // Result: 1 credit = 1 email, always
+    // 
+    // The credit is now "reserved" before the long-running n8n call.
+    // If generation fails, we refund. This guarantees credit integrity.
     // =========================================================================
     const enforceCredits = isCreditEnforcementEnabled();
+    let creditConsumed = false; // Track if we consumed a credit (for refund on failure)
     
     if (enforceCredits) {
       const creditCheck = await checkCredits(userId, 'ai', 1);
@@ -231,7 +251,58 @@ export async function POST(request: NextRequest) {
         }, { status: 402 }); // Payment Required
       }
       
-      console.log(`[AI Outreach] Credit check passed for user ${userId}. Remaining: ${creditCheck.remaining}`);
+      // =========================================================================
+      // CONSUME CREDIT IMMEDIATELY (Atomic reservation)
+      // 
+      // This prevents race conditions where multiple requests pass the check
+      // but only some get charged. By consuming NOW, we guarantee:
+      // - If consumption fails → Return error (user sees insufficient credits)
+      // - If consumption succeeds → Credit is reserved, proceed with generation
+      // - If generation fails later → Refund the credit
+      // =========================================================================
+      const consumeResult = await consumeCredits(
+        userId, 
+        'ai', 
+        1, 
+        requestedAffiliateId?.toString() || 'unknown', 
+        'outreach'
+      );
+      
+      if (!consumeResult.success) {
+        console.log(`[AI Outreach] Credit consumption failed for user ${userId} (race condition protection)`);
+        return NextResponse.json({ 
+          error: 'Unable to reserve AI credit. Please try again.',
+          creditError: true,
+          remaining: 0,
+        }, { status: 402 });
+      }
+      
+      creditConsumed = true; // Mark as consumed for potential refund
+      console.log(`[AI Outreach] 💳 Reserved 1 AI credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
+    }
+
+    // =========================================================================
+    // STEP 4.5: SET GENERATION LOCK (January 24th, 2026)
+    // 
+    // NOW we set the lock, AFTER credit consumption succeeded.
+    // This ensures we don't block retries if credits were insufficient.
+    // 
+    // Previous flow (bug): Lock → Credit check → (fail) → Lock remains!
+    // New flow (fixed): Credit check → (fail) → No lock set, immediate retry
+    //                   Credit check → (pass) → Lock set → Generate
+    // =========================================================================
+    if (requestedAffiliateId) {
+      try {
+        await sql`
+          UPDATE crewcast.saved_affiliates
+          SET ai_generation_started_at = NOW()
+          WHERE id = ${requestedAffiliateId} AND user_id = ${userId}
+        `;
+        console.log(`[AI Outreach] 🔒 Marked generation as started for affiliate ${requestedAffiliateId}`);
+      } catch (lockError) {
+        // Log but don't fail - continue with generation
+        console.error('[AI Outreach] ⚠️ Failed to set lock (proceeding with generation):', lockError);
+      }
     }
 
     // =========================================================================
@@ -373,6 +444,27 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       console.error(`[AI Outreach] n8n failed: ${result.error}`);
+      
+      // =========================================================================
+      // REFUND CREDIT ON N8N FAILURE (January 24th, 2026)
+      // 
+      // Since we consumed the credit upfront (before n8n call), we must refund
+      // it when generation fails. This ensures users only pay for successful
+      // email generation.
+      // =========================================================================
+      if (creditConsumed) {
+        const refundResult = await refundCredits(
+          userId,
+          'ai',
+          1,
+          requestedAffiliateId?.toString() || 'unknown',
+          'outreach_failed'
+        );
+        if (refundResult.success) {
+          console.log(`[AI Outreach] ↩️ Refunded 1 AI credit for user ${userId} due to n8n failure`);
+        }
+      }
+      
       return NextResponse.json(
         { error: result.error || 'Failed to generate email' },
         { status: 500 }
@@ -388,6 +480,23 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     if (!result.message || typeof result.message !== 'string' || !result.message.trim()) {
       console.error(`[AI Outreach] ❌ Empty message returned from n8n for ${affiliate.domain}`);
+      
+      // =========================================================================
+      // REFUND CREDIT ON EMPTY MESSAGE (January 24th, 2026)
+      // =========================================================================
+      if (creditConsumed) {
+        const refundResult = await refundCredits(
+          userId,
+          'ai',
+          1,
+          requestedAffiliateId?.toString() || 'unknown',
+          'outreach_empty'
+        );
+        if (refundResult.success) {
+          console.log(`[AI Outreach] ↩️ Refunded 1 AI credit for user ${userId} due to empty message`);
+        }
+      }
+      
       return NextResponse.json(
         { error: 'AI returned an empty message. Please try again.' },
         { status: 500 }
@@ -395,24 +504,17 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================================================
-    // STEP 9: CONSUME AI CREDIT
-    // Only consume on successful generation
+    // STEP 9: CREDIT ALREADY CONSUMED (Updated January 24th, 2026)
+    // 
+    // NOTE: Credit consumption was MOVED to STEP 4 (before n8n call) to fix
+    // the TOCTOU race condition. See STEP 4 comments for details.
+    // 
+    // At this point:
+    // - Credit was already consumed in STEP 4
+    // - If we reached here, generation was successful
+    // - No refund needed
     // =========================================================================
-    if (enforceCredits) {
-      const consumeResult = await consumeCredits(
-        userId, 
-        'ai', 
-        1, 
-        affiliate.id.toString(), 
-        'outreach'
-      );
-      
-      if (consumeResult.success) {
-        console.log(`💳 [AI Outreach] Consumed 1 AI credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
-      } else {
-        console.error(`❌ [AI Outreach] Failed to consume credit for user ${userId}`);
-      }
-    }
+    console.log(`[AI Outreach] ✅ Generation successful, credit was consumed in STEP 4`);
 
     // =========================================================================
     // STEP 9.5: SAVE GENERATED MESSAGE TO DATABASE (Updated January 22, 2026)
@@ -512,6 +614,39 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('[AI Outreach] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // =========================================================================
+    // REFUND CREDIT ON UNEXPECTED ERROR (January 24th, 2026)
+    // 
+    // If we consumed a credit but hit an unexpected error, refund it.
+    // Note: creditConsumed may not be defined if error occurred before STEP 4,
+    // so we check if the variable exists and is true.
+    // =========================================================================
+    // @ts-ignore - creditConsumed may not be in scope if error before STEP 4
+    if (typeof creditConsumed !== 'undefined' && creditConsumed) {
+      try {
+        // @ts-ignore - userId may not be in scope if error before STEP 3
+        const refundUserId = typeof userId !== 'undefined' ? userId : null;
+        // @ts-ignore - requestedAffiliateId may not be in scope
+        const refundAffId = typeof requestedAffiliateId !== 'undefined' ? requestedAffiliateId : null;
+        
+        if (refundUserId) {
+          const refundResult = await refundCredits(
+            refundUserId,
+            'ai',
+            1,
+            refundAffId?.toString() || 'unknown',
+            'outreach_error'
+          );
+          if (refundResult.success) {
+            console.log(`[AI Outreach] ↩️ Refunded 1 AI credit for user ${refundUserId} due to error`);
+          }
+        }
+      } catch (refundError) {
+        console.error('[AI Outreach] ⚠️ Failed to refund credit after error:', refundError);
+      }
+    }
+    
     return NextResponse.json(
       { error: 'Failed to generate email', details: errorMessage },
       { status: 500 }
