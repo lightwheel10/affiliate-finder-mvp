@@ -15,6 +15,7 @@ import {
 } from '@stripe/stripe-js';
 import { Lock, AlertCircle, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 /**
  * =============================================================================
@@ -220,13 +221,22 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Security Badge - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* Security Badge with Stripe Logo - NEO-BRUTALIST (Updated January 24th, 2026) */}
       {showSecurityBadge && (
-        <div className="flex items-center gap-2 p-3 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500">
-          <Lock size={14} className="text-blue-600 shrink-0" />
-          <div className="text-xs text-blue-800 dark:text-blue-300">
-            <span className="font-black uppercase">Secure payment</span>
-            <span className="text-blue-600 dark:text-blue-400 ml-1 font-medium">• Powered by Stripe</span>
+        <div className="flex items-center justify-between p-3 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500">
+          <div className="flex items-center gap-2">
+            <Lock size={14} className="text-blue-600 shrink-0" />
+            <span className="text-xs font-black text-blue-800 dark:text-blue-300 uppercase">Secure payment</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Powered by</span>
+            <Image 
+              src="/stripe-logo.png" 
+              alt="Stripe" 
+              width={50}
+              height={20}
+              className="h-5 w-auto"
+            />
           </div>
         </div>
       )}

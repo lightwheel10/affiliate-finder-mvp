@@ -388,6 +388,10 @@ export interface Dictionary {
       cardholderName: string;
       cardDetails: string;
       nameOnCard: string;
+      // Trust messaging
+      cancelAnytime: string;
+      noChargeToday: string;
+      secureFooter: string;
     };
     // Analyzing Screen (between step 1 and 2)
     analyzing: {

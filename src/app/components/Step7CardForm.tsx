@@ -242,6 +242,14 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
             </>
           )}
         </button>
+        
+        {/* Trust Messaging - Added January 24th, 2026 */}
+        <p className="text-center text-[11px] text-gray-500 dark:text-gray-400 mt-3">
+          {t.onboarding.step7.cancelAnytime}
+        </p>
+        <p className="text-center text-[10px] text-gray-400 dark:text-gray-500 mt-2">
+          {t.onboarding.step7.secureFooter}
+        </p>
       </div>
     </div>
   );

@@ -410,6 +410,10 @@ export const de: Dictionary = {
       cardholderName: 'Name des Karteninhabers',
       cardDetails: 'Kartendaten',
       nameOnCard: 'Name auf der Karte',
+      // Trust messaging - Added January 24th, 2026
+      cancelAnytime: 'Jederzeit während der Testphase kündbar',
+      noChargeToday: 'Heute keine Abbuchung',
+      secureFooter: 'Deine Zahlung wird von Stripe gesichert. Wir speichern niemals deine Kartendaten.',
     },
     // Analyzing Screen (between step 1 and 2)
     analyzing: {

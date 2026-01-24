@@ -410,6 +410,10 @@ export const en: Dictionary = {
       cardholderName: 'Cardholder Name',
       cardDetails: 'Card Details',
       nameOnCard: 'Name on card',
+      // Trust messaging - Added January 24th, 2026
+      cancelAnytime: 'Cancel anytime during your trial',
+      noChargeToday: 'No charge today',
+      secureFooter: 'Your payment is secured by Stripe. We never store your card details.',
     },
     // Analyzing Screen (between step 1 and 2)
     analyzing: {
