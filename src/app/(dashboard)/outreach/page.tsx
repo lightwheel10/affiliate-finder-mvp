@@ -1759,10 +1759,20 @@ export default function OutreachPage() {
                         // PARTIAL GENERATION: Show both View and Add More buttons
                         <div className="flex items-center gap-1.5">
                           {/* VIEW EXISTING MESSAGES BUTTON */}
+                          {/* 
+                            BUG FIX (January 24th, 2026):
+                            Always use multi-message view (item.id without colon) for multi-contact
+                            affiliates, even when messageCount === 1. This is because the 1 generated
+                            message might NOT be for the primary contact (item.email), so using
+                            messageKey would cause the modal to show empty content.
+                            
+                            By using `${item.id}`, we trigger the carousel view which uses
+                            getAllMessagesForAffiliate() to find ALL messages by prefix matching.
+                          */}
                           <button
                             onClick={() => {
                               setCurrentMessageIndex(0);
-                              setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey);
+                              setViewingMessageId(`${item.id}`); // Always use multi-message view for multi-contact
                             }}
                             className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-black uppercase bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
                             title={`View ${messageCount} generated message${messageCount > 1 ? 's' : ''}`}
