@@ -410,6 +410,72 @@ export default function OutreachPage() {
           return merged;
         });
       }
+      
+      // =====================================================================
+      // DETECT IN-PROGRESS GENERATIONS (January 24th, 2026)
+      // Updated: Also REMOVE from generatingIds when generation completes
+      // 
+      // When user navigates away while generation is running and comes back,
+      // we need to show the spinner for any affiliates that have generation
+      // in progress.
+      // 
+      // Logic: If aiGenerationStartedAt > aiGeneratedAt → In progress
+      // AND startedAt is within last 60 seconds (timeout protection)
+      // 
+      // IMPORTANT: This now also REMOVES from generatingIds when:
+      // - Generation completed (generatedAt >= startedAt)
+      // - Or timeout exceeded (startedAt > 60 seconds ago)
+      // =====================================================================
+      const inProgressIds = new Set<string>();
+      const completedIds = new Set<string>(); // IDs that finished generating
+      const now = Date.now();
+      
+      savedAffiliates.forEach((affiliate) => {
+        if (affiliate.id) {
+          const messageKey = affiliate.email 
+            ? `${affiliate.id}:${affiliate.email}` 
+            : `${affiliate.id}`;
+          
+          if (affiliate.aiGenerationStartedAt) {
+            const startedAt = new Date(affiliate.aiGenerationStartedAt).getTime();
+            const generatedAt = affiliate.aiGeneratedAt 
+              ? new Date(affiliate.aiGeneratedAt).getTime() 
+              : 0;
+            
+            // Check if generation is in progress:
+            // - Started within last 60 seconds
+            // - AND generated_at is before started_at (not completed yet)
+            const isInProgress = (now - startedAt) < 60000 && 
+              (generatedAt === 0 || generatedAt < startedAt);
+            
+            if (isInProgress) {
+              inProgressIds.add(messageKey);
+              console.log(`[Outreach] 🔄 Detected in-progress generation for ${messageKey} (started ${Math.round((now - startedAt) / 1000)}s ago)`);
+            } else if (generatedAt >= startedAt) {
+              // Generation completed - mark for removal from generatingIds
+              completedIds.add(messageKey);
+            }
+          }
+        }
+      });
+      
+      // Update generatingIds: ADD in-progress, REMOVE completed
+      setGeneratingIds(prev => {
+        const updated = new Set(prev);
+        
+        // Add in-progress IDs
+        inProgressIds.forEach(id => updated.add(id));
+        
+        // Remove completed IDs (generation finished)
+        completedIds.forEach(id => {
+          if (updated.has(id)) {
+            console.log(`[Outreach] ✅ Generation completed for ${id} - removing spinner`);
+            updated.delete(id);
+          }
+        });
+        
+        return updated;
+      });
     }
   }, [savedAffiliates]);
   
@@ -754,6 +820,11 @@ export default function OutreachPage() {
       next.delete(messageKey);
       return next;
     });
+    
+    // Flag to track if we should skip cleanup (for "already in progress" case)
+    // January 24th, 2026: When backend says generation is in progress elsewhere,
+    // we want to KEEP the spinner showing instead of removing it
+    let skipCleanup = false;
 
     try {
       // Build the request with optional selectedContact
@@ -821,7 +892,30 @@ export default function OutreachPage() {
       } else {
         // =====================================================================
         // FAILURE: Mark as failed and show notification
+        // Updated January 24th, 2026: Handle "already in progress" gracefully
         // =====================================================================
+        
+        // =====================================================================
+        // SPECIAL CASE: Generation already in progress (409 Conflict)
+        // 
+        // This happens when user navigates away and back while generation is
+        // running, then clicks "Generate" before the spinner loads.
+        // 
+        // Instead of showing an error:
+        // 1. Keep the spinner showing (skipCleanup = true)
+        // 2. Show a friendly info message
+        // 3. Don't mark as failed
+        // 
+        // The original generation will complete and update the database.
+        // When user refreshes or the data reloads, they'll see the message.
+        // =====================================================================
+        if (response.status === 409 && data.inProgress) {
+          console.log(`[Outreach] ℹ️ Generation already in progress for ${messageKey} - keeping spinner`);
+          skipCleanup = true; // Don't remove from generatingIds in finally block
+          showToast('info', 'Email generation is already in progress. Please wait.');
+          return; // Exit early, finally will still run but skipCleanup prevents removal
+        }
+        
         console.error('AI generation failed:', data.error);
         setFailedIds(prev => new Set(prev).add(messageKey));
         
@@ -849,20 +943,25 @@ export default function OutreachPage() {
       // =========================================================================
       // CLEANUP (Updated January 24th, 2026)
       // 
-      // Always remove from both tracking mechanisms:
-      // 1. inFlightGenerations (useRef) - synchronous, prevents duplicate API calls
-      // 2. generatingIds (useState) - async, controls UI spinner
+      // Remove from tracking mechanisms UNLESS skipCleanup is true.
       // 
-      // Using finally ensures cleanup happens even if an error is thrown.
+      // skipCleanup = true when backend returns 409 "already in progress",
+      // meaning another request is still generating. In that case, we want
+      // to KEEP the spinner showing to indicate generation is happening.
+      // 
+      // 1. inFlightGenerations (useRef) - always clear to allow future clicks
+      // 2. generatingIds (useState) - only clear if skipCleanup is false
       // =========================================================================
       inFlightGenerations.current.delete(messageKey);
       
-      // Remove from generating set (hides spinner)
-      setGeneratingIds(prev => {
-        const next = new Set(prev);
-        next.delete(messageKey);
-        return next;
-      });
+      // Only remove spinner if we should (not when generation is in progress elsewhere)
+      if (!skipCleanup) {
+        setGeneratingIds(prev => {
+          const next = new Set(prev);
+          next.delete(messageKey);
+          return next;
+        });
+      }
     }
   };
   

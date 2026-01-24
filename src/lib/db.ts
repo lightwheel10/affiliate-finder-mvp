@@ -187,7 +187,19 @@ export interface DbSavedAffiliate {
   // ==========================================================================
   ai_generated_message: string | null;   // Full email body (legacy: primary contact)
   ai_generated_subject: string | null;   // Email subject line (legacy: primary contact)
-  ai_generated_at: string | null;        // ISO timestamp when generated
+  ai_generated_at: string | null;        // ISO timestamp when generation COMPLETED
+  
+  // ==========================================================================
+  // AI GENERATION STARTED AT (Added January 24th, 2026)
+  // 
+  // Tracks when AI email generation STARTED (not completed). Used for:
+  // 1. Showing "generating" spinner after page navigation
+  // 2. Blocking duplicate requests while generation is in progress
+  // 3. Preventing double credit consumption
+  // 
+  // Logic: If started_at > generated_at → Generation is in progress
+  // ==========================================================================
+  ai_generation_started_at: string | null;
   
   // ==========================================================================
   // AI GENERATED MESSAGES - Per-contact messages (Added Dec 25, 2025)

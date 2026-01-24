@@ -175,7 +175,18 @@ export interface ResultItem {
   // ==========================================================================
   aiGeneratedMessage?: string;    // Full email body (legacy: primary contact)
   aiGeneratedSubject?: string;    // Email subject line (legacy: primary contact)
-  aiGeneratedAt?: string;         // ISO timestamp when generated
+  aiGeneratedAt?: string;         // ISO timestamp when generation COMPLETED
+  
+  // ==========================================================================
+  // AI Generation Started At (Added January 24th, 2026)
+  // 
+  // Tracks when generation STARTED. Used to:
+  // 1. Show "generating" spinner after page navigation
+  // 2. Block duplicate requests while generation is in progress
+  // 
+  // Logic: If startedAt > generatedAt → Generation is in progress
+  // ==========================================================================
+  aiGenerationStartedAt?: string;
   
   // ==========================================================================
   // AI Generated Messages - Per-contact (Added Dec 25, 2025)

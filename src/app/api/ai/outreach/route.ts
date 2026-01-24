@@ -132,6 +132,88 @@ export async function POST(request: NextRequest) {
     const userId = user.id as number;
 
     // =========================================================================
+    // STEP 3.5: CHECK IF GENERATION IS ALREADY IN PROGRESS (January 24th, 2026)
+    // 
+    // PURPOSE: Prevents duplicate credit consumption when:
+    // - User clicks "Generate", navigates away, comes back, clicks again
+    // - User has multiple browser tabs open
+    // - Any scenario where duplicate requests might be sent
+    // 
+    // HOW IT WORKS:
+    // 1. Check if ai_generation_started_at is recent (< 60 seconds)
+    // 2. AND ai_generated_at is older than ai_generation_started_at (not completed yet)
+    // 3. If both true → Generation is in progress → Block this request
+    // 
+    // WHY 60 SECONDS:
+    // - AI generation typically takes 15-25 seconds
+    // - 60 seconds gives buffer for slow generations
+    // - After 60 seconds, user can retry (timeout scenario)
+    // 
+    // This also sets ai_generation_started_at = NOW() to "lock" this affiliate
+    // for subsequent requests.
+    // =========================================================================
+    const requestedAffiliateId = affiliateId || affiliateData?.id;
+    
+    if (requestedAffiliateId) {
+      try {
+        // Check if generation is currently in progress
+        const existingRecord = await sql`
+          SELECT 
+            ai_generation_started_at,
+            ai_generated_at,
+            ai_generated_message
+          FROM crewcast.saved_affiliates 
+          WHERE id = ${requestedAffiliateId} 
+            AND user_id = ${userId}
+        `;
+        
+        if (existingRecord.length > 0) {
+          const record = existingRecord[0];
+          const now = Date.now();
+          const startedAt = record.ai_generation_started_at 
+            ? new Date(record.ai_generation_started_at).getTime() 
+            : 0;
+          const generatedAt = record.ai_generated_at 
+            ? new Date(record.ai_generated_at).getTime() 
+            : 0;
+          
+          // Generation is IN PROGRESS if:
+          // - Started recently (within 60 seconds)
+          // - AND not completed yet (generated_at is before started_at or null)
+          const isInProgress = startedAt > 0 && 
+            (now - startedAt) < 60000 && 
+            (generatedAt === 0 || generatedAt < startedAt);
+          
+          if (isInProgress) {
+            const elapsedSeconds = Math.round((now - startedAt) / 1000);
+            console.log(`[AI Outreach] ⚠️ Generation already in progress for affiliate ${requestedAffiliateId} (started ${elapsedSeconds}s ago). Blocking duplicate.`);
+            
+            return NextResponse.json({
+              success: false,
+              error: 'Email generation is already in progress. Please wait for it to complete.',
+              inProgress: true,
+              startedSecondsAgo: elapsedSeconds,
+              creditsConsumed: false,
+            }, { status: 409 }); // 409 Conflict
+          }
+        }
+        
+        // Mark generation as STARTED (creates a "lock")
+        // This happens BEFORE calling n8n, so subsequent requests will see it
+        await sql`
+          UPDATE crewcast.saved_affiliates
+          SET ai_generation_started_at = NOW()
+          WHERE id = ${requestedAffiliateId} AND user_id = ${userId}
+        `;
+        console.log(`[AI Outreach] 🔒 Marked generation as started for affiliate ${requestedAffiliateId}`);
+        
+      } catch (lockError) {
+        // Log but don't fail - proceed with generation if lock check fails
+        console.error('[AI Outreach] ⚠️ Lock check failed (proceeding with generation):', lockError);
+      }
+    }
+
+    // =========================================================================
     // STEP 4: CHECK AI CREDITS
     // =========================================================================
     const enforceCredits = isCreditEnforcementEnabled();

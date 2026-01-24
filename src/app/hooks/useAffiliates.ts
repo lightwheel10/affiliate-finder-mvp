@@ -188,6 +188,14 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     aiGeneratedAt: dbAffiliate.ai_generated_at || undefined,
     
     // ==========================================================================
+    // AI GENERATION STARTED AT (Added January 24th, 2026)
+    // 
+    // Tracks when generation STARTED. Used to show "generating" spinner
+    // after page navigation and block duplicate requests.
+    // ==========================================================================
+    aiGenerationStartedAt: dbAffiliate.ai_generation_started_at || undefined,
+    
+    // ==========================================================================
     // AI GENERATED MESSAGES - Per-contact (Added Dec 25, 2025)
     // 
     // When Lusha returns multiple contacts, users can generate personalized
