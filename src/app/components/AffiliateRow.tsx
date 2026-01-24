@@ -1256,9 +1256,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Relevant Content - col-span-2 for pipeline (no date column), col-span-3 for find */}
+      {/* Relevant Content - col-span-3 for all views (expanded for better content display) */}
       {/* Updated January 16, 2026: Added max-w-[200px] wrapper and break-words to prevent layout shifts */}
-      <div className={`${isPipelineView ? "col-span-2" : "col-span-3"} min-w-0 overflow-hidden`}>
+      {/* Updated January 25, 2026: Changed pipeline from col-span-2 to col-span-3 for more space */}
+      {/*                           (Discovery Method reduced from col-span-2 to col-span-1 to compensate) */}
+      <div className="col-span-3 min-w-0 overflow-hidden">
         <div className="flex items-start gap-3">
           {/* Video/Post Thumbnail for social media - Neo-brutalist with bold borders */}
           {isSocialMedia && thumbnail && (
@@ -1292,7 +1294,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           )}
           
           {/* January 16, 2026: Fixed max-width container to prevent content from affecting table layout */}
-          <div className="flex-1 min-w-0 max-w-[200px] space-y-1 overflow-hidden">
+          {/* Updated January 25, 2026: Increased max-w-[200px] to max-w-[280px] to use expanded column space */}
+          <div className="flex-1 min-w-0 max-w-[280px] space-y-1 overflow-hidden">
             {/* Title with tooltip, break-words for long URLs/hashtags, line-clamp-2 for 2-line limit */}
             <a 
               href={link}
@@ -1344,10 +1347,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Discovery Method - col-span-2 (NEW DESIGN January 6th, 2026) */}
+      {/* Discovery Method - col-span-1 for pipeline, col-span-2 for find/discovered */}
       {/* Updated January 16, 2026: Added h-8 flex items-center for consistent height */}
       {/* Updated January 22, 2026: DiscoveryReasonsPopover removed (feature rollback) */}
-      <div className="col-span-2 h-8 flex items-center">
+      {/* Updated January 25, 2026: Made conditional - pipeline uses col-span-1 (gave space to Relevant Content) */}
+      <div className={`${isPipelineView ? "col-span-1" : "col-span-2"} h-8 flex items-center`}>
          {renderDiscoveryMethod()}
       </div>
 
@@ -1369,28 +1373,33 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       )}
 
-      {/* Status (Pipeline Only) - col-span-1 Neo-brutalist */}
-      {/* Updated January 16, 2026: Added h-8 flex items-center for consistent height with Email column */}
-      {isPipelineView && (
-        <div className="col-span-1 h-8 flex items-center">
-           <span className="h-7 inline-flex items-center px-2 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
-             {t.affiliateRow.badges.discovered} <ChevronDown size={10} className="ml-1" />
-           </span>
-        </div>
-      )}
+      {/* ==========================================================================
+         STATUS COLUMN REMOVED - January 25, 2026
+         
+         The Status column (showing "DISCOVERED" badge) has been removed from the
+         Saved page per client request. The Email column now gets col-span-2 instead
+         of col-span-1 to utilize the freed space.
+         
+         Previous column layout: 1+3+2+2+1+1+2 = 12
+         New column layout:      1+3+2+2+2+2 = 12
+         ========================================================================== */}
 
-      {/* Emails (Pipeline Only) - col-span-1 Neo-brutalist */}
+      {/* Emails (Pipeline Only) - col-span-2 Neo-brutalist */}
       {/* Updated January 10th, 2026 - i18n migration */}
       {/* Updated January 16, 2026: Fixed height container (h-8/32px) to prevent layout shift on state change */}
+      {/* Updated January 25, 2026: Increased button sizes (h-7→h-8, px-2→px-3) and added whitespace-nowrap */}
+      {/*                           to prevent "FIND EMAIL" text from wrapping to two lines */}
+      {/* Updated January 25, 2026: Changed from col-span-1 to col-span-2 (Status column removed) */}
       {isPipelineView && (
-         <div className="col-span-1 h-8 flex items-center">
+         <div className="col-span-2 h-8 flex items-center">
             {/* Email Found - Show email count badge that opens modal */}
             {/* Updated January 24, 2026: CRITICAL FIX - Only show email if emailStatus is 'found' */}
             {/* Previously checked (emailStatus === 'found' || email) which showed bio emails for free */}
+            {/* Updated January 25, 2026: Increased size (h-7→h-8, px-2→px-3) to accommodate counts like "100 Found" */}
             {emailStatus === 'found' && email ? (
                <button 
                  onClick={() => setIsEmailModalOpen(true)}
-                 className="h-7 flex items-center gap-1.5 px-2 bg-emerald-500 text-white text-[10px] font-black uppercase border-2 border-black hover:bg-emerald-600 transition-colors group whitespace-nowrap"
+                 className="h-8 flex items-center gap-1.5 px-3 bg-emerald-500 text-white text-[10px] font-black uppercase border-2 border-black hover:bg-emerald-600 transition-colors group whitespace-nowrap"
                  title={t.affiliateRow.actions.view}
                >
                  <Mail size={12} />
@@ -1399,18 +1408,20 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                </button>
             ) : emailStatus === 'searching' ? (
                /* Searching State - Animated spinner */
-               <div className="w-7 h-7 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+               /* Updated January 25, 2026: Increased size (w-7 h-7→w-8 h-8) for consistency */
+               <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
                  <Loader2 size={14} className="text-black animate-spin" />
                </div>
             ) : emailStatus === 'not_found' ? (
-               /* Not Found State - January 16, 2026: Same style as status pills, consistent h-7 height */
+               /* Not Found State - January 16, 2026: Same style as status pills */
+               /* Updated January 25, 2026: Increased size (h-7→h-8, w-7→w-8) for consistency */
                <div className="flex items-center gap-1 flex-nowrap">
-                 <span className="h-7 inline-flex items-center px-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase border-2 border-black dark:border-gray-600 whitespace-nowrap">
+                 <span className="h-8 inline-flex items-center px-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase border-2 border-black dark:border-gray-600 whitespace-nowrap">
                    0 {t.affiliateRow.actions.found}
                  </span>
                  <button 
                    onClick={onFindEmail}
-                   className="w-7 h-7 inline-flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors group"
+                   className="w-8 h-8 inline-flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors group"
                    title={t.affiliateRow.actions.retry}
                  >
                    <RotateCw size={12} className="group-hover:rotate-180 transition-transform duration-300" />
@@ -1418,16 +1429,17 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                </div>
             ) : emailStatus === 'error' ? (
                /* Error State - Warning icon + retry */
+               /* Updated January 25, 2026: Increased size (w-7 h-7→w-8 h-8) for consistency */
                <div className="flex items-center gap-1">
                  <div 
-                   className="w-7 h-7 bg-red-400 border-2 border-black flex items-center justify-center"
+                   className="w-8 h-8 bg-red-400 border-2 border-black flex items-center justify-center"
                    title={t.common.error}
                  >
                    <AlertCircle size={12} className="text-white" />
                  </div>
                  <button 
                    onClick={onFindEmail}
-                   className="w-7 h-7 bg-red-300 border-2 border-black flex items-center justify-center hover:bg-red-400 transition-colors group"
+                   className="w-8 h-8 bg-red-300 border-2 border-black flex items-center justify-center hover:bg-red-400 transition-colors group"
                    title={t.affiliateRow.actions.retry}
                  >
                    <RotateCw size={12} className="text-black group-hover:rotate-180 transition-transform duration-300" />
@@ -1435,9 +1447,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                </div>
             ) : (
                /* Default: Find Email Button - Neo-brutalist */
+               /* Updated January 25, 2026: Increased size (h-7→h-8, px-2→px-3) and added whitespace-nowrap */
+               /*                           to prevent text wrapping ("FIND" / "EMAIL" on separate lines) */
                <button 
                  onClick={onFindEmail}
-                 className="h-7 flex items-center gap-1.5 px-2 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black hover:shadow-[2px_2px_0px_0px_#000000] transition-all"
+                 className="h-8 flex items-center gap-1.5 px-3 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black hover:shadow-[2px_2px_0px_0px_#000000] transition-all whitespace-nowrap"
                  title={t.affiliateRow.actions.findEmail}
                >
                  <Search size={12} />

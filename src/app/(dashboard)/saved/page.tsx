@@ -718,7 +718,9 @@ export default function SavedPage() {
             ============================================================================= */}
         <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
           {/* Table Header - Translated (January 9th, 2026) */}
-          {/* Column spans match AffiliateRow: 1+3+2+2+1+1+2 = 12 */}
+          {/* Updated January 25, 2026: Removed Status column, gave Email col-span-2 for more space */}
+          {/* Updated January 25, 2026: Expanded Relevant Content (col-span-2→3), reduced Discovery (col-span-2→1) */}
+          {/* Column spans match AffiliateRow: 1+3+3+1+2+2 = 12 */}
           <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
             <div className="col-span-1 flex justify-center">
               <input 
@@ -729,11 +731,13 @@ export default function SavedPage() {
               />
             </div>
             <div className="col-span-3">{t.dashboard.table.affiliate}</div>
-            <div className="col-span-2">{t.dashboard.table.relevantContent}</div>
-            <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
-            <div className="col-span-1">{t.dashboard.table.status}</div>
+            {/* Updated January 25, 2026: Expanded from col-span-2 to col-span-3 for more content space */}
+            <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
+            {/* Updated January 25, 2026: Reduced from col-span-2 to col-span-1 (badge doesn't need much space) */}
+            <div className="col-span-1">{t.dashboard.table.discoveryMethod}</div>
             {/* Email column with clickable filter - January 16, 2026 */}
-            <div className="col-span-1">
+            {/* Updated January 25, 2026: Changed from col-span-1 to col-span-2 (Status column removed) */}
+            <div className="col-span-2">
               <button
                 onClick={() => setShowOnlyWithEmail(!showOnlyWithEmail)}
                 className={cn(
