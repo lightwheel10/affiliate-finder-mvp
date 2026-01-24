@@ -2235,10 +2235,18 @@ export default function OutreachPage() {
                 <div className="space-y-2">
                   {contactPicker.contacts.map((contact) => {
                     const isSelected = contactPicker.selectedContacts.has(contact.email);
-                    // January 17, 2026: Using i18n translation for unknown name
+                    // =========================================================================
+                    // DISPLAY NAME LOGIC (Updated January 24th, 2026)
+                    // 
+                    // If name is available → show name + email
+                    // If name is NOT available → show email only (no "Unknown")
+                    // 
+                    // This provides cleaner UI when we only have email addresses
+                    // without associated contact names from enrichment services.
+                    // =========================================================================
                     const displayName = contact.fullName || 
                       [contact.firstName, contact.lastName].filter(Boolean).join(' ') || 
-                      t.dashboard.outreach.contactPicker.unknownName;
+                      null; // null means no name available, will show email as primary
                     const hasExistingMessage = generatedMessages.has(
                       getMessageKey(contactPicker.affiliateId!, contact.email)
                     );
@@ -2262,27 +2270,58 @@ export default function OutreachPage() {
                         />
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-black text-gray-900 dark:text-white truncate">
-                              {displayName}
-                            </p>
-                            {/* January 17, 2026: Using i18n translation */}
-                            {hasExistingMessage && (
-                              <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase border border-black">
-                                {t.dashboard.outreach.contactPicker.alreadyGenerated}
-                              </span>
-                            )}
-                          </div>
-                          {contact.title && (
-                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 font-medium">
-                              <Briefcase size={10} />
-                              {contact.title}
-                            </p>
+                          {/* ===============================================================
+                              CONDITIONAL NAME/EMAIL DISPLAY (January 24th, 2026)
+                              
+                              If we have a name: Show name as primary, email as secondary
+                              If no name: Show email as the primary text (larger, prominent)
+                              =============================================================== */}
+                          {displayName ? (
+                            <>
+                              {/* Has name - show name as primary */}
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-black text-gray-900 dark:text-white truncate">
+                                  {displayName}
+                                </p>
+                                {hasExistingMessage && (
+                                  <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase border border-black">
+                                    {t.dashboard.outreach.contactPicker.alreadyGenerated}
+                                  </span>
+                                )}
+                              </div>
+                              {contact.title && (
+                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 font-medium">
+                                  <Briefcase size={10} />
+                                  {contact.title}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-0.5 font-mono">
+                                <Mail size={10} />
+                                {contact.email}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              {/* No name - show email as primary */}
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-black text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                                  <Mail size={12} />
+                                  {contact.email}
+                                </p>
+                                {hasExistingMessage && (
+                                  <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase border border-black">
+                                    {t.dashboard.outreach.contactPicker.alreadyGenerated}
+                                  </span>
+                                )}
+                              </div>
+                              {contact.title && (
+                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 font-medium">
+                                  <Briefcase size={10} />
+                                  {contact.title}
+                                </p>
+                              )}
+                            </>
                           )}
-                          <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-0.5 font-mono">
-                            <Mail size={10} />
-                            {contact.email}
-                          </p>
                         </div>
                         
                         <ChevronRight size={14} className={cn(
