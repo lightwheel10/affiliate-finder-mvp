@@ -84,7 +84,20 @@ function extractFilterOptions(
         topics.add(item.discoveryMethod.value);
       }
     }
-    if (item.keyword) {
+    // ==========================================================================
+    // BUG FIX - January 25, 2026
+    // 
+    // Previously, item.keyword was added to topics regardless of discovery type.
+    // This caused competitor-discovered affiliates (e.g., discovered via apollo.io
+    // with keyword "bedrop") to appear in topic filter results for "bedrop".
+    // 
+    // FIX: Only add keyword to topics if the affiliate was NOT discovered via
+    // competitor or brand search. This ensures the Topics filter only shows
+    // affiliates discovered via topic/keyword searches.
+    // ==========================================================================
+    if (item.keyword && 
+        item.discoveryMethod?.type !== 'competitor' && 
+        item.discoveryMethod?.type !== 'brand') {
       topics.add(item.keyword);
     }
   });

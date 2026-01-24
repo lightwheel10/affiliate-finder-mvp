@@ -265,11 +265,24 @@ export default function DiscoveredPage() {
         }
       }
 
+      // ========================================================================
+      // TOPICS FILTER - BUG FIX January 25, 2026
+      // 
+      // Previously, this filter matched on item.keyword for ALL affiliates,
+      // including those discovered via competitor search. This caused affiliates
+      // discovered via "apollo.io" with keyword "bedrop" to incorrectly appear
+      // when filtering by topic "bedrop".
+      // 
+      // FIX: Only match on item.keyword if the affiliate was NOT discovered
+      // via competitor or brand search. Topic filter should only show affiliates
+      // actually discovered through topic/keyword searches.
+      // ========================================================================
       if (advancedFilters.topics.length > 0) {
         const matchesTopic =
           (item.discoveryMethod?.type === 'topic' && advancedFilters.topics.includes(item.discoveryMethod.value)) ||
           (item.discoveryMethod?.type === 'keyword' && advancedFilters.topics.includes(item.discoveryMethod.value)) ||
-          (item.keyword && advancedFilters.topics.includes(item.keyword));
+          (item.keyword && advancedFilters.topics.includes(item.keyword) && 
+           item.discoveryMethod?.type !== 'competitor' && item.discoveryMethod?.type !== 'brand');
         if (!matchesTopic) return false;
       }
 
