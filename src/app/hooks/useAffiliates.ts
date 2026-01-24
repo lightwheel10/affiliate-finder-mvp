@@ -17,7 +17,7 @@
 // AFTER:  Both use same SWR cache key. Saving triggers mutate(), all update.
 // =============================================================================
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { useNeonUser } from './useNeonUser';
 import { ResultItem, SimilarWebData } from '../types';
@@ -342,6 +342,22 @@ export function useSavedAffiliates() {
   const { data, error, isLoading: swrLoading, mutate } = useSWR(swrKey, fetcher);
   
   // ===========================================================================
+  // IN-FLIGHT EMAIL LOOKUP TRACKING - January 24, 2026
+  // 
+  // CRITICAL FIX: Prevent duplicate API calls when user clicks "Find Email"
+  // multiple times rapidly.
+  // 
+  // This Set tracks which affiliateIds currently have an email lookup in progress.
+  // If user clicks again while a request is in flight, we ignore the duplicate.
+  // 
+  // Using useRef (not useState) because:
+  // 1. We don't need re-renders when the Set changes
+  // 2. The Set persists across renders without causing re-renders
+  // 3. It's a synchronous check - no race conditions with state updates
+  // ===========================================================================
+  const inFlightEmailLookups = useRef<Set<number>>(new Set());
+  
+  // ===========================================================================
   // MEMOIZED TRANSFORM - January 3rd, 2026
   // 
   // CRITICAL: Use useMemo to prevent creating a new array on every render.
@@ -450,6 +466,24 @@ export function useSavedAffiliates() {
     const affiliateId = affiliate.id;
 
     // ==========================================================================
+    // IN-FLIGHT DUPLICATE PREVENTION - January 24, 2026
+    // 
+    // CRITICAL FIX: Prevent multiple API calls when user clicks rapidly.
+    // 
+    // If this affiliateId is already being processed, ignore the duplicate call.
+    // This works together with backend idempotency to ensure credits are only
+    // consumed once per email lookup.
+    // ==========================================================================
+    if (inFlightEmailLookups.current.has(affiliateId)) {
+      console.log(`[findEmail] Ignoring duplicate call - already in flight for affiliate ${affiliateId}`);
+      return null;
+    }
+
+    // Mark this affiliate as in-flight
+    inFlightEmailLookups.current.add(affiliateId);
+    console.log(`[findEmail] Started email lookup for affiliate ${affiliateId}`);
+
+    // ==========================================================================
     // SOCIAL MEDIA BIO EMAIL CHECK - January 14, 2026
     // Updated: January 16, 2026 - Now consumes credits for bio emails (client request)
     // 
@@ -479,17 +513,66 @@ export function useSavedAffiliates() {
     );
 
     if (isSocialAffiliate) {
-      // Check if we already have an email from bio extraction
-      const bioEmail = affiliate.email;
+      // ========================================================================
+      // EXTRACT EMAIL FROM BIO - Updated January 24, 2026
+      // 
+      // CRITICAL FIX: Previously we checked affiliate.email, but bio emails
+      // are no longer stored there (to prevent free email display).
+      // 
+      // Now we extract the email on-demand from the bio field:
+      // - TikTok: affiliate.tiktokBio
+      // - Instagram: affiliate.instagramBio
+      // 
+      // This ensures users must click "Find Email" and pay credits to see it.
+      // ========================================================================
+      const extractEmailFromBio = (text: string | undefined | null): string | undefined => {
+        if (!text) return undefined;
+        const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+        const matches = text.match(EMAIL_REGEX);
+        return matches && matches.length > 0 ? matches[0] : undefined;
+      };
+      
+      // Get the appropriate bio field based on platform
+      const sourceLower = affiliate.source.toLowerCase();
+      let bioText: string | undefined;
+      if (sourceLower.includes('tiktok')) {
+        bioText = affiliate.tiktokBio;
+      } else if (sourceLower.includes('instagram')) {
+        bioText = affiliate.instagramBio;
+      }
+      
+      // Extract email from bio (NOT from affiliate.email which is no longer populated)
+      const bioEmail = extractEmailFromBio(bioText);
       const emailStatus = bioEmail ? 'found' : 'not_found';
 
       // ========================================================================
-      // CALL API FIRST - January 16, 2026
+      // OPTIMISTIC "SEARCHING" UPDATE - January 24, 2026
       // 
-      // We call the PATCH endpoint BEFORE optimistic update to:
+      // CRITICAL FIX: Set status to 'searching' BEFORE API call.
+      // This makes the UI show a spinner instead of the clickable button,
+      // preventing users from clicking multiple times.
+      // 
+      // Previously this was only done for Web affiliates, not social.
+      // ========================================================================
+      mutate(
+        (currentData: any) => ({
+          ...currentData,
+          affiliates: (currentData?.affiliates || []).map((a: any) =>
+            a.id === affiliateId ? { ...a, email_status: 'searching' } : a
+          )
+        }),
+        { revalidate: false }
+      );
+
+      // ========================================================================
+      // CALL API - January 16, 2026
+      // Updated January 24, 2026: Added try/finally to ensure cleanup
+      // 
+      // We call the PATCH endpoint to:
       // 1. Check if user has sufficient credits (for 'found' status)
       // 2. Handle 402 errors gracefully
-      // 3. Only update UI if API succeeds
+      // 3. Update database with email status
+      // 4. Consume credits if email found
       // ========================================================================
       try {
         const res = await fetch('/api/affiliates/saved', {
@@ -572,7 +655,8 @@ export function useSavedAffiliates() {
         }
 
         // Return result in same format as enrichment API for consistency
-        return {
+        // Note: finally block below will clean up in-flight tracking
+        const result = {
           email: bioEmail || null,
           emails: bioEmail ? [bioEmail] : [],
           status: emailStatus,
@@ -583,14 +667,41 @@ export function useSavedAffiliates() {
           creditsConsumed: data.creditsConsumed || false,
           creditsRemaining: data.creditsRemaining,
         };
+        return result;
       } catch (err) {
         console.error('[findEmail] Error updating email status for social affiliate:', err);
+        
+        // ======================================================================
+        // REVERT OPTIMISTIC UPDATE ON ERROR - January 24, 2026
+        // 
+        // If the API call failed, revert the 'searching' status back to 
+        // 'not_searched' so user can try again.
+        // ======================================================================
+        mutate(
+          (currentData: any) => ({
+            ...currentData,
+            affiliates: (currentData?.affiliates || []).map((a: any) =>
+              a.id === affiliateId ? { ...a, email_status: 'error' } : a
+            )
+          }),
+          { revalidate: false }
+        );
+        
         return {
           email: null,
           emails: [],
           status: 'error' as const,
           error: 'Network error while finding email',
         };
+      } finally {
+        // ======================================================================
+        // CLEANUP IN-FLIGHT TRACKING - January 24, 2026
+        // 
+        // CRITICAL: Always remove from in-flight Set, whether success or error.
+        // This ensures the user can retry after an error.
+        // ======================================================================
+        inFlightEmailLookups.current.delete(affiliateId);
+        console.log(`[findEmail] Completed email lookup for affiliate ${affiliateId}`);
       }
     }
     // ==========================================================================
@@ -789,6 +900,15 @@ export function useSavedAffiliates() {
       );
       
       return null;
+    } finally {
+      // ========================================================================
+      // CLEANUP IN-FLIGHT TRACKING - January 24, 2026
+      // 
+      // CRITICAL: Always remove from in-flight Set for Web affiliates too.
+      // This ensures the user can retry after an error.
+      // ========================================================================
+      inFlightEmailLookups.current.delete(affiliateId);
+      console.log(`[findEmail] Completed email lookup for web affiliate ${affiliateId}`);
     }
   }, [userId, mutate]);
 

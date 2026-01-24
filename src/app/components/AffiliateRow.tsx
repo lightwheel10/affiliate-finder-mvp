@@ -1385,8 +1385,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       {isPipelineView && (
          <div className="col-span-1 h-8 flex items-center">
             {/* Email Found - Show email count badge that opens modal */}
-            {/* Updated January 16, 2026: Added whitespace-nowrap to prevent text wrapping */}
-            {(emailStatus === 'found' || email) && email ? (
+            {/* Updated January 24, 2026: CRITICAL FIX - Only show email if emailStatus is 'found' */}
+            {/* Previously checked (emailStatus === 'found' || email) which showed bio emails for free */}
+            {emailStatus === 'found' && email ? (
                <button 
                  onClick={() => setIsEmailModalOpen(true)}
                  className="h-7 flex items-center gap-1.5 px-2 bg-emerald-500 text-white text-[10px] font-black uppercase border-2 border-black hover:bg-emerald-600 transition-colors group whitespace-nowrap"

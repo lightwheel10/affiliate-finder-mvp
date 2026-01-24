@@ -395,22 +395,18 @@ export async function searchInstagramApify(
       const firstPost = item.latestPosts?.[0];
 
       // ========================================================================
-      // INSTAGRAM BIO EMAIL EXTRACTION - January 14, 2026
+      // INSTAGRAM BIO EMAIL - Updated January 24, 2026
       // 
-      // Extract email addresses from Instagram biography field using regex.
-      // Many creators include their business email in their bio for collabs.
+      // IMPORTANT: We NO LONGER extract bio email here and store it in the
+      // `email` field. This was causing users to see "email found" for free
+      // without clicking "Find Email" or paying credits.
       // 
-      // Examples of emails found in real Instagram bios:
-      //   "photographer ——— inquiries: robertjunilkim@gmail.com"
-      //   "NYC Photographer: Inquiries JuanPatinoPhoto@gmail.com"
+      // The bio is stored in `instagramBio` field. When user clicks "Find Email",
+      // the email is extracted from the bio at that point and credits are charged.
       // 
-      // This provides FREE email discovery without needing paid enrichment
-      // services like Lusha or Apollo.
-      // 
-      // The extracted email flows through:
-      //   Apify → SearchResult.email → ResultItem.email → Database
+      // This ensures consistent monetization: all email discoveries cost credits.
       // ========================================================================
-      const bioEmail = extractEmailFromText(item.biography);
+      // const bioEmail = extractEmailFromText(item.biography); // REMOVED - now done on-demand
 
       return {
         title: item.fullName || `@${item.username}` || '',
@@ -424,8 +420,9 @@ export async function searchInstagramApify(
         searchQuery: keyword,
         personName: item.fullName || item.username,
         
-        // January 14, 2026: Email extracted from Instagram bio
-        email: bioEmail,
+        // January 24, 2026: REMOVED bio email from this field
+        // Email is now extracted on-demand when user clicks "Find Email" (charges 1 credit)
+        // email: undefined,
         
         // Instagram-specific fields - these are now properly passed through the pipeline
         // and will be saved to the database columns: instagram_username, instagram_followers, etc.
@@ -567,21 +564,18 @@ export async function searchTikTokApify(
       const author = item.authorMeta;
       
       // ========================================================================
-      // EMAIL EXTRACTION FROM BIO - Added January 14, 2026
+      // BIO EMAIL EXTRACTION - Updated January 24, 2026
       // 
-      // Many TikTok creators include their business email in their bio (signature)
-      // for collaboration inquiries. We extract it here using regex so it's
-      // available immediately in search results without needing paid enrichment.
+      // IMPORTANT: We NO LONGER extract bio email here and store it in the
+      // `email` field. This was causing users to see "email found" for free
+      // without clicking "Find Email" or paying credits.
       // 
-      // Examples of emails found in real TikTok bios:
-      //   "💌ashisatthegym.biz@gmail.com"
-      //   "📧: kayymrose@gmail.com"
-      //   "Business inquiries: Jordan@company.com"
+      // The bio is stored in `tiktokBio` field. When user clicks "Find Email",
+      // the email is extracted from the bio at that point and credits are charged.
       // 
-      // The extracted email is stored in the `email` field which flows through
-      // to the database and is displayed in the UI.
+      // This ensures consistent monetization: all email discoveries cost credits.
       // ========================================================================
-      const bioEmail = extractEmailFromText(author?.signature);
+      // const bioEmail = extractEmailFromText(author?.signature); // REMOVED - now done on-demand
       
       // Build snippet from video text and author stats
       // FIX: January 15th, 2026 - Ensure snippet is never empty to avoid NOT NULL violation
@@ -624,10 +618,15 @@ export async function searchTikTokApify(
         personName: author?.nickName || author?.name,
         
         // ======================================================================
-        // Email extracted from TikTok bio - Added January 14, 2026
-        // This provides immediate contact info without paid enrichment services
+        // January 24, 2026: REMOVED bio email from this field
+        // 
+        // Previously: email: bioEmail (extracted from bio and stored for free)
+        // Now: email is undefined here - extracted on-demand when user pays
+        // 
+        // The bio is stored in tiktokBio field and email is extracted when
+        // user clicks "Find Email" button (charges 1 credit).
         // ======================================================================
-        email: bioEmail,
+        // email: undefined, // Bio email extracted on-demand, not stored here
         
         // TikTok-specific fields - these are now properly passed through the pipeline
         // and will be saved to the database columns: tiktok_username, tiktok_followers, etc.

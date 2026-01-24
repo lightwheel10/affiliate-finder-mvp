@@ -50,7 +50,7 @@
  * =============================================================================
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 // =============================================================================
 // January 17th, 2026: Added Link for "Find Affiliates" button navigation
 // When clicked, routes to /find?openModal=true to auto-open the search modal
@@ -205,6 +205,47 @@ export default function OutreachPage() {
   // Shows "Generating 2/5..." in the header button
   // =========================================================================
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
+  
+  // =========================================================================
+  // IN-FLIGHT GENERATION TRACKING (January 24th, 2026)
+  // 
+  // PURPOSE: Prevents duplicate API calls when user clicks "Generate" rapidly.
+  // 
+  // PROBLEM SOLVED:
+  // React's useState updates are async. When user clicks "Generate" multiple
+  // times in quick succession, the `generatingIds` state check happens BEFORE
+  // the state update commits. This causes multiple API calls to fire, each
+  // consuming AI credits - a significant revenue/UX issue.
+  // 
+  // SOLUTION:
+  // useRef provides synchronous, immediate updates that persist across renders
+  // without triggering re-renders. We check this Set BEFORE starting any API
+  // call. If the messageKey is already in the Set, we return early.
+  // 
+  // KEY FORMAT: Same as generatingIds - "affiliateId:email" or "affiliateId"
+  // 
+  // LIFECYCLE:
+  // 1. User clicks "Generate" → Check if messageKey in Set → If yes, return
+  // 2. Add messageKey to Set (synchronous, immediate)
+  // 3. Make API call
+  // 4. Remove from Set in `finally` block (always runs, even on error)
+  // 
+  // NOTE: This does NOT fix the navigation-away issue (see outreach page docs).
+  // If user navigates away and back while generation is in-progress, the ref
+  // resets. That requires database-level status tracking (future enhancement).
+  // 
+  // @see useAffiliates.ts findEmail() for the same pattern used in email lookup
+  // =========================================================================
+  const inFlightGenerations = useRef<Set<string>>(new Set());
+  
+  // =========================================================================
+  // BULK GENERATION IN-FLIGHT FLAG (January 24th, 2026)
+  // 
+  // Prevents duplicate bulk generation when user rapidly clicks the bulk
+  // generate button. Same concept as inFlightGenerations but for the entire
+  // bulk operation rather than individual affiliates.
+  // =========================================================================
+  const isBulkGenerationInFlight = useRef<boolean>(false);
   
   // =========================================================================
   // NOTE (January 17, 2026): Using custom neo-brutalist toast component.
@@ -675,6 +716,7 @@ export default function OutreachPage() {
   
   // =========================================================================
   // SINGLE CONTACT EMAIL GENERATION (December 25, 2025)
+  // Updated: January 24th, 2026 - Added in-flight duplicate prevention
   //
   // Generates an AI email for a specific contact. This is the core generation
   // function that handles both single-contact affiliates and individual
@@ -686,7 +728,24 @@ export default function OutreachPage() {
   ) => {
     const messageKey = getMessageKey(affiliate.id!, contact?.email || affiliate.email);
     
-    // Add to generating set (shows spinner)
+    // =========================================================================
+    // IN-FLIGHT DUPLICATE PREVENTION (January 24th, 2026)
+    // 
+    // Check if this messageKey is already being processed. If so, return early
+    // to prevent duplicate API calls and duplicate credit consumption.
+    // 
+    // This check is SYNCHRONOUS (useRef) unlike the generatingIds state which
+    // is async. This prevents race conditions when user clicks rapidly.
+    // =========================================================================
+    if (inFlightGenerations.current.has(messageKey)) {
+      console.log(`[Outreach] ⚠️ Ignoring duplicate generation request for ${messageKey} - already in flight`);
+      return;
+    }
+    
+    // Mark as in-flight IMMEDIATELY (synchronous) before any async operations
+    inFlightGenerations.current.add(messageKey);
+    
+    // Add to generating set (shows spinner - async state update for UI)
     setGeneratingIds(prev => new Set(prev).add(messageKey));
     
     // Clear any previous failure state
@@ -787,6 +846,17 @@ export default function OutreachPage() {
       setFailedIds(prev => new Set(prev).add(messageKey));
       showToast('error', t.toasts.error.aiConnectionFailed);
     } finally {
+      // =========================================================================
+      // CLEANUP (Updated January 24th, 2026)
+      // 
+      // Always remove from both tracking mechanisms:
+      // 1. inFlightGenerations (useRef) - synchronous, prevents duplicate API calls
+      // 2. generatingIds (useState) - async, controls UI spinner
+      // 
+      // Using finally ensures cleanup happens even if an error is thrown.
+      // =========================================================================
+      inFlightGenerations.current.delete(messageKey);
+      
       // Remove from generating set (hides spinner)
       setGeneratingIds(prev => {
         const next = new Set(prev);
@@ -821,6 +891,7 @@ export default function OutreachPage() {
 
   // =========================================================================
   // BULK EMAIL GENERATION (Updated December 25, 2025)
+  // Updated: January 24th, 2026 - Added in-flight duplicate prevention
   // 
   // Generates AI emails for all selected affiliates sequentially.
   // Shows progress indicator "Generating 2/5..." in the header button.
@@ -831,6 +902,21 @@ export default function OutreachPage() {
   // =========================================================================
   const handleGenerateMessages = async () => {
     if (selectedAffiliates.size === 0) return;
+    
+    // =========================================================================
+    // IN-FLIGHT DUPLICATE PREVENTION (January 24th, 2026)
+    // 
+    // Prevent duplicate bulk generation if user rapidly clicks the button.
+    // The button is disabled by generatingIds.size > 0, but that's async.
+    // This synchronous check catches rapid clicks before state updates.
+    // =========================================================================
+    if (isBulkGenerationInFlight.current) {
+      console.log('[Outreach] ⚠️ Ignoring duplicate bulk generation request - already in flight');
+      return;
+    }
+    
+    // Mark bulk generation as in-flight immediately (synchronous)
+    isBulkGenerationInFlight.current = true;
     
     const idsToProcess = Array.from(selectedAffiliates);
     const total = idsToProcess.length;
@@ -853,7 +939,22 @@ export default function OutreachPage() {
       
       const messageKey = getMessageKey(id, affiliate.email);
       
-      // Add to generating set
+      // =========================================================================
+      // IN-FLIGHT TRACKING FOR INDIVIDUAL AFFILIATE (January 24th, 2026)
+      // 
+      // Skip if this specific affiliate is already being processed.
+      // This prevents duplicate API calls for the same affiliate if user
+      // somehow triggers generation through both bulk and single paths.
+      // =========================================================================
+      if (inFlightGenerations.current.has(messageKey)) {
+        console.log(`[Outreach] ⚠️ Skipping ${messageKey} in bulk - already in flight`);
+        continue;
+      }
+      
+      // Mark as in-flight (synchronous)
+      inFlightGenerations.current.add(messageKey);
+      
+      // Add to generating set (async UI state)
       setGeneratingIds(prev => new Set(prev).add(messageKey));
       
       // Clear previous failure state
@@ -900,7 +1001,11 @@ export default function OutreachPage() {
           failCount++;
         }
         
-        // Remove from generating set as it completes
+        // =====================================================================
+        // CLEANUP (Updated January 24th, 2026)
+        // Remove from both in-flight tracking (sync) and generating set (async)
+        // =====================================================================
+        inFlightGenerations.current.delete(messageKey);
         setGeneratingIds(prev => {
           const next = new Set(prev);
           next.delete(messageKey);
@@ -917,6 +1022,11 @@ export default function OutreachPage() {
         setFailedIds(prev => new Set(prev).add(messageKey));
         failCount++;
         
+        // =====================================================================
+        // CLEANUP ON ERROR (Updated January 24th, 2026)
+        // Ensure in-flight tracking is cleared even on network errors
+        // =====================================================================
+        inFlightGenerations.current.delete(messageKey);
         setGeneratingIds(prev => {
           const next = new Set(prev);
           next.delete(messageKey);
@@ -924,6 +1034,14 @@ export default function OutreachPage() {
         });
       }
     }
+    
+    // =========================================================================
+    // BULK GENERATION CLEANUP (January 24th, 2026)
+    // 
+    // Reset the bulk in-flight flag so user can trigger another bulk generation.
+    // This is placed after the loop completes (success or partial failure).
+    // =========================================================================
+    isBulkGenerationInFlight.current = false;
     
     // Clear progress indicator
     setBulkProgress(null);

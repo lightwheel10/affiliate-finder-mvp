@@ -217,10 +217,11 @@ export default function SavedPage() {
     if (visibleSelectedLinks.size === 0) return;
     
     const selectedAffiliates = savedAffiliates.filter(a => visibleSelectedLinks.has(a.link));
+    // Updated January 24, 2026: Only check emailStatus, not email field existence
+    // Bio emails are no longer stored in email field - they're extracted on-demand
     const needsLookup = selectedAffiliates.filter(a => 
       a.emailStatus !== 'found' && 
-      a.emailStatus !== 'searching' &&
-      !a.email
+      a.emailStatus !== 'searching'
     );
     
     if (needsLookup.length === 0) {
@@ -417,11 +418,14 @@ export default function SavedPage() {
       }
 
       // ==========================================================================
-      // EMAIL FOUND FILTER - January 16, 2026
-      // When showOnlyWithEmail is true, only show affiliates with emails
+      // EMAIL FOUND FILTER - Updated January 24, 2026
+      // When showOnlyWithEmail is true, only show affiliates with paid emails
+      // 
+      // CRITICAL FIX: Now only checks emailStatus === 'found', not email existence.
+      // This ensures bio emails (stored but not paid for) don't show as "found".
       // ==========================================================================
       if (showOnlyWithEmail) {
-        if (!item.email && item.emailStatus !== 'found') return false;
+        if (item.emailStatus !== 'found') return false;
       }
 
       return true;
@@ -439,12 +443,13 @@ export default function SavedPage() {
     return visible;
   }, [selectedLinks, filteredResults]);
 
+  // Updated January 24, 2026: Only check emailStatus, not email field existence
+  // Bio emails are no longer stored in email field - they're extracted on-demand
   const selectedNeedingEmailLookup = useMemo(() => {
     return savedAffiliates.filter(a => 
       visibleSelectedLinks.has(a.link) &&
       a.emailStatus !== 'found' && 
-      a.emailStatus !== 'searching' &&
-      !a.email
+      a.emailStatus !== 'searching'
     ).length;
   }, [savedAffiliates, visibleSelectedLinks]);
 
@@ -459,13 +464,15 @@ export default function SavedPage() {
   }, [savedAffiliates]);
 
   // ==========================================================================
-  // EMAIL FOUND COUNT - January 16, 2026
+  // EMAIL FOUND COUNT - Updated January 24, 2026
   // Shows how many affiliates have emails found in the current filtered view
-  // FIX: Now uses filteredResults instead of savedAffiliates so count updates
-  // when platform filter (YouTube/TikTok/etc.) changes
+  // 
+  // CRITICAL FIX: Now only checks emailStatus === 'found', not email existence.
+  // This ensures bio emails (stored but not paid for) don't show as "found".
+  // Only affiliates where user clicked "Find Email" and paid credits count.
   // ==========================================================================
   const emailsFoundCount = useMemo(() => {
-    return filteredResults.filter(a => a.email || a.emailStatus === 'found').length;
+    return filteredResults.filter(a => a.emailStatus === 'found').length;
   }, [filteredResults]);
 
   const filterTabs = [

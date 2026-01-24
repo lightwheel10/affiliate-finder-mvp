@@ -272,6 +272,47 @@ export async function PATCH(request: NextRequest) {
     }
 
     // ==========================================================================
+    // IDEMPOTENCY CHECK - January 24, 2026
+    // 
+    // CRITICAL FIX: Prevent duplicate credit consumption when user clicks
+    // "Find Email" multiple times rapidly.
+    // 
+    // Before doing anything, check if this affiliate already has email_status='found'.
+    // If so, return success immediately WITHOUT consuming credits again.
+    // This makes the endpoint idempotent - multiple calls = same result.
+    // ==========================================================================
+    const existingRecord = await sql`
+      SELECT email_status, email FROM crewcast.saved_affiliates 
+      WHERE id = ${affiliateId} AND user_id = ${userId}
+    `;
+
+    if (existingRecord.length === 0) {
+      console.log(`[PATCH /api/affiliates/saved] Affiliate ${affiliateId} not found for user ${userId}`);
+      return NextResponse.json(
+        { error: 'Affiliate not found' }, 
+        { status: 404 }
+      );
+    }
+
+    const currentStatus = existingRecord[0].email_status;
+    const currentEmail = existingRecord[0].email;
+
+    // If already 'found', return success without consuming credits
+    // This prevents duplicate charges from rapid clicks
+    if (currentStatus === 'found') {
+      console.log(`[PATCH /api/affiliates/saved] Affiliate ${affiliateId} already has email_status='found'. Skipping credit consumption (idempotent).`);
+      return NextResponse.json({ 
+        success: true,
+        email: currentEmail || email || null,
+        status: 'found',
+        provider: provider,
+        creditsConsumed: false,
+        creditsRemaining: 0,
+        alreadyProcessed: true, // Flag to indicate this was a duplicate request
+      });
+    }
+
+    // ==========================================================================
     // CREDIT CHECK - January 16, 2026
     // 
     // If an email was found (bio extraction succeeded), we charge 1 credit.
