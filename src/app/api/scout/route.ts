@@ -1,9 +1,27 @@
-import { Platform, SearchResult, searchWeb, WebSearchOptions } from '../../services/search';
+import { 
+  Platform, 
+  SearchResult, 
+  searchWeb, 
+  WebSearchOptions,
+  // ==========================================================================
+  // January 26, 2026: Import Serper-based social media search functions
+  // These are used when USE_SERPER_FOR_SOCIAL feature flag is enabled.
+  // See search.ts for detailed documentation on the trade-offs.
+  // ==========================================================================
+  USE_SERPER_FOR_SOCIAL,
+  searchYouTubeSerper,
+  searchInstagramSerper,
+  searchTikTokSerper,
+} from '../../services/search';
 import { analyzeContent } from '../../services/analysis';
 import { trackSearch, completeSearch, API_COSTS } from '../../services/tracking';
 import { 
   enrichDomainsBatch, 
   SimilarWebData,
+  // ==========================================================================
+  // January 26, 2026: These Apify functions are still imported but will only
+  // be used when USE_SERPER_FOR_SOCIAL is false (the default).
+  // ==========================================================================
   searchYouTubeApify,
   searchInstagramApify,
   searchTikTokApify 
@@ -339,23 +357,54 @@ export async function POST(req: Request) {
             // Call the appropriate search function for each platform
             // Location filtering added January 16, 2026 - passes targetCountry
             // to social platforms for localized results
+            // 
+            // January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
+            // When enabled, uses Serper with site: filters for better language accuracy
+            // Trade-off: No rich metadata (followers, subscribers, etc.)
             switch (platform) {
               case 'YouTube':
-                // Pass targetCountry to append country to query (January 16, 2026)
-                results = await searchYouTubeApify(keyword, userId, 15, targetCountry);
-                totalCost += API_COSTS.apify_youtube * results.length;
+                // =============================================================
+                // January 26, 2026: Conditional routing based on feature flag
+                // USE_SERPER_FOR_SOCIAL=true  → Serper (better language accuracy)
+                // USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, default)
+                // =============================================================
+                if (USE_SERPER_FOR_SOCIAL) {
+                  results = await searchYouTubeSerper(keyword, userId, 15, targetCountry, targetLanguage);
+                  totalCost += API_COSTS.serper; // Serper cost instead of Apify
+                } else {
+                  results = await searchYouTubeApify(keyword, userId, 15, targetCountry);
+                  totalCost += API_COSTS.apify_youtube * results.length;
+                }
                 break;
                 
               case 'Instagram':
-                // Pass targetCountry to append country to query (January 16, 2026)
-                results = await searchInstagramApify(keyword, userId, 15, targetCountry);
-                totalCost += API_COSTS.apify_instagram * results.length;
+                // =============================================================
+                // January 26, 2026: Conditional routing based on feature flag
+                // USE_SERPER_FOR_SOCIAL=true  → Serper (better language accuracy)
+                // USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, default)
+                // =============================================================
+                if (USE_SERPER_FOR_SOCIAL) {
+                  results = await searchInstagramSerper(keyword, userId, 15, targetCountry, targetLanguage);
+                  totalCost += API_COSTS.serper; // Serper cost instead of Apify
+                } else {
+                  results = await searchInstagramApify(keyword, userId, 15, targetCountry);
+                  totalCost += API_COSTS.apify_instagram * results.length;
+                }
                 break;
                 
               case 'TikTok':
-                // Pass targetCountry to append country to query (January 16, 2026)
-                results = await searchTikTokApify(keyword, userId, 15, targetCountry);
-                totalCost += API_COSTS.apify_tiktok * results.length;
+                // =============================================================
+                // January 26, 2026: Conditional routing based on feature flag
+                // USE_SERPER_FOR_SOCIAL=true  → Serper (better language accuracy)
+                // USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, default)
+                // =============================================================
+                if (USE_SERPER_FOR_SOCIAL) {
+                  results = await searchTikTokSerper(keyword, userId, 15, targetCountry, targetLanguage);
+                  totalCost += API_COSTS.serper; // Serper cost instead of Apify
+                } else {
+                  results = await searchTikTokApify(keyword, userId, 15, targetCountry);
+                  totalCost += API_COSTS.apify_tiktok * results.length;
+                }
                 break;
                 
               case 'Web':

@@ -41,8 +41,24 @@
  * =============================================================================
  */
 
-import { searchWeb, SearchResult } from '../../../services/search';
 import { 
+  searchWeb, 
+  SearchResult,
+  // ==========================================================================
+  // January 26, 2026: Import Serper-based social media search functions
+  // These are used when USE_SERPER_FOR_SOCIAL feature flag is enabled.
+  // Trade-off: Better language accuracy, but no rich metadata.
+  // ==========================================================================
+  USE_SERPER_FOR_SOCIAL,
+  searchYouTubeSerper,
+  searchInstagramSerper,
+  searchTikTokSerper,
+} from '../../../services/search';
+import { 
+  // ==========================================================================
+  // January 26, 2026: Apify functions are still imported and used by default.
+  // They will only be skipped when USE_SERPER_FOR_SOCIAL=true.
+  // ==========================================================================
   searchYouTubeApify, 
   searchInstagramApify, 
   searchTikTokApify,
@@ -364,11 +380,23 @@ export async function POST(req: Request): Promise<Response> {
         })
     );
 
-    // YOUTUBE SEARCHES (Apify) - These are slowest (~30-168 seconds)
-    const youtubeSearchPromises = topics.map(topic =>
-      searchYouTubeApify(topic, userId, 10)
+    // =========================================================================
+    // YOUTUBE SEARCHES
+    // 
+    // January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
+    // - USE_SERPER_FOR_SOCIAL=true  → Serper (better language, ~2-5 seconds)
+    // - USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, ~30-168 seconds)
+    // =========================================================================
+    const youtubeSearchPromises = topics.map(topic => {
+      // Choose search function based on feature flag
+      const searchFn = USE_SERPER_FOR_SOCIAL
+        ? searchYouTubeSerper(topic, userId, 10, null, null) // Serper (no country/lang for onboarding)
+        : searchYouTubeApify(topic, userId, 10);             // Apify (default)
+
+      return searchFn
         .then(async (results) => {
-          console.log(`[Onboarding Scout] YouTube "${topic.substring(0, 30)}...": ${results.length} results`);
+          const approach = USE_SERPER_FOR_SOCIAL ? 'Serper' : 'Apify';
+          console.log(`[Onboarding Scout] YouTube (${approach}) "${topic.substring(0, 30)}...": ${results.length} results`);
           
           let savedCount = 0;
           for (const result of results) {
@@ -381,14 +409,26 @@ export async function POST(req: Request): Promise<Response> {
         .catch(err => {
           console.error(`[Onboarding Scout] YouTube search failed for "${topic}":`, err.message);
           return { topic, platform: 'YouTube' as const, results: [] as SearchResult[], savedCount: 0 };
-        })
-    );
+        });
+    });
 
-    // INSTAGRAM SEARCHES (Apify) - Medium speed (~30-60 seconds)
-    const instagramSearchPromises = topics.map(topic =>
-      searchInstagramApify(topic, userId, 10)
+    // =========================================================================
+    // INSTAGRAM SEARCHES
+    // 
+    // January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
+    // - USE_SERPER_FOR_SOCIAL=true  → Serper (better language, ~2-5 seconds)
+    // - USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, ~30-60 seconds)
+    // =========================================================================
+    const instagramSearchPromises = topics.map(topic => {
+      // Choose search function based on feature flag
+      const searchFn = USE_SERPER_FOR_SOCIAL
+        ? searchInstagramSerper(topic, userId, 10, null, null) // Serper (no country/lang for onboarding)
+        : searchInstagramApify(topic, userId, 10);              // Apify (default)
+
+      return searchFn
         .then(async (results) => {
-          console.log(`[Onboarding Scout] Instagram "${topic.substring(0, 30)}...": ${results.length} results`);
+          const approach = USE_SERPER_FOR_SOCIAL ? 'Serper' : 'Apify';
+          console.log(`[Onboarding Scout] Instagram (${approach}) "${topic.substring(0, 30)}...": ${results.length} results`);
           
           let savedCount = 0;
           for (const result of results) {
@@ -401,14 +441,26 @@ export async function POST(req: Request): Promise<Response> {
         .catch(err => {
           console.error(`[Onboarding Scout] Instagram search failed for "${topic}":`, err.message);
           return { topic, platform: 'Instagram' as const, results: [] as SearchResult[], savedCount: 0 };
-        })
-    );
+        });
+    });
 
-    // TIKTOK SEARCHES (Apify) - Fast (~5-30 seconds)
-    const tiktokSearchPromises = topics.map(topic =>
-      searchTikTokApify(topic, userId, 10)
+    // =========================================================================
+    // TIKTOK SEARCHES
+    // 
+    // January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
+    // - USE_SERPER_FOR_SOCIAL=true  → Serper (better language, ~2-5 seconds)
+    // - USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, ~5-30 seconds)
+    // =========================================================================
+    const tiktokSearchPromises = topics.map(topic => {
+      // Choose search function based on feature flag
+      const searchFn = USE_SERPER_FOR_SOCIAL
+        ? searchTikTokSerper(topic, userId, 10, null, null) // Serper (no country/lang for onboarding)
+        : searchTikTokApify(topic, userId, 10);              // Apify (default)
+
+      return searchFn
         .then(async (results) => {
-          console.log(`[Onboarding Scout] TikTok "${topic.substring(0, 30)}...": ${results.length} results`);
+          const approach = USE_SERPER_FOR_SOCIAL ? 'Serper' : 'Apify';
+          console.log(`[Onboarding Scout] TikTok (${approach}) "${topic.substring(0, 30)}...": ${results.length} results`);
           
           let savedCount = 0;
           for (const result of results) {
@@ -421,8 +473,8 @@ export async function POST(req: Request): Promise<Response> {
         .catch(err => {
           console.error(`[Onboarding Scout] TikTok search failed for "${topic}":`, err.message);
           return { topic, platform: 'TikTok' as const, results: [] as SearchResult[], savedCount: 0 };
-        })
-    );
+        });
+    });
 
     // =========================================================================
     // WAIT FOR ALL SEARCHES TO COMPLETE - January 15th, 2026

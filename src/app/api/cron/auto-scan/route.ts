@@ -39,8 +39,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { checkCredits, consumeCredits } from '@/lib/credits';
-import { searchWeb } from '@/app/services/search';
 import { 
+  searchWeb,
+  // ==========================================================================
+  // January 26, 2026: Import Serper-based social media search functions
+  // These are used when USE_SERPER_FOR_SOCIAL feature flag is enabled.
+  // ==========================================================================
+  USE_SERPER_FOR_SOCIAL,
+  searchYouTubeSerper,
+  searchInstagramSerper,
+  searchTikTokSerper,
+} from '@/app/services/search';
+import { 
+  // ==========================================================================
+  // January 26, 2026: Apify functions still imported, used when flag is false
+  // ==========================================================================
   searchYouTubeApify, 
   searchInstagramApify, 
   searchTikTokApify 
@@ -302,19 +315,39 @@ async function runAutoScan(
   // Process each keyword
   for (const keyword of keywords) {
     try {
-      // Run searches on all platforms in parallel
+      // =========================================================================
+      // January 26, 2026: USE_SERPER_FOR_SOCIAL feature flag support
+      // 
+      // When enabled, uses Serper with site: filters for better language accuracy.
+      // Trade-off: No rich metadata (followers, subscribers, etc.)
+      // =========================================================================
       const [webResults, youtubeResults, instagramResults, tiktokResults] = await Promise.all([
         searchWeb(keyword).catch(() => []),
-        searchYouTubeApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
-        searchInstagramApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
-        searchTikTokApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
+        // YouTube: Choose Serper or Apify based on feature flag
+        USE_SERPER_FOR_SOCIAL
+          ? searchYouTubeSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => [])
+          : searchYouTubeApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
+        // Instagram: Choose Serper or Apify based on feature flag
+        USE_SERPER_FOR_SOCIAL
+          ? searchInstagramSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => [])
+          : searchInstagramApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
+        // TikTok: Choose Serper or Apify based on feature flag
+        USE_SERPER_FOR_SOCIAL
+          ? searchTikTokSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => [])
+          : searchTikTokApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
       ]);
       
-      // Calculate costs
-      totalCost += API_COSTS.serper;
-      totalCost += API_COSTS.apify_youtube * youtubeResults.length;
-      totalCost += API_COSTS.apify_instagram * instagramResults.length;
-      totalCost += API_COSTS.apify_tiktok * tiktokResults.length;
+      // Calculate costs - different costs for Serper vs Apify
+      totalCost += API_COSTS.serper; // Web search
+      if (USE_SERPER_FOR_SOCIAL) {
+        // Serper costs (3 extra searches for social platforms)
+        totalCost += API_COSTS.serper * 3; // YouTube, Instagram, TikTok
+      } else {
+        // Apify costs (per result)
+        totalCost += API_COSTS.apify_youtube * youtubeResults.length;
+        totalCost += API_COSTS.apify_instagram * instagramResults.length;
+        totalCost += API_COSTS.apify_tiktok * tiktokResults.length;
+      }
       
       // Combine all results
       const allResults = [

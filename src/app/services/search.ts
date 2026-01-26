@@ -20,6 +20,14 @@
  * - Blocked github.com, github.io, selecdoo.com domains
  * - Fixed Invalid Date display issue
  * 
+ * January 26, 2026: Added Serper-based social media search (EXPERIMENTAL)
+ * - New functions: searchYouTubeSerper, searchInstagramSerper, searchTikTokSerper
+ * - Feature flag: USE_SERPER_FOR_SOCIAL (disabled by default)
+ * - Uses site: filters with language params for better localization
+ * - Trade-off: Better language accuracy, but NO rich metadata (followers, etc.)
+ * - Old Apify approach remains default and untouched
+ * - See: test-results/comparison-*.json for test data
+ * 
  * Architecture:
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │  searchWeb(keyword, options)                                            │
@@ -39,6 +47,56 @@ import {
 } from './location';
 
 const SERPER_API_KEY = process.env.SERPER_API_KEY;
+
+// =============================================================================
+// FEATURE FLAG: USE SERPER FOR SOCIAL MEDIA SEARCH
+// Added: January 26, 2026
+// 
+// PURPOSE:
+// When enabled, uses Serper (Google search with site: filters) instead of
+// Apify actors for YouTube, Instagram, and TikTok searches.
+// 
+// WHY THIS EXISTS:
+// - Apify actors return results in mixed languages (~30% target language)
+// - Serper with gl/hl/lr params returns ~90% target language results
+// - Client requirement: "All results should be in the target language"
+// 
+// TRADE-OFFS:
+// ┌────────────────────────────────────────────────────────────────────────┐
+// │ Metric              │ Apify (current)      │ Serper (new)             │
+// ├────────────────────────────────────────────────────────────────────────┤
+// │ Language accuracy   │ ~30%                 │ ~90%                     │
+// │ Result count        │ ~15 per platform     │ ~30 per platform         │
+// │ Followers/subs      │ ✅ Yes               │ ❌ No                    │
+// │ Views/plays         │ ✅ Yes               │ ❌ No                    │
+// │ Bio/description     │ ✅ Yes               │ ❌ No                    │
+// │ Email extraction    │ ✅ Yes               │ ❌ No                    │
+// │ Username            │ ✅ Yes               │ ⚠️ TikTok only (parsed) │
+// │ API cost            │ Apify credits        │ Serper credits           │
+// │ Speed               │ Slow (~30-120s)      │ Fast (~2-5s)             │
+// └────────────────────────────────────────────────────────────────────────┘
+// 
+// HOW TO ENABLE:
+// Set USE_SERPER_FOR_SOCIAL=true in .env.local
+// 
+// HOW TO TEST:
+// Run: npx tsx scripts/test-serper-vs-apify.ts
+// Results saved to: test-results/comparison-*.json
+// 
+// ROLLBACK:
+// Set USE_SERPER_FOR_SOCIAL=false (or remove the env var)
+// The old Apify approach will be used automatically.
+// 
+// AFFECTED FILES (when enabled):
+// - src/app/api/scout/route.ts (main search endpoint)
+// - src/app/api/scout/onboarding/route.ts (onboarding pre-fetch)
+// - src/app/api/cron/auto-scan/route.ts (scheduled scans)
+// - src/app/services/search.ts (this file - routing logic)
+// 
+// IMPORTANT: The Apify code in apify.ts is NOT modified. This is purely
+// additive - we're adding a new approach alongside the existing one.
+// =============================================================================
+export const USE_SERPER_FOR_SOCIAL = process.env.USE_SERPER_FOR_SOCIAL === 'true';
 
 // =============================================================================
 // E-COMMERCE DOMAIN BLOCKLIST - January 16, 2026
@@ -1010,6 +1068,444 @@ export async function searchWeb(
   return finalResults;
 }
 
+// =============================================================================
+// SERPER-BASED SOCIAL MEDIA SEARCH FUNCTIONS
+// Added: January 26, 2026
+// 
+// PURPOSE:
+// Alternative to Apify actors for YouTube, Instagram, TikTok searches.
+// Uses Google search with site: filters and language params (gl, hl, lr).
+// 
+// WHEN TO USE:
+// Only when USE_SERPER_FOR_SOCIAL feature flag is enabled.
+// Provides better language accuracy (~90% vs ~30%) at the cost of losing
+// rich metadata (followers, subscribers, views, bio, email).
+// 
+// ARCHITECTURE:
+// ┌─────────────────────────────────────────────────────────────────────────┐
+// │ searchYouTubeSerper(keyword, options)                                   │
+// │ ├── 1. Build query: "keyword site:youtube.com"                         │
+// │ ├── 2. Add language params: gl, hl, lr                                 │
+// │ ├── 3. Fetch multiple pages from Serper                                │
+// │ ├── 4. Parse results into SearchResult format                          │
+// │ └── 5. Apply franc language post-filter                                │
+// └─────────────────────────────────────────────────────────────────────────┘
+// 
+// DATA MAPPING (Serper → SearchResult):
+// ┌──────────────────┬───────────────────────────────────────────────────────┐
+// │ SearchResult     │ Serper Source                                         │
+// ├──────────────────┼───────────────────────────────────────────────────────┤
+// │ title            │ result.title                                          │
+// │ link             │ result.link                                           │
+// │ snippet          │ result.snippet                                        │
+// │ date             │ result.date (e.g., "vor 1 Tag")                       │
+// │ source           │ 'YouTube' | 'Instagram' | 'TikTok'                    │
+// │ domain           │ Extracted from link                                   │
+// │ tiktokUsername   │ Parsed from URL (TikTok only)                         │
+// │ ALL OTHER FIELDS │ null (not available from Serper)                      │
+// └──────────────────┴───────────────────────────────────────────────────────┘
+// 
+// IMPORTANT NOTES:
+// - These functions do NOT replace Apify. They are an alternative.
+// - The Apify functions in apify.ts remain completely unchanged.
+// - Switching between approaches is controlled by USE_SERPER_FOR_SOCIAL flag.
+// - If this experiment fails, simply disable the flag to revert.
+// =============================================================================
+
+/**
+ * Number of Serper pages to fetch for social media searches.
+ * Each page returns ~10 results. 3 pages = ~30 results per platform.
+ * 
+ * Added: January 26, 2026
+ */
+const SERPER_SOCIAL_PAGES = 3;
+
+/**
+ * Helper: Fetch a single page from Serper for social media search.
+ * 
+ * Added: January 26, 2026
+ * 
+ * @param query - Search query (e.g., "propolis site:youtube.com")
+ * @param page - Page number (1-based)
+ * @param locationParams - Serper location params (gl, hl, lr)
+ * @returns Serper API response
+ */
+async function serperFetchSocialPage(
+  query: string,
+  page: number,
+  locationParams: Record<string, string>
+): Promise<any> {
+  if (!SERPER_API_KEY) {
+    console.error('❌ SERPER_API_KEY is not configured');
+    return { error: 'API key not configured' };
+  }
+
+  try {
+    const response = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': SERPER_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        q: query,
+        num: 10,
+        page,
+        ...locationParams,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Serper HTTP ${response.status}: ${errorText}`);
+      return { error: `HTTP ${response.status}` };
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error(`❌ Serper fetch error:`, error.message);
+    return { error: error.message };
+  }
+}
+
+/**
+ * Helper: Fetch multiple pages from Serper and combine results.
+ * 
+ * Added: January 26, 2026
+ * 
+ * @param query - Search query (e.g., "propolis site:youtube.com")
+ * @param numPages - Number of pages to fetch
+ * @param locationParams - Serper location params (gl, hl, lr)
+ * @returns Array of organic results from all pages
+ */
+async function serperFetchMultipleSocialPages(
+  query: string,
+  numPages: number,
+  locationParams: Record<string, string>
+): Promise<any[]> {
+  const pagePromises = [];
+  for (let page = 1; page <= numPages; page++) {
+    pagePromises.push(serperFetchSocialPage(query, page, locationParams));
+  }
+
+  const results = await Promise.all(pagePromises);
+  const allOrganic: any[] = [];
+
+  for (const result of results) {
+    if (result.organic && Array.isArray(result.organic)) {
+      allOrganic.push(...result.organic);
+    }
+  }
+
+  return allOrganic;
+}
+
+/**
+ * Helper: Parse TikTok username from URL.
+ * 
+ * Added: January 26, 2026
+ * 
+ * Example: "https://www.tiktok.com/@janine.griesser/video/123" → "janine.griesser"
+ * 
+ * @param url - TikTok URL
+ * @returns Username without @ symbol, or null if not found
+ */
+function parseTikTokUsernameFromUrl(url: string): string | null {
+  try {
+    // Match pattern: tiktok.com/@username/...
+    const match = url.match(/tiktok\.com\/@([^\/\?]+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Search YouTube using Serper with site: filter.
+ * 
+ * Added: January 26, 2026
+ * 
+ * WHEN TO USE:
+ * Only when USE_SERPER_FOR_SOCIAL is true. Otherwise, use searchYouTubeApify.
+ * 
+ * WHAT YOU GET:
+ * - Title, link, snippet, date
+ * - Better language accuracy (~90%)
+ * 
+ * WHAT YOU DON'T GET (compared to Apify):
+ * - Channel name, subscribers, thumbnail
+ * - Video views, likes, comments
+ * - Video duration
+ * 
+ * @param keyword - Search keyword
+ * @param userId - User ID for tracking (optional)
+ * @param maxResults - Maximum results (not used, controlled by SERPER_SOCIAL_PAGES)
+ * @param targetCountry - Target country for localization
+ * @param targetLanguage - Target language for localization
+ * @returns Array of SearchResult objects
+ */
+export async function searchYouTubeSerper(
+  keyword: string,
+  userId?: number,
+  maxResults: number = 15,
+  targetCountry?: string | null,
+  targetLanguage?: string | null
+): Promise<SearchResult[]> {
+  console.log(`🎬 [Serper] YouTube search: "${keyword}" (country: ${targetCountry || 'global'}, lang: ${targetLanguage || 'any'})`);
+
+  // Get location config for Serper params
+  const locationConfig = getLocationConfig(targetCountry, targetLanguage);
+  const locationParams: Record<string, string> = locationConfig
+    ? {
+        gl: locationConfig.countryCode,
+        hl: locationConfig.languageCode,
+        lr: `lang_${locationConfig.languageCode}`,
+      }
+    : {};
+
+  // Build search query with site: filter
+  const query = `${keyword} site:youtube.com`;
+
+  // Fetch multiple pages
+  const rawResults = await serperFetchMultipleSocialPages(query, SERPER_SOCIAL_PAGES, locationParams);
+
+  console.log(`🎬 [Serper] YouTube raw results: ${rawResults.length}`);
+
+  // Transform to SearchResult format
+  const results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => ({
+    title: r.title || '',
+    link: r.link || '',
+    snippet: r.snippet || '',
+    source: 'YouTube' as Platform,
+    domain: 'youtube.com',
+    date: r.date || null,
+    position: index + 1,
+    searchQuery: keyword,
+    // YouTube-specific fields - NOT available from Serper
+    channel: undefined,
+    duration: undefined,
+    views: undefined,
+    thumbnail: undefined,
+    youtubeVideoLikes: undefined,
+    youtubeVideoComments: undefined,
+  }));
+
+  // Apply language filtering if target language is set
+  if (locationConfig?.languageCode) {
+    const languageFilterConfig: LanguageFilterConfig = {
+      enabled: true,
+      targetLanguageCode: locationConfig.languageCode,
+      verbose: process.env.NODE_ENV === 'development',
+    };
+
+    const { results: filteredResults, stats } = filterResultsByLanguage(results, languageFilterConfig);
+    console.log(`🎬 [Serper] YouTube after language filter: ${filteredResults.length}/${results.length}`);
+    return filteredResults;
+  }
+
+  return results;
+}
+
+/**
+ * Search Instagram using Serper with site: filter.
+ * 
+ * Added: January 26, 2026
+ * 
+ * WHEN TO USE:
+ * Only when USE_SERPER_FOR_SOCIAL is true. Otherwise, use searchInstagramApify.
+ * 
+ * WHAT YOU GET:
+ * - Title (post caption excerpt), link, snippet, date
+ * - Better language accuracy (~90%)
+ * 
+ * WHAT YOU DON'T GET (compared to Apify):
+ * - Username, full name, bio
+ * - Followers, following, posts count
+ * - Is verified, is business
+ * - Post likes, comments, views
+ * - Profile picture
+ * - Email from bio
+ * 
+ * @param keyword - Search keyword
+ * @param userId - User ID for tracking (optional)
+ * @param maxResults - Maximum results (not used, controlled by SERPER_SOCIAL_PAGES)
+ * @param targetCountry - Target country for localization
+ * @param targetLanguage - Target language for localization
+ * @returns Array of SearchResult objects
+ */
+export async function searchInstagramSerper(
+  keyword: string,
+  userId?: number,
+  maxResults: number = 15,
+  targetCountry?: string | null,
+  targetLanguage?: string | null
+): Promise<SearchResult[]> {
+  console.log(`📸 [Serper] Instagram search: "${keyword}" (country: ${targetCountry || 'global'}, lang: ${targetLanguage || 'any'})`);
+
+  // Get location config for Serper params
+  const locationConfig = getLocationConfig(targetCountry, targetLanguage);
+  const locationParams: Record<string, string> = locationConfig
+    ? {
+        gl: locationConfig.countryCode,
+        hl: locationConfig.languageCode,
+        lr: `lang_${locationConfig.languageCode}`,
+      }
+    : {};
+
+  // Build search query with site: filter
+  const query = `${keyword} site:instagram.com`;
+
+  // Fetch multiple pages
+  const rawResults = await serperFetchMultipleSocialPages(query, SERPER_SOCIAL_PAGES, locationParams);
+
+  console.log(`📸 [Serper] Instagram raw results: ${rawResults.length}`);
+
+  // Transform to SearchResult format
+  const results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => ({
+    title: r.title || '',
+    link: r.link || '',
+    snippet: r.snippet || '',
+    source: 'Instagram' as Platform,
+    domain: 'instagram.com',
+    date: r.date || null,
+    position: index + 1,
+    searchQuery: keyword,
+    // Instagram-specific fields - NOT available from Serper
+    instagramUsername: undefined,
+    instagramFullName: undefined,
+    instagramBio: undefined,
+    instagramFollowers: undefined,
+    instagramFollowing: undefined,
+    instagramPostsCount: undefined,
+    instagramIsBusiness: undefined,
+    instagramIsVerified: undefined,
+    instagramPostLikes: undefined,
+    instagramPostComments: undefined,
+    instagramPostViews: undefined,
+    email: undefined,
+    thumbnail: undefined,
+  }));
+
+  // Apply language filtering if target language is set
+  if (locationConfig?.languageCode) {
+    const languageFilterConfig: LanguageFilterConfig = {
+      enabled: true,
+      targetLanguageCode: locationConfig.languageCode,
+      verbose: process.env.NODE_ENV === 'development',
+    };
+
+    const { results: filteredResults, stats } = filterResultsByLanguage(results, languageFilterConfig);
+    console.log(`📸 [Serper] Instagram after language filter: ${filteredResults.length}/${results.length}`);
+    return filteredResults;
+  }
+
+  return results;
+}
+
+/**
+ * Search TikTok using Serper with site: filter.
+ * 
+ * Added: January 26, 2026
+ * 
+ * WHEN TO USE:
+ * Only when USE_SERPER_FOR_SOCIAL is true. Otherwise, use searchTikTokApify.
+ * 
+ * WHAT YOU GET:
+ * - Title (video caption excerpt), link, snippet, date
+ * - Username (parsed from URL - e.g., tiktok.com/@username/...)
+ * - Better language accuracy (~90%)
+ * 
+ * WHAT YOU DON'T GET (compared to Apify):
+ * - Display name, bio
+ * - Followers, following, total likes
+ * - Is verified
+ * - Video plays, likes, comments, shares
+ * - Profile picture
+ * - Email from bio
+ * 
+ * @param keyword - Search keyword
+ * @param userId - User ID for tracking (optional)
+ * @param maxResults - Maximum results (not used, controlled by SERPER_SOCIAL_PAGES)
+ * @param targetCountry - Target country for localization
+ * @param targetLanguage - Target language for localization
+ * @returns Array of SearchResult objects
+ */
+export async function searchTikTokSerper(
+  keyword: string,
+  userId?: number,
+  maxResults: number = 15,
+  targetCountry?: string | null,
+  targetLanguage?: string | null
+): Promise<SearchResult[]> {
+  console.log(`🎵 [Serper] TikTok search: "${keyword}" (country: ${targetCountry || 'global'}, lang: ${targetLanguage || 'any'})`);
+
+  // Get location config for Serper params
+  const locationConfig = getLocationConfig(targetCountry, targetLanguage);
+  const locationParams: Record<string, string> = locationConfig
+    ? {
+        gl: locationConfig.countryCode,
+        hl: locationConfig.languageCode,
+        lr: `lang_${locationConfig.languageCode}`,
+      }
+    : {};
+
+  // Build search query with site: filter
+  const query = `${keyword} site:tiktok.com`;
+
+  // Fetch multiple pages
+  const rawResults = await serperFetchMultipleSocialPages(query, SERPER_SOCIAL_PAGES, locationParams);
+
+  console.log(`🎵 [Serper] TikTok raw results: ${rawResults.length}`);
+
+  // Transform to SearchResult format
+  // NOTE: We can parse username from TikTok URLs (unlike YouTube/Instagram)
+  const results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => {
+    const username = parseTikTokUsernameFromUrl(r.link || '');
+
+    return {
+      title: r.title || '',
+      link: r.link || '',
+      snippet: r.snippet || '',
+      source: 'TikTok' as Platform,
+      domain: 'tiktok.com',
+      date: r.date || null,
+      position: index + 1,
+      searchQuery: keyword,
+      // TikTok username - CAN be parsed from URL!
+      tiktokUsername: username || undefined,
+      // TikTok-specific fields - NOT available from Serper
+      tiktokDisplayName: undefined,
+      tiktokBio: undefined,
+      tiktokFollowers: undefined,
+      tiktokFollowing: undefined,
+      tiktokLikes: undefined,
+      tiktokVideosCount: undefined,
+      tiktokIsVerified: undefined,
+      tiktokVideoPlays: undefined,
+      tiktokVideoLikes: undefined,
+      tiktokVideoComments: undefined,
+      tiktokVideoShares: undefined,
+      email: undefined,
+      thumbnail: undefined,
+    };
+  });
+
+  // Apply language filtering if target language is set
+  if (locationConfig?.languageCode) {
+    const languageFilterConfig: LanguageFilterConfig = {
+      enabled: true,
+      targetLanguageCode: locationConfig.languageCode,
+      verbose: process.env.NODE_ENV === 'development',
+    };
+
+    const { results: filteredResults, stats } = filterResultsByLanguage(results, languageFilterConfig);
+    console.log(`🎵 [Serper] TikTok after language filter: ${filteredResults.length}/${results.length}`);
+    return filteredResults;
+  }
+
+  return results;
+}
+
 /**
  * Search Web using Serper.dev
  * Note: YouTube, Instagram, TikTok are now handled by Apify in searchMultiPlatform
@@ -1034,9 +1530,20 @@ async function searchPlatform(
 /**
  * Search across multiple platforms in parallel
  * - Web: Uses Serper.dev
- * - YouTube/Instagram/TikTok: Uses Apify scrapers
+ * - YouTube/Instagram/TikTok: Uses Apify scrapers (default) OR Serper (if flag enabled)
  * 
  * Updated January 16, 2026: Added webSearchOptions for affiliate filtering
+ * Updated January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
+ * 
+ * FEATURE FLAG: USE_SERPER_FOR_SOCIAL
+ * When enabled (set to 'true' in .env.local), social media searches will use
+ * Serper with site: filters instead of Apify actors.
+ * 
+ * Trade-offs:
+ * - Serper: Better language accuracy (~90%), but no rich metadata
+ * - Apify: Rich metadata (followers, etc.), but mixed language results (~30%)
+ * 
+ * See detailed documentation at the top of this file.
  */
 export async function searchMultiPlatform(
   keyword: string, 
@@ -1045,27 +1552,98 @@ export async function searchMultiPlatform(
   webSearchOptions: WebSearchOptions = {}
 ): Promise<SearchResult[]> {
   console.log(`\n🚀 Starting multi-platform search for "${keyword}"`);
-  console.log(`📡 Platforms: ${sources.join(', ')}\n`);
+  console.log(`📡 Platforms: ${sources.join(', ')}`);
+  
+  // ============================================================================
+  // January 26, 2026: Log which approach is being used for social media
+  // This helps with debugging and monitoring in production logs.
+  // ============================================================================
+  if (USE_SERPER_FOR_SOCIAL) {
+    console.log(`🔧 Social media approach: SERPER (USE_SERPER_FOR_SOCIAL=true)`);
+  } else {
+    console.log(`🔧 Social media approach: APIFY (USE_SERPER_FOR_SOCIAL=false or not set)`);
+  }
+  console.log('');
 
   // Run all searches in parallel
   const promises = sources.map(source => {
     // Route to appropriate service based on platform
     switch (source) {
       case 'YouTube':
-        return searchYouTubeApify(keyword, userId, 15).catch(err => {
-          console.error(`❌ YouTube (Apify) search failed:`, err);
-          return [] as SearchResult[];
-        });
+        // ======================================================================
+        // January 26, 2026: Conditional routing based on feature flag
+        // 
+        // USE_SERPER_FOR_SOCIAL=true  → searchYouTubeSerper (better language)
+        // USE_SERPER_FOR_SOCIAL=false → searchYouTubeApify (rich metadata)
+        // ======================================================================
+        if (USE_SERPER_FOR_SOCIAL) {
+          return searchYouTubeSerper(
+            keyword,
+            userId,
+            15,
+            webSearchOptions.targetCountry,
+            webSearchOptions.targetLanguage
+          ).catch(err => {
+            console.error(`❌ YouTube (Serper) search failed:`, err);
+            return [] as SearchResult[];
+          });
+        } else {
+          return searchYouTubeApify(keyword, userId, 15).catch(err => {
+            console.error(`❌ YouTube (Apify) search failed:`, err);
+            return [] as SearchResult[];
+          });
+        }
+        
       case 'Instagram':
-        return searchInstagramApify(keyword, userId, 15).catch(err => {
-          console.error(`❌ Instagram (Apify) search failed:`, err);
-          return [] as SearchResult[];
-        });
+        // ======================================================================
+        // January 26, 2026: Conditional routing based on feature flag
+        // 
+        // USE_SERPER_FOR_SOCIAL=true  → searchInstagramSerper (better language)
+        // USE_SERPER_FOR_SOCIAL=false → searchInstagramApify (rich metadata)
+        // ======================================================================
+        if (USE_SERPER_FOR_SOCIAL) {
+          return searchInstagramSerper(
+            keyword,
+            userId,
+            15,
+            webSearchOptions.targetCountry,
+            webSearchOptions.targetLanguage
+          ).catch(err => {
+            console.error(`❌ Instagram (Serper) search failed:`, err);
+            return [] as SearchResult[];
+          });
+        } else {
+          return searchInstagramApify(keyword, userId, 15).catch(err => {
+            console.error(`❌ Instagram (Apify) search failed:`, err);
+            return [] as SearchResult[];
+          });
+        }
+        
       case 'TikTok':
-        return searchTikTokApify(keyword, userId, 15).catch(err => {
-          console.error(`❌ TikTok (Apify) search failed:`, err);
-          return [] as SearchResult[];
-        });
+        // ======================================================================
+        // January 26, 2026: Conditional routing based on feature flag
+        // 
+        // USE_SERPER_FOR_SOCIAL=true  → searchTikTokSerper (better language)
+        // USE_SERPER_FOR_SOCIAL=false → searchTikTokApify (rich metadata)
+        // ======================================================================
+        if (USE_SERPER_FOR_SOCIAL) {
+          return searchTikTokSerper(
+            keyword,
+            userId,
+            15,
+            webSearchOptions.targetCountry,
+            webSearchOptions.targetLanguage
+          ).catch(err => {
+            console.error(`❌ TikTok (Serper) search failed:`, err);
+            return [] as SearchResult[];
+          });
+        } else {
+          return searchTikTokApify(keyword, userId, 15).catch(err => {
+            console.error(`❌ TikTok (Apify) search failed:`, err);
+            return [] as SearchResult[];
+          });
+        }
+        
       case 'Web':
       default:
         return searchPlatform(keyword, source, webSearchOptions).catch(err => {
