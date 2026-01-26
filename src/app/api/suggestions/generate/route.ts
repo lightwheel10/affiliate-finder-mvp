@@ -298,10 +298,18 @@ async function generateWithAI(
    - For country-specific domains (e.g., .de, .fr, .co.uk), prefer those when targeting that market`
     : '';
   
-  const languageInstruction = targetLanguage
-    ? `\n   - CRITICAL: All topics/keywords MUST be in ${targetLanguage} language
-   - Use native ${targetLanguage} terms for products/ingredients, not English translations`
-    : '';
+  // Build combined instruction for topics (both country and language matter)
+  const topicsInstruction = (() => {
+    const parts: string[] = [];
+    if (targetCountry) {
+      parts.push(`Generate topics relevant to what people in ${targetCountry} search for`);
+    }
+    if (targetLanguage) {
+      parts.push(`All topics MUST be in ${targetLanguage} language`);
+      parts.push(`Use native ${targetLanguage} terms, not English translations`);
+    }
+    return parts.length > 0 ? '\n   - ' + parts.join('\n   - ') : '';
+  })();
   
   try {
     const completion = await client.chat.completions.parse({
@@ -326,7 +334,7 @@ Your task is to analyze a website and identify:
    - So generate only the BASE product/ingredient/category keywords
    - NO full sentences, NO phrases with adjectives like "best" or years
    - Just the core noun: product name, ingredient, or category
-   - Extract these from the scraped website content${languageInstruction}
+   - Extract these from the scraped website content${topicsInstruction}
 
 Be specific and practical. These suggestions will be used for affiliate marketing outreach.`
         },
