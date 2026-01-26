@@ -26,9 +26,21 @@
  *   - User will select up to 5 in Step 3
  *   - Each competitor domain is validated before returning
  * 
- * - 10 Topics: Keywords/topics affiliates would write about
- *   - User will select up to 10 in Step 4
- *   - Used for affiliate discovery searches
+ * - 10 Topics: SHORT search keywords (1-3 words max)
+ *   - User will select up to 5 in Step 4
+ *   - Used for affiliate discovery searches on Serper, YouTube, Instagram, TikTok
+ *   - Words like "review", "blog" are added automatically by search.ts
+ * 
+ * =============================================================================
+ * CHANGELOG
+ * =============================================================================
+ * January 26, 2026:
+ * - Fixed topic generation to produce SHORT keywords instead of long phrases
+ * - Problem: AI was generating full sentences/phrases (5+ words)
+ * - These became too specific when we added "review"/"blog" suffix in search
+ * - Too specific = zero results from Serper
+ * - Solution: Updated prompt to request 1-3 word base keywords only
+ * - AI extracts core product/ingredient/category from scraped website content
  * 
  * =============================================================================
  * ERROR HANDLING
@@ -82,8 +94,8 @@ const SuggestionsSchema = z.object({
   })).describe('12 direct competitors to this business'),
   
   topics: z.array(z.object({
-    keyword: z.string().describe('Search keyword or topic phrase'),
-  })).describe('10 relevant topics/keywords affiliates would write about'),
+    keyword: z.string().describe('Short search keyword (1-3 words max) - NOT a full phrase or sentence'),
+  })).describe('10 short base keywords for search (words like "review" are added automatically)'),
   
   industry: z.string().describe('The primary industry/category of this business'),
   
@@ -288,9 +300,7 @@ async function generateWithAI(
   
   const languageInstruction = targetLanguage
     ? `\n   - CRITICAL: All topics/keywords MUST be in ${targetLanguage} language
-   - Think about how ${targetLanguage}-speaking content creators would search
-   - Use ${targetLanguage} terms, not English translations
-   - Example: For German, use "beste Matratze 2026" not "best mattress 2026"`
+   - Use native ${targetLanguage} terms for products/ingredients, not English translations`
     : '';
   
   try {
@@ -310,9 +320,13 @@ Your task is to analyze a website and identify:
    - Domain format: just the domain (e.g., "competitor.com"), no http/https/www${countryInstruction}
 
 2. TOPICS (exactly 10):
-   - Keywords and topics that affiliate marketers and content creators would write about
-   - Think: blog posts, YouTube reviews, comparison articles, "best X" listicles
-   - Should be relevant to discovering affiliates in this space${languageInstruction}
+   - SHORT search keywords (1-3 words maximum!) based on the website content
+   - These keywords are used to search Google, YouTube, Instagram, TikTok
+   - Words like "review", "blog", "test" are AUTOMATICALLY ADDED by our system
+   - So generate only the BASE product/ingredient/category keywords
+   - NO full sentences, NO phrases with adjectives like "best" or years
+   - Just the core noun: product name, ingredient, or category
+   - Extract these from the scraped website content${languageInstruction}
 
 Be specific and practical. These suggestions will be used for affiliate marketing outreach.`
         },

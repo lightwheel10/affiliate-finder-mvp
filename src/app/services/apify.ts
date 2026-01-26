@@ -373,8 +373,24 @@ export async function searchInstagramApify(
     // FIX: Now returning all Instagram-specific fields from Apify response
     // Previously, this data was lost because SearchResult didn't have these fields
     // The data now flows: Apify → SearchResult → ResultItem → Database
+    // 
+    // UPDATED January 26, 2026: Filter out invalid results with no username
+    // Apify sometimes returns incomplete profiles - these would show "@undefined"
+    // in the UI which is confusing. We now skip these entirely.
     // ==========================================================================
-    return results.map((item, index): SearchResult => {
+    
+    // Filter out results with no username - these are invalid/incomplete profiles
+    const validResults = results.filter(item => {
+      if (!item.username) {
+        console.log(`⚠️ Skipping Instagram result with no username:`, item.fullName || 'unknown');
+        return false;
+      }
+      return true;
+    });
+    
+    console.log(`📸 Instagram: ${validResults.length}/${results.length} valid profiles (${results.length - validResults.length} skipped)`);
+    
+    return validResults.map((item, index): SearchResult => {
       // Build snippet from bio and stats
       // FIX: January 15th, 2026 - Ensure snippet is never empty to avoid NOT NULL violation
       // The database column 'snippet' has a NOT NULL constraint, and empty strings
@@ -387,9 +403,10 @@ export async function searchInstagramApify(
         stats.length > 0 ? `📊 ${stats.join(' • ')}` : null,
       ].filter(Boolean);
       // Provide fallback if no bio or stats available
+      // Note: username is guaranteed to exist due to filter above
       const snippet = snippetParts.length > 0 
         ? snippetParts.join('\n') 
-        : `Instagram profile: @${item.username || 'unknown'}`;
+        : `Instagram profile: @${item.username}`;
 
       // Extract first (most recent) post stats from latestPosts array
       const firstPost = item.latestPosts?.[0];
@@ -408,8 +425,11 @@ export async function searchInstagramApify(
       // ========================================================================
       // const bioEmail = extractEmailFromText(item.biography); // REMOVED - now done on-demand
 
+      // Build title safely - username is guaranteed to exist due to filter above
+      const title = item.fullName || `@${item.username}`;
+
       return {
-        title: item.fullName || `@${item.username}` || '',
+        title,
         link: item.url || `https://www.instagram.com/${item.username}`,
         snippet,
         source: 'Instagram' as Platform,
@@ -559,9 +579,26 @@ export async function searchTikTokApify(
     // FIX: Now returning all TikTok-specific fields from Apify response
     // Previously, this data was lost because SearchResult didn't have these fields
     // The data now flows: Apify → SearchResult → ResultItem → Database
+    // 
+    // UPDATED January 26, 2026: Filter out invalid results with no author info
+    // Apify sometimes returns incomplete videos - these would show "@undefined"
+    // in the UI which is confusing. We now skip these entirely.
     // ==========================================================================
-    return results.map((item, index): SearchResult => {
-      const author = item.authorMeta;
+    
+    // Filter out results with no author username - these are invalid/incomplete
+    const validResults = results.filter(item => {
+      if (!item.authorMeta?.name) {
+        console.log(`⚠️ Skipping TikTok result with no author:`, item.text?.substring(0, 30) || 'unknown video');
+        return false;
+      }
+      return true;
+    });
+    
+    console.log(`🎵 TikTok: ${validResults.length}/${results.length} valid videos (${results.length - validResults.length} skipped)`);
+    
+    return validResults.map((item, index): SearchResult => {
+      // Note: author is guaranteed to exist with name due to filter above
+      const author = item.authorMeta!;
       
       // ========================================================================
       // BIO EMAIL EXTRACTION - Updated January 24, 2026
@@ -582,25 +619,27 @@ export async function searchTikTokApify(
       const stats = [];
       if (item.playCount) stats.push(`${formatNumber(item.playCount)} views`);
       if (item.diggCount) stats.push(`${formatNumber(item.diggCount)} likes`);
-      if (author?.fans) stats.push(`${formatNumber(author.fans)} followers`);
+      if (author.fans) stats.push(`${formatNumber(author.fans)} followers`);
       
       const snippetParts = [
         item.text?.substring(0, 200),
         stats.length > 0 ? `📊 ${stats.join(' • ')}` : null,
       ].filter(Boolean);
       // Provide fallback if no text or stats available
+      // Note: author.name is guaranteed to exist due to filter above
       const snippet = snippetParts.length > 0 
         ? snippetParts.join('\n') 
-        : `TikTok video by @${author?.name || 'unknown'}`;
+        : `TikTok video by @${author.name}`;
 
       // Create a channel-like object for TikTok creator (kept for backward compatibility)
-      const channel: YouTubeChannelInfo | undefined = author ? {
-        name: author.nickName || author.name || '',
+      // Note: author is guaranteed to exist with name due to filter above
+      const channel: YouTubeChannelInfo = {
+        name: author.nickName || author.name!, // name is guaranteed by filter
         link: author.profileUrl || `https://www.tiktok.com/@${author.name}`,
         thumbnail: author.avatar,
         verified: author.verified,
         subscribers: author.fans ? formatNumber(author.fans) : undefined,
-      } : undefined;
+      };
 
       return {
         title: item.text?.substring(0, 100) || 'TikTok Video',
@@ -608,14 +647,14 @@ export async function searchTikTokApify(
         snippet,
         source: 'TikTok' as Platform,
         domain: 'tiktok.com',
-        thumbnail: item.videoMeta?.coverUrl || author?.avatar,
+        thumbnail: item.videoMeta?.coverUrl || author.avatar,
         views: item.playCount ? formatNumber(item.playCount) : undefined,
         date: item.createTimeISO,
         duration: item.videoMeta?.duration ? `${Math.floor(item.videoMeta.duration / 60)}:${(item.videoMeta.duration % 60).toString().padStart(2, '0')}` : undefined,
         channel,
         position: index + 1,
         searchQuery: keyword,
-        personName: author?.nickName || author?.name,
+        personName: author.nickName || author.name,
         
         // ======================================================================
         // January 24, 2026: REMOVED bio email from this field

@@ -308,10 +308,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   };
 
   // Format date for display
+  // Fixed January 26, 2026: Handle invalid date strings gracefully
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return new Date().toLocaleDateString();
     try {
       const d = new Date(dateStr);
+      // Check if date is valid - new Date() doesn't throw on invalid strings,
+      // it returns an Invalid Date object which has NaN as its time value
+      if (isNaN(d.getTime())) {
+        return ''; // Return empty string for invalid dates (hides from UI)
+      }
       return d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
     } catch {
       return dateStr;
