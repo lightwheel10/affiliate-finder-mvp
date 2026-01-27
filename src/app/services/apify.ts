@@ -274,6 +274,164 @@ export async function searchYouTubeApify(
 }
 
 // ============================================================================
+// YOUTUBE URL ENRICHMENT - January 27, 2026
+// 
+// PURPOSE:
+// Enriches YouTube video URLs with full channel/video metadata from Apify.
+// Used in hybrid search flow: Serper (language filtering) → Apify (enrichment).
+// 
+// WHY THIS EXISTS:
+// - Serper returns YouTube results with good language accuracy (~90%)
+// - But Serper only provides: title, link, snippet, date
+// - Apify can enrich with: subscribers, views, likes, comments, duration, thumbnail
+// - This function bridges the gap: take Serper URLs, get Apify metadata
+// 
+// INPUT:
+// - Array of YouTube video URLs (from Serper results)
+// - e.g., ["https://www.youtube.com/watch?v=VIDEO_ID", ...]
+// 
+// OUTPUT:
+// - Map<string, ApifyYouTubeResult> keyed by video URL
+// - Allows O(1) lookup to merge with Serper results
+// 
+// ERROR HANDLING:
+// - Returns empty Map on complete failure (graceful degradation)
+// - Individual video failures are logged but don't block other results
+// ============================================================================
+
+/**
+ * Enrich YouTube video URLs with full metadata from Apify.
+ * 
+ * This function takes video URLs (typically from Serper search results)
+ * and fetches complete channel and video metadata from YouTube via Apify.
+ * 
+ * @param videoUrls - Array of YouTube video URLs to enrich
+ * @param userId - Optional user ID for API cost tracking
+ * @returns Map of video URL to enriched YouTube data
+ * 
+ * @example
+ * const urls = ['https://www.youtube.com/watch?v=VIDEO_ID'];
+ * const enriched = await enrichYouTubeByUrls(urls, userId);
+ * const data = enriched.get(urls[0]); // Full YouTube data
+ */
+export async function enrichYouTubeByUrls(
+  videoUrls: string[],
+  userId?: number
+): Promise<Map<string, ApifyYouTubeResult>> {
+  const results = new Map<string, ApifyYouTubeResult>();
+
+  // Guard: Check if Apify client is initialized
+  if (!client) {
+    console.error('❌ [YouTube Enrichment] Apify client not initialized');
+    return results;
+  }
+
+  // Guard: No URLs to process
+  if (!videoUrls || videoUrls.length === 0) {
+    console.log('⚠️ [YouTube Enrichment] No URLs to enrich');
+    return results;
+  }
+
+  // Filter to valid YouTube video URLs only
+  // Accepts both youtube.com/watch?v=ID and m.youtube.com/watch?v=ID
+  const validUrls = videoUrls.filter(url => 
+    url && (url.includes('youtube.com/watch') || url.includes('youtu.be/'))
+  );
+
+  if (validUrls.length === 0) {
+    console.log('⚠️ [YouTube Enrichment] No valid YouTube video URLs found');
+    return results;
+  }
+
+  const startTime = Date.now();
+  console.log(`🎬 [YouTube Enrichment] Enriching ${validUrls.length} video URLs via Apify...`);
+
+  try {
+    // Call the YouTube scraper with startUrls input
+    // This is the same actor used for keyword search, but with different input
+    const run = await client.actor(ACTORS.youtube).call({
+      startUrls: validUrls.map(url => ({ url })),
+      maxResults: 1,  // We only want data for the specific videos
+      maxResultsShorts: 0,
+      maxResultStreams: 0,
+    });
+
+    // Fetch results from dataset
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    const apifyResults = items as unknown as ApifyYouTubeResult[];
+
+    console.log(`✅ [YouTube Enrichment] Received ${apifyResults.length}/${validUrls.length} results`);
+
+    // Build Map keyed by video URL for O(1) lookup
+    for (const item of apifyResults) {
+      // Use the URL from the result if available
+      const videoUrl = item.url;
+      if (videoUrl) {
+        results.set(videoUrl, item);
+      }
+    }
+
+    // Also map by submitted URL (in case URL format differs slightly)
+    // This handles edge cases where URL format differs between Serper and Apify
+    // e.g., youtube.com vs www.youtube.com vs m.youtube.com
+    for (const inputUrl of validUrls) {
+      if (!results.has(inputUrl)) {
+        // Try to find a match by video ID
+        const videoIdMatch = inputUrl.match(/[?&]v=([^&]+)/) || inputUrl.match(/youtu\.be\/([^?]+)/);
+        if (videoIdMatch) {
+          const videoId = videoIdMatch[1];
+          for (const item of apifyResults) {
+            // Check if the video ID matches
+            if (item.url?.includes(videoId) || item.url?.includes(`v=${videoId}`)) {
+              results.set(inputUrl, item);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    const durationMs = Date.now() - startTime;
+    console.log(`✅ [YouTube Enrichment] Complete: ${results.size}/${validUrls.length} URLs enriched in ${durationMs}ms`);
+
+    // Track API call for cost monitoring
+    if (userId) {
+      await trackApiCall({
+        userId,
+        service: 'apify_youtube',
+        endpoint: ACTORS.youtube,
+        status: 'success',
+        resultsCount: results.size,
+        estimatedCost: validUrls.length * API_COSTS.apify_youtube,
+        apifyRunId: run.id,
+        durationMs,
+      });
+    }
+
+    return results;
+
+  } catch (error: any) {
+    const durationMs = Date.now() - startTime;
+    console.error('❌ [YouTube Enrichment] Apify error:', error.message);
+
+    // Track failed API call
+    if (userId) {
+      await trackApiCall({
+        userId,
+        service: 'apify_youtube',
+        endpoint: ACTORS.youtube,
+        status: 'error',
+        errorMessage: error.message,
+        durationMs,
+      });
+    }
+
+    // Return empty Map on error - caller should handle gracefully
+    return results;
+  }
+}
+
+// ============================================================================
 // INSTAGRAM SCRAPER
 // ============================================================================
 
@@ -700,6 +858,161 @@ export async function searchTikTokApify(
     }
 
     return [];
+  }
+}
+
+// ============================================================================
+// TIKTOK URL ENRICHMENT - January 27, 2026
+// 
+// PURPOSE:
+// Enriches TikTok video URLs with full author/video metadata from Apify.
+// Used in hybrid search flow: Serper (language filtering) → Apify (enrichment).
+// 
+// WHY THIS EXISTS:
+// - Serper returns TikTok results with good language accuracy (~90%)
+// - But Serper only provides: title, link, snippet, date
+// - Apify can enrich with: followers, bio, email, video stats, verified status
+// - This function bridges the gap: take Serper URLs, get Apify metadata
+// 
+// INPUT:
+// - Array of TikTok video URLs (from Serper results)
+// - e.g., ["https://www.tiktok.com/@username/video/7123456789", ...]
+// 
+// OUTPUT:
+// - Map<string, ApifyTikTokResult> keyed by video URL
+// - Allows O(1) lookup to merge with Serper results
+// 
+// ERROR HANDLING:
+// - Returns empty Map on complete failure (graceful degradation)
+// - Individual video failures are logged but don't block other results
+// - Private/deleted videos return error field but are still in Map
+// ============================================================================
+
+/**
+ * Enrich TikTok video URLs with full metadata from Apify.
+ * 
+ * This function takes video URLs (typically from Serper search results)
+ * and fetches complete author and video metadata from TikTok via Apify.
+ * 
+ * @param videoUrls - Array of TikTok video URLs to enrich
+ * @param userId - Optional user ID for API cost tracking
+ * @returns Map of video URL to enriched TikTok data
+ * 
+ * @example
+ * const urls = ['https://www.tiktok.com/@user/video/123'];
+ * const enriched = await enrichTikTokByUrls(urls, userId);
+ * const data = enriched.get(urls[0]); // Full TikTok data
+ */
+export async function enrichTikTokByUrls(
+  videoUrls: string[],
+  userId?: number
+): Promise<Map<string, ApifyTikTokResult>> {
+  const results = new Map<string, ApifyTikTokResult>();
+
+  // Guard: Check if Apify client is initialized
+  if (!client) {
+    console.error('❌ [TikTok Enrichment] Apify client not initialized');
+    return results;
+  }
+
+  // Guard: No URLs to process
+  if (!videoUrls || videoUrls.length === 0) {
+    console.log('⚠️ [TikTok Enrichment] No URLs to enrich');
+    return results;
+  }
+
+  // Filter to valid TikTok video URLs only
+  const validUrls = videoUrls.filter(url => 
+    url && url.includes('tiktok.com') && url.includes('/video/')
+  );
+
+  if (validUrls.length === 0) {
+    console.log('⚠️ [TikTok Enrichment] No valid TikTok video URLs found');
+    return results;
+  }
+
+  const startTime = Date.now();
+  console.log(`🎵 [TikTok Enrichment] Enriching ${validUrls.length} video URLs via Apify...`);
+
+  try {
+    // Call the TikTok scraper with postURLs input
+    // This is the same actor used for keyword search, but with different input
+    const run = await client.actor(ACTORS.tiktok).call({
+      postURLs: validUrls,
+      resultsPerPage: 1,  // We only need the video data, not more from each author
+    });
+
+    // Fetch results from dataset
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    const apifyResults = items as unknown as ApifyTikTokResult[];
+
+    console.log(`✅ [TikTok Enrichment] Received ${apifyResults.length}/${validUrls.length} results`);
+
+    // Build Map keyed by video URL for O(1) lookup
+    for (const item of apifyResults) {
+      // Use webVideoUrl if available, otherwise try to find matching input URL
+      const videoUrl = item.webVideoUrl;
+      if (videoUrl) {
+        results.set(videoUrl, item);
+      }
+    }
+
+    // Also map by submitted URL (in case webVideoUrl differs slightly)
+    // This handles edge cases where URL format differs between Serper and Apify
+    for (const inputUrl of validUrls) {
+      if (!results.has(inputUrl)) {
+        // Try to find a match by video ID
+        const videoIdMatch = inputUrl.match(/\/video\/(\d+)/);
+        if (videoIdMatch) {
+          const videoId = videoIdMatch[1];
+          for (const item of apifyResults) {
+            if (item.id === videoId || item.webVideoUrl?.includes(videoId)) {
+              results.set(inputUrl, item);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    const durationMs = Date.now() - startTime;
+    console.log(`✅ [TikTok Enrichment] Complete: ${results.size}/${validUrls.length} URLs enriched in ${durationMs}ms`);
+
+    // Track API call for cost monitoring
+    // Note: Using 'apify_tiktok' service type since it's the same actor
+    if (userId) {
+      await trackApiCall({
+        userId,
+        service: 'apify_tiktok',
+        endpoint: ACTORS.tiktok,
+        status: 'success',
+        resultsCount: results.size,
+        estimatedCost: validUrls.length * API_COSTS.apify_tiktok,
+        apifyRunId: run.id,
+        durationMs,
+      });
+    }
+
+    return results;
+
+  } catch (error: any) {
+    const durationMs = Date.now() - startTime;
+    console.error('❌ [TikTok Enrichment] Apify error:', error.message);
+
+    // Track failed API call
+    if (userId) {
+      await trackApiCall({
+        userId,
+        service: 'apify_tiktok',
+        endpoint: ACTORS.tiktok,
+        status: 'error',
+        errorMessage: error.message,
+        durationMs,
+      });
+    }
+
+    // Return empty Map on error - caller should handle gracefully
+    return results;
   }
 }
 

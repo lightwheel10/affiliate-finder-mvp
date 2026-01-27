@@ -38,7 +38,7 @@
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 
-import { searchYouTubeApify, searchInstagramApify, searchTikTokApify } from './apify';
+import { searchYouTubeApify, searchInstagramApify, searchTikTokApify, enrichTikTokByUrls, enrichYouTubeByUrls } from './apify';
 import { 
   getLocationConfig, 
   filterResultsByLanguage, 
@@ -97,6 +97,18 @@ const SERPER_API_KEY = process.env.SERPER_API_KEY;
 // additive - we're adding a new approach alongside the existing one.
 // =============================================================================
 export const USE_SERPER_FOR_SOCIAL = process.env.USE_SERPER_FOR_SOCIAL === 'true';
+
+// Helper to format numbers (e.g., 5700 -> "5.7K")
+// Used for formatting follower counts in channel object
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return num.toString();
+}
 
 // =============================================================================
 // E-COMMERCE DOMAIN BLOCKLIST - January 16, 2026
@@ -1118,7 +1130,7 @@ export async function searchWeb(
  * 
  * Added: January 26, 2026
  */
-const SERPER_SOCIAL_PAGES = 3;
+const SERPER_SOCIAL_PAGES = 5;
 
 /**
  * Helper: Fetch a single page from Serper for social media search.
@@ -1263,8 +1275,15 @@ export async function searchYouTubeSerper(
       }
     : {};
 
-  // Build search query with site: filter
-  const query = `${keyword} site:youtube.com`;
+  // ==========================================================================
+  // QUERY OPTIMIZATION - January 27, 2026
+  // 
+  // Adding "review" to the query improves results (same as TikTok):
+  // - Targets content creators who review products
+  // - Filters out official brand channels
+  // - Better chance of finding affiliates open to partnerships
+  // ==========================================================================
+  const query = `${keyword} review site:youtube.com`;
 
   // Fetch multiple pages
   const rawResults = await serperFetchMultipleSocialPages(query, SERPER_SOCIAL_PAGES, locationParams);
@@ -1272,7 +1291,7 @@ export async function searchYouTubeSerper(
   console.log(`🎬 [Serper] YouTube raw results: ${rawResults.length}`);
 
   // Transform to SearchResult format
-  const results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => ({
+  let results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => ({
     title: r.title || '',
     link: r.link || '',
     snippet: r.snippet || '',
@@ -1281,7 +1300,7 @@ export async function searchYouTubeSerper(
     date: r.date || null,
     position: index + 1,
     searchQuery: keyword,
-    // YouTube-specific fields - NOT available from Serper
+    // YouTube-specific fields - will be populated by Apify enrichment below
     channel: undefined,
     duration: undefined,
     views: undefined,
@@ -1289,6 +1308,82 @@ export async function searchYouTubeSerper(
     youtubeVideoLikes: undefined,
     youtubeVideoComments: undefined,
   }));
+
+  // ==========================================================================
+  // APIFY ENRICHMENT - January 27, 2026
+  // 
+  // Enrich Serper results with full YouTube metadata from Apify.
+  // This gives us the best of both worlds:
+  // - Serper: Good language filtering (~90% accuracy)
+  // - Apify: Rich metadata (subscribers, views, likes, comments, duration)
+  // 
+  // The enrichment is done BEFORE language filtering so that we have
+  // complete data for all results that pass the language filter.
+  // ==========================================================================
+  if (results.length > 0) {
+    const videoUrls = results
+      .map(r => r.link)
+      .filter((url): url is string => !!url && url.includes('youtube.com/watch'));
+
+    if (videoUrls.length > 0) {
+      console.log(`🎬 [Serper] Enriching ${videoUrls.length} YouTube URLs via Apify...`);
+      
+      try {
+        const enrichedData = await enrichYouTubeByUrls(videoUrls, userId);
+        
+        if (enrichedData.size > 0) {
+          console.log(`🎬 [Serper] Enrichment complete: ${enrichedData.size}/${videoUrls.length} URLs enriched`);
+          
+          // Merge enriched data into results
+          results = results.map(result => {
+            const apifyData = enrichedData.get(result.link);
+            
+            if (apifyData) {
+              // Merge Apify data with Serper result
+              return {
+                ...result,
+                // CRITICAL: Populate channel field for UI compatibility
+                // The row displays channel?.name, so without this the UI shows "youtube.com"
+                channel: {
+                  name: apifyData.channelName || 'Unknown Channel',
+                  link: apifyData.channelUrl || `https://www.youtube.com/@${apifyData.channelUsername || 'unknown'}`,
+                  verified: apifyData.isVerified,
+                  subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined,
+                },
+                // Video metadata
+                views: apifyData.viewCount ? formatNumber(apifyData.viewCount) : undefined,
+                youtubeVideoLikes: apifyData.likes,
+                youtubeVideoComments: apifyData.commentsCount,
+                duration: apifyData.duration,
+                thumbnail: apifyData.thumbnailUrl,
+                // Use Apify's title and description if available (more complete)
+                title: apifyData.title || result.title,
+                snippet: apifyData.text?.substring(0, 300) || result.snippet,
+                // Use Apify's proper ISO date if available
+                date: apifyData.date || apifyData.uploadDate || result.date,
+              };
+            }
+            
+            // Return original result if no enrichment data
+            return result;
+          });
+        }
+      } catch (enrichError: any) {
+        // Log error but continue with Serper-only results
+        console.warn(`⚠️ [Serper] YouTube enrichment failed (continuing with basic data):`, enrichError.message);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // FILTER: Only keep enriched results
+  // 
+  // Skip YouTube results that don't have enrichment data.
+  // This ensures we only show results with proper metadata (subscribers, etc.)
+  // ==========================================================================
+  const beforeFilterCount = results.length;
+  results = results.filter(r => r.channel && r.channel.name !== 'Unknown Channel');
+  console.log(`🎬 [Serper] YouTube after enrichment filter: ${results.length}/${beforeFilterCount} (removed ${beforeFilterCount - results.length} non-enriched)`);
 
   // Apply language filtering if target language is set
   if (locationConfig?.languageCode) {
@@ -1450,7 +1545,21 @@ export async function searchTikTokSerper(
     : {};
 
   // Build search query with site: filter
-  const query = `${keyword} site:tiktok.com`;
+  // ==========================================================================
+  // QUERY OPTIMIZATION - January 27, 2026
+  // 
+  // Adding "review" to the query significantly improves results:
+  // - Without "review": 78% corporate accounts (ALDI, Lidl, etc.)
+  // - With "review": 70% individual creators (actual affiliates)
+  // - Also finds 4x more emails in bios
+  // 
+  // This targets content creators who review products rather than brands
+  // promoting their own products. These creators are more likely to:
+  // 1. Be actual affiliates open to partnerships
+  // 2. Have contact emails in their bio
+  // 3. Respond to outreach
+  // ==========================================================================
+  const query = `${keyword} review site:tiktok.com`;
 
   // Fetch multiple pages
   const rawResults = await serperFetchMultipleSocialPages(query, SERPER_SOCIAL_PAGES, locationParams);
@@ -1459,7 +1568,7 @@ export async function searchTikTokSerper(
 
   // Transform to SearchResult format
   // NOTE: We can parse username from TikTok URLs (unlike YouTube/Instagram)
-  const results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => {
+  let results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => {
     const username = parseTikTokUsernameFromUrl(r.link || '');
 
     return {
@@ -1473,7 +1582,7 @@ export async function searchTikTokSerper(
       searchQuery: keyword,
       // TikTok username - CAN be parsed from URL!
       tiktokUsername: username || undefined,
-      // TikTok-specific fields - NOT available from Serper
+      // TikTok-specific fields - will be populated by Apify enrichment below
       tiktokDisplayName: undefined,
       tiktokBio: undefined,
       tiktokFollowers: undefined,
@@ -1489,6 +1598,91 @@ export async function searchTikTokSerper(
       thumbnail: undefined,
     };
   });
+
+  // ==========================================================================
+  // APIFY ENRICHMENT - January 27, 2026
+  // 
+  // Enrich Serper results with full TikTok metadata from Apify.
+  // This gives us the best of both worlds:
+  // - Serper: Good language filtering (~90% accuracy)
+  // - Apify: Rich metadata (followers, bio, email, video stats)
+  // 
+  // The enrichment is done BEFORE language filtering so that we have
+  // complete data for all results that pass the language filter.
+  // ==========================================================================
+  if (results.length > 0) {
+    const videoUrls = results
+      .map(r => r.link)
+      .filter((url): url is string => !!url && url.includes('/video/'));
+
+    if (videoUrls.length > 0) {
+      console.log(`🎵 [Serper] Enriching ${videoUrls.length} TikTok URLs via Apify...`);
+      
+      try {
+        const enrichedData = await enrichTikTokByUrls(videoUrls, userId);
+        
+        if (enrichedData.size > 0) {
+          console.log(`🎵 [Serper] Enrichment complete: ${enrichedData.size}/${videoUrls.length} URLs enriched`);
+          
+          // Merge enriched data into results
+          results = results.map(result => {
+            const apifyData = enrichedData.get(result.link);
+            
+            if (apifyData && apifyData.authorMeta) {
+              const author = apifyData.authorMeta;
+              
+              // Merge Apify author data with Serper result
+              return {
+                ...result,
+                // CRITICAL: Populate channel field for UI compatibility
+                // The row displays channel?.name, so without this the UI shows "tiktok.com"
+                channel: {
+                  name: author.nickName || author.name || result.tiktokUsername || 'Unknown',
+                  link: author.profileUrl || `https://www.tiktok.com/@${author.name}`,
+                  thumbnail: author.avatar,
+                  verified: author.verified,
+                  subscribers: author.fans ? formatNumber(author.fans) : undefined,
+                },
+                // Author data
+                tiktokUsername: author.name || result.tiktokUsername,
+                tiktokDisplayName: author.nickName,
+                tiktokBio: author.signature,
+                tiktokFollowers: author.fans,
+                tiktokLikes: author.heart,
+                tiktokVideosCount: author.video,
+                tiktokIsVerified: author.verified,
+                // Video data
+                tiktokVideoPlays: apifyData.playCount,
+                tiktokVideoLikes: apifyData.diggCount,
+                tiktokVideoComments: apifyData.commentCount,
+                tiktokVideoShares: apifyData.shareCount,
+                // Use Apify's proper ISO date if available
+                date: apifyData.createTimeISO || result.date,
+                // Thumbnail from video cover
+                thumbnail: apifyData.videoMeta?.coverUrl || author.avatar,
+              };
+            }
+            
+            // Return original result if no enrichment data
+            return result;
+          });
+        }
+      } catch (enrichError: any) {
+        // Log error but continue with Serper-only results
+        console.warn(`⚠️ [Serper] TikTok enrichment failed (continuing with basic data):`, enrichError.message);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // FILTER: Only keep enriched results
+  // 
+  // Skip TikTok results that don't have enrichment data.
+  // This ensures we only show results with proper metadata (followers, etc.)
+  // ==========================================================================
+  const beforeFilterCount = results.length;
+  results = results.filter(r => r.channel && r.tiktokFollowers !== undefined);
+  console.log(`🎵 [Serper] TikTok after enrichment filter: ${results.length}/${beforeFilterCount} (removed ${beforeFilterCount - results.length} non-enriched)`);
 
   // Apply language filtering if target language is set
   if (locationConfig?.languageCode) {

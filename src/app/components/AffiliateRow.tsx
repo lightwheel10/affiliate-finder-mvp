@@ -1315,15 +1315,25 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             
             {/* Stats row for social media - Neo-brutalist with bold styling */}
             {/* Updated January 10th, 2026 - i18n migration */}
-            {isSocialMedia && (views || date) && (
+            {/* Updated January 27th, 2026 - TikTok shows video plays instead of date */}
+            {isSocialMedia && (
               <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
-                {views && (
+                {/* TikTok: Show video plays from tiktokVideoPlays */}
+                {source.toLowerCase() === 'tiktok' && affiliateData?.tiktokVideoPlays && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
+                    <Eye size={10} />
+                    {formatNumber(affiliateData.tiktokVideoPlays)} {t.affiliateRow.metrics.views}
+                  </span>
+                )}
+                {/* YouTube/Instagram: Show views prop */}
+                {source.toLowerCase() !== 'tiktok' && views && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
                     <Eye size={10} />
                     {views} {t.affiliateRow.metrics.views}
                   </span>
                 )}
-                {date && (
+                {/* Only show date for non-TikTok (TikTok date shows in modal) */}
+                {source.toLowerCase() !== 'tiktok' && date && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
                     {formatDate(date)}
                   </span>
