@@ -38,7 +38,14 @@
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 
-import { searchYouTubeApify, searchInstagramApify, searchTikTokApify, enrichTikTokByUrls, enrichYouTubeByUrls } from './apify';
+import { 
+  searchYouTubeApify, 
+  searchInstagramApify, 
+  searchTikTokApify, 
+  enrichTikTokByUrls, 
+  enrichYouTubeByUrls,
+  enrichInstagramByUrls  // Added January 28, 2026
+} from './apify';
 import { 
   getLocationConfig, 
   filterResultsByLanguage, 
@@ -1402,31 +1409,32 @@ export async function searchYouTubeSerper(
 }
 
 /**
- * Search Instagram using Serper with site: filter.
+ * Search Instagram using Serper with site: filter + Apify enrichment.
  * 
  * Added: January 26, 2026
+ * Updated: January 28, 2026 - Added Apify enrichment for full profile data
+ * 
+ * HYBRID APPROACH:
+ * 1. Serper: Find Instagram content with language filtering (~90% accuracy)
+ * 2. Apify: Enrich URLs with full profile data (followers, bio, posts, etc.)
  * 
  * WHEN TO USE:
  * Only when USE_SERPER_FOR_SOCIAL is true. Otherwise, use searchInstagramApify.
  * 
- * WHAT YOU GET:
- * - Title (post caption excerpt), link, snippet, date
- * - Better language accuracy (~90%)
- * 
- * WHAT YOU DON'T GET (compared to Apify):
+ * WHAT YOU GET (after enrichment):
  * - Username, full name, bio
  * - Followers, following, posts count
  * - Is verified, is business
- * - Post likes, comments, views
+ * - Latest post likes, comments, views
  * - Profile picture
- * - Email from bio
+ * - Better language accuracy (~90%)
  * 
  * @param keyword - Search keyword
  * @param userId - User ID for tracking (optional)
  * @param maxResults - Maximum results (not used, controlled by SERPER_SOCIAL_PAGES)
  * @param targetCountry - Target country for localization
  * @param targetLanguage - Target language for localization
- * @returns Array of SearchResult objects
+ * @returns Array of SearchResult objects with full Instagram profile data
  */
 export async function searchInstagramSerper(
   keyword: string,
@@ -1447,8 +1455,15 @@ export async function searchInstagramSerper(
       }
     : {};
 
-  // Build search query with site: filter
-  const query = `${keyword} site:instagram.com`;
+  // ==========================================================================
+  // QUERY OPTIMIZATION - January 28, 2026
+  // 
+  // Adding "review" to the query improves results (same as YouTube/TikTok):
+  // - Targets content creators who review products
+  // - Filters out official brand accounts
+  // - Better chance of finding affiliates open to partnerships
+  // ==========================================================================
+  const query = `${keyword} review site:instagram.com`;
 
   // Fetch multiple pages
   const rawResults = await serperFetchMultipleSocialPages(query, SERPER_SOCIAL_PAGES, locationParams);
@@ -1456,7 +1471,7 @@ export async function searchInstagramSerper(
   console.log(`📸 [Serper] Instagram raw results: ${rawResults.length}`);
 
   // Transform to SearchResult format
-  const results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => ({
+  let results: SearchResult[] = rawResults.map((r: any, index: number): SearchResult => ({
     title: r.title || '',
     link: r.link || '',
     snippet: r.snippet || '',
@@ -1465,7 +1480,8 @@ export async function searchInstagramSerper(
     date: r.date || null,
     position: index + 1,
     searchQuery: keyword,
-    // Instagram-specific fields - NOT available from Serper
+    // Instagram-specific fields - will be populated by Apify enrichment below
+    channel: undefined,
     instagramUsername: undefined,
     instagramFullName: undefined,
     instagramBio: undefined,
@@ -1480,6 +1496,99 @@ export async function searchInstagramSerper(
     email: undefined,
     thumbnail: undefined,
   }));
+
+  // ==========================================================================
+  // APIFY ENRICHMENT - January 28, 2026
+  // 
+  // Enrich Serper results with full Instagram profile metadata from Apify.
+  // This gives us the best of both worlds:
+  // - Serper: Good language filtering (~90% accuracy)
+  // - Apify: Rich metadata (username, followers, bio, posts, engagement)
+  // 
+  // The enrichment is done BEFORE language filtering so that we have
+  // complete data for all results that pass the language filter.
+  // 
+  // NOTE: Serper returns mostly post/reel URLs (~92%), not profile URLs.
+  // The Apify actor can take ANY URL type and return the author's profile.
+  // ==========================================================================
+  if (results.length > 0) {
+    const instagramUrls = results
+      .map(r => r.link)
+      .filter((url): url is string => !!url && url.includes('instagram.com'));
+
+    if (instagramUrls.length > 0) {
+      console.log(`📸 [Serper] Enriching ${instagramUrls.length} Instagram URLs via Apify...`);
+      
+      try {
+        const enrichedData = await enrichInstagramByUrls(instagramUrls, userId);
+        
+        if (enrichedData.size > 0) {
+          console.log(`📸 [Serper] Enrichment complete: ${enrichedData.size}/${instagramUrls.length} URLs enriched`);
+          
+          // Merge enriched data into results
+          results = results.map(result => {
+            const apifyData = enrichedData.get(result.link);
+            
+            if (apifyData && apifyData.username) {
+              // Get first post for engagement data
+              const firstPost = apifyData.latestPosts?.[0];
+              
+              // Merge Apify profile data with Serper result
+              return {
+                ...result,
+                // CRITICAL: Populate channel field for UI compatibility
+                // The row displays channel?.name, so without this the UI shows "instagram.com"
+                channel: {
+                  name: apifyData.fullName || apifyData.username,
+                  link: apifyData.url || `https://www.instagram.com/${apifyData.username}/`,
+                  thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+                  verified: apifyData.verified,
+                  subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
+                },
+                // Profile metadata
+                instagramUsername: apifyData.username,
+                instagramFullName: apifyData.fullName,
+                instagramBio: apifyData.biography,
+                instagramFollowers: apifyData.followersCount,
+                instagramFollowing: apifyData.followsCount,
+                instagramPostsCount: apifyData.postsCount,
+                instagramIsBusiness: apifyData.isBusinessAccount,
+                instagramIsVerified: apifyData.verified,
+                // Latest post engagement (for quality assessment)
+                instagramPostLikes: firstPost?.likesCount,
+                instagramPostComments: firstPost?.commentsCount,
+                instagramPostViews: firstPost?.videoViewCount,
+                // Profile picture and display name
+                thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+                personName: apifyData.fullName || apifyData.username,
+                // Use Apify's title if better
+                title: apifyData.fullName || `@${apifyData.username}` || result.title,
+                // Use bio as snippet if available (more informative)
+                snippet: apifyData.biography?.substring(0, 300) || result.snippet,
+              };
+            }
+            
+            // Return original result if no enrichment data
+            return result;
+          });
+        }
+      } catch (enrichError: any) {
+        // Log error but continue with Serper-only results
+        console.warn(`⚠️ [Serper] Instagram enrichment failed (continuing with basic data):`, enrichError.message);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // FILTER: Only keep enriched results - January 28, 2026
+  // 
+  // Skip Instagram results that don't have enrichment data.
+  // This ensures we only show results with proper metadata (followers, etc.)
+  // Users expect to see creator info, not just links to random posts.
+  // ==========================================================================
+  const beforeFilterCount = results.length;
+  results = results.filter(r => r.channel && r.instagramUsername);
+  console.log(`📸 [Serper] Instagram after enrichment filter: ${results.length}/${beforeFilterCount} (removed ${beforeFilterCount - results.length} non-enriched)`);
 
   // Apply language filtering if target language is set
   if (locationConfig?.languageCode) {

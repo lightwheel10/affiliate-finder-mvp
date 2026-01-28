@@ -39,10 +39,20 @@ const client = APIFY_TOKEN
     }) 
   : null;
 
-// Apify Actor IDs
+// =============================================================================
+// APIFY ACTOR IDs
+// 
+// Each platform has one or more actors for different use cases:
+// - youtube: Video/channel scraper (keyword search OR URL enrichment)
+// - instagram: Search scraper (keyword search only, NOT for URL enrichment)
+// - instagramProfile: Profile scraper (URL enrichment) - Added January 28, 2026
+// - tiktok: Video/profile scraper (keyword search OR URL enrichment)
+// - similarweb: Website traffic data
+// =============================================================================
 const ACTORS = {
   youtube: 'h7sDV53CddomktSi5',
-  instagram: 'DrF9mzPPEuVizVF4l',
+  instagram: 'DrF9mzPPEuVizVF4l',           // Search actor (keyword-based only)
+  instagramProfile: 'shu8hvrXbJbY3Eb9W',    // Profile actor (URL-based) - January 28, 2026
   tiktok: 'GdWCkxBtKWOsKjdch',
   similarweb: 'yOYYzj2J5K88boIVO',
 } as const;
@@ -432,6 +442,185 @@ export async function enrichYouTubeByUrls(
 }
 
 // ============================================================================
+// INSTAGRAM URL ENRICHMENT - January 28, 2026
+// 
+// PURPOSE:
+// Enriches Instagram URLs (posts, reels, profiles) with full profile metadata
+// from Apify. Used in hybrid search flow: Serper (language filtering) → 
+// Apify (enrichment).
+// 
+// WHY THIS EXISTS:
+// - Serper returns Instagram results with good language accuracy (~90%)
+// - But Serper only provides: title, link, snippet, date
+// - Serper returns mostly post/reel URLs (~92%), not profile URLs
+// - Apify can enrich ANY URL type and return the author's full profile:
+//   - Username, full name, bio
+//   - Followers, following, posts count
+//   - Business account status, verified badge
+//   - Latest posts with engagement data
+// 
+// INPUT:
+// - Array of Instagram URLs (from Serper results)
+// - e.g., ["https://www.instagram.com/p/ABC123/", "https://www.instagram.com/user/reel/XYZ/"]
+// 
+// OUTPUT:
+// - Map<string, ApifyInstagramProfileResult> keyed by input URL
+// - Allows O(1) lookup to merge with Serper results
+// 
+// ERROR HANDLING:
+// - Returns empty Map on complete failure (graceful degradation)
+// - Individual URL failures are logged but don't block other results
+// - Private accounts may return limited data
+// 
+// ACTOR USED:
+// - shu8hvrXbJbY3Eb9W (instagram-scraper, NOT instagram-search-scraper)
+// - Accepts: directUrls input
+// - Returns: Full profile data for the content author
+// ============================================================================
+
+/**
+ * Enrich Instagram URLs with full profile metadata from Apify.
+ * 
+ * This function takes Instagram URLs (posts, reels, or profiles) from Serper
+ * search results and fetches complete profile metadata from the content author.
+ * 
+ * @param instagramUrls - Array of Instagram URLs to enrich
+ * @param userId - Optional user ID for API cost tracking
+ * @returns Map of input URL to enriched profile data
+ * 
+ * @example
+ * const urls = ['https://www.instagram.com/p/ABC123/'];
+ * const enriched = await enrichInstagramByUrls(urls, userId);
+ * const data = enriched.get(urls[0]); // Full profile data of the post author
+ */
+export async function enrichInstagramByUrls(
+  instagramUrls: string[],
+  userId?: number
+): Promise<Map<string, ApifyInstagramProfileResult>> {
+  const results = new Map<string, ApifyInstagramProfileResult>();
+
+  // Guard: Check if Apify client is initialized
+  if (!client) {
+    console.error('❌ [Instagram Enrichment] Apify client not initialized');
+    return results;
+  }
+
+  // Guard: No URLs to process
+  if (!instagramUrls || instagramUrls.length === 0) {
+    console.log('⚠️ [Instagram Enrichment] No URLs to enrich');
+    return results;
+  }
+
+  // Filter to valid Instagram URLs only
+  // Accepts: posts (/p/), reels (/reel/), and profile URLs
+  const filteredUrls = instagramUrls.filter(url => 
+    url && url.includes('instagram.com')
+  );
+
+  // IMPORTANT: Deduplicate URLs - Apify rejects duplicate items
+  // Serper can return the same URL multiple times across pages
+  const validUrls = [...new Set(filteredUrls)];
+
+  if (validUrls.length === 0) {
+    console.log('⚠️ [Instagram Enrichment] No valid Instagram URLs found');
+    return results;
+  }
+
+  const startTime = Date.now();
+  const dedupeCount = filteredUrls.length - validUrls.length;
+  console.log(`📸 [Instagram Enrichment] Enriching ${validUrls.length} URLs via Apify...${dedupeCount > 0 ? ` (${dedupeCount} duplicates removed)` : ''}`);
+
+  try {
+    // Call the Instagram profile scraper with directUrls input
+    // IMPORTANT: Using instagramProfile actor (shu8hvrXbJbY3Eb9W), NOT instagram actor
+    const run = await client.actor(ACTORS.instagramProfile).call({
+      directUrls: validUrls,
+      resultsType: 'details',  // Get full profile details
+      resultsLimit: 1,         // We only need profile data, not posts
+      addParentData: false,    // We don't need parent data for enrichment
+    });
+
+    // Fetch results from dataset
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    const apifyResults = items as unknown as ApifyInstagramProfileResult[];
+
+    console.log(`✅ [Instagram Enrichment] Received ${apifyResults.length}/${validUrls.length} results`);
+
+    // Build Map keyed by input URL for O(1) lookup
+    // The actor returns inputUrl field which matches what we submitted
+    for (const item of apifyResults) {
+      if (item.inputUrl) {
+        results.set(item.inputUrl, item);
+      }
+      // Also map by the profile URL if different from inputUrl
+      if (item.url && item.url !== item.inputUrl) {
+        results.set(item.url, item);
+      }
+    }
+
+    // Also try to map by username for flexible matching
+    // This handles edge cases where URL format differs between Serper and Apify
+    for (const inputUrl of validUrls) {
+      if (!results.has(inputUrl)) {
+        // Try to find a match by username extracted from URL
+        const usernameMatch = inputUrl.match(/instagram\.com\/([^\/\?]+)/);
+        if (usernameMatch && usernameMatch[1]) {
+          const urlUsername = usernameMatch[1].toLowerCase();
+          // Skip special paths
+          if (!['p', 'reel', 'reels', 'stories', 'explore', 'tv'].includes(urlUsername)) {
+            for (const item of apifyResults) {
+              if (item.username?.toLowerCase() === urlUsername) {
+                results.set(inputUrl, item);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const durationMs = Date.now() - startTime;
+    console.log(`✅ [Instagram Enrichment] Complete: ${results.size}/${validUrls.length} URLs enriched in ${durationMs}ms`);
+
+    // Track API call for cost monitoring
+    // Note: Using 'apify_instagram' service type for consistency with existing tracking
+    if (userId) {
+      await trackApiCall({
+        userId,
+        service: 'apify_instagram',
+        endpoint: ACTORS.instagramProfile,
+        status: 'success',
+        resultsCount: results.size,
+        estimatedCost: validUrls.length * API_COSTS.apify_instagram,
+        apifyRunId: run.id,
+        durationMs,
+      });
+    }
+
+    return results;
+
+  } catch (error: any) {
+    const durationMs = Date.now() - startTime;
+    console.error('❌ [Instagram Enrichment] Apify error:', error.message);
+
+    // Track failed API call
+    if (userId) {
+      await trackApiCall({
+        userId,
+        service: 'apify_instagram',
+        endpoint: ACTORS.instagramProfile,
+        status: 'error',
+        errorMessage: error.message,
+        durationMs,
+      });
+    }
+
+    // Return empty Map on error - caller should handle gracefully
+    return results;
+  }
+}
+
+// ============================================================================
 // INSTAGRAM SCRAPER
 // ============================================================================
 
@@ -460,6 +649,86 @@ interface ApifyInstagramResult {
     displayUrl?: string;
     caption?: string;
   }>;
+}
+
+// ============================================================================
+// INSTAGRAM PROFILE ACTOR RESPONSE - January 28, 2026
+// 
+// This interface defines the response from the Instagram Profile actor
+// (shu8hvrXbJbY3Eb9W) which accepts URLs via directUrls input.
+// 
+// IMPORTANT: This actor is different from the search actor (DrF9mzPPEuVizVF4l).
+// - Search actor: Takes keywords, returns profile search results
+// - Profile actor: Takes URLs (posts, reels, profiles), returns full profile data
+// 
+// The profile actor can accept:
+// - Post URLs: instagram.com/p/ABC123/
+// - Reel URLs: instagram.com/reel/ABC123/
+// - Profile URLs: instagram.com/username/
+// 
+// All URL types return the AUTHOR's full profile data.
+// ============================================================================
+interface ApifyInstagramProfileResult {
+  // Input URL that was processed
+  inputUrl: string;
+  
+  // Profile identification
+  id?: string;
+  username: string;
+  url?: string;
+  
+  // Profile details
+  fullName?: string;
+  biography?: string;
+  externalUrl?: string;
+  externalUrls?: string[];
+  
+  // Follower/following stats
+  followersCount?: number;
+  followsCount?: number;
+  postsCount?: number;
+  
+  // Account type and status
+  isBusinessAccount?: boolean;
+  businessCategoryName?: string;
+  private?: boolean;
+  verified?: boolean;
+  joinedRecently?: boolean;
+  
+  // Profile images
+  profilePicUrl?: string;
+  profilePicUrlHD?: string;
+  
+  // Additional data
+  hasChannel?: boolean;
+  highlightReelCount?: number;
+  igtvVideoCount?: number;
+  
+  // Related profiles (for discovery)
+  relatedProfiles?: Array<{
+    username: string;
+    fullName?: string;
+    profilePicUrl?: string;
+  }>;
+  
+  // Latest posts with engagement data
+  latestPosts?: Array<{
+    id: string;
+    type: string;
+    shortCode: string;
+    caption?: string;
+    url: string;
+    likesCount?: number;
+    commentsCount?: number;
+    videoViewCount?: number;
+    timestamp?: string;
+    displayUrl?: string;
+    ownerUsername?: string;
+    ownerId?: string;
+  }>;
+  
+  // Facebook integration
+  fbid?: string;
 }
 
 /**
