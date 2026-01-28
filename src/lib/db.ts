@@ -313,7 +313,7 @@ export interface DbSearch {
 export interface DbApiCall {
   id: number;
   user_id: number;
-  service: 'serper' | 'apify_youtube' | 'apify_instagram' | 'apify_tiktok' | 'apify_similarweb' | 'apollo_email' | 'lusha_email';
+  service: 'serper' | 'apify_youtube' | 'apify_instagram' | 'apify_tiktok' | 'apify_similarweb' | 'apollo_email' | 'lusha_email' | 'apify_google_scraper';
   endpoint: string | null;
   keyword: string | null;
   domain: string | null;
@@ -324,6 +324,32 @@ export interface DbApiCall {
   apify_run_id: string | null;
   duration_ms: number | null;
   created_at: string;
+}
+
+// =============================================================================
+// SEARCH JOBS - January 29, 2026
+// 
+// Tracks async Apify google-search-scraper runs for polling-based search.
+// Part of Phase 1 polling implementation.
+// 
+// Flow:
+// 1. POST /api/search/start → creates job with status='running'
+// 2. GET /api/search/status?jobId=X → polls until done/failed
+// 3. When Apify completes → results processed, status='done'
+// =============================================================================
+export interface DbSearchJob {
+  id: number;
+  user_id: number;
+  keyword: string;
+  sources: string[];
+  apify_run_id: string;
+  status: 'pending' | 'running' | 'processing' | 'done' | 'failed' | 'timeout';
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  results_count: number | null;
+  error_message: string | null;
+  estimated_cost: number | null;
 }
 
 export interface DbSubscription {
