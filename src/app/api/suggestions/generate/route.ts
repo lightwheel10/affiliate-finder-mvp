@@ -87,7 +87,7 @@ const DOMAIN_VALIDATION_TIMEOUT = 5000; // 5 seconds per domain
 // This schema ensures OpenAI returns properly structured data.
 // Using Zod with OpenAI's zodResponseFormat for type-safe responses.
 // =============================================================================
-// January 28th, 2026: Updated schema descriptions for stricter generation
+// January 28th, 2026 (v2): Updated schema descriptions - translation is mandatory
 const SuggestionsSchema = z.object({
   competitors: z.array(z.object({
     name: z.string().describe('Company or product name'),
@@ -95,8 +95,8 @@ const SuggestionsSchema = z.object({
   })).describe('12 direct competitors to this business'),
   
   topics: z.array(z.object({
-    keyword: z.string().describe('Short keyword (1-3 words) extracted DIRECTLY from the website content. Must be in target language. No generic terms.'),
-  })).describe('10 specific keywords from the website content - product names, ingredients, brand terms that ACTUALLY appear on the site'),
+    keyword: z.string().describe('Short keyword (1-3 words) TRANSLATED to the target language. If website has English/French terms, translate them. Example: "Bee Cream" → "Bienencreme" for German.'),
+  })).describe('10 specific keywords TRANSLATED to target language - based on website products/ingredients but OUTPUT IN TARGET LANGUAGE ONLY'),
   
   industry: z.string().describe('The primary industry/category of this business'),
   
@@ -301,31 +301,59 @@ async function generateWithAI(
   
   // ==========================================================================
   // January 28th, 2026: Stricter language and specificity instructions
+  // Updated: January 28th, 2026 (v2) - Even stricter translation enforcement
   // 
   // Problem: AI was generating:
   // 1. Keywords in wrong language (French "Gelée Royale" for German users)
-  // 2. Generic/broad keywords not specific to the website content
+  // 2. Product names in English when target is German (e.g., "Bee Cream")
+  // 3. Generic/broad keywords not specific to the website content
   // 
-  // Solution: Much stricter instructions with explicit rules
+  // Root cause: AI prioritizes "extract literally" over "translate to target"
+  // Solution: Make translation the #1 priority with many concrete examples
   // ==========================================================================
   const topicsInstruction = (() => {
     const parts: string[] = [];
     
-    // Specificity instruction (always apply)
-    parts.push(`CRITICAL: Keywords must be DIRECTLY extracted from the scraped website content below`);
-    parts.push(`Only use product names, brand names, and ingredients that ACTUALLY APPEAR on the website`);
-    parts.push(`Do NOT generate generic category keywords like "honey" or "cream" - be specific`);
-    parts.push(`Example: If website sells "Manuka Honey MGO 400+", use "Manuka Honig MGO 400" not just "Honig"`);
-    
-    if (targetCountry) {
-      parts.push(`Generate topics relevant to what people in ${targetCountry} search for`);
+    if (targetLanguage) {
+      // TRANSLATION IS #1 PRIORITY - put this first and make it very explicit
+      parts.push(`⚠️ MANDATORY TRANSLATION RULE ⚠️`);
+      parts.push(`Every single keyword MUST be in ${targetLanguage} language`);
+      parts.push(`If the website uses English, French, or any other language - you MUST TRANSLATE to ${targetLanguage}`);
+      parts.push(`DO NOT copy foreign language terms literally - ALWAYS translate them`);
+      
+      // Language-specific examples
+      if (targetLanguage.toLowerCase() === 'german') {
+        parts.push(`GERMAN TRANSLATION EXAMPLES (you must apply similar translations):`);
+        parts.push(`  • "Bee Cream" → "Bienencreme" (NOT "Bee Cream")`);
+        parts.push(`  • "Gelée Royale" → "Gelee Royal" (remove French accent)`);
+        parts.push(`  • "Royal Jelly" → "Gelee Royal" (translate English to German)`);
+        parts.push(`  • "Anti Aging" → "Anti-Aging" (acceptable, commonly used in German)`);
+        parts.push(`  • "Face Serum" → "Gesichtsserum" (translate to German)`);
+        parts.push(`  • "Honey" → "Honig" (translate to German)`);
+        parts.push(`  • "Propolis Tincture" → "Propolis Tinktur" (translate to German)`);
+      } else if (targetLanguage.toLowerCase() === 'french') {
+        parts.push(`FRENCH TRANSLATION EXAMPLES:`);
+        parts.push(`  • "Bee Cream" → "Crème d'abeille"`);
+        parts.push(`  • "Honey" → "Miel"`);
+        parts.push(`  • "Royal Jelly" → "Gelée Royale"`);
+      } else if (targetLanguage.toLowerCase() === 'spanish') {
+        parts.push(`SPANISH TRANSLATION EXAMPLES:`);
+        parts.push(`  • "Bee Cream" → "Crema de abeja"`);
+        parts.push(`  • "Honey" → "Miel"`);
+        parts.push(`  • "Royal Jelly" → "Jalea Real"`);
+      }
+      
+      parts.push(`VERIFICATION: Before outputting, check each keyword - if it's not in ${targetLanguage}, translate it!`);
     }
     
-    if (targetLanguage) {
-      parts.push(`LANGUAGE RULE: ALL keywords MUST be in ${targetLanguage} language ONLY`);
-      parts.push(`NEVER use French, English, or any other language - only ${targetLanguage}`);
-      parts.push(`If the website has terms in other languages, TRANSLATE them to ${targetLanguage}`);
-      parts.push(`Example for German: "Gelée Royale" → "Gelee Royal", "Royal Jelly" → "Gelée Royal"`);
+    // Specificity instruction (after translation)
+    parts.push(`SPECIFICITY: Base keywords on products/ingredients from the website content`);
+    parts.push(`Use specific product names, brand terms, ingredients - not generic categories`);
+    parts.push(`BAD: "honey", "cream", "supplements" (too generic)`);
+    parts.push(`GOOD: "Manuka Honig", "Propolis Tinktur", "Bienengift Salbe" (specific)`);
+    
+    if (targetCountry) {
+      parts.push(`Generate topics relevant to what people in ${targetCountry} would search for`);
     }
     
     return parts.length > 0 ? '\n   - ' + parts.join('\n   - ') : '';
@@ -336,7 +364,7 @@ async function generateWithAI(
       model: OPENAI_MODEL,
       messages: [
         {
-          // January 28th, 2026: Improved prompt for stricter language + specificity
+          // January 28th, 2026 (v2): Much stricter translation enforcement
           role: 'system',
           content: `You are a competitive analysis expert specializing in affiliate marketing.
 
@@ -354,28 +382,37 @@ Your task is to analyze a website and identify competitors and search keywords.
 - Words like "review", "blog", "test" are AUTOMATICALLY ADDED by our system
 - Generate only the BASE product/ingredient keywords${topicsInstruction}
 
-=== IMPORTANT RULES ===
-1. SPECIFICITY: Keywords must come from the ACTUAL website content provided below.
-   - Extract real product names, brand names, ingredients mentioned on the site
-   - Do NOT invent generic keywords that don't appear on the website
-   - BAD: "honey", "bee products", "health supplements" (too generic)
+=== CRITICAL LANGUAGE RULE ===
+If a target language is specified, you MUST translate ALL keywords to that language.
+- DO NOT keep English product names like "Bee Cream" - translate them!
+- DO NOT keep French terms like "Gelée Royale" - translate them!
+- EVERY keyword must be in the target language, no exceptions.
+- This is the #1 most important rule for keywords.
 
-2. LANGUAGE: If a target language is specified, ALL keywords must be in that language.
-   - If the website uses English/French terms, TRANSLATE them to the target language
-   - NEVER mix languages - all 10 keywords must be in the SAME target language
+=== SPECIFICITY RULE ===
+Keywords should be based on the website content but TRANSLATED to target language.
+- BAD: "honey", "bee products" (too generic)
+- BAD: "Bee Cream", "Royal Jelly" (not translated to German)
+- GOOD: "Bienencreme", "Gelee Royal", "Propolis Tinktur" (specific + German)
 
-Be specific and practical. Generic keywords return generic results.`
+Be specific and practical. Generic or wrong-language keywords fail.`
         },
         {
-          // January 28th, 2026: Clearer user message with language emphasis
+          // January 28th, 2026 (v2): Even clearer user message with translation emphasis
           role: 'user',
           content: `Analyze this website and provide competitor and topic suggestions.
 
 Website: ${websiteUrl}
 ${targetCountry ? `Target Market: ${targetCountry}` : ''}
-${targetLanguage ? `Target Language: ${targetLanguage} (ALL keywords MUST be in ${targetLanguage} only!)` : ''}
+${targetLanguage ? `
+⚠️ TARGET LANGUAGE: ${targetLanguage}
+MANDATORY: Translate ALL keywords to ${targetLanguage}!
+- If website has "Bee Cream" → output "${targetLanguage === 'German' ? 'Bienencreme' : 'translated term'}"
+- If website has "Gelée Royale" → output "${targetLanguage === 'German' ? 'Gelee Royal' : 'translated term'}"
+- Do NOT output English or French terms - ONLY ${targetLanguage}!
+` : ''}
 
-Extract keywords from this website content - only use terms that actually appear here:
+Analyze the website content below. Extract product/ingredient keywords, then TRANSLATE them to ${targetLanguage || 'the appropriate language'}:
 
 ${truncatedContent}`
         }
