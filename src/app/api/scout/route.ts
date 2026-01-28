@@ -4,11 +4,12 @@ import {
   searchWeb, 
   WebSearchOptions,
   // ==========================================================================
-  // January 26, 2026: Import Serper-based social media search functions
-  // These are used when USE_SERPER_FOR_SOCIAL feature flag is enabled.
-  // See search.ts for detailed documentation on the trade-offs.
+  // January 29, 2026: CLEANUP - Removed USE_SERPER_FOR_SOCIAL and dead imports
+  // 
+  // These Serper-based functions are now the ONLY search path.
+  // They use Serper for discovery (good language filtering) and call
+  // Apify enrichment functions internally for metadata (followers, etc.)
   // ==========================================================================
-  USE_SERPER_FOR_SOCIAL,
   searchYouTubeSerper,
   searchInstagramSerper,
   searchTikTokSerper,
@@ -19,12 +20,11 @@ import {
   enrichDomainsBatch, 
   SimilarWebData,
   // ==========================================================================
-  // January 26, 2026: These Apify functions are still imported but will only
-  // be used when USE_SERPER_FOR_SOCIAL is false (the default).
+  // January 29, 2026: CLEANUP - Removed dead Apify search function imports
+  // (searchYouTubeApify, searchInstagramApify, searchTikTokApify)
+  // These were only used when USE_SERPER_FOR_SOCIAL=false, which was never
+  // the case in production.
   // ==========================================================================
-  searchYouTubeApify,
-  searchInstagramApify,
-  searchTikTokApify 
 } from '../../services/apify';
 import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 import { sql } from '@/lib/db';
@@ -231,16 +231,16 @@ export async function POST(req: Request) {
     const writer = stream.writable.getWriter();
 
     // ============================================================================
-    // STREAMING SEARCH PROCESSOR (Updated December 16, 2025)
+    // STREAMING SEARCH PROCESSOR (Updated January 29, 2026)
     // 
     // PREVIOUS BEHAVIOR (Blocking):
-    // 1. Wait for ALL platforms to complete (searchMultiPlatform)
-    // 2. Wait for ALL SimilarWeb enrichment (enrichDomainsWithSimilarWeb)
+    // 1. Wait for ALL platforms to complete
+    // 2. Wait for ALL SimilarWeb enrichment
     // 3. Only THEN stream all results to client
     // Result: User waited 60+ seconds before seeing ANY results
     //
-    // NEW BEHAVIOR (Streaming):
-    // 1. Start ALL platform searches in parallel
+    // CURRENT BEHAVIOR (Streaming):
+    // 1. Start ALL platform searches in parallel (using Serper + Apify enrichment)
     // 2. Stream results IMMEDIATELY as each platform completes
     // 3. Web results sent without SimilarWeb (marked with isEnriching: true)
     // 4. SimilarWeb batch runs in background (single API call for all domains)
@@ -358,53 +358,35 @@ export async function POST(req: Request) {
             // Location filtering added January 16, 2026 - passes targetCountry
             // to social platforms for localized results
             // 
-            // January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
-            // When enabled, uses Serper with site: filters for better language accuracy
-            // Trade-off: No rich metadata (followers, subscribers, etc.)
+            // January 29, 2026: CLEANUP - Removed USE_SERPER_FOR_SOCIAL conditionals
+            // All social media searches now use Serper (for language accuracy) + Apify
+            // enrichment (for metadata). The old Apify-only path was dead code.
             switch (platform) {
               case 'YouTube':
                 // =============================================================
-                // January 26, 2026: Conditional routing based on feature flag
-                // USE_SERPER_FOR_SOCIAL=true  → Serper (better language accuracy)
-                // USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, default)
+                // Uses Serper for discovery (language-filtered) then Apify for
+                // enrichment (subscribers, views, etc.)
                 // =============================================================
-                if (USE_SERPER_FOR_SOCIAL) {
-                  results = await searchYouTubeSerper(keyword, userId, 15, targetCountry, targetLanguage);
-                  totalCost += API_COSTS.serper; // Serper cost instead of Apify
-                } else {
-                  results = await searchYouTubeApify(keyword, userId, 15, targetCountry);
-                  totalCost += API_COSTS.apify_youtube * results.length;
-                }
+                results = await searchYouTubeSerper(keyword, userId, 15, targetCountry, targetLanguage);
+                totalCost += API_COSTS.serper;
                 break;
                 
               case 'Instagram':
                 // =============================================================
-                // January 26, 2026: Conditional routing based on feature flag
-                // USE_SERPER_FOR_SOCIAL=true  → Serper (better language accuracy)
-                // USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, default)
+                // Uses Serper for discovery (language-filtered) then Apify for
+                // enrichment (followers, bio, etc.)
                 // =============================================================
-                if (USE_SERPER_FOR_SOCIAL) {
-                  results = await searchInstagramSerper(keyword, userId, 15, targetCountry, targetLanguage);
-                  totalCost += API_COSTS.serper; // Serper cost instead of Apify
-                } else {
-                  results = await searchInstagramApify(keyword, userId, 15, targetCountry);
-                  totalCost += API_COSTS.apify_instagram * results.length;
-                }
+                results = await searchInstagramSerper(keyword, userId, 15, targetCountry, targetLanguage);
+                totalCost += API_COSTS.serper;
                 break;
                 
               case 'TikTok':
                 // =============================================================
-                // January 26, 2026: Conditional routing based on feature flag
-                // USE_SERPER_FOR_SOCIAL=true  → Serper (better language accuracy)
-                // USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, default)
+                // Uses Serper for discovery (language-filtered) then Apify for
+                // enrichment (followers, bio, etc.)
                 // =============================================================
-                if (USE_SERPER_FOR_SOCIAL) {
-                  results = await searchTikTokSerper(keyword, userId, 15, targetCountry, targetLanguage);
-                  totalCost += API_COSTS.serper; // Serper cost instead of Apify
-                } else {
-                  results = await searchTikTokApify(keyword, userId, 15, targetCountry);
-                  totalCost += API_COSTS.apify_tiktok * results.length;
-                }
+                results = await searchTikTokSerper(keyword, userId, 15, targetCountry, targetLanguage);
+                totalCost += API_COSTS.serper;
                 break;
                 
               case 'Web':

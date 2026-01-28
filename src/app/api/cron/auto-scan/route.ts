@@ -42,22 +42,17 @@ import { checkCredits, consumeCredits } from '@/lib/credits';
 import { 
   searchWeb,
   // ==========================================================================
-  // January 26, 2026: Import Serper-based social media search functions
-  // These are used when USE_SERPER_FOR_SOCIAL feature flag is enabled.
+  // January 29, 2026: CLEANUP - Removed USE_SERPER_FOR_SOCIAL conditional
+  // 
+  // These Serper-based functions are now the ONLY search path.
+  // They use Serper for discovery (good language filtering) and call
+  // Apify enrichment functions internally for metadata (followers, etc.)
   // ==========================================================================
-  USE_SERPER_FOR_SOCIAL,
   searchYouTubeSerper,
   searchInstagramSerper,
   searchTikTokSerper,
 } from '@/app/services/search';
-import { 
-  // ==========================================================================
-  // January 26, 2026: Apify functions still imported, used when flag is false
-  // ==========================================================================
-  searchYouTubeApify, 
-  searchInstagramApify, 
-  searchTikTokApify 
-} from '@/app/services/apify';
+// January 29, 2026: CLEANUP - Removed dead Apify search function imports
 import { trackSearch, completeSearch, API_COSTS } from '@/app/services/tracking';
 
 // =============================================================================
@@ -316,38 +311,20 @@ async function runAutoScan(
   for (const keyword of keywords) {
     try {
       // =========================================================================
-      // January 26, 2026: USE_SERPER_FOR_SOCIAL feature flag support
+      // January 29, 2026: CLEANUP - Simplified (removed dead code path)
       // 
-      // When enabled, uses Serper with site: filters for better language accuracy.
-      // Trade-off: No rich metadata (followers, subscribers, etc.)
+      // All social media searches now use Serper for discovery (language-filtered)
+      // plus Apify enrichment for metadata (followers, bio, etc.)
       // =========================================================================
       const [webResults, youtubeResults, instagramResults, tiktokResults] = await Promise.all([
         searchWeb(keyword).catch(() => []),
-        // YouTube: Choose Serper or Apify based on feature flag
-        USE_SERPER_FOR_SOCIAL
-          ? searchYouTubeSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => [])
-          : searchYouTubeApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
-        // Instagram: Choose Serper or Apify based on feature flag
-        USE_SERPER_FOR_SOCIAL
-          ? searchInstagramSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => [])
-          : searchInstagramApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
-        // TikTok: Choose Serper or Apify based on feature flag
-        USE_SERPER_FOR_SOCIAL
-          ? searchTikTokSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => [])
-          : searchTikTokApify(keyword, userId, RESULTS_PER_PLATFORM).catch(() => []),
+        searchYouTubeSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => []),
+        searchInstagramSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => []),
+        searchTikTokSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => []),
       ]);
       
-      // Calculate costs - different costs for Serper vs Apify
-      totalCost += API_COSTS.serper; // Web search
-      if (USE_SERPER_FOR_SOCIAL) {
-        // Serper costs (3 extra searches for social platforms)
-        totalCost += API_COSTS.serper * 3; // YouTube, Instagram, TikTok
-      } else {
-        // Apify costs (per result)
-        totalCost += API_COSTS.apify_youtube * youtubeResults.length;
-        totalCost += API_COSTS.apify_instagram * instagramResults.length;
-        totalCost += API_COSTS.apify_tiktok * tiktokResults.length;
-      }
+      // Calculate costs - Serper for all 4 searches
+      totalCost += API_COSTS.serper * 4; // Web + YouTube + Instagram + TikTok
       
       // Combine all results
       const allResults = [

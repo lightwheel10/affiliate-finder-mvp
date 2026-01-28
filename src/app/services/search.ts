@@ -3,7 +3,7 @@
  * 
  * Handles multi-platform search for affiliate discovery:
  * - Web: Uses Serper.dev (Google search)
- * - YouTube/Instagram/TikTok: Uses Apify scrapers for rich data
+ * - YouTube/Instagram/TikTok: Uses Serper + Apify enrichment (hybrid approach)
  * 
  * Changelog:
  * 
@@ -20,13 +20,16 @@
  * - Blocked github.com, github.io, selecdoo.com domains
  * - Fixed Invalid Date display issue
  * 
- * January 26, 2026: Added Serper-based social media search (EXPERIMENTAL)
- * - New functions: searchYouTubeSerper, searchInstagramSerper, searchTikTokSerper
- * - Feature flag: USE_SERPER_FOR_SOCIAL (disabled by default)
+ * January 26, 2026: Added Serper-based social media search
+ * - Functions: searchYouTubeSerper, searchInstagramSerper, searchTikTokSerper
  * - Uses site: filters with language params for better localization
- * - Trade-off: Better language accuracy, but NO rich metadata (followers, etc.)
- * - Old Apify approach remains default and untouched
- * - See: test-results/comparison-*.json for test data
+ * - Enriched with Apify metadata (followers, bio, etc.)
+ * 
+ * January 29, 2026: DEAD CODE CLEANUP
+ * - Removed searchMultiPlatform() - was never called (routing is in route.ts)
+ * - Removed imports for dead Apify search functions (searchYouTubeApify, etc.)
+ * - These were replaced by searchYouTubeSerper/etc. + Apify enrichment
+ * - See apify.ts for details on what was removed
  * 
  * Architecture:
  * ┌─────────────────────────────────────────────────────────────────────────┐
@@ -34,17 +37,21 @@
  * │  ├── 1. Build localized search query (keyword + language terms)        │
  * │  ├── 2. Serper API call (gl, hl, lr params)                            │
  * │  ├── 3. Domain filtering (block e-commerce, shops)                     │
- * │  └── 4. Language filtering (franc detection) ← NEW January 26          │
+ * │  └── 4. Language filtering (franc detection)                            │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ * 
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │  searchYouTubeSerper / searchInstagramSerper / searchTikTokSerper       │
+ * │  ├── 1. Serper API call (site:youtube.com, etc.)                       │
+ * │  ├── 2. Language filtering                                              │
+ * │  └── 3. Apify enrichment (enrichYouTubeByUrls, etc.)                   │
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 
 import { 
-  searchYouTubeApify, 
-  searchInstagramApify, 
-  searchTikTokApify, 
   enrichTikTokByUrls, 
   enrichYouTubeByUrls,
-  enrichInstagramByUrls  // Added January 28, 2026
+  enrichInstagramByUrls
 } from './apify';
 import { 
   getLocationConfig, 
@@ -58,54 +65,18 @@ import {
 const SERPER_API_KEY = process.env.SERPER_API_KEY;
 
 // =============================================================================
-// FEATURE FLAG: USE SERPER FOR SOCIAL MEDIA SEARCH
-// Added: January 26, 2026
+// January 29, 2026: REMOVED USE_SERPER_FOR_SOCIAL feature flag
 // 
-// PURPOSE:
-// When enabled, uses Serper (Google search with site: filters) instead of
-// Apify actors for YouTube, Instagram, and TikTok searches.
+// The feature flag has been permanently enabled and the conditional code removed.
+// All social media searches now use Serper for discovery + Apify enrichment.
 // 
-// WHY THIS EXISTS:
-// - Apify actors return results in mixed languages (~30% target language)
-// - Serper with gl/hl/lr params returns ~90% target language results
-// - Client requirement: "All results should be in the target language"
+// Benefits of current approach:
+// - Better language accuracy (~90% vs ~30% with Apify-only)
+// - Faster searches (~5-10s vs ~30-168s)
+// - Still get rich metadata (followers, bio) via Apify enrichment
 // 
-// TRADE-OFFS:
-// ┌────────────────────────────────────────────────────────────────────────┐
-// │ Metric              │ Apify (current)      │ Serper (new)             │
-// ├────────────────────────────────────────────────────────────────────────┤
-// │ Language accuracy   │ ~30%                 │ ~90%                     │
-// │ Result count        │ ~15 per platform     │ ~30 per platform         │
-// │ Followers/subs      │ ✅ Yes               │ ❌ No                    │
-// │ Views/plays         │ ✅ Yes               │ ❌ No                    │
-// │ Bio/description     │ ✅ Yes               │ ❌ No                    │
-// │ Email extraction    │ ✅ Yes               │ ❌ No                    │
-// │ Username            │ ✅ Yes               │ ⚠️ TikTok only (parsed) │
-// │ API cost            │ Apify credits        │ Serper credits           │
-// │ Speed               │ Slow (~30-120s)      │ Fast (~2-5s)             │
-// └────────────────────────────────────────────────────────────────────────┘
-// 
-// HOW TO ENABLE:
-// Set USE_SERPER_FOR_SOCIAL=true in .env.local
-// 
-// HOW TO TEST:
-// Run: npx tsx scripts/test-serper-vs-apify.ts
-// Results saved to: test-results/comparison-*.json
-// 
-// ROLLBACK:
-// Set USE_SERPER_FOR_SOCIAL=false (or remove the env var)
-// The old Apify approach will be used automatically.
-// 
-// AFFECTED FILES (when enabled):
-// - src/app/api/scout/route.ts (main search endpoint)
-// - src/app/api/scout/onboarding/route.ts (onboarding pre-fetch)
-// - src/app/api/cron/auto-scan/route.ts (scheduled scans)
-// - src/app/services/search.ts (this file - routing logic)
-// 
-// IMPORTANT: The Apify code in apify.ts is NOT modified. This is purely
-// additive - we're adding a new approach alongside the existing one.
+// The old Apify-only search functions were dead code and have been removed.
 // =============================================================================
-export const USE_SERPER_FOR_SOCIAL = process.env.USE_SERPER_FOR_SOCIAL === 'true';
 
 // Helper to format numbers (e.g., 5700 -> "5.7K")
 // Used for formatting follower counts in channel object
@@ -1915,156 +1886,20 @@ export async function searchTikTokSerper(
   return results;
 }
 
-/**
- * Search Web using Serper.dev
- * Note: YouTube, Instagram, TikTok are now handled by Apify in searchMultiPlatform
- * 
- * Updated January 16, 2026: Added options parameter for affiliate filtering
- */
-async function searchPlatform(
-  keyword: string, 
-  platform: Platform,
-  options: WebSearchOptions = {}
-): Promise<SearchResult[]> {
-  // Only Web searches use Serper now
-  // YouTube/Instagram/TikTok are routed to Apify in searchMultiPlatform
-  if (platform !== 'Web') {
-    console.warn(`⚠️ Platform ${platform} should be handled by Apify, not Serper`);
-    return [];
-  }
-
-  return searchWeb(keyword, options);
-}
-
-/**
- * Search across multiple platforms in parallel
- * - Web: Uses Serper.dev
- * - YouTube/Instagram/TikTok: Uses Apify scrapers (default) OR Serper (if flag enabled)
- * 
- * Updated January 16, 2026: Added webSearchOptions for affiliate filtering
- * Updated January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
- * 
- * FEATURE FLAG: USE_SERPER_FOR_SOCIAL
- * When enabled (set to 'true' in .env.local), social media searches will use
- * Serper with site: filters instead of Apify actors.
- * 
- * Trade-offs:
- * - Serper: Better language accuracy (~90%), but no rich metadata
- * - Apify: Rich metadata (followers, etc.), but mixed language results (~30%)
- * 
- * See detailed documentation at the top of this file.
- */
-export async function searchMultiPlatform(
-  keyword: string, 
-  sources: Platform[],
-  userId?: number,
-  webSearchOptions: WebSearchOptions = {}
-): Promise<SearchResult[]> {
-  console.log(`\n🚀 Starting multi-platform search for "${keyword}"`);
-  console.log(`📡 Platforms: ${sources.join(', ')}`);
-  
-  // ============================================================================
-  // January 26, 2026: Log which approach is being used for social media
-  // This helps with debugging and monitoring in production logs.
-  // ============================================================================
-  if (USE_SERPER_FOR_SOCIAL) {
-    console.log(`🔧 Social media approach: SERPER (USE_SERPER_FOR_SOCIAL=true)`);
-  } else {
-    console.log(`🔧 Social media approach: APIFY (USE_SERPER_FOR_SOCIAL=false or not set)`);
-  }
-  console.log('');
-
-  // Run all searches in parallel
-  const promises = sources.map(source => {
-    // Route to appropriate service based on platform
-    switch (source) {
-      case 'YouTube':
-        // ======================================================================
-        // January 26, 2026: Conditional routing based on feature flag
-        // 
-        // USE_SERPER_FOR_SOCIAL=true  → searchYouTubeSerper (better language)
-        // USE_SERPER_FOR_SOCIAL=false → searchYouTubeApify (rich metadata)
-        // ======================================================================
-        if (USE_SERPER_FOR_SOCIAL) {
-          return searchYouTubeSerper(
-            keyword,
-            userId,
-            15,
-            webSearchOptions.targetCountry,
-            webSearchOptions.targetLanguage
-          ).catch(err => {
-            console.error(`❌ YouTube (Serper) search failed:`, err);
-            return [] as SearchResult[];
-          });
-        } else {
-          return searchYouTubeApify(keyword, userId, 15).catch(err => {
-            console.error(`❌ YouTube (Apify) search failed:`, err);
-            return [] as SearchResult[];
-          });
-        }
-        
-      case 'Instagram':
-        // ======================================================================
-        // January 26, 2026: Conditional routing based on feature flag
-        // 
-        // USE_SERPER_FOR_SOCIAL=true  → searchInstagramSerper (better language)
-        // USE_SERPER_FOR_SOCIAL=false → searchInstagramApify (rich metadata)
-        // ======================================================================
-        if (USE_SERPER_FOR_SOCIAL) {
-          return searchInstagramSerper(
-            keyword,
-            userId,
-            15,
-            webSearchOptions.targetCountry,
-            webSearchOptions.targetLanguage
-          ).catch(err => {
-            console.error(`❌ Instagram (Serper) search failed:`, err);
-            return [] as SearchResult[];
-          });
-        } else {
-          return searchInstagramApify(keyword, userId, 15).catch(err => {
-            console.error(`❌ Instagram (Apify) search failed:`, err);
-            return [] as SearchResult[];
-          });
-        }
-        
-      case 'TikTok':
-        // ======================================================================
-        // January 26, 2026: Conditional routing based on feature flag
-        // 
-        // USE_SERPER_FOR_SOCIAL=true  → searchTikTokSerper (better language)
-        // USE_SERPER_FOR_SOCIAL=false → searchTikTokApify (rich metadata)
-        // ======================================================================
-        if (USE_SERPER_FOR_SOCIAL) {
-          return searchTikTokSerper(
-            keyword,
-            userId,
-            15,
-            webSearchOptions.targetCountry,
-            webSearchOptions.targetLanguage
-          ).catch(err => {
-            console.error(`❌ TikTok (Serper) search failed:`, err);
-            return [] as SearchResult[];
-          });
-        } else {
-          return searchTikTokApify(keyword, userId, 15).catch(err => {
-            console.error(`❌ TikTok (Apify) search failed:`, err);
-            return [] as SearchResult[];
-          });
-        }
-        
-      case 'Web':
-      default:
-        return searchPlatform(keyword, source, webSearchOptions).catch(err => {
-          console.error(`❌ ${source} search failed:`, err);
-          return [] as SearchResult[];
-        });
-    }
-  });
-
-  const results = await Promise.all(promises);
-  const flatResults = results.flat();
-
-  console.log(`\n✅ Total results: ${flatResults.length}\n`);
-  return flatResults;
-}
+// =============================================================================
+// REMOVED: January 29, 2026
+// 
+// searchPlatform() and searchMultiPlatform() functions were removed.
+// They were NEVER CALLED - the routing logic lives directly in the route files:
+// - src/app/api/scout/route.ts
+// - src/app/api/scout/onboarding/route.ts
+// - src/app/api/cron/auto-scan/route.ts
+// 
+// These functions also imported the now-removed Apify search functions
+// (searchYouTubeApify, etc.) which caused TypeScript errors.
+// 
+// The current production flow is:
+// 1. Route files call searchYouTubeSerper/searchInstagramSerper/searchTikTokSerper
+// 2. Those functions use Serper for discovery (with language filtering)
+// 3. Then call Apify enrichment functions for metadata
+// =============================================================================

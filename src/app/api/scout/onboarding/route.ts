@@ -11,17 +11,20 @@
  * - SimilarWeb ran at the very end
  * - Total time: ~485 seconds for 5 topics
  * 
- * NEW IMPLEMENTATION (Fully Parallel - ~3 minutes):
+ * CURRENT IMPLEMENTATION (Fully Parallel - ~30 seconds):
  * - ALL searches fire simultaneously at T=0:
  *   - 5 Web (Serper) searches
- *   - 5 YouTube (Apify) actors
- *   - 5 Instagram (Apify) actors  
- *   - 5 TikTok (Apify) actors
+ *   - 5 YouTube (Serper + Apify enrichment) searches
+ *   - 5 Instagram (Serper + Apify enrichment) searches
+ *   - 5 TikTok (Serper + Apify enrichment) searches
  * - Results saved as they complete (not waiting for all)
- * - SimilarWeb starts as soon as Web results arrive (overlaps with Apify)
- * - Total time: ~168 seconds (bottleneck = slowest Apify actor)
+ * - SimilarWeb starts after all searches complete
+ * - Total time: ~30 seconds (Serper is fast!)
  * 
- * PERFORMANCE IMPROVEMENT: 66% faster (5+ minutes saved)
+ * January 29, 2026: CLEANUP
+ * - Removed dead code paths (USE_SERPER_FOR_SOCIAL conditionals)
+ * - All social media searches now use Serper + Apify enrichment
+ * - Removed searchYouTubeApify/searchInstagramApify/searchTikTokApify imports
  * 
  * PURPOSE:
  * This endpoint runs affiliate searches during onboarding AFTER payment succeeds.
@@ -45,23 +48,21 @@ import {
   searchWeb, 
   SearchResult,
   // ==========================================================================
-  // January 26, 2026: Import Serper-based social media search functions
-  // These are used when USE_SERPER_FOR_SOCIAL feature flag is enabled.
-  // Trade-off: Better language accuracy, but no rich metadata.
+  // January 29, 2026: CLEANUP - Removed USE_SERPER_FOR_SOCIAL conditional
+  // 
+  // These Serper-based functions are now the ONLY search path.
+  // They use Serper for discovery (good language filtering) and call
+  // Apify enrichment functions internally for metadata (followers, etc.)
   // ==========================================================================
-  USE_SERPER_FOR_SOCIAL,
   searchYouTubeSerper,
   searchInstagramSerper,
   searchTikTokSerper,
 } from '../../../services/search';
 import { 
   // ==========================================================================
-  // January 26, 2026: Apify functions are still imported and used by default.
-  // They will only be skipped when USE_SERPER_FOR_SOCIAL=true.
+  // January 29, 2026: CLEANUP - Removed dead Apify search function imports
+  // (searchYouTubeApify, searchInstagramApify, searchTikTokApify)
   // ==========================================================================
-  searchYouTubeApify, 
-  searchInstagramApify, 
-  searchTikTokApify,
   enrichDomainsBatch,
   SimilarWebData
 } from '../../../services/apify';
@@ -326,15 +327,15 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // =========================================================================
-    // PARALLEL ARCHITECTURE - January 15th, 2026
+    // PARALLEL ARCHITECTURE - Updated January 29, 2026
     // 
     // Fire ALL searches at T=0:
     // - 5 Web (Serper) - fast, ~2-3 seconds
-    // - 5 YouTube (Apify) - slow, ~30-168 seconds
-    // - 5 Instagram (Apify) - medium, ~30-60 seconds
-    // - 5 TikTok (Apify) - fast, ~5-30 seconds
+    // - 5 YouTube (Serper + Apify enrichment) - ~5-10 seconds
+    // - 5 Instagram (Serper + Apify enrichment) - ~5-10 seconds
+    // - 5 TikTok (Serper + Apify enrichment) - ~5-10 seconds
     // 
-    // Total: 20 concurrent operations
+    // Total: 20 concurrent operations, all fast now!
     // =========================================================================
     
     const platformResults = {
@@ -381,22 +382,15 @@ export async function POST(req: Request): Promise<Response> {
     );
 
     // =========================================================================
-    // YOUTUBE SEARCHES
+    // YOUTUBE SEARCHES - January 29, 2026: Simplified (removed dead code path)
     // 
-    // January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
-    // - USE_SERPER_FOR_SOCIAL=true  → Serper (better language, ~2-5 seconds)
-    // - USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, ~30-168 seconds)
+    // Uses Serper for discovery (language-filtered) then Apify enrichment
+    // for metadata (subscribers, views, etc.)
     // =========================================================================
     const youtubeSearchPromises = topics.map(topic => {
-      // Choose search function based on feature flag
-      const searchFn = USE_SERPER_FOR_SOCIAL
-        ? searchYouTubeSerper(topic, userId, 10, null, null) // Serper (no country/lang for onboarding)
-        : searchYouTubeApify(topic, userId, 10);             // Apify (default)
-
-      return searchFn
+      return searchYouTubeSerper(topic, userId, 10, null, null)
         .then(async (results) => {
-          const approach = USE_SERPER_FOR_SOCIAL ? 'Serper' : 'Apify';
-          console.log(`[Onboarding Scout] YouTube (${approach}) "${topic.substring(0, 30)}...": ${results.length} results`);
+          console.log(`[Onboarding Scout] YouTube "${topic.substring(0, 30)}...": ${results.length} results`);
           
           let savedCount = 0;
           for (const result of results) {
@@ -413,22 +407,15 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     // =========================================================================
-    // INSTAGRAM SEARCHES
+    // INSTAGRAM SEARCHES - January 29, 2026: Simplified (removed dead code path)
     // 
-    // January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
-    // - USE_SERPER_FOR_SOCIAL=true  → Serper (better language, ~2-5 seconds)
-    // - USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, ~30-60 seconds)
+    // Uses Serper for discovery (language-filtered) then Apify enrichment
+    // for metadata (followers, bio, etc.)
     // =========================================================================
     const instagramSearchPromises = topics.map(topic => {
-      // Choose search function based on feature flag
-      const searchFn = USE_SERPER_FOR_SOCIAL
-        ? searchInstagramSerper(topic, userId, 10, null, null) // Serper (no country/lang for onboarding)
-        : searchInstagramApify(topic, userId, 10);              // Apify (default)
-
-      return searchFn
+      return searchInstagramSerper(topic, userId, 10, null, null)
         .then(async (results) => {
-          const approach = USE_SERPER_FOR_SOCIAL ? 'Serper' : 'Apify';
-          console.log(`[Onboarding Scout] Instagram (${approach}) "${topic.substring(0, 30)}...": ${results.length} results`);
+          console.log(`[Onboarding Scout] Instagram "${topic.substring(0, 30)}...": ${results.length} results`);
           
           let savedCount = 0;
           for (const result of results) {
@@ -445,22 +432,15 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     // =========================================================================
-    // TIKTOK SEARCHES
+    // TIKTOK SEARCHES - January 29, 2026: Simplified (removed dead code path)
     // 
-    // January 26, 2026: Added USE_SERPER_FOR_SOCIAL feature flag support
-    // - USE_SERPER_FOR_SOCIAL=true  → Serper (better language, ~2-5 seconds)
-    // - USE_SERPER_FOR_SOCIAL=false → Apify (rich metadata, ~5-30 seconds)
+    // Uses Serper for discovery (language-filtered) then Apify enrichment
+    // for metadata (followers, bio, etc.)
     // =========================================================================
     const tiktokSearchPromises = topics.map(topic => {
-      // Choose search function based on feature flag
-      const searchFn = USE_SERPER_FOR_SOCIAL
-        ? searchTikTokSerper(topic, userId, 10, null, null) // Serper (no country/lang for onboarding)
-        : searchTikTokApify(topic, userId, 10);              // Apify (default)
-
-      return searchFn
+      return searchTikTokSerper(topic, userId, 10, null, null)
         .then(async (results) => {
-          const approach = USE_SERPER_FOR_SOCIAL ? 'Serper' : 'Apify';
-          console.log(`[Onboarding Scout] TikTok (${approach}) "${topic.substring(0, 30)}...": ${results.length} results`);
+          console.log(`[Onboarding Scout] TikTok "${topic.substring(0, 30)}...": ${results.length} results`);
           
           let savedCount = 0;
           for (const result of results) {

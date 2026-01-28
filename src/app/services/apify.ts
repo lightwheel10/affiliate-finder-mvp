@@ -1,11 +1,33 @@
 /**
  * Apify Scraper Service
- * Provides rich data from YouTube, Instagram, TikTok, and SimilarWeb
+ * Provides URL enrichment and traffic data from YouTube, Instagram, TikTok, and SimilarWeb
+ * 
+ * =============================================================================
+ * CLEANUP: January 29, 2026
+ * 
+ * REMOVED DEAD CODE:
+ * - searchYouTubeApify() - Was only used when USE_SERPER_FOR_SOCIAL=false (never in prod)
+ * - searchInstagramApify() - Same, replaced by searchInstagramSerper() in search.ts
+ * - searchTikTokApify() - Same, replaced by searchTikTokSerper() in search.ts
+ * 
+ * WHY: The USE_SERPER_FOR_SOCIAL=true flag has been enabled in production since
+ * January 26, 2026. The old Apify actor-based search functions were never called
+ * because the conditional always took the Serper path. These functions added
+ * ~450 lines of unmaintained code.
+ * 
+ * WHAT REMAINS:
+ * - enrichYouTubeByUrls() - Used by searchYouTubeSerper() for metadata enrichment
+ * - enrichInstagramByUrls() - Used by searchInstagramSerper() for metadata enrichment
+ * - enrichTikTokByUrls() - Used by searchTikTokSerper() for metadata enrichment
+ * - enrichDomainWithSimilarWeb() - Used by /api/enrich for on-demand enrichment
+ * - enrichDomainsWithSimilarWeb() - Used by /api/enrich for batch enrichment
+ * - enrichDomainsBatch() - Used by scout routes for SimilarWeb data
+ * =============================================================================
  * 
  * Actor IDs:
- * - YouTube: h7sDV53CddomktSi5 (streamers/youtube-scraper)
- * - Instagram: DrF9mzPPEuVizVF4l (apify/instagram-search-scraper)
- * - TikTok: GdWCkxBtKWOsKjdch (clockworks/tiktok-scraper)
+ * - YouTube: h7sDV53CddomktSi5 (streamers/youtube-scraper) - FOR ENRICHMENT ONLY
+ * - Instagram: shu8hvrXbJbY3Eb9W (profile scraper) - FOR ENRICHMENT ONLY
+ * - TikTok: GdWCkxBtKWOsKjdch (clockworks/tiktok-scraper) - FOR ENRICHMENT ONLY
  * - SimilarWeb: yOYYzj2J5K88boIVO (curious_coder/similarweb-scraper)
  */
 
@@ -175,113 +197,14 @@ interface ApifyYouTubeResult {
   text?: string;
 }
 
-/**
- * Search YouTube videos using Apify scraper
- * Returns rich data including subscriber counts and engagement metrics
- * 
- * @param targetCountry - Optional country from onboarding for localized results
- *                        Added January 16, 2026
- */
-export async function searchYouTubeApify(
-  keyword: string,
-  userId?: number,
-  maxResults: number = 10,
-  targetCountry?: string | null
-): Promise<SearchResult[]> {
-  if (!client) {
-    console.error('❌ Apify client not initialized');
-    return [];
-  }
-
-  const startTime = Date.now();
-  
-  // ==========================================================================
-  // LOCATION-BASED QUERY - January 16, 2026
-  // 
-  // Appends country shortName to search query for localized results.
-  // Example: "propolis" + Germany → "propolis Germany"
-  // Example: "organic skincare" + UK → "organic skincare UK"
-  // ==========================================================================
-  const locationConfig = getLocationConfig(targetCountry, null);
-  const searchQuery = locationConfig 
-    ? `${keyword} ${locationConfig.shortName}`
-    : keyword;
-
-  console.log(`🎬 Apify YouTube search: "${searchQuery}" (location: ${locationConfig?.shortName || 'global'})`);
-
-  try {
-    const run = await client.actor(ACTORS.youtube).call({
-      searchQueries: [searchQuery],
-      maxResults,
-      maxResultsShorts: 0,
-      maxResultStreams: 0,
-    });
-
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    const results = items as unknown as ApifyYouTubeResult[];
-
-    console.log(`✅ Apify YouTube: ${results.length} videos found`);
-
-    // Track API call
-    if (userId) {
-      await trackApiCall({
-        userId,
-        service: 'apify_youtube',
-        endpoint: ACTORS.youtube,
-        keyword,
-        status: 'success',
-        resultsCount: results.length,
-        estimatedCost: results.length * API_COSTS.apify_youtube,
-        apifyRunId: run.id,
-        durationMs: Date.now() - startTime,
-      });
-    }
-
-    return results.map((item, index): SearchResult => {
-      const channel: YouTubeChannelInfo | undefined = item.channelName ? {
-        name: item.channelName,
-        link: item.channelUrl || `https://www.youtube.com/@${item.channelUsername || item.channelName}`,
-        verified: item.isVerified,
-        subscribers: item.numberOfSubscribers ? formatNumber(item.numberOfSubscribers) : undefined,
-      } : undefined;
-
-      return {
-        title: item.title || '',
-        link: item.url || '',
-        snippet: item.text?.substring(0, 300) || '',
-        source: 'YouTube' as Platform,
-        domain: 'youtube.com',
-        thumbnail: item.thumbnailUrl,
-        views: item.viewCount ? formatNumber(item.viewCount) : undefined,
-        date: item.date || item.uploadDate,
-        duration: item.duration,
-        channel,
-        position: index + 1,
-        searchQuery: keyword,
-        // YouTube-specific video stats (Added Dec 2025)
-        youtubeVideoLikes: item.likes,
-        youtubeVideoComments: item.commentsCount,
-      };
-    });
-
-  } catch (error: any) {
-    console.error('❌ Apify YouTube error:', error.message);
-
-    if (userId) {
-      await trackApiCall({
-        userId,
-        service: 'apify_youtube',
-        endpoint: ACTORS.youtube,
-        keyword,
-        status: 'error',
-        errorMessage: error.message,
-        durationMs: Date.now() - startTime,
-      });
-    }
-
-    return [];
-  }
-}
+// =============================================================================
+// REMOVED: searchYouTubeApify() - January 29, 2026
+// 
+// This function was dead code. It was only called when USE_SERPER_FOR_SOCIAL=false,
+// but production has always used USE_SERPER_FOR_SOCIAL=true since January 26, 2026.
+// Discovery is now done via searchYouTubeSerper() in search.ts, which uses Serper
+// for finding URLs and then calls enrichYouTubeByUrls() below for metadata.
+// =============================================================================
 
 // ============================================================================
 // YOUTUBE URL ENRICHMENT - January 27, 2026
@@ -621,35 +544,11 @@ export async function enrichInstagramByUrls(
 }
 
 // ============================================================================
-// INSTAGRAM SCRAPER
+// INSTAGRAM URL ENRICHMENT
+// 
+// REMOVED January 29, 2026: ApifyInstagramResult interface (was only used by
+// the now-removed searchInstagramApify function)
 // ============================================================================
-
-interface ApifyInstagramResult {
-  username?: string;
-  fullName?: string;
-  url?: string;
-  biography?: string;
-  followersCount?: number;
-  followsCount?: number;
-  postsCount?: number;
-  verified?: boolean;
-  isVerified?: boolean;
-  isBusinessAccount?: boolean;
-  businessCategoryName?: string;
-  profilePicUrl?: string;
-  profilePicUrlHD?: string;
-  latestPosts?: Array<{
-    id: string;
-    type: string;
-    url: string;
-    likesCount?: number;
-    commentsCount?: number;
-    videoViewCount?: number;
-    timestamp?: string;
-    displayUrl?: string;
-    caption?: string;
-  }>;
-}
 
 // ============================================================================
 // INSTAGRAM PROFILE ACTOR RESPONSE - January 28, 2026
@@ -731,186 +630,27 @@ interface ApifyInstagramProfileResult {
   fbid?: string;
 }
 
-/**
- * Search Instagram users/profiles using Apify scraper
- * Returns rich profile data including followers and recent posts
- * 
- * @param targetCountry - Optional country from onboarding for localized results
- *                        Added January 16, 2026
- */
-export async function searchInstagramApify(
-  keyword: string,
-  userId?: number,
-  searchLimit: number = 10,
-  targetCountry?: string | null
-): Promise<SearchResult[]> {
-  if (!client) {
-    console.error('❌ Apify client not initialized');
-    return [];
-  }
+// =============================================================================
+// REMOVED: searchInstagramApify() - January 29, 2026
+// 
+// This function was dead code. It was only called when USE_SERPER_FOR_SOCIAL=false,
+// but production has always used USE_SERPER_FOR_SOCIAL=true since January 26, 2026.
+// Discovery is now done via searchInstagramSerper() in search.ts, which uses Serper
+// for finding URLs and then calls enrichInstagramByUrls() below for metadata.
+// =============================================================================
 
-  const startTime = Date.now();
-  
-  // Sanitize keyword - Instagram rejects special characters like . in domains
-  const sanitizedKeyword = sanitizeKeywordForSocialMedia(keyword);
-  
-  // ==========================================================================
-  // LOCATION-BASED QUERY - January 16, 2026
-  // 
-  // Appends country shortName to search query for localized results.
-  // Instagram searches for USER PROFILES (searchType: 'user'), so adding
-  // country helps find local influencers/businesses.
-  // Example: "propolis" + Germany → "propolis Germany"
-  // ==========================================================================
-  const locationConfig = getLocationConfig(targetCountry, null);
-  const searchQuery = locationConfig 
-    ? `${sanitizedKeyword} ${locationConfig.shortName}`
-    : sanitizedKeyword;
-
-  console.log(`📸 Apify Instagram search: "${searchQuery}" (location: ${locationConfig?.shortName || 'global'})`);
-
-  try {
-    const run = await client.actor(ACTORS.instagram).call({
-      search: searchQuery,
-      searchType: 'user',
-      searchLimit,
-    });
-
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    const results = items as ApifyInstagramResult[];
-
-    console.log(`✅ Apify Instagram: ${results.length} profiles found`);
-
-    // Track API call
-    if (userId) {
-      await trackApiCall({
-        userId,
-        service: 'apify_instagram',
-        endpoint: ACTORS.instagram,
-        keyword,
-        status: 'success',
-        resultsCount: results.length,
-        estimatedCost: results.length * API_COSTS.apify_instagram,
-        apifyRunId: run.id,
-        durationMs: Date.now() - startTime,
-      });
-    }
-
-    // ==========================================================================
-    // FIX: Now returning all Instagram-specific fields from Apify response
-    // Previously, this data was lost because SearchResult didn't have these fields
-    // The data now flows: Apify → SearchResult → ResultItem → Database
-    // 
-    // UPDATED January 26, 2026: Filter out invalid results with no username
-    // Apify sometimes returns incomplete profiles - these would show "@undefined"
-    // in the UI which is confusing. We now skip these entirely.
-    // ==========================================================================
-    
-    // Filter out results with no username - these are invalid/incomplete profiles
-    const validResults = results.filter(item => {
-      if (!item.username) {
-        console.log(`⚠️ Skipping Instagram result with no username:`, item.fullName || 'unknown');
-        return false;
-      }
-      return true;
-    });
-    
-    console.log(`📸 Instagram: ${validResults.length}/${results.length} valid profiles (${results.length - validResults.length} skipped)`);
-    
-    return validResults.map((item, index): SearchResult => {
-      // Build snippet from bio and stats
-      // FIX: January 15th, 2026 - Ensure snippet is never empty to avoid NOT NULL violation
-      // The database column 'snippet' has a NOT NULL constraint, and empty strings
-      // were being converted to null in the INSERT statement (using || null).
-      const stats = [];
-      if (item.followersCount) stats.push(`${formatNumber(item.followersCount)} followers`);
-      if (item.postsCount) stats.push(`${formatNumber(item.postsCount)} posts`);
-      const snippetParts = [
-        item.biography?.substring(0, 200),
-        stats.length > 0 ? `📊 ${stats.join(' • ')}` : null,
-      ].filter(Boolean);
-      // Provide fallback if no bio or stats available
-      // Note: username is guaranteed to exist due to filter above
-      const snippet = snippetParts.length > 0 
-        ? snippetParts.join('\n') 
-        : `Instagram profile: @${item.username}`;
-
-      // Extract first (most recent) post stats from latestPosts array
-      const firstPost = item.latestPosts?.[0];
-
-      // ========================================================================
-      // INSTAGRAM BIO EMAIL - Updated January 24, 2026
-      // 
-      // IMPORTANT: We NO LONGER extract bio email here and store it in the
-      // `email` field. This was causing users to see "email found" for free
-      // without clicking "Find Email" or paying credits.
-      // 
-      // The bio is stored in `instagramBio` field. When user clicks "Find Email",
-      // the email is extracted from the bio at that point and credits are charged.
-      // 
-      // This ensures consistent monetization: all email discoveries cost credits.
-      // ========================================================================
-      // const bioEmail = extractEmailFromText(item.biography); // REMOVED - now done on-demand
-
-      // Build title safely - username is guaranteed to exist due to filter above
-      const title = item.fullName || `@${item.username}`;
-
-      return {
-        title,
-        link: item.url || `https://www.instagram.com/${item.username}`,
-        snippet,
-        source: 'Instagram' as Platform,
-        domain: 'instagram.com',
-        thumbnail: item.profilePicUrlHD || item.profilePicUrl,
-        views: item.followersCount ? formatNumber(item.followersCount) : undefined,
-        position: index + 1,
-        searchQuery: keyword,
-        personName: item.fullName || item.username,
-        
-        // January 24, 2026: REMOVED bio email from this field
-        // Email is now extracted on-demand when user clicks "Find Email" (charges 1 credit)
-        // email: undefined,
-        
-        // Instagram-specific fields - these are now properly passed through the pipeline
-        // and will be saved to the database columns: instagram_username, instagram_followers, etc.
-        instagramUsername: item.username,
-        instagramFullName: item.fullName,
-        instagramBio: item.biography,
-        instagramFollowers: item.followersCount,
-        instagramFollowing: item.followsCount,
-        instagramPostsCount: item.postsCount,
-        instagramIsBusiness: item.isBusinessAccount,
-        instagramIsVerified: item.verified ?? item.isVerified,
-        // Instagram post-level stats (from most recent post - Added Dec 2025)
-        instagramPostLikes: firstPost?.likesCount,
-        instagramPostComments: firstPost?.commentsCount,
-        instagramPostViews: firstPost?.videoViewCount,
-      };
-    });
-
-  } catch (error: any) {
-    console.error('❌ Apify Instagram error:', error.message);
-
-    if (userId) {
-      await trackApiCall({
-        userId,
-        service: 'apify_instagram',
-        endpoint: ACTORS.instagram,
-        keyword,
-        status: 'error',
-        errorMessage: error.message,
-        durationMs: Date.now() - startTime,
-      });
-    }
-
-    return [];
-  }
-}
+// =============================================================================
+// REMOVED: searchTikTokApify() - January 29, 2026
+// 
+// This function was dead code. It was only called when USE_SERPER_FOR_SOCIAL=false,
+// but production has always used USE_SERPER_FOR_SOCIAL=true since January 26, 2026.
+// Discovery is now done via searchTikTokSerper() in search.ts, which uses Serper
+// for finding URLs and then calls enrichTikTokByUrls() below for metadata.
+// =============================================================================
 
 // ============================================================================
-// TIKTOK SCRAPER
+// TIKTOK DATA TYPES - Used by enrichTikTokByUrls()
 // ============================================================================
-
 interface ApifyTikTokResult {
   id: string;
   text?: string;
@@ -936,198 +676,6 @@ interface ApifyTikTokResult {
     coverUrl?: string;
     duration?: number;
   };
-}
-
-/**
- * Search TikTok videos using Apify scraper
- * Returns rich data including creator stats and video metrics
- * 
- * @param targetCountry - Optional country from onboarding for localized results
- *                        Added January 16, 2026
- */
-export async function searchTikTokApify(
-  keyword: string,
-  userId?: number,
-  resultsPerPage: number = 10,
-  targetCountry?: string | null
-): Promise<SearchResult[]> {
-  if (!client) {
-    console.error('❌ Apify client not initialized');
-    return [];
-  }
-
-  const startTime = Date.now();
-  
-  // Sanitize keyword - TikTok may also reject special characters
-  const sanitizedKeyword = sanitizeKeywordForSocialMedia(keyword);
-  
-  // ==========================================================================
-  // LOCATION-BASED QUERY - January 16, 2026
-  // 
-  // Appends country shortName to search query for localized results.
-  // Example: "propolis" + Germany → "propolis Germany"
-  // Example: "fitness" + UK → "fitness UK"
-  // ==========================================================================
-  const locationConfig = getLocationConfig(targetCountry, null);
-  const searchQuery = locationConfig 
-    ? `${sanitizedKeyword} ${locationConfig.shortName}`
-    : sanitizedKeyword;
-
-  console.log(`🎵 Apify TikTok search: "${searchQuery}" (location: ${locationConfig?.shortName || 'global'})`);
-
-  try {
-    const run = await client.actor(ACTORS.tiktok).call({
-      searchQueries: [searchQuery],
-      resultsPerPage,
-      maxProfilesPerQuery: resultsPerPage,
-    });
-
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    const results = items as unknown as ApifyTikTokResult[];
-
-    console.log(`✅ Apify TikTok: ${results.length} videos found`);
-
-    // Track API call
-    if (userId) {
-      await trackApiCall({
-        userId,
-        service: 'apify_tiktok',
-        endpoint: ACTORS.tiktok,
-        keyword,
-        status: 'success',
-        resultsCount: results.length,
-        estimatedCost: results.length * API_COSTS.apify_tiktok,
-        apifyRunId: run.id,
-        durationMs: Date.now() - startTime,
-      });
-    }
-
-    // ==========================================================================
-    // FIX: Now returning all TikTok-specific fields from Apify response
-    // Previously, this data was lost because SearchResult didn't have these fields
-    // The data now flows: Apify → SearchResult → ResultItem → Database
-    // 
-    // UPDATED January 26, 2026: Filter out invalid results with no author info
-    // Apify sometimes returns incomplete videos - these would show "@undefined"
-    // in the UI which is confusing. We now skip these entirely.
-    // ==========================================================================
-    
-    // Filter out results with no author username - these are invalid/incomplete
-    const validResults = results.filter(item => {
-      if (!item.authorMeta?.name) {
-        console.log(`⚠️ Skipping TikTok result with no author:`, item.text?.substring(0, 30) || 'unknown video');
-        return false;
-      }
-      return true;
-    });
-    
-    console.log(`🎵 TikTok: ${validResults.length}/${results.length} valid videos (${results.length - validResults.length} skipped)`);
-    
-    return validResults.map((item, index): SearchResult => {
-      // Note: author is guaranteed to exist with name due to filter above
-      const author = item.authorMeta!;
-      
-      // ========================================================================
-      // BIO EMAIL EXTRACTION - Updated January 24, 2026
-      // 
-      // IMPORTANT: We NO LONGER extract bio email here and store it in the
-      // `email` field. This was causing users to see "email found" for free
-      // without clicking "Find Email" or paying credits.
-      // 
-      // The bio is stored in `tiktokBio` field. When user clicks "Find Email",
-      // the email is extracted from the bio at that point and credits are charged.
-      // 
-      // This ensures consistent monetization: all email discoveries cost credits.
-      // ========================================================================
-      // const bioEmail = extractEmailFromText(author?.signature); // REMOVED - now done on-demand
-      
-      // Build snippet from video text and author stats
-      // FIX: January 15th, 2026 - Ensure snippet is never empty to avoid NOT NULL violation
-      const stats = [];
-      if (item.playCount) stats.push(`${formatNumber(item.playCount)} views`);
-      if (item.diggCount) stats.push(`${formatNumber(item.diggCount)} likes`);
-      if (author.fans) stats.push(`${formatNumber(author.fans)} followers`);
-      
-      const snippetParts = [
-        item.text?.substring(0, 200),
-        stats.length > 0 ? `📊 ${stats.join(' • ')}` : null,
-      ].filter(Boolean);
-      // Provide fallback if no text or stats available
-      // Note: author.name is guaranteed to exist due to filter above
-      const snippet = snippetParts.length > 0 
-        ? snippetParts.join('\n') 
-        : `TikTok video by @${author.name}`;
-
-      // Create a channel-like object for TikTok creator (kept for backward compatibility)
-      // Note: author is guaranteed to exist with name due to filter above
-      const channel: YouTubeChannelInfo = {
-        name: author.nickName || author.name!, // name is guaranteed by filter
-        link: author.profileUrl || `https://www.tiktok.com/@${author.name}`,
-        thumbnail: author.avatar,
-        verified: author.verified,
-        subscribers: author.fans ? formatNumber(author.fans) : undefined,
-      };
-
-      return {
-        title: item.text?.substring(0, 100) || 'TikTok Video',
-        link: item.webVideoUrl || '',
-        snippet,
-        source: 'TikTok' as Platform,
-        domain: 'tiktok.com',
-        thumbnail: item.videoMeta?.coverUrl || author.avatar,
-        views: item.playCount ? formatNumber(item.playCount) : undefined,
-        date: item.createTimeISO,
-        duration: item.videoMeta?.duration ? `${Math.floor(item.videoMeta.duration / 60)}:${(item.videoMeta.duration % 60).toString().padStart(2, '0')}` : undefined,
-        channel,
-        position: index + 1,
-        searchQuery: keyword,
-        personName: author.nickName || author.name,
-        
-        // ======================================================================
-        // January 24, 2026: REMOVED bio email from this field
-        // 
-        // Previously: email: bioEmail (extracted from bio and stored for free)
-        // Now: email is undefined here - extracted on-demand when user pays
-        // 
-        // The bio is stored in tiktokBio field and email is extracted when
-        // user clicks "Find Email" button (charges 1 credit).
-        // ======================================================================
-        // email: undefined, // Bio email extracted on-demand, not stored here
-        
-        // TikTok-specific fields - these are now properly passed through the pipeline
-        // and will be saved to the database columns: tiktok_username, tiktok_followers, etc.
-        tiktokUsername: author?.name,
-        tiktokDisplayName: author?.nickName,
-        tiktokBio: author?.signature,
-        tiktokFollowers: author?.fans,
-        tiktokLikes: author?.heart,
-        tiktokVideosCount: author?.video,
-        tiktokIsVerified: author?.verified,
-        // Video-specific metrics for the discovered video
-        tiktokVideoPlays: item.playCount,
-        tiktokVideoLikes: item.diggCount,
-        tiktokVideoComments: item.commentCount,
-        tiktokVideoShares: item.shareCount,
-      };
-    });
-
-  } catch (error: any) {
-    console.error('❌ Apify TikTok error:', error.message);
-
-    if (userId) {
-      await trackApiCall({
-        userId,
-        service: 'apify_tiktok',
-        endpoint: ACTORS.tiktok,
-        keyword,
-        status: 'error',
-        errorMessage: error.message,
-        durationMs: Date.now() - startTime,
-      });
-    }
-
-    return [];
-  }
 }
 
 // ============================================================================
