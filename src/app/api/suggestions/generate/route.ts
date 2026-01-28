@@ -87,6 +87,7 @@ const DOMAIN_VALIDATION_TIMEOUT = 5000; // 5 seconds per domain
 // This schema ensures OpenAI returns properly structured data.
 // Using Zod with OpenAI's zodResponseFormat for type-safe responses.
 // =============================================================================
+// January 28th, 2026: Updated schema descriptions for stricter generation
 const SuggestionsSchema = z.object({
   competitors: z.array(z.object({
     name: z.string().describe('Company or product name'),
@@ -94,8 +95,8 @@ const SuggestionsSchema = z.object({
   })).describe('12 direct competitors to this business'),
   
   topics: z.array(z.object({
-    keyword: z.string().describe('Short search keyword (1-3 words max) - NOT a full phrase or sentence'),
-  })).describe('10 short base keywords for search (words like "review" are added automatically)'),
+    keyword: z.string().describe('Short keyword (1-3 words) extracted DIRECTLY from the website content. Must be in target language. No generic terms.'),
+  })).describe('10 specific keywords from the website content - product names, ingredients, brand terms that ACTUALLY appear on the site'),
   
   industry: z.string().describe('The primary industry/category of this business'),
   
@@ -298,16 +299,35 @@ async function generateWithAI(
    - For country-specific domains (e.g., .de, .fr, .co.uk), prefer those when targeting that market`
     : '';
   
-  // Build combined instruction for topics (both country and language matter)
+  // ==========================================================================
+  // January 28th, 2026: Stricter language and specificity instructions
+  // 
+  // Problem: AI was generating:
+  // 1. Keywords in wrong language (French "Gelée Royale" for German users)
+  // 2. Generic/broad keywords not specific to the website content
+  // 
+  // Solution: Much stricter instructions with explicit rules
+  // ==========================================================================
   const topicsInstruction = (() => {
     const parts: string[] = [];
+    
+    // Specificity instruction (always apply)
+    parts.push(`CRITICAL: Keywords must be DIRECTLY extracted from the scraped website content below`);
+    parts.push(`Only use product names, brand names, and ingredients that ACTUALLY APPEAR on the website`);
+    parts.push(`Do NOT generate generic category keywords like "honey" or "cream" - be specific`);
+    parts.push(`Example: If website sells "Manuka Honey MGO 400+", use "Manuka Honig MGO 400" not just "Honig"`);
+    
     if (targetCountry) {
       parts.push(`Generate topics relevant to what people in ${targetCountry} search for`);
     }
+    
     if (targetLanguage) {
-      parts.push(`All topics MUST be in ${targetLanguage} language`);
-      parts.push(`Use native ${targetLanguage} terms, not English translations`);
+      parts.push(`LANGUAGE RULE: ALL keywords MUST be in ${targetLanguage} language ONLY`);
+      parts.push(`NEVER use French, English, or any other language - only ${targetLanguage}`);
+      parts.push(`If the website has terms in other languages, TRANSLATE them to ${targetLanguage}`);
+      parts.push(`Example for German: "Gelée Royale" → "Gelee Royal", "Royal Jelly" → "Gelée Royal"`);
     }
+    
     return parts.length > 0 ? '\n   - ' + parts.join('\n   - ') : '';
   })();
   
@@ -316,35 +336,47 @@ async function generateWithAI(
       model: OPENAI_MODEL,
       messages: [
         {
+          // January 28th, 2026: Improved prompt for stricter language + specificity
           role: 'system',
-          content: `You are a competitive analysis expert specializing in affiliate marketing. 
+          content: `You are a competitive analysis expert specializing in affiliate marketing.
 
-Your task is to analyze a website and identify:
+Your task is to analyze a website and identify competitors and search keywords.
 
-1. COMPETITORS (exactly 12):
-   - Must be REAL, existing companies with working websites
-   - Direct competitors offering similar products/services
-   - Include a mix of large and smaller competitors
-   - Domain format: just the domain (e.g., "competitor.com"), no http/https/www${countryInstruction}
+=== COMPETITORS (exactly 12) ===
+- Must be REAL, existing companies with working websites
+- Direct competitors offering similar products/services
+- Include a mix of large and smaller competitors
+- Domain format: just the domain (e.g., "competitor.com"), no http/https/www${countryInstruction}
 
-2. TOPICS (exactly 10):
-   - SHORT search keywords (1-3 words maximum!) based on the website content
-   - These keywords are used to search Google, YouTube, Instagram, TikTok
-   - Words like "review", "blog", "test" are AUTOMATICALLY ADDED by our system
-   - So generate only the BASE product/ingredient/category keywords
-   - NO full sentences, NO phrases with adjectives like "best" or years
-   - Just the core noun: product name, ingredient, or category
-   - Extract these from the scraped website content${topicsInstruction}
+=== TOPICS/KEYWORDS (exactly 10) ===
+- SHORT search keywords (1-3 words maximum!)
+- These keywords are used to search Google, YouTube, Instagram, TikTok
+- Words like "review", "blog", "test" are AUTOMATICALLY ADDED by our system
+- Generate only the BASE product/ingredient keywords${topicsInstruction}
 
-Be specific and practical. These suggestions will be used for affiliate marketing outreach.`
+=== IMPORTANT RULES ===
+1. SPECIFICITY: Keywords must come from the ACTUAL website content provided below.
+   - Extract real product names, brand names, ingredients mentioned on the site
+   - Do NOT invent generic keywords that don't appear on the website
+   - BAD: "honey", "bee products", "health supplements" (too generic)
+
+2. LANGUAGE: If a target language is specified, ALL keywords must be in that language.
+   - If the website uses English/French terms, TRANSLATE them to the target language
+   - NEVER mix languages - all 10 keywords must be in the SAME target language
+
+Be specific and practical. Generic keywords return generic results.`
         },
         {
+          // January 28th, 2026: Clearer user message with language emphasis
           role: 'user',
           content: `Analyze this website and provide competitor and topic suggestions.
 
-Website: ${websiteUrl}${targetCountry ? `\nTarget Market: ${targetCountry}` : ''}${targetLanguage ? `\nTarget Language: ${targetLanguage}` : ''}
+Website: ${websiteUrl}
+${targetCountry ? `Target Market: ${targetCountry}` : ''}
+${targetLanguage ? `Target Language: ${targetLanguage} (ALL keywords MUST be in ${targetLanguage} only!)` : ''}
 
-Content:
+Extract keywords from this website content - only use terms that actually appear here:
+
 ${truncatedContent}`
         }
       ],

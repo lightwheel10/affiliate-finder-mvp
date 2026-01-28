@@ -50,6 +50,9 @@ next-env.d.ts
 # scripts folder (test files and results)
 /scripts/
 
+# test results
+/test-results/
+
 # IDE and editor folders
 .cursor/
 .vscode/

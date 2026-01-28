@@ -49,8 +49,10 @@ import {
 import { 
   getLocationConfig, 
   filterResultsByLanguage, 
+  filterResultsByTLD,           // January 28, 2026: TLD-based country filtering
   getLanguageName,
-  type LanguageFilterConfig 
+  type LanguageFilterConfig,
+  type TLDFilterConfig          // January 28, 2026: TLD filter configuration type
 } from './location';
 
 const SERPER_API_KEY = process.env.SERPER_API_KEY;
@@ -1081,6 +1083,47 @@ export async function searchWeb(
     console.log(`🌐 Language filter: Disabled (no target language set)`);
     finalResults = domainFiltered;
   }
+
+  // ==========================================================================
+  // TLD-BASED COUNTRY FILTERING - January 28, 2026
+  // 
+  // Purpose:
+  // Filter results by domain TLD (Top-Level Domain) to ensure results are from
+  // the user's target country or related regions. This is the final filtering
+  // step after language detection.
+  // 
+  // Why this is needed:
+  // Even with Serper's gl/hl/lr parameters and franc language detection, some
+  // results from unrelated countries may slip through. For example, a German
+  // user might see .fr (France) or .es (Spain) domains with German content.
+  // 
+  // How it works:
+  // - Each country has a list of allowed TLDs (defined in location.ts)
+  // - Germany allows: .de, .at, .ch (DACH region) + .com, .net, .org, .io
+  // - Results from other country TLDs (.fr, .es, .it, .co.uk, etc.) are blocked
+  // 
+  // Configuration:
+  // - Only runs when targetCountry is set in user's onboarding
+  // - Logs only when results are actually filtered (not verbose)
+  // ==========================================================================
+  if (options.targetCountry) {
+    const tldFilterConfig: TLDFilterConfig = {
+      enabled: true,
+      targetCountry: options.targetCountry,
+    };
+
+    const { results: tldFiltered, stats: tldStats } = filterResultsByTLD(
+      finalResults,
+      tldFilterConfig
+    );
+
+    // Only log if we actually filtered something (keep logs clean)
+    if (tldStats.filtered > 0) {
+      console.log(`🌍 TLD filter: ${tldStats.passed}/${tldStats.totalBefore} passed (blocked: ${tldStats.blockedTLDs.join(', ')})`);
+    }
+
+    finalResults = tldFiltered;
+  }
   
   console.log(`✅ Web results (final): ${finalResults.length}/${results.length}`);
 
@@ -1402,7 +1445,30 @@ export async function searchYouTubeSerper(
 
     const { results: filteredResults, stats } = filterResultsByLanguage(results, languageFilterConfig);
     console.log(`🎬 [Serper] YouTube after language filter: ${filteredResults.length}/${results.length}`);
-    return filteredResults;
+    results = filteredResults;
+  }
+
+  // ==========================================================================
+  // TLD-BASED COUNTRY FILTERING - January 28, 2026
+  // 
+  // Filter YouTube results by domain TLD to ensure results are from the user's
+  // target country. While YouTube URLs are always youtube.com, the linked
+  // channel pages and external links may have country-specific TLDs.
+  // 
+  // Note: For YouTube, this primarily catches edge cases where non-youtube.com
+  // URLs appear in results (rare but possible).
+  // ==========================================================================
+  if (targetCountry) {
+    const { results: tldFiltered, stats: tldStats } = filterResultsByTLD(
+      results,
+      { enabled: true, targetCountry }
+    );
+
+    if (tldStats.filtered > 0) {
+      console.log(`🎬 [Serper] YouTube TLD filter: ${tldStats.passed}/${tldStats.totalBefore} (blocked: ${tldStats.blockedTLDs.join(', ')})`);
+    }
+
+    results = tldFiltered;
   }
 
   return results;
@@ -1600,7 +1666,27 @@ export async function searchInstagramSerper(
 
     const { results: filteredResults, stats } = filterResultsByLanguage(results, languageFilterConfig);
     console.log(`📸 [Serper] Instagram after language filter: ${filteredResults.length}/${results.length}`);
-    return filteredResults;
+    results = filteredResults;
+  }
+
+  // ==========================================================================
+  // TLD-BASED COUNTRY FILTERING - January 28, 2026
+  // 
+  // Filter Instagram results by domain TLD to ensure results are from the
+  // user's target country. While Instagram URLs are always instagram.com,
+  // this filter catches edge cases and maintains consistency across platforms.
+  // ==========================================================================
+  if (targetCountry) {
+    const { results: tldFiltered, stats: tldStats } = filterResultsByTLD(
+      results,
+      { enabled: true, targetCountry }
+    );
+
+    if (tldStats.filtered > 0) {
+      console.log(`📸 [Serper] Instagram TLD filter: ${tldStats.passed}/${tldStats.totalBefore} (blocked: ${tldStats.blockedTLDs.join(', ')})`);
+    }
+
+    results = tldFiltered;
   }
 
   return results;
@@ -1803,7 +1889,27 @@ export async function searchTikTokSerper(
 
     const { results: filteredResults, stats } = filterResultsByLanguage(results, languageFilterConfig);
     console.log(`🎵 [Serper] TikTok after language filter: ${filteredResults.length}/${results.length}`);
-    return filteredResults;
+    results = filteredResults;
+  }
+
+  // ==========================================================================
+  // TLD-BASED COUNTRY FILTERING - January 28, 2026
+  // 
+  // Filter TikTok results by domain TLD to ensure results are from the user's
+  // target country. While TikTok URLs are always tiktok.com, this filter
+  // catches edge cases and maintains consistency across all platforms.
+  // ==========================================================================
+  if (targetCountry) {
+    const { results: tldFiltered, stats: tldStats } = filterResultsByTLD(
+      results,
+      { enabled: true, targetCountry }
+    );
+
+    if (tldStats.filtered > 0) {
+      console.log(`🎵 [Serper] TikTok TLD filter: ${tldStats.passed}/${tldStats.totalBefore} (blocked: ${tldStats.blockedTLDs.join(', ')})`);
+    }
+
+    results = tldFiltered;
   }
 
   return results;
