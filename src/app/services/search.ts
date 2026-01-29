@@ -1903,3 +1903,309 @@ export async function searchTikTokSerper(
 // 2. Those functions use Serper for discovery (with language filtering)
 // 3. Then call Apify enrichment functions for metadata
 // =============================================================================
+
+// =============================================================================
+// FILTERING FUNCTIONS FOR POLLING ARCHITECTURE
+// January 29, 2026
+// 
+// These functions are used by /api/search/status to filter results from the
+// Apify google-search-scraper. They encapsulate the filtering logic that was
+// previously inline in the Serper-based search functions.
+// 
+// IMPORTANT: Web and Social have DIFFERENT filtering requirements!
+// - Web: Full filtering (e-commerce, shop patterns, language, TLD)
+// - Social: Minimal filtering (enrichment required, language only)
+// =============================================================================
+
+/**
+ * Options for web result filtering
+ */
+export interface WebFilterOptions {
+  userBrand?: string;
+  excludeDomains?: string[];
+  targetCountry?: string;
+  targetLanguage?: string;
+  strictFiltering?: boolean;
+}
+
+/**
+ * Options for social result filtering
+ */
+export interface SocialFilterOptions {
+  requireEnrichment?: boolean;
+  targetLanguage?: string;
+  /** User's own brand domain to exclude their own social accounts */
+  userBrand?: string;
+  /** Competitor domains to exclude their own social accounts (when searching competitors) */
+  excludeBrands?: string[];
+}
+
+/**
+ * Filter web results through the full filtering pipeline.
+ * 
+ * January 29, 2026: Exported for use by /api/search/status
+ * 
+ * Filtering steps:
+ * 1. Block ECOMMERCE_DOMAINS
+ * 2. Exclude user's own brand domain
+ * 3. Block SHOP_URL_PATTERNS
+ * 4. Block shop content signals (unless has affiliate signals)
+ * 5. Apply language filter (franc)
+ * 6. Apply TLD filter (country)
+ * 7. Prioritize results with affiliate signals
+ * 
+ * @param results - Raw web results
+ * @param options - Filter options
+ * @returns Filtered and prioritized results
+ */
+export function filterWebResults(
+  results: SearchResult[],
+  options: WebFilterOptions = {}
+): SearchResult[] {
+  const { 
+    userBrand, 
+    excludeDomains = [], 
+    targetCountry, 
+    targetLanguage,
+    strictFiltering = true 
+  } = options;
+  
+  console.log(`🌐 [FilterWeb] Input: ${results.length} results`);
+  
+  // Step 1-4: Domain and shop filtering via filterAndPrioritizeResults
+  const domainFiltered = filterAndPrioritizeResults(results, {
+    userBrand,
+    excludeDomains,
+    strictFiltering,
+  });
+  
+  console.log(`🌐 [FilterWeb] After domain filter: ${domainFiltered.length}`);
+  
+  // Step 5: Language filtering
+  let languageFiltered = domainFiltered;
+  if (targetLanguage) {
+    const locationConfig = getLocationConfig(targetCountry, targetLanguage);
+    if (locationConfig?.languageCode) {
+      const languageFilterConfig: LanguageFilterConfig = {
+        enabled: true,
+        targetLanguageCode: locationConfig.languageCode,
+        verbose: process.env.NODE_ENV === 'development',
+      };
+      
+      const { results: filtered } = filterResultsByLanguage(
+        domainFiltered,
+        languageFilterConfig
+      );
+      languageFiltered = filtered;
+      console.log(`🌐 [FilterWeb] After language filter: ${languageFiltered.length}`);
+    }
+  }
+  
+  // Step 6: TLD filtering
+  let tldFiltered = languageFiltered;
+  if (targetCountry) {
+    const tldFilterConfig: TLDFilterConfig = {
+      enabled: true,
+      targetCountry,
+    };
+    
+    const { results: filtered, stats } = filterResultsByTLD(
+      languageFiltered,
+      tldFilterConfig
+    );
+    
+    if (stats.filtered > 0) {
+      console.log(`🌐 [FilterWeb] TLD filter: blocked ${stats.filtered} results (${stats.blockedTLDs.join(', ')})`);
+    }
+    
+    tldFiltered = filtered;
+  }
+  
+  console.log(`🌐 [FilterWeb] Final: ${tldFiltered.length} results`);
+  
+  return tldFiltered;
+}
+
+/**
+ * Filter social results (YouTube, Instagram, TikTok).
+ * 
+ * January 29, 2026: Exported for use by /api/search/status
+ * 
+ * Social results have minimal filtering because:
+ * - The site: filter already constrains to the platform
+ * - No need for e-commerce/shop filtering
+ * - TLD filtering is useless (URLs are always platform.com)
+ * 
+ * Filtering steps:
+ * 1. Require enrichment data (skip results without metadata)
+ * 2. Apply language filter (franc)
+ * 
+ * @param results - Social platform results (already enriched)
+ * @param options - Filter options
+ * @returns Filtered results
+ */
+export function filterSocialResults(
+  results: SearchResult[],
+  options: SocialFilterOptions = {}
+): SearchResult[] {
+  const { requireEnrichment = true, targetLanguage, userBrand, excludeBrands } = options;
+  
+  console.log(`📱 [FilterSocial] Input: ${results.length} results`);
+  
+  let filtered = results;
+  
+  // Step 1: Filter out results without enrichment
+  if (requireEnrichment) {
+    filtered = results.filter(r => {
+      // Check for enrichment markers based on platform
+      if (r.source === 'YouTube') {
+        return r.channel && r.channel.name !== 'Unknown Channel';
+      }
+      if (r.source === 'Instagram') {
+        return r.channel && r.instagramUsername;
+      }
+      if (r.source === 'TikTok') {
+        return r.channel && r.tiktokFollowers !== undefined;
+      }
+      return true;
+    });
+    
+    console.log(`📱 [FilterSocial] After enrichment filter: ${filtered.length}`);
+  }
+  
+  // Step 2: Brand exclusion - filter out brand's own social accounts
+  // January 29, 2026: Added to exclude competitor's own accounts when searching competitors
+  if (userBrand || (excludeBrands && excludeBrands.length > 0)) {
+    const brandsToExclude: string[] = [];
+    
+    // Add user's own brand
+    if (userBrand) {
+      const userBrandName = extractBrandNameForFilter(userBrand);
+      if (userBrandName) {
+        brandsToExclude.push(userBrandName);
+      }
+    }
+    
+    // Add competitor brands
+    if (excludeBrands) {
+      for (const brand of excludeBrands) {
+        const brandName = extractBrandNameForFilter(brand);
+        if (brandName) {
+          brandsToExclude.push(brandName);
+        }
+      }
+    }
+    
+    if (brandsToExclude.length > 0) {
+      const beforeCount = filtered.length;
+      filtered = filtered.filter(r => {
+        // Get channel/username to check
+        const channelName = (r.channel?.name || '').toLowerCase();
+        const username = (r.tiktokUsername || r.instagramUsername || '').toLowerCase();
+        
+        // Also check the title for brand mention (catches branded content)
+        const title = (r.title || '').toLowerCase();
+        
+        // Keep result if it doesn't match any excluded brand
+        const shouldExclude = brandsToExclude.some(brand => {
+          // Check if channel name or username contains the brand
+          // Use word boundary matching to avoid false positives
+          // e.g., "bedrop" should match "bedrop_official" but not "bedrops_store"
+          const brandLower = brand.toLowerCase();
+          
+          return channelName.includes(brandLower) || 
+                 username.includes(brandLower) ||
+                 // Check if title starts with brand (official account pattern)
+                 title.startsWith(brandLower);
+        });
+        
+        return !shouldExclude;
+      });
+      
+      if (filtered.length < beforeCount) {
+        console.log(`📱 [FilterSocial] Brand exclusion: removed ${beforeCount - filtered.length} results (brands: ${brandsToExclude.join(', ')})`);
+      }
+    }
+  }
+  
+  // Step 3: Language filtering
+  if (targetLanguage && filtered.length > 0) {
+    // Get language code from LANGUAGE_TO_CODE
+    const languageCode = LANGUAGE_TO_CODE[targetLanguage];
+    
+    if (languageCode) {
+      const languageFilterConfig: LanguageFilterConfig = {
+        enabled: true,
+        targetLanguageCode: languageCode,
+        verbose: process.env.NODE_ENV === 'development',
+      };
+      
+      const { results: langFiltered } = filterResultsByLanguage(
+        filtered,
+        languageFilterConfig
+      );
+      filtered = langFiltered;
+      console.log(`📱 [FilterSocial] After language filter: ${filtered.length}`);
+    }
+  }
+  
+  return filtered;
+}
+
+/**
+ * Extract brand name from domain for filtering.
+ * Simplified version that strips common TLDs.
+ */
+function extractBrandNameForFilter(domain: string): string {
+  if (!domain || typeof domain !== 'string') return '';
+  
+  let cleaned = domain.trim().toLowerCase();
+  
+  // Remove protocol
+  cleaned = cleaned.replace(/^https?:\/\//, '');
+  
+  // Remove www
+  cleaned = cleaned.replace(/^www\./, '');
+  
+  // Remove path
+  cleaned = cleaned.replace(/\/.*$/, '');
+  
+  // Remove TLD
+  cleaned = cleaned.replace(/\.(com|de|co\.uk|net|org|io|app|shop|store|eu|at|ch|fr|es|it|nl|be|pl|se|no|dk|fi)$/i, '');
+  
+  // Handle compound domains like .co.uk
+  const parts = cleaned.split('.');
+  if (parts.length > 1) {
+    // Take the main part (before subdomain or remaining TLD parts)
+    cleaned = parts[parts.length - 1] || parts[0];
+  }
+  
+  return cleaned;
+}
+
+// =============================================================================
+// LANGUAGE_TO_CODE MAPPING (for filterSocialResults)
+// January 29, 2026
+// 
+// Maps language names to ISO 639-1 codes.
+// Needed because filterResultsByLanguage uses ISO codes, not language names.
+// =============================================================================
+const LANGUAGE_TO_CODE: Record<string, string> = {
+  'English': 'en',
+  'Spanish': 'es',
+  'German': 'de',
+  'French': 'fr',
+  'Portuguese': 'pt',
+  'Italian': 'it',
+  'Dutch': 'nl',
+  'Swedish': 'sv',
+  'Danish': 'da',
+  'Norwegian': 'no',
+  'Finnish': 'fi',
+  'Polish': 'pl',
+  'Czech': 'cs',
+  'Japanese': 'ja',
+  'Korean': 'ko',
+  'Arabic': 'ar',
+  'Hebrew': 'he',
+};

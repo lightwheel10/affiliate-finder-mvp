@@ -1,25 +1,36 @@
 /**
  * =============================================================================
- * AUTO-SCAN CRON ENDPOINT - January 13th, 2026
+ * AUTO-SCAN CRON ENDPOINT - January 29th, 2026
  * =============================================================================
+ * 
+ * MAJOR REFACTOR: January 29th, 2026 - Apify Polling Architecture
  * 
  * This endpoint is triggered by Vercel Cron to automatically scan for new
  * affiliates for paid users.
  * 
  * HOW IT WORKS:
  * 1. Vercel Cron calls this endpoint hourly (configured in vercel.json)
- * 2. We find all users where:
+ * 2. We find 1 user where:
  *    - status = 'active' (paid users, not trialing)
  *    - next_auto_scan_at <= NOW() (scan is due)
- * 3. For each qualifying user:
+ * 3. For the qualifying user:
  *    - Check if they have topic_search credits available
  *    - Get their topics[] and competitors[] from onboarding data
- *    - Run searches on all platforms (Web, YouTube, Instagram, TikTok)
- *    - Save results to discovered_affiliates (duplicates auto-blocked by link)
+ *    - Start Apify google-search-scraper run (all platforms batched)
+ *    - Poll until complete (40-95s typical)
+ *    - Enrich social results with Apify enrichment actors
+ *    - Filter results (Web: full pipeline, Social: minimal)
+ *    - Save results to discovered_affiliates
  *    - Consume 1 topic_search credit
  *    - Update last_auto_scan_at = NOW()
  *    - Update next_auto_scan_at = NOW() + 7 days
- * 4. If no credits available, scan is skipped (user will see "No credits" state)
+ * 4. If no credits available, scan is skipped
+ * 
+ * ARCHITECTURE CHANGE (January 29th, 2026):
+ * - Changed from 10 users/run (Serper) to 1 user/run (Apify)
+ * - Apify runs take 40-95s vs Serper's 2-3s
+ * - Single user per run stays within Vercel 300s limit
+ * - Hourly cron ensures users are processed over time
  * 
  * SECURITY:
  * - Protected by CRON_SECRET header (Vercel auto-sends this)
@@ -28,11 +39,6 @@
  * 
  * SCAN INTERVAL: 7 days for all plans (Pro, Business, Enterprise)
  * 
- * COST CONSIDERATIONS:
- * - Each user scan consumes 1 topic_search credit
- * - API costs: Serper (Web) + Apify (YouTube, Instagram, TikTok)
- * - SimilarWeb enrichment is skipped for auto-scans (cost savings)
- * 
  * =============================================================================
  */
 
@@ -40,33 +46,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { checkCredits, consumeCredits } from '@/lib/credits';
 import { 
-  searchWeb,
-  // ==========================================================================
-  // January 29, 2026: CLEANUP - Removed USE_SERPER_FOR_SOCIAL conditional
-  // 
-  // These Serper-based functions are now the ONLY search path.
-  // They use Serper for discovery (good language filtering) and call
-  // Apify enrichment functions internally for metadata (followers, etc.)
-  // ==========================================================================
-  searchYouTubeSerper,
-  searchInstagramSerper,
-  searchTikTokSerper,
+  SearchResult,
+  Platform,
+  filterWebResults,
+  filterSocialResults,
 } from '@/app/services/search';
-// January 29, 2026: CLEANUP - Removed dead Apify search function imports
+import {
+  enrichYouTubeByUrls,
+  enrichInstagramByUrls,
+  enrichTikTokByUrls,
+} from '@/app/services/apify';
+import {
+  startGoogleSearchRun,
+  getRunStatus,
+  fetchAndProcessResults,
+} from '@/app/services/apify-google-scraper';
 import { trackSearch, completeSearch, API_COSTS } from '@/app/services/tracking';
 
 // =============================================================================
 // VERCEL FUNCTION CONFIGURATION
-// Auto-scans can take time if processing multiple users
+// January 29th, 2026: Single user per run with Apify polling
 // =============================================================================
 export const maxDuration = 300; // 5 minutes - Vercel Pro plan limit
 
 // =============================================================================
-// CONSTANTS
+// CONSTANTS - January 29th, 2026
 // =============================================================================
 const SCAN_INTERVAL_DAYS = 7; // All plans get 7-day scan interval
-const MAX_USERS_PER_RUN = 10; // Limit users per cron run to avoid timeout
-const RESULTS_PER_PLATFORM = 10; // Fewer results than manual search (cost savings)
+const MAX_USERS_PER_RUN = 1; // Changed from 10 to 1 for Apify polling (40-95s per user)
 
 /**
  * GET /api/cron/auto-scan
@@ -98,8 +105,9 @@ export async function GET(request: NextRequest) {
   }
   
   console.log('[AutoScan] ========================================');
-  console.log('[AutoScan] Starting auto-scan cron job...');
+  console.log('[AutoScan] Starting auto-scan cron job (Apify Polling)...');
   console.log(`[AutoScan] Time: ${new Date().toISOString()}`);
+  console.log(`[AutoScan] Max users per run: ${MAX_USERS_PER_RUN}`);
   
   try {
     // ========================================================================
@@ -114,7 +122,8 @@ export async function GET(request: NextRequest) {
         u.topics,
         u.competitors,
         u.target_country,
-        u.target_language
+        u.target_language,
+        u.brand
       FROM crewcast.subscriptions s
       JOIN crewcast.users u ON s.user_id = u.id
       WHERE 
@@ -180,12 +189,17 @@ export async function GET(request: NextRequest) {
           continue;
         }
         
-        // Build search keywords from topics + competitors
-        const searchKeywords = buildSearchKeywords(topics, competitors);
-        console.log(`[AutoScan] User ${userId}: Searching ${searchKeywords.length} keywords`);
+        // Get user's target settings
+        const targetCountry = user.target_country as string | null;
+        const targetLanguage = user.target_language as string | null;
+        const userBrand = user.brand as string | null;
         
-        // Run the scan
-        const scanResult = await runAutoScan(userId, searchKeywords);
+        console.log(`[AutoScan] User ${userId}: Scanning ${topics.length} topics + ${competitors.length} competitors`);
+        
+        // Run the scan with Apify polling
+        // January 29, 2026: Pass topics and competitors directly (no more buildSearchKeywords)
+        // January 29, 2026: Pass userBrand for social filtering (exclude own accounts)
+        const scanResult = await runAutoScan(userId, topics, competitors, userBrand, targetCountry, targetLanguage);
         
         // Consume credit (only if we found results or attempted search)
         const consumeResult = await consumeCredits(userId, 'topic_search', 1, 'auto_scan', 'cron');
@@ -255,103 +269,366 @@ export async function GET(request: NextRequest) {
 }
 
 // =============================================================================
-// HELPER: Build search keywords from topics and competitors
+// HELPER: Format number for display (e.g., 5700 -> "5.7K")
+// January 29th, 2026
 // =============================================================================
-function buildSearchKeywords(topics: string[], competitors: string[]): string[] {
-  const keywords: string[] = [];
-  
-  // Add topics directly as search keywords
-  topics.forEach(topic => {
-    if (topic.trim()) {
-      keywords.push(topic.trim());
-    }
-  });
-  
-  // Add competitor-based keywords (e.g., "competitor.com alternatives")
-  competitors.forEach(competitor => {
-    if (competitor.trim()) {
-      // Extract brand name from domain if possible
-      const domain = competitor.trim().toLowerCase();
-      const brandName = domain
-        .replace(/^www\./, '')
-        .replace(/\.(com|io|co|net|org|app).*$/, '');
-      
-      if (brandName) {
-        keywords.push(`${brandName} alternative`);
-        keywords.push(`${brandName} competitor`);
-      }
-    }
-  });
-  
-  // Remove duplicates and limit to 5 keywords max
-  return [...new Set(keywords)].slice(0, 5);
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return num.toString();
 }
 
 // =============================================================================
-// HELPER: Run auto-scan for a user
+// HELPER: Sleep for polling
+// January 29th, 2026
+// =============================================================================
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// =============================================================================
+// HELPER: Build search keywords from topics and competitors
+// 
+// January 29, 2026 - DEPRECATED
+// This function is no longer used. Topics and competitors are now passed
+// directly to startGoogleSearchRun() which uses the shared localized-search
+// utility to build fully localized queries.
+// 
+// OLD BEHAVIOR (buggy):
+// - Created English queries like "bedrop alternative" and "bedrop competitor"
+// - Didn't use localized terms for non-English targets
+// 
+// NEW BEHAVIOR:
+// - Topics are passed as keywords[] to startGoogleSearchRun
+// - Competitors are passed as competitors[] (brand name is extracted automatically)
+// - Queries are fully localized (German: "bedrop erfahrung", not "bedrop alternative")
+// =============================================================================
+// function buildSearchKeywords - REMOVED
+
+// =============================================================================
+// HELPER: Enrich YouTube results with Apify metadata
+// January 29th, 2026
+// =============================================================================
+async function enrichYouTubeResults(results: SearchResult[]): Promise<SearchResult[]> {
+  if (results.length === 0) return results;
+  
+  try {
+    const urls = results.map(r => r.link).filter(Boolean);
+    console.log(`[AutoScan] Enriching ${urls.length} YouTube URLs...`);
+    
+    const enrichmentMap = await enrichYouTubeByUrls(urls);
+    
+    return results.map(result => {
+      const apifyData = enrichmentMap.get(result.link);
+      if (apifyData) {
+        return {
+          ...result,
+          channel: {
+            name: apifyData.channelName || 'Unknown Channel',
+            link: apifyData.channelUrl || `https://www.youtube.com/@${apifyData.channelUsername || 'unknown'}`,
+            verified: apifyData.isVerified,
+            subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined,
+          },
+          views: apifyData.viewCount ? formatNumber(apifyData.viewCount) : undefined,
+          youtubeVideoLikes: apifyData.likes,
+          youtubeVideoComments: apifyData.commentsCount,
+          duration: apifyData.duration,
+          thumbnail: apifyData.thumbnailUrl,
+          title: apifyData.title || result.title,
+          snippet: apifyData.text?.substring(0, 300) || result.snippet,
+          date: apifyData.date || apifyData.uploadDate || result.date,
+        };
+      }
+      return result;
+    });
+  } catch (error: any) {
+    console.warn(`[AutoScan] YouTube enrichment failed:`, error.message);
+    return results;
+  }
+}
+
+// =============================================================================
+// HELPER: Enrich Instagram results with Apify metadata
+// January 29th, 2026
+// =============================================================================
+async function enrichInstagramResults(results: SearchResult[]): Promise<SearchResult[]> {
+  if (results.length === 0) return results;
+  
+  try {
+    const urls = results.map(r => r.link).filter(Boolean);
+    console.log(`[AutoScan] Enriching ${urls.length} Instagram URLs...`);
+    
+    const enrichmentMap = await enrichInstagramByUrls(urls);
+    
+    return results.map(result => {
+      const apifyData = enrichmentMap.get(result.link);
+      if (apifyData && apifyData.username) {
+        const firstPost = (apifyData as any).latestPosts?.[0];
+        
+        return {
+          ...result,
+          channel: {
+            name: apifyData.fullName || apifyData.username,
+            link: apifyData.url || `https://www.instagram.com/${apifyData.username}/`,
+            thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+            verified: apifyData.verified,
+            subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
+          },
+          instagramUsername: apifyData.username,
+          instagramFullName: apifyData.fullName,
+          instagramBio: apifyData.biography,
+          instagramFollowers: apifyData.followersCount,
+          instagramFollowing: apifyData.followsCount,
+          instagramPostsCount: apifyData.postsCount,
+          instagramIsBusiness: apifyData.isBusinessAccount,
+          instagramIsVerified: apifyData.verified,
+          instagramPostLikes: firstPost?.likesCount,
+          instagramPostComments: firstPost?.commentsCount,
+          instagramPostViews: firstPost?.videoViewCount,
+          thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+          personName: apifyData.fullName || apifyData.username,
+          title: apifyData.fullName || `@${apifyData.username}` || result.title,
+          snippet: apifyData.biography?.substring(0, 300) || result.snippet,
+        };
+      }
+      return result;
+    });
+  } catch (error: any) {
+    console.warn(`[AutoScan] Instagram enrichment failed:`, error.message);
+    return results;
+  }
+}
+
+// =============================================================================
+// HELPER: Enrich TikTok results with Apify metadata
+// January 29th, 2026
+// =============================================================================
+async function enrichTikTokResults(results: SearchResult[]): Promise<SearchResult[]> {
+  if (results.length === 0) return results;
+  
+  try {
+    const urls = results.map(r => r.link).filter(Boolean);
+    console.log(`[AutoScan] Enriching ${urls.length} TikTok URLs...`);
+    
+    const enrichmentMap = await enrichTikTokByUrls(urls);
+    
+    return results.map(result => {
+      const apifyData = enrichmentMap.get(result.link);
+      if (apifyData && apifyData.authorMeta) {
+        const author = apifyData.authorMeta;
+        
+        return {
+          ...result,
+          channel: {
+            name: author.nickName || author.name || result.tiktokUsername || 'Unknown',
+            link: author.profileUrl || `https://www.tiktok.com/@${author.name}`,
+            thumbnail: author.avatar,
+            verified: author.verified,
+            subscribers: author.fans ? formatNumber(author.fans) : undefined,
+          },
+          tiktokUsername: author.name || result.tiktokUsername,
+          tiktokDisplayName: author.nickName,
+          tiktokBio: author.signature,
+          tiktokFollowers: author.fans,
+          tiktokLikes: author.heart,
+          tiktokVideosCount: author.video,
+          tiktokIsVerified: author.verified,
+          tiktokVideoPlays: apifyData.playCount,
+          tiktokVideoLikes: apifyData.diggCount,
+          tiktokVideoComments: apifyData.commentCount,
+          tiktokVideoShares: apifyData.shareCount,
+          thumbnail: apifyData.videoMeta?.coverUrl || author.avatar,
+          date: apifyData.createTimeISO || result.date,
+        };
+      }
+      return result;
+    });
+  } catch (error: any) {
+    console.warn(`[AutoScan] TikTok enrichment failed:`, error.message);
+    return results;
+  }
+}
+
+// =============================================================================
+// HELPER: Run auto-scan for a user using Apify polling
+// January 29th, 2026 - Migrated from Serper to Apify
+// January 29th, 2026 - FIX: Now uses keywords[] + competitors[] properly
+// January 29th, 2026 - Added userBrand for social filtering
 // =============================================================================
 async function runAutoScan(
   userId: number,
-  keywords: string[]
+  topics: string[],
+  competitors: string[],
+  userBrand: string | null,
+  targetCountry: string | null,
+  targetLanguage: string | null
 ): Promise<{ totalResults: number; totalCost: number }> {
   let totalResults = 0;
   let totalCost = 0;
   
-  // Combine all keywords into one search string for tracking
-  const combinedKeyword = keywords.join(' | ');
+  const sources: Platform[] = ['Web', 'YouTube', 'Instagram', 'TikTok'];
   
-  // Track the search
+  // Track the search with descriptive label
+  const searchLabel = `[AUTO-SCAN] topics=${topics.join(',')} competitors=${competitors.join(',')}`;
   const searchId = await trackSearch({
     userId,
-    keyword: `[AUTO-SCAN] ${combinedKeyword}`,
-    sources: ['Web', 'YouTube', 'Instagram', 'TikTok'],
+    keyword: searchLabel.substring(0, 200), // Limit length for DB
+    sources,
   });
   
-  // Process each keyword
-  for (const keyword of keywords) {
-    try {
-      // =========================================================================
-      // January 29, 2026: CLEANUP - Simplified (removed dead code path)
-      // 
-      // All social media searches now use Serper for discovery (language-filtered)
-      // plus Apify enrichment for metadata (followers, bio, etc.)
-      // =========================================================================
-      const [webResults, youtubeResults, instagramResults, tiktokResults] = await Promise.all([
-        searchWeb(keyword).catch(() => []),
-        searchYouTubeSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => []),
-        searchInstagramSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => []),
-        searchTikTokSerper(keyword, userId, RESULTS_PER_PLATFORM, null, null).catch(() => []),
-      ]);
+  console.log(`[AutoScan] Starting Apify run:`);
+  console.log(`[AutoScan]   Topics (${topics.length}): ${topics.join(', ')}`);
+  console.log(`[AutoScan]   Competitors (${competitors.length}): ${competitors.join(', ')}`);
+  console.log(`[AutoScan]   Target: ${targetCountry || 'default'} / ${targetLanguage || 'default'}`);
+  
+  try {
+    // =========================================================================
+    // STEP 1: START APIFY RUN (NON-BLOCKING)
+    // 
+    // January 29, 2026 FIX:
+    // - Pass topics as keywords[] and competitors as competitors[]
+    // - Service will build fully localized queries for each
+    // - Brand names are extracted automatically from competitor domains
+    // =========================================================================
+    const { runId } = await startGoogleSearchRun({
+      keywords: topics,
+      competitors: competitors,
+      sources,
+      targetCountry,
+      targetLanguage,
+    });
+    
+    console.log(`[AutoScan] Apify run started: ${runId}`);
+    
+    // =========================================================================
+    // STEP 2: POLL UNTIL COMPLETE
+    // =========================================================================
+    const POLL_INTERVAL_MS = 5000;
+    const MAX_POLL_TIME_MS = 180000; // 180 seconds max (leaves buffer for enrichment)
+    const pollStartTime = Date.now();
+    
+    let status = await getRunStatus(runId);
+    let pollCount = 0;
+    
+    while (status.status === 'RUNNING') {
+      const elapsed = Date.now() - pollStartTime;
       
-      // Calculate costs - Serper for all 4 searches
-      totalCost += API_COSTS.serper * 4; // Web + YouTube + Instagram + TikTok
-      
-      // Combine all results
-      const allResults = [
-        ...webResults,
-        ...youtubeResults,
-        ...instagramResults,
-        ...tiktokResults,
-      ];
-      
-      // Save to discovered_affiliates (duplicates auto-blocked by link)
-      for (const result of allResults) {
-        try {
-          await saveDiscoveredAffiliate(userId, combinedKeyword, result);
-          totalResults++;
-        } catch (saveError) {
-          // Ignore duplicate errors, log others
-          const errorMsg = saveError instanceof Error ? saveError.message : '';
-          if (!errorMsg.includes('duplicate')) {
-            console.error(`[AutoScan] Failed to save affiliate: ${errorMsg}`);
-          }
-        }
+      if (elapsed > MAX_POLL_TIME_MS) {
+        throw new Error(`Apify run timed out after ${elapsed/1000}s`);
       }
       
-    } catch (keywordError) {
-      console.error(`[AutoScan] Keyword "${keyword}" failed:`, keywordError);
-      // Continue with other keywords
+      await sleep(POLL_INTERVAL_MS);
+      pollCount++;
+      status = await getRunStatus(runId);
+      
+      console.log(`[AutoScan] Poll #${pollCount}: ${status.status} (${Math.round(elapsed/1000)}s elapsed)`);
     }
+    
+    if (status.status === 'FAILED' || status.status === 'ABORTED') {
+      throw new Error(`Apify run ${status.status}`);
+    }
+    
+    console.log(`[AutoScan] Apify run SUCCEEDED`);
+    
+    // =========================================================================
+    // STEP 3: FETCH RAW RESULTS
+    // =========================================================================
+    const rawResults = await fetchAndProcessResults(runId, {
+      targetCountry,
+      targetLanguage,
+    });
+    
+    console.log(`[AutoScan] Fetched ${rawResults.length} raw results`);
+    
+    // Calculate Apify cost
+    totalCost += API_COSTS.apify_google_scraper || 0.02;
+    
+    // =========================================================================
+    // STEP 4: CATEGORIZE BY PLATFORM
+    // =========================================================================
+    let youtubeResults = rawResults.filter(r => r.source === 'YouTube');
+    let instagramResults = rawResults.filter(r => r.source === 'Instagram');
+    let tiktokResults = rawResults.filter(r => r.source === 'TikTok');
+    let webResults = rawResults.filter(r => r.source === 'Web');
+    
+    console.log(`[AutoScan] Raw breakdown: YouTube=${youtubeResults.length}, Instagram=${instagramResults.length}, TikTok=${tiktokResults.length}, Web=${webResults.length}`);
+    
+    // =========================================================================
+    // STEP 5: ENRICH SOCIAL RESULTS (PARALLEL)
+    // =========================================================================
+    const [enrichedYouTube, enrichedInstagram, enrichedTikTok] = await Promise.all([
+      enrichYouTubeResults(youtubeResults),
+      enrichInstagramResults(instagramResults),
+      enrichTikTokResults(tiktokResults),
+    ]);
+    
+    // Add enrichment costs
+    if (youtubeResults.length > 0) totalCost += API_COSTS.apify_youtube || 0.01;
+    if (instagramResults.length > 0) totalCost += API_COSTS.apify_instagram || 0.01;
+    if (tiktokResults.length > 0) totalCost += API_COSTS.apify_tiktok || 0.01;
+    
+    // =========================================================================
+    // STEP 6: APPLY FILTERING
+    // =========================================================================
+    const filteredWeb = filterWebResults(webResults, {
+      targetCountry: targetCountry || undefined,
+      targetLanguage: targetLanguage || undefined,
+    });
+    
+    // January 29, 2026: Added brand exclusion to filter out user's own and competitor accounts
+    const filteredYouTube = filterSocialResults(enrichedYouTube, {
+      requireEnrichment: true,
+      targetLanguage: targetLanguage || undefined,
+      userBrand: userBrand || undefined,
+      excludeBrands: competitors || undefined,
+    });
+    
+    const filteredInstagram = filterSocialResults(enrichedInstagram, {
+      requireEnrichment: true,
+      targetLanguage: targetLanguage || undefined,
+      userBrand: userBrand || undefined,
+      excludeBrands: competitors || undefined,
+    });
+    
+    const filteredTikTok = filterSocialResults(enrichedTikTok, {
+      requireEnrichment: true,
+      targetLanguage: targetLanguage || undefined,
+      userBrand: userBrand || undefined,
+      excludeBrands: competitors || undefined,
+    });
+    
+    console.log(`[AutoScan] Filtered: YouTube=${filteredYouTube.length}, Instagram=${filteredInstagram.length}, TikTok=${filteredTikTok.length}, Web=${filteredWeb.length}`);
+    
+    // =========================================================================
+    // STEP 7: SAVE RESULTS TO DATABASE
+    // =========================================================================
+    const allFilteredResults = [
+      ...filteredWeb,
+      ...filteredYouTube,
+      ...filteredInstagram,
+      ...filteredTikTok,
+    ];
+    
+    for (const result of allFilteredResults) {
+      try {
+        await saveDiscoveredAffiliate(userId, combinedKeyword, result);
+        totalResults++;
+      } catch (saveError) {
+        // Ignore duplicate errors, log others
+        const errorMsg = saveError instanceof Error ? saveError.message : '';
+        if (!errorMsg.includes('duplicate')) {
+          console.error(`[AutoScan] Failed to save affiliate: ${errorMsg}`);
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.error(`[AutoScan] Run failed:`, error);
+    throw error;
   }
   
   // Complete the search tracking
@@ -364,6 +641,7 @@ async function runAutoScan(
 
 // =============================================================================
 // HELPER: Save discovered affiliate to database
+// January 29th, 2026 - Updated for Apify enrichment fields
 // =============================================================================
 async function saveDiscoveredAffiliate(
   userId: number,
@@ -388,6 +666,10 @@ async function saveDiscoveredAffiliate(
       subscribers?: string;
     };
     duration?: string;
+    // YouTube fields
+    youtubeVideoLikes?: number;
+    youtubeVideoComments?: number;
+    // Instagram fields
     instagramUsername?: string;
     instagramFullName?: string;
     instagramBio?: string;
@@ -396,6 +678,10 @@ async function saveDiscoveredAffiliate(
     instagramPostsCount?: number;
     instagramIsBusiness?: boolean;
     instagramIsVerified?: boolean;
+    instagramPostLikes?: number;
+    instagramPostComments?: number;
+    instagramPostViews?: number;
+    // TikTok fields
     tiktokUsername?: string;
     tiktokDisplayName?: string;
     tiktokBio?: string;
@@ -429,9 +715,11 @@ async function saveDiscoveredAffiliate(
       discovery_method_type, discovery_method_value,
       is_new, channel_name, channel_link, channel_thumbnail, 
       channel_verified, channel_subscribers, duration,
+      youtube_video_likes, youtube_video_comments,
       instagram_username, instagram_full_name, instagram_bio,
       instagram_followers, instagram_following, instagram_posts_count,
       instagram_is_business, instagram_is_verified,
+      instagram_post_likes, instagram_post_comments, instagram_post_views,
       tiktok_username, tiktok_display_name, tiktok_bio,
       tiktok_followers, tiktok_following, tiktok_likes,
       tiktok_videos_count, tiktok_is_verified,
@@ -445,9 +733,11 @@ async function saveDiscoveredAffiliate(
       true, ${result.channel?.name || null}, ${result.channel?.link || null},
       ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
       ${result.channel?.subscribers || null}, ${result.duration || null},
+      ${result.youtubeVideoLikes || null}, ${result.youtubeVideoComments || null},
       ${result.instagramUsername || null}, ${result.instagramFullName || null}, ${result.instagramBio || null},
       ${result.instagramFollowers || null}, ${result.instagramFollowing || null}, ${result.instagramPostsCount || null},
       ${result.instagramIsBusiness || null}, ${result.instagramIsVerified || null},
+      ${result.instagramPostLikes || null}, ${result.instagramPostComments || null}, ${result.instagramPostViews || null},
       ${result.tiktokUsername || null}, ${result.tiktokDisplayName || null}, ${result.tiktokBio || null},
       ${result.tiktokFollowers || null}, ${result.tiktokFollowing || null}, ${result.tiktokLikes || null},
       ${result.tiktokVideosCount || null}, ${result.tiktokIsVerified || null},

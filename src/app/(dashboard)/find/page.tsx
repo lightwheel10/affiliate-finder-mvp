@@ -3,29 +3,33 @@
 /**
  * =============================================================================
  * FIND NEW AFFILIATES PAGE - January 3rd, 2026
+ * Updated: January 29, 2026 - Migrated from streaming to polling architecture
  * =============================================================================
  * 
  * This page provides the main "Find New Affiliates" functionality:
  *   - Multi-keyword search across YouTube, Instagram, TikTok, and Web
- *   - Real-time streaming results with progressive rendering
+ *   - Polling-based results with progress indicator
  *   - Bulk selection and save to pipeline
  *   - Advanced filtering by platform, subscribers, date, etc.
  * 
- * ARCHITECTURE NOTES:
- * -------------------
+ * SEARCH ARCHITECTURE (January 29, 2026):
+ * ---------------------------------------
+ * Uses polling-based approach via usePollingSearch hook:
+ *   1. POST /api/search/start → starts Apify run, returns jobId
+ *   2. GET /api/search/status?jobId=X → poll until done
+ *   3. Status endpoint handles enrichment and filtering server-side
+ *   4. Final results returned with all metadata (followers, views, etc.)
+ * 
+ * This replaced the previous streaming approach (/api/scout) to avoid
+ * Vercel timeout issues with Apify's 40-95 second search duration.
+ * 
+ * LAYOUT NOTES:
+ * -------------
  * This page is part of the (dashboard) route group, which means:
  *   - URL is /find (not /(dashboard)/find)
  *   - Sidebar is rendered in the parent layout.tsx (not here)
  *   - AuthGuard is also in the parent layout.tsx
  *   - Navigation to other dashboard pages won't remount the Sidebar
- * 
- * MOVED FROM:
- * -----------
- * This was originally the Dashboard component inside src/app/page.tsx.
- * It was moved here on January 3rd, 2026 to:
- *   1. Enable the shared dashboard layout pattern
- *   2. Prevent Sidebar remount when navigating to/from this page
- *   3. Allow src/app/page.tsx to be a pure landing page
  * 
  * =============================================================================
  */
@@ -65,7 +69,9 @@ import {
 import { cn } from '@/lib/utils';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../../hooks/useAffiliates';
+import { usePollingSearch, SearchProgress } from '../../hooks/usePollingSearch';
 import { FilterPanel } from '../../components/FilterPanel';
+import { Platform } from '../../services/search';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
@@ -127,6 +133,20 @@ export default function FindNewPage() {
     removeDiscoveredAffiliatesBulk,
     isLoading: discoveredLoading
   } = useDiscoveredAffiliates();
+
+  // ==========================================================================
+  // POLLING SEARCH HOOK - January 29, 2026
+  // 
+  // Replaces streaming /api/scout with polling /api/search/start + /api/search/status
+  // This avoids Vercel timeout issues with long-running Apify searches.
+  // ==========================================================================
+  const { 
+    searchWithPolling, 
+    cancelSearch, 
+    isSearching: isPollingSearching,
+    progress: searchProgress,
+    error: searchError,
+  } = usePollingSearch();
 
   // Multiple keywords support
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -353,6 +373,23 @@ export default function FindNewPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, discoveredLoading, discoveredAffiliates]);
 
+  // ==========================================================================
+  // HANDLE FIND AFFILIATES - Updated January 29, 2026
+  // 
+  // MIGRATION: Changed from streaming /api/scout to polling-based approach:
+  // - POST /api/search/start → returns jobId
+  // - GET /api/search/status?jobId=X → poll until done
+  // 
+  // This avoids Vercel timeout issues with long-running Apify searches
+  // (40-95 seconds). The polling approach allows the Apify run to complete
+  // in the background while the frontend shows progress.
+  // 
+  // FLOW:
+  // 1. For each keyword: start search → poll until done → process results
+  // 2. Results are enriched server-side (YouTube, Instagram, TikTok metadata)
+  // 3. Filtering is applied server-side (language, TLD, e-commerce block)
+  // 4. Final results saved to discovered_affiliates via existing hooks
+  // ==========================================================================
   const handleFindAffiliates = async () => {
     if (keywords.length === 0) return;
     
@@ -364,10 +401,7 @@ export default function FindNewPage() {
     setIsFindModalOpen(false);
     setCurrentPage(1);
     setAnimationKey(prev => prev + 1);
-    // ==========================================================================
-    // CREDIT ERROR RESET - January 4th, 2026
-    // Clear any previous credit error when starting a new search
-    // ==========================================================================
+    // Clear any previous credit error
     setCreditError(null);
     
     if (hadPreviousResults) {
@@ -376,203 +410,132 @@ export default function FindNewPage() {
     }
 
     const combinedKeyword = keywords.join(' | ');
-    const streamedResults: ResultItem[] = [];
-    const resultsToSave: ResultItem[] = [];
+    const allResults: ResultItem[] = [];
+    const sources: Platform[] = ['Web', 'YouTube', 'Instagram', 'TikTok'];
 
     try {
-      const searchPromises = keywords.map(async (kw) => {
-        const res = await fetch('/api/scout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keyword: kw, sources: ['Web', 'YouTube', 'Instagram', 'TikTok'], userId }),
-        });
-
-        // ======================================================================
-        // CREDIT ERROR HANDLING - January 4th, 2026
-        // 
-        // When user has 0 topic_search credits, API returns 402 (Payment Required)
-        // with creditError: true. Previously this was silently ignored and user
-        // just saw "No results found" which was confusing.
-        // 
-        // Now we detect the 402 and show a clear error message explaining they
-        // need to upgrade their plan or wait for credits to refresh.
-        // ======================================================================
-        if (res.status === 402) {
-          const errorData = await res.json();
-          if (errorData.creditError) {
-            setCreditError({
-              message: errorData.error || 'Insufficient topic search credits',
-              remaining: errorData.remaining ?? 0,
-            });
-            // January 5th, 2026: Added warning toast for insufficient credits
-            // i18n: January 10th, 2026
-            toast.warning(t.toasts.warning.insufficientCredits);
-            return; // Stop processing this keyword
-          }
-        }
-
-        const contentType = res.headers.get('content-type');
+      // ==========================================================================
+      // SEQUENTIAL KEYWORD SEARCHES
+      // 
+      // Process keywords one at a time to show progress clearly.
+      // Each search takes 40-95 seconds on Apify, so sequential is fine.
+      // ==========================================================================
+      for (const kw of keywords) {
+        console.log(`[handleFindAffiliates] Starting search for keyword: "${kw}"`);
         
-        if (contentType?.includes('text/event-stream')) {
-          // STREAMING MODE
-          const reader = res.body?.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-
-          while (reader) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') continue;
-
-                try {
-                  const result = JSON.parse(data);
-                  
-                  // ================================================================
-                  // ENRICHMENT UPDATE HANDLER (December 16, 2025)
-                  // ================================================================
-                  if (result.type === 'enrichment_update') {
-                    const domain = result.domain;
-                    const similarWebData = result.similarWeb;
-                    
-                    setResults(prev => prev.map(r => {
-                      if (r.domain === domain && r.source === 'Web') {
-                        return {
-                          ...r,
-                          similarWeb: similarWebData,
-                          isEnriching: false,
-                        };
-                      }
-                      return r;
-                    }));
-                    
-                    streamedResults.forEach((r, idx) => {
-                      if (r.domain === domain && r.source === 'Web') {
-                        streamedResults[idx] = {
-                          ...r,
-                          similarWeb: similarWebData,
-                          isEnriching: false,
-                        };
-                      }
-                    });
-                    
-                    continue;
-                  }
-                  
-                  // Regular affiliate result processing
-                  // ================================================================
-                  // DISCOVERY METHOD - January 23, 2026
-                  // 
-                  // IMPORTANT: Use the server's discoveryMethod if present!
-                  // The scout route sends pre-tagged results with accurate
-                  // discoveryMethod (brand, competitor, keyword).
-                  // 
-                  // Only fall back to keyword heuristics if server didn't provide one.
-                  // ================================================================
-                  let discoveryMethod = result.discoveryMethod;
-                  
-                  if (!discoveryMethod) {
-                    // Fallback: Use keyword-based heuristic (legacy behavior)
-                    const isCompetitor = kw.toLowerCase().includes('alternative') || 
-                                       kw.toLowerCase().includes('vs') || 
-                                       kw.toLowerCase().includes('competitor');
-                    let methodValue = kw;
-                    if (isCompetitor) {
-                      methodValue = kw.replace(/alternative|vs|competitor/gi, '').trim();
-                    }
-                    discoveryMethod = {
-                      type: isCompetitor ? 'competitor' as const : 'keyword' as const,
-                      value: methodValue || kw
-                    };
-                  }
-
-                  const enhancedResult: ResultItem = {
-                    ...result,
-                    rank: result.rank || streamedResults.length + 1,
-                    keyword: result.keyword || kw,
-                    discoveryMethod,
-                    date: result.date || undefined
-                  };
-
-                  streamedResults.push(enhancedResult);
-                  setResults([...streamedResults]);
-                  
-                  saveDiscoveredAffiliate(enhancedResult, combinedKeyword).catch(err => {
-                    console.error('Failed to save discovered affiliate:', err);
-                  });
-                  
-                } catch (parseError) {
-                  console.error('Failed to parse streamed result:', parseError);
-                }
+        try {
+          // ====================================================================
+          // POLLING SEARCH
+          // 
+          // Uses the new usePollingSearch hook which:
+          // 1. Calls POST /api/search/start
+          // 2. Polls GET /api/search/status until done
+          // 3. Returns enriched, filtered results
+          // ====================================================================
+          const searchResults = await searchWithPolling(kw, sources, {
+            onProgress: (progress) => {
+              // Progress updates are handled by the hook's state
+              console.log(`[handleFindAffiliates] Progress: ${progress.status} (${progress.elapsedSeconds}s)`);
+            },
+          });
+          
+          console.log(`[handleFindAffiliates] Got ${searchResults.length} results for "${kw}"`);
+          
+          // ==================================================================
+          // PROCESS RESULTS
+          // 
+          // Add discovery method (if not present) and save to discovered.
+          // Server already provides discoveryMethod, but we add fallback.
+          // 
+          // NOTE: SearchResult type doesn't include all ResultItem fields,
+          // but the status endpoint actually returns enriched data with
+          // these fields. We cast to any to access them safely.
+          // ==================================================================
+          for (let i = 0; i < searchResults.length; i++) {
+            // Cast to any to access additional fields from status endpoint
+            const result = searchResults[i] as any;
+            
+            // Use server's discoveryMethod if present, else fallback to keyword
+            let discoveryMethod = result.discoveryMethod;
+            if (!discoveryMethod) {
+              const isCompetitor = kw.toLowerCase().includes('alternative') || 
+                                 kw.toLowerCase().includes('vs') || 
+                                 kw.toLowerCase().includes('competitor');
+              let methodValue = kw;
+              if (isCompetitor) {
+                methodValue = kw.replace(/alternative|vs|competitor/gi, '').trim();
               }
+              discoveryMethod = {
+                type: isCompetitor ? 'competitor' as const : 'keyword' as const,
+                value: methodValue || kw
+              };
+            }
+            
+            const enhancedResult: ResultItem = {
+              ...result,
+              rank: result.rank || allResults.length + i + 1,
+              keyword: result.keyword || kw,
+              discoveryMethod,
+              date: result.date || undefined,
+            };
+            
+            allResults.push(enhancedResult);
+          }
+          
+          // Update UI with results so far
+          setResults([...allResults]);
+          
+          // Batch save results for this keyword
+          if (searchResults.length > 0) {
+            try {
+              const resultsToSave = searchResults.map((r, i) => {
+                const result = r as any;
+                return {
+                  ...result,
+                  rank: result.rank || allResults.length - searchResults.length + i + 1,
+                  keyword: result.keyword || kw,
+                  discoveryMethod: result.discoveryMethod || { type: 'keyword' as const, value: kw },
+                } as ResultItem;
+              });
+              await saveDiscoveredAffiliates(resultsToSave, combinedKeyword);
+            } catch (saveErr) {
+              console.error('Failed to save discovered affiliates:', saveErr);
             }
           }
-        } else {
-          // FALLBACK: Non-streaming mode
-          const data = await res.json();
-          if (data.results) {
-            data.results.forEach((r: ResultItem, i: number) => {
-              // ================================================================
-              // DISCOVERY METHOD - January 23, 2026
-              // Use server's discoveryMethod if present, else fallback to heuristic
-              // ================================================================
-              let discoveryMethod = r.discoveryMethod;
-              
-              if (!discoveryMethod) {
-                const isCompetitor = kw.toLowerCase().includes('alternative') || 
-                                   kw.toLowerCase().includes('vs') || 
-                                   kw.toLowerCase().includes('competitor');
-                let methodValue = kw;
-                if (isCompetitor) {
-                  methodValue = kw.replace(/alternative|vs|competitor/gi, '').trim();
-                }
-                discoveryMethod = {
-                  type: isCompetitor ? 'competitor' as const : 'keyword' as const,
-                  value: methodValue || kw
-                };
-              }
-
-              const enhancedResult: ResultItem = {
-                ...r,
-                rank: r.rank || i + 1,
-                keyword: r.keyword || kw,
-                discoveryMethod,
-                date: r.date || undefined
-              };
-              
-              streamedResults.push(enhancedResult);
-              resultsToSave.push(enhancedResult);
+          
+        } catch (searchErr: any) {
+          // ====================================================================
+          // ERROR HANDLING
+          // ====================================================================
+          
+          // Credit error
+          if (searchErr.creditError) {
+            setCreditError({
+              message: searchErr.message || 'Insufficient topic search credits',
+              remaining: searchErr.remaining ?? 0,
             });
-            setResults([...streamedResults]);
+            toast.warning(t.toasts.warning.insufficientCredits);
+            // Don't stop - continue with other keywords if any
+            continue;
           }
-        }
-      });
-
-      await Promise.all(searchPromises);
-      
-      if (resultsToSave.length > 0) {
-        try {
-          await saveDiscoveredAffiliates(resultsToSave, combinedKeyword);
-        } catch (err) {
-          console.error('Failed to batch save discovered affiliates:', err);
+          
+          // Cancelled
+          if (searchErr.name === 'AbortError' || searchErr.code === 'CANCELLED') {
+            console.log('[handleFindAffiliates] Search cancelled');
+            break;
+          }
+          
+          // Other errors
+          console.error(`[handleFindAffiliates] Search error for "${kw}":`, searchErr);
+          toast.error(t.toasts.error.searchFailed);
         }
       }
 
       // ==========================================================================
-      // CREDITS REFRESH - January 4th, 2026
+      // CREDITS REFRESH
       // 
       // After search completes, the backend has consumed topic_search credits.
       // Dispatch event to trigger useCredits hook to refetch from database.
-      // This ensures the credit display shows the real balance without page refresh.
-      // 
-      // SAFE: Does NOT modify credits - only triggers a refetch of existing DB value.
       // ==========================================================================
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('credits-updated'));
@@ -584,8 +547,6 @@ export default function FindNewPage() {
         // Search cancelled by user - no notification needed
       } else {
         console.error('Search error:', e);
-        // January 5th, 2026: Added error toast for search failures
-        // i18n: January 10th, 2026
         toast.error(t.toasts.error.searchFailed);
       }
     } finally {
@@ -629,9 +590,42 @@ export default function FindNewPage() {
     };
   }, [results, hasSearched]);
 
-  // Generate dynamic loading message based on which platforms have returned results
-  // January 17, 2026: Updated with i18n translations
+  // ==========================================================================
+  // LOADING MESSAGE - Updated January 29, 2026
+  // 
+  // Now uses searchProgress from usePollingSearch hook for better feedback.
+  // Shows elapsed time during the Apify polling phase.
+  // ==========================================================================
   const loadingMessage = useMemo(() => {
+    // If we have search progress from polling hook, use it
+    if (searchProgress && searchProgress.status !== 'idle' && searchProgress.status !== 'done') {
+      const elapsed = searchProgress.elapsedSeconds || 0;
+      
+      switch (searchProgress.status) {
+        case 'starting':
+          return {
+            title: 'Starting search...',
+            subtitle: 'Initializing search across all platforms',
+            badge: 'Starting'
+          };
+        case 'running':
+          return {
+            title: `Searching... (${elapsed}s)`,
+            subtitle: 'Apify is scanning YouTube, Instagram, TikTok, and Web',
+            badge: `${elapsed}s`
+          };
+        case 'processing':
+          return {
+            title: 'Processing results...',
+            subtitle: 'Enriching and filtering results',
+            badge: 'Processing'
+          };
+        default:
+          break;
+      }
+    }
+    
+    // Fallback: show results count if we have them
     if (results.length === 0) {
       return {
         title: t.dashboard.find.loading.scanning,
@@ -661,7 +655,7 @@ export default function FindNewPage() {
         : t.dashboard.find.loading.analyzing,
       badge: `${results.length} ${t.dashboard.find.loading.found}`
     };
-  }, [results.length, counts, t]);
+  }, [results.length, counts, t, searchProgress]);
 
   // Filter tabs data with real counts
   const filterTabs = [

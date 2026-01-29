@@ -350,6 +350,12 @@ export interface DbSearchJob {
   results_count: number | null;
   error_message: string | null;
   estimated_cost: number | null;
+  // January 29, 2026: Added user_settings to store filtering params for status endpoint
+  user_settings: {
+    targetCountry?: string | null;
+    targetLanguage?: string | null;
+    userBrand?: string | null;
+  } | null;
 }
 
 export interface DbSubscription {

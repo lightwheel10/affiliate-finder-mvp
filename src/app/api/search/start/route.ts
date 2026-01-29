@@ -1,0 +1,256 @@
+/**
+ * Search Start API - Initiates async Apify Google Search Scraper run
+ * 
+ * =============================================================================
+ * Created: January 29, 2026
+ * 
+ * PURPOSE:
+ * Starts a non-blocking Apify google-search-scraper run and returns immediately
+ * with a jobId. The search runs in the background for 40-95 seconds.
+ * 
+ * FLOW:
+ * 1. Auth check via getAuthenticatedUser()
+ * 2. Get user settings from DB (target_country, target_language, brand)
+ * 3. Credit check via checkCredits()
+ * 4. Call startGoogleSearchRun() - returns immediately with runId
+ * 5. Insert job into search_jobs table
+ * 6. Return { jobId, status: 'started', runId }
+ * 
+ * POLLING:
+ * Client should poll /api/search/status?jobId=X every 3-5 seconds until done.
+ * 
+ * CREDITS:
+ * Credit is RESERVED at start but only CONSUMED when results are delivered.
+ * If search fails, credit is not consumed.
+ * =============================================================================
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
+import { sql } from '@/lib/db';
+import { checkCredits } from '@/lib/credits';
+import { startGoogleSearchRun, buildBatchedQueries } from '@/app/services/apify-google-scraper';
+import { Platform } from '@/app/services/search';
+import { trackApiCall } from '@/app/services/tracking';
+
+// =============================================================================
+// VERCEL FUNCTION CONFIGURATION
+// January 29, 2026
+// 
+// This endpoint is fast (just starts the run), so we don't need long timeout.
+// =============================================================================
+export const maxDuration = 30; // 30 seconds is plenty
+
+// =============================================================================
+// REQUEST/RESPONSE TYPES
+// January 29, 2026
+// =============================================================================
+
+interface StartSearchRequest {
+  keyword: string;
+  sources?: Platform[];
+}
+
+interface StartSearchResponse {
+  jobId: number;
+  runId: string;
+  status: 'started';
+  message: string;
+  queries: string[];
+}
+
+interface ErrorResponse {
+  error: string;
+  code?: string;
+}
+
+// =============================================================================
+// POST /api/search/start
+// January 29, 2026
+// =============================================================================
+
+export async function POST(req: NextRequest): Promise<NextResponse<StartSearchResponse | ErrorResponse>> {
+  const startTime = Date.now();
+  
+  try {
+    // Parse request body
+    const body = await req.json() as StartSearchRequest;
+    const { keyword, sources = ['Web', 'YouTube', 'Instagram', 'TikTok'] } = body;
+    
+    // Validate keyword
+    if (!keyword || typeof keyword !== 'string' || keyword.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Keyword is required', code: 'MISSING_KEYWORD' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate sources
+    const validSources: Platform[] = ['Web', 'YouTube', 'Instagram', 'TikTok'];
+    const filteredSources = sources.filter(s => validSources.includes(s));
+    
+    if (filteredSources.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one valid source is required', code: 'INVALID_SOURCES' },
+        { status: 400 }
+      );
+    }
+    
+    console.log(`🔍 [Search/Start] Keyword: "${keyword}", Sources: ${filteredSources.join(', ')}`);
+    
+    // ==========================================================================
+    // AUTHENTICATION CHECK
+    // January 29, 2026
+    // ==========================================================================
+    const authUser = await getAuthenticatedUser();
+    
+    if (!authUser) {
+      console.error('[Search/Start] Unauthorized: No authenticated user');
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in.', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+    }
+    
+    // ==========================================================================
+    // GET USER FROM DATABASE
+    // January 29, 2026
+    // 
+    // Fetch user settings needed for:
+    // - target_country: For location config (gl, hl params)
+    // - target_language: For localized search terms
+    // - brand: For filtering (stored in job for status endpoint)
+    // ==========================================================================
+    const users = await sql`
+      SELECT id, brand, target_country, target_language
+      FROM crewcast.users WHERE email = ${authUser.email}
+    `;
+    
+    if (users.length === 0) {
+      console.error(`[Search/Start] User not found: ${authUser.email}`);
+      return NextResponse.json(
+        { error: 'User account not found. Please complete onboarding.', code: 'USER_NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+    
+    const user = users[0];
+    const userId = user.id as number;
+    const targetCountry = user.target_country as string | null;
+    const targetLanguage = user.target_language as string | null;
+    const userBrand = user.brand as string | null;
+    
+    console.log(`🔍 [Search/Start] User: ${userId}, Country: ${targetCountry}, Language: ${targetLanguage}`);
+    
+    // ==========================================================================
+    // CREDIT CHECK
+    // January 29, 2026
+    // 
+    // Check if user has credits for topic_search.
+    // Credit is reserved but not consumed until results are delivered.
+    // ==========================================================================
+    const creditCheck = await checkCredits(userId, 'topic_search', 1);
+    
+    if (!creditCheck.allowed) {
+      console.log(`[Search/Start] Insufficient credits for user ${userId}: ${creditCheck.message}`);
+      return NextResponse.json(
+        { error: creditCheck.message || 'Insufficient credits. Please upgrade your plan.', code: 'INSUFFICIENT_CREDITS' },
+        { status: 402 }
+      );
+    }
+    
+    // ==========================================================================
+    // START APIFY RUN
+    // January 29, 2026
+    // 
+    // This returns immediately with a runId. The actual search runs
+    // in the background on Apify's servers.
+    // ==========================================================================
+    const runResult = await startGoogleSearchRun({
+      keyword: keyword.trim(),
+      sources: filteredSources,
+      targetCountry,
+      targetLanguage,
+    });
+    
+    console.log(`🔍 [Search/Start] Apify run started: ${runResult.runId}`);
+    
+    // ==========================================================================
+    // BUILD QUERIES FOR LOGGING
+    // January 29, 2026
+    // ==========================================================================
+    const queries = buildBatchedQueries(keyword.trim(), filteredSources, targetLanguage);
+    
+    // ==========================================================================
+    // INSERT JOB INTO DATABASE
+    // January 29, 2026
+    // 
+    // Store job with user settings so status endpoint can apply filtering.
+    // user_settings JSON contains: targetCountry, targetLanguage, userBrand
+    // ==========================================================================
+    const userSettings = JSON.stringify({
+      targetCountry,
+      targetLanguage,
+      userBrand,
+    });
+    
+    const sourcesArray = `{${filteredSources.join(',')}}`;
+    
+    const jobs = await sql`
+      INSERT INTO crewcast.search_jobs (
+        user_id,
+        keyword,
+        sources,
+        apify_run_id,
+        status,
+        user_settings
+      ) VALUES (
+        ${userId},
+        ${keyword.trim()},
+        ${sourcesArray}::text[],
+        ${runResult.runId},
+        'running',
+        ${userSettings}::jsonb
+      )
+      RETURNING id
+    `;
+    
+    const jobId = jobs[0].id as number;
+    
+    console.log(`🔍 [Search/Start] Job created: ${jobId}`);
+    
+    // ==========================================================================
+    // TRACK API CALL
+    // January 29, 2026
+    // ==========================================================================
+    await trackApiCall({
+      userId,
+      service: 'apify_google_scraper',
+      endpoint: 'start',
+      keyword: keyword.trim(),
+      status: 'success',
+      apifyRunId: runResult.runId,
+      durationMs: Date.now() - startTime,
+    });
+    
+    // ==========================================================================
+    // RETURN SUCCESS RESPONSE
+    // January 29, 2026
+    // ==========================================================================
+    return NextResponse.json({
+      jobId,
+      runId: runResult.runId,
+      status: 'started',
+      message: 'Search started. Poll /api/search/status?jobId=' + jobId + ' for results.',
+      queries,
+    });
+    
+  } catch (error: any) {
+    console.error('[Search/Start] Error:', error);
+    
+    return NextResponse.json(
+      { error: error.message || 'Internal server error', code: 'INTERNAL_ERROR' },
+      { status: 500 }
+    );
+  }
+}

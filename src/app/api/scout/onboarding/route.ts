@@ -1,30 +1,21 @@
 /**
  * =============================================================================
- * ONBOARDING SCOUT API - January 15th, 2026
+ * ONBOARDING SCOUT API - January 29th, 2026
  * =============================================================================
  * 
- * MAJOR REFACTOR: January 15th, 2026 - Parallel Architecture
+ * MAJOR REFACTOR: January 29th, 2026 - Apify Polling Architecture
  * 
- * PREVIOUS IMPLEMENTATION (Sequential - 8+ minutes):
- * - Topics processed one at a time in a for loop
- * - Each topic waited for all 4 platforms before moving to next
- * - SimilarWeb ran at the very end
- * - Total time: ~485 seconds for 5 topics
+ * PREVIOUS IMPLEMENTATION (Serper - ~30 seconds):
+ * - 20 parallel Serper calls (5 topics × 4 platforms)
+ * - Fast but ~30% German language accuracy
  * 
- * CURRENT IMPLEMENTATION (Fully Parallel - ~30 seconds):
- * - ALL searches fire simultaneously at T=0:
- *   - 5 Web (Serper) searches
- *   - 5 YouTube (Serper + Apify enrichment) searches
- *   - 5 Instagram (Serper + Apify enrichment) searches
- *   - 5 TikTok (Serper + Apify enrichment) searches
- * - Results saved as they complete (not waiting for all)
- * - SimilarWeb starts after all searches complete
- * - Total time: ~30 seconds (Serper is fast!)
- * 
- * January 29, 2026: CLEANUP
- * - Removed dead code paths (USE_SERPER_FOR_SOCIAL conditionals)
- * - All social media searches now use Serper + Apify enrichment
- * - Removed searchYouTubeApify/searchInstagramApify/searchTikTokApify imports
+ * CURRENT IMPLEMENTATION (Apify Polling - ~70-150 seconds):
+ * - Single batched Apify google-search-scraper run
+ * - Poll until complete (40-95s typical)
+ * - Enrich social results with Apify enrichment actors
+ * - Filter results (Web: full pipeline, Social: minimal)
+ * - 80-100% German language accuracy
+ * - Still under Vercel 300s limit
  * 
  * PURPOSE:
  * This endpoint runs affiliate searches during onboarding AFTER payment succeeds.
@@ -37,7 +28,7 @@
  * 3. DIRECT DB SAVE - Saves results directly to discovered_affiliates table
  * 
  * CRITICAL:
- * - This is a PAID CLIENT PROJECT - January 15th, 2026
+ * - This is a PAID CLIENT PROJECT - January 29th, 2026
  * - This endpoint MUST complete successfully for onboarding to work
  * - Frontend waits for this to complete before redirecting user
  * 
@@ -45,39 +36,57 @@
  */
 
 import { 
-  searchWeb, 
   SearchResult,
-  // ==========================================================================
-  // January 29, 2026: CLEANUP - Removed USE_SERPER_FOR_SOCIAL conditional
-  // 
-  // These Serper-based functions are now the ONLY search path.
-  // They use Serper for discovery (good language filtering) and call
-  // Apify enrichment functions internally for metadata (followers, etc.)
-  // ==========================================================================
-  searchYouTubeSerper,
-  searchInstagramSerper,
-  searchTikTokSerper,
+  Platform,
+  filterWebResults,
+  filterSocialResults,
 } from '../../../services/search';
 import { 
-  // ==========================================================================
-  // January 29, 2026: CLEANUP - Removed dead Apify search function imports
-  // (searchYouTubeApify, searchInstagramApify, searchTikTokApify)
-  // ==========================================================================
   enrichDomainsBatch,
+  enrichYouTubeByUrls,
+  enrichInstagramByUrls,
+  enrichTikTokByUrls,
   SimilarWebData
 } from '../../../services/apify';
+import {
+  startGoogleSearchRun,
+  getRunStatus,
+  fetchAndProcessResults,
+} from '../../../services/apify-google-scraper';
 import { sql } from '@/lib/db';
 
 // =============================================================================
-// VERCEL FUNCTION CONFIGURATION - January 15th, 2026
+// VERCEL FUNCTION CONFIGURATION - January 29th, 2026
 // 
-// With the parallel architecture, we should complete much faster (~3 min).
-// We keep 300 seconds for safety margin.
+// With Apify polling, searches take 70-150 seconds typically.
+// We keep 300 seconds for safety margin (includes enrichment + SimilarWeb).
 // =============================================================================
 export const maxDuration = 300;
 
 // =============================================================================
-// TYPE DEFINITIONS - January 15th, 2026
+// HELPER: Format number for display (e.g., 5700 -> "5.7K")
+// January 29th, 2026
+// =============================================================================
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return num.toString();
+}
+
+// =============================================================================
+// HELPER: Sleep for polling
+// January 29th, 2026
+// =============================================================================
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// =============================================================================
+// TYPE DEFINITIONS - January 29th, 2026
 // =============================================================================
 
 interface OnboardingScoutRequest {
@@ -101,12 +110,156 @@ interface OnboardingScoutResponse {
 }
 
 // =============================================================================
+// HELPER: Enrich YouTube results with Apify metadata
+// January 29th, 2026
+// =============================================================================
+async function enrichYouTubeResults(results: SearchResult[]): Promise<SearchResult[]> {
+  if (results.length === 0) return results;
+  
+  try {
+    const urls = results.map(r => r.link).filter(Boolean);
+    console.log(`🎬 [Onboarding] Enriching ${urls.length} YouTube URLs...`);
+    
+    const enrichmentMap = await enrichYouTubeByUrls(urls);
+    
+    return results.map(result => {
+      const apifyData = enrichmentMap.get(result.link);
+      if (apifyData) {
+        return {
+          ...result,
+          channel: {
+            name: apifyData.channelName || 'Unknown Channel',
+            link: apifyData.channelUrl || `https://www.youtube.com/@${apifyData.channelUsername || 'unknown'}`,
+            verified: apifyData.isVerified,
+            subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined,
+          },
+          views: apifyData.viewCount ? formatNumber(apifyData.viewCount) : undefined,
+          youtubeVideoLikes: apifyData.likes,
+          youtubeVideoComments: apifyData.commentsCount,
+          duration: apifyData.duration,
+          thumbnail: apifyData.thumbnailUrl,
+          title: apifyData.title || result.title,
+          snippet: apifyData.text?.substring(0, 300) || result.snippet,
+          date: apifyData.date || apifyData.uploadDate || result.date,
+        };
+      }
+      return result;
+    });
+  } catch (error: any) {
+    console.warn(`⚠️ [Onboarding] YouTube enrichment failed:`, error.message);
+    return results;
+  }
+}
+
+// =============================================================================
+// HELPER: Enrich Instagram results with Apify metadata
+// January 29th, 2026
+// =============================================================================
+async function enrichInstagramResults(results: SearchResult[]): Promise<SearchResult[]> {
+  if (results.length === 0) return results;
+  
+  try {
+    const urls = results.map(r => r.link).filter(Boolean);
+    console.log(`📸 [Onboarding] Enriching ${urls.length} Instagram URLs...`);
+    
+    const enrichmentMap = await enrichInstagramByUrls(urls);
+    
+    return results.map(result => {
+      const apifyData = enrichmentMap.get(result.link);
+      if (apifyData && apifyData.username) {
+        const firstPost = (apifyData as any).latestPosts?.[0];
+        
+        return {
+          ...result,
+          channel: {
+            name: apifyData.fullName || apifyData.username,
+            link: apifyData.url || `https://www.instagram.com/${apifyData.username}/`,
+            thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+            verified: apifyData.verified,
+            subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
+          },
+          instagramUsername: apifyData.username,
+          instagramFullName: apifyData.fullName,
+          instagramBio: apifyData.biography,
+          instagramFollowers: apifyData.followersCount,
+          instagramFollowing: apifyData.followsCount,
+          instagramPostsCount: apifyData.postsCount,
+          instagramIsBusiness: apifyData.isBusinessAccount,
+          instagramIsVerified: apifyData.verified,
+          instagramPostLikes: firstPost?.likesCount,
+          instagramPostComments: firstPost?.commentsCount,
+          instagramPostViews: firstPost?.videoViewCount,
+          thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+          personName: apifyData.fullName || apifyData.username,
+          title: apifyData.fullName || `@${apifyData.username}` || result.title,
+          snippet: apifyData.biography?.substring(0, 300) || result.snippet,
+        };
+      }
+      return result;
+    });
+  } catch (error: any) {
+    console.warn(`⚠️ [Onboarding] Instagram enrichment failed:`, error.message);
+    return results;
+  }
+}
+
+// =============================================================================
+// HELPER: Enrich TikTok results with Apify metadata
+// January 29th, 2026
+// =============================================================================
+async function enrichTikTokResults(results: SearchResult[]): Promise<SearchResult[]> {
+  if (results.length === 0) return results;
+  
+  try {
+    const urls = results.map(r => r.link).filter(Boolean);
+    console.log(`🎵 [Onboarding] Enriching ${urls.length} TikTok URLs...`);
+    
+    const enrichmentMap = await enrichTikTokByUrls(urls);
+    
+    return results.map(result => {
+      const apifyData = enrichmentMap.get(result.link);
+      if (apifyData && apifyData.authorMeta) {
+        const author = apifyData.authorMeta;
+        
+        return {
+          ...result,
+          channel: {
+            name: author.nickName || author.name || result.tiktokUsername || 'Unknown',
+            link: author.profileUrl || `https://www.tiktok.com/@${author.name}`,
+            thumbnail: author.avatar,
+            verified: author.verified,
+            subscribers: author.fans ? formatNumber(author.fans) : undefined,
+          },
+          tiktokUsername: author.name || result.tiktokUsername,
+          tiktokDisplayName: author.nickName,
+          tiktokBio: author.signature,
+          tiktokFollowers: author.fans,
+          tiktokLikes: author.heart,
+          tiktokVideosCount: author.video,
+          tiktokIsVerified: author.verified,
+          tiktokVideoPlays: apifyData.playCount,
+          tiktokVideoLikes: apifyData.diggCount,
+          tiktokVideoComments: apifyData.commentCount,
+          tiktokVideoShares: apifyData.shareCount,
+          thumbnail: apifyData.videoMeta?.coverUrl || author.avatar,
+          date: apifyData.createTimeISO || result.date,
+        };
+      }
+      return result;
+    });
+  } catch (error: any) {
+    console.warn(`⚠️ [Onboarding] TikTok enrichment failed:`, error.message);
+    return results;
+  }
+}
+
+// =============================================================================
 // HELPER: Save a single result to the database
 // 
 // Extracted to avoid code duplication and ensure consistent error handling.
 // Returns true if saved successfully, false otherwise.
 // 
-// January 15th, 2026: Created as part of parallel architecture refactor
+// January 29th, 2026: Updated for Apify polling architecture
 // =============================================================================
 async function saveResultToDb(
   userId: number,
@@ -236,7 +389,7 @@ async function saveResultToDb(
 // =============================================================================
 // HELPER: Update web results with SimilarWeb data
 // 
-// January 15th, 2026: Created as part of parallel architecture refactor
+// January 29th, 2026: Updated for Apify polling architecture
 // =============================================================================
 async function updateWithSimilarWebData(
   userId: number,
@@ -274,7 +427,7 @@ async function updateWithSimilarWebData(
 }
 
 // =============================================================================
-// MAIN HANDLER - January 15th, 2026 (Parallel Architecture)
+// MAIN HANDLER - January 29th, 2026 (Apify Polling Architecture)
 // =============================================================================
 
 export async function POST(req: Request): Promise<Response> {
@@ -305,17 +458,17 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     console.log(`\n${'='.repeat(70)}`);
-    console.log(`[Onboarding Scout] PARALLEL ARCHITECTURE - January 15th, 2026`);
+    console.log(`[Onboarding Scout] APIFY POLLING ARCHITECTURE - January 29th, 2026`);
     console.log(`[Onboarding Scout] User: ${userId}`);
     console.log(`[Onboarding Scout] Topics: ${topics.length}`);
-    console.log(`[Onboarding Scout] Launching ALL searches simultaneously...`);
+    console.log(`[Onboarding Scout] Starting batched Apify search...`);
     console.log(`${'='.repeat(70)}\n`);
 
     // =========================================================================
-    // VERIFY USER EXISTS
+    // VERIFY USER EXISTS AND GET TARGET SETTINGS
     // =========================================================================
     const userCheck = await sql`
-      SELECT id FROM crewcast.users WHERE id = ${userId}
+      SELECT id, target_country, target_language, brand FROM crewcast.users WHERE id = ${userId}
     `;
 
     if (userCheck.length === 0) {
@@ -326,16 +479,21 @@ export async function POST(req: Request): Promise<Response> {
       } as OnboardingScoutResponse, { status: 404 });
     }
 
+    const targetCountry = userCheck[0].target_country as string | null;
+    const targetLanguage = userCheck[0].target_language as string | null;
+    const userBrand = userCheck[0].brand as string | null;
+
     // =========================================================================
-    // PARALLEL ARCHITECTURE - Updated January 29, 2026
+    // APIFY POLLING ARCHITECTURE - January 29th, 2026
     // 
-    // Fire ALL searches at T=0:
-    // - 5 Web (Serper) - fast, ~2-3 seconds
-    // - 5 YouTube (Serper + Apify enrichment) - ~5-10 seconds
-    // - 5 Instagram (Serper + Apify enrichment) - ~5-10 seconds
-    // - 5 TikTok (Serper + Apify enrichment) - ~5-10 seconds
-    // 
-    // Total: 20 concurrent operations, all fast now!
+    // Single batched Apify run with all topics and platforms:
+    // 1. Start non-blocking Apify run
+    // 2. Poll until complete (40-95s typical)
+    // 3. Fetch results
+    // 4. Enrich social results
+    // 5. Filter (Web: full pipeline, Social: minimal)
+    // 6. Save to DB
+    // 7. SimilarWeb enrichment for Web
     // =========================================================================
     
     const platformResults = {
@@ -349,142 +507,207 @@ export async function POST(req: Request): Promise<Response> {
     const allWebDomains: string[] = [];
 
     // =========================================================================
-    // CREATE ALL SEARCH PROMISES - January 15th, 2026
+    // STEP 1: START APIFY RUN (NON-BLOCKING)
     // 
-    // Each promise includes:
-    // 1. Execute the search
-    // 2. Save results to database immediately
-    // 3. Return metadata for tracking
+    // January 29, 2026 FIX:
+    // - Pass keywords[] and competitors[] separately (not combined)
+    // - Each keyword/competitor gets separate queries for each platform
+    // - Queries are fully localized (no English mixing for non-English targets)
     // =========================================================================
-
-    // WEB SEARCHES (Serper) - These complete fast (~2-3 seconds)
-    const webSearchPromises = topics.map(topic => 
-      searchWeb(topic)
-        .then(async (results) => {
-          console.log(`[Onboarding Scout] Web "${topic.substring(0, 30)}...": ${results.length} results`);
-          
-          // Save results immediately
-          let savedCount = 0;
-          for (const result of results) {
-            if (result.domain && !allWebDomains.includes(result.domain)) {
-              allWebDomains.push(result.domain);
-            }
-            const saved = await saveResultToDb(userId, topic, result);
-            if (saved) savedCount++;
-          }
-          
-          return { topic, platform: 'Web' as const, results, savedCount };
-        })
-        .catch(err => {
-          console.error(`[Onboarding Scout] Web search failed for "${topic}":`, err.message);
-          return { topic, platform: 'Web' as const, results: [] as SearchResult[], savedCount: 0 };
-        })
-    );
-
-    // =========================================================================
-    // YOUTUBE SEARCHES - January 29, 2026: Simplified (removed dead code path)
-    // 
-    // Uses Serper for discovery (language-filtered) then Apify enrichment
-    // for metadata (subscribers, views, etc.)
-    // =========================================================================
-    const youtubeSearchPromises = topics.map(topic => {
-      return searchYouTubeSerper(topic, userId, 10, null, null)
-        .then(async (results) => {
-          console.log(`[Onboarding Scout] YouTube "${topic.substring(0, 30)}...": ${results.length} results`);
-          
-          let savedCount = 0;
-          for (const result of results) {
-            const saved = await saveResultToDb(userId, topic, result);
-            if (saved) savedCount++;
-          }
-          
-          return { topic, platform: 'YouTube' as const, results, savedCount };
-        })
-        .catch(err => {
-          console.error(`[Onboarding Scout] YouTube search failed for "${topic}":`, err.message);
-          return { topic, platform: 'YouTube' as const, results: [] as SearchResult[], savedCount: 0 };
-        });
-    });
-
-    // =========================================================================
-    // INSTAGRAM SEARCHES - January 29, 2026: Simplified (removed dead code path)
-    // 
-    // Uses Serper for discovery (language-filtered) then Apify enrichment
-    // for metadata (followers, bio, etc.)
-    // =========================================================================
-    const instagramSearchPromises = topics.map(topic => {
-      return searchInstagramSerper(topic, userId, 10, null, null)
-        .then(async (results) => {
-          console.log(`[Onboarding Scout] Instagram "${topic.substring(0, 30)}...": ${results.length} results`);
-          
-          let savedCount = 0;
-          for (const result of results) {
-            const saved = await saveResultToDb(userId, topic, result);
-            if (saved) savedCount++;
-          }
-          
-          return { topic, platform: 'Instagram' as const, results, savedCount };
-        })
-        .catch(err => {
-          console.error(`[Onboarding Scout] Instagram search failed for "${topic}":`, err.message);
-          return { topic, platform: 'Instagram' as const, results: [] as SearchResult[], savedCount: 0 };
-        });
-    });
-
-    // =========================================================================
-    // TIKTOK SEARCHES - January 29, 2026: Simplified (removed dead code path)
-    // 
-    // Uses Serper for discovery (language-filtered) then Apify enrichment
-    // for metadata (followers, bio, etc.)
-    // =========================================================================
-    const tiktokSearchPromises = topics.map(topic => {
-      return searchTikTokSerper(topic, userId, 10, null, null)
-        .then(async (results) => {
-          console.log(`[Onboarding Scout] TikTok "${topic.substring(0, 30)}...": ${results.length} results`);
-          
-          let savedCount = 0;
-          for (const result of results) {
-            const saved = await saveResultToDb(userId, topic, result);
-            if (saved) savedCount++;
-          }
-          
-          return { topic, platform: 'TikTok' as const, results, savedCount };
-        })
-        .catch(err => {
-          console.error(`[Onboarding Scout] TikTok search failed for "${topic}":`, err.message);
-          return { topic, platform: 'TikTok' as const, results: [] as SearchResult[], savedCount: 0 };
-        });
-    });
-
-    // =========================================================================
-    // WAIT FOR ALL SEARCHES TO COMPLETE - January 15th, 2026
-    // 
-    // All 20 search operations run in parallel:
-    // - 5 Web (Serper) → Fast, ~2-3 seconds
-    // - 5 YouTube (Apify) → Slow, ~30-168 seconds  
-    // - 5 Instagram (Apify) → Medium, ~30-60 seconds
-    // - 5 TikTok (Apify) → Fast, ~5-30 seconds
-    // 
-    // Results are saved to DB as each search completes (in .then() handlers above).
-    // =========================================================================
-    console.log(`[Onboarding Scout] Waiting for all ${topics.length * 4} search operations...`);
+    const sources: Platform[] = ['Web', 'YouTube', 'Instagram', 'TikTok'];
     
-    // Wait for all searches in parallel
-    const [webResults, youtubeResults, instagramResults, tiktokResults] = await Promise.all([
-      Promise.all(webSearchPromises),
-      Promise.all(youtubeSearchPromises),
-      Promise.all(instagramSearchPromises),
-      Promise.all(tiktokSearchPromises),
-    ]);
+    console.log(`[Onboarding Scout] Starting Apify run:`);
+    console.log(`[Onboarding Scout]   Keywords (${topics.length}): ${topics.join(', ')}`);
+    console.log(`[Onboarding Scout]   Competitors (${competitors?.length || 0}): ${competitors?.join(', ') || 'none'}`);
+    console.log(`[Onboarding Scout]   Target: ${targetCountry || 'default'} / ${targetLanguage || 'default'}`);
+    
+    let runId: string;
+    try {
+      const runResult = await startGoogleSearchRun({
+        keywords: topics,
+        competitors: competitors || [],
+        sources,
+        targetCountry,
+        targetLanguage,
+      });
+      runId = runResult.runId;
+      console.log(`[Onboarding Scout] Apify run started: ${runId}`);
+    } catch (startError: any) {
+      console.error(`[Onboarding Scout] Failed to start Apify run:`, startError.message);
+      return Response.json({ 
+        success: false, 
+        error: 'Failed to start search' 
+      } as OnboardingScoutResponse, { status: 500 });
+    }
 
-    // Count results by platform
-    webResults.forEach(r => platformResults.web += r.savedCount);
-    youtubeResults.forEach(r => platformResults.youtube += r.savedCount);
-    instagramResults.forEach(r => platformResults.instagram += r.savedCount);
-    tiktokResults.forEach(r => platformResults.tiktok += r.savedCount);
+    // =========================================================================
+    // STEP 2: POLL UNTIL COMPLETE
+    // 
+    // Poll every 5 seconds until SUCCEEDED, FAILED, or ABORTED.
+    // Max wait: ~150 seconds (still under Vercel 300s limit).
+    // =========================================================================
+    const POLL_INTERVAL_MS = 5000;
+    const MAX_POLL_TIME_MS = 200000; // 200 seconds max
+    const pollStartTime = Date.now();
+    
+    console.log(`[Onboarding Scout] Polling for completion (interval: ${POLL_INTERVAL_MS/1000}s)...`);
+    
+    let status = await getRunStatus(runId);
+    let pollCount = 0;
+    
+    while (status.status === 'RUNNING') {
+      const elapsed = Date.now() - pollStartTime;
+      
+      if (elapsed > MAX_POLL_TIME_MS) {
+        console.error(`[Onboarding Scout] Apify run timed out after ${elapsed/1000}s`);
+        return Response.json({ 
+          success: false, 
+          error: 'Search timed out' 
+        } as OnboardingScoutResponse, { status: 504 });
+      }
+      
+      await sleep(POLL_INTERVAL_MS);
+      pollCount++;
+      status = await getRunStatus(runId);
+      
+      console.log(`[Onboarding Scout] Poll #${pollCount}: ${status.status} (${Math.round(elapsed/1000)}s elapsed)`);
+    }
+    
+    // Check for failure
+    if (status.status === 'FAILED' || status.status === 'ABORTED') {
+      console.error(`[Onboarding Scout] Apify run ${status.status}`);
+      return Response.json({ 
+        success: false, 
+        error: `Search ${status.status.toLowerCase()}` 
+      } as OnboardingScoutResponse, { status: 500 });
+    }
+    
+    console.log(`[Onboarding Scout] Apify run SUCCEEDED after ${pollCount} polls`);
+
+    // =========================================================================
+    // STEP 3: FETCH RAW RESULTS
+    // =========================================================================
+    console.log(`[Onboarding Scout] Fetching results from Apify...`);
+    
+    let rawResults: SearchResult[];
+    try {
+      rawResults = await fetchAndProcessResults(runId, {
+        targetCountry,
+        targetLanguage,
+      });
+    } catch (fetchError: any) {
+      console.error(`[Onboarding Scout] Failed to fetch results:`, fetchError.message);
+      return Response.json({ 
+        success: false, 
+        error: 'Failed to fetch results' 
+      } as OnboardingScoutResponse, { status: 500 });
+    }
+    
+    console.log(`[Onboarding Scout] Fetched ${rawResults.length} raw results`);
+
+    // =========================================================================
+    // STEP 4: CATEGORIZE BY PLATFORM
+    // =========================================================================
+    let youtubeResults = rawResults.filter(r => r.source === 'YouTube');
+    let instagramResults = rawResults.filter(r => r.source === 'Instagram');
+    let tiktokResults = rawResults.filter(r => r.source === 'TikTok');
+    let webResults = rawResults.filter(r => r.source === 'Web');
+    
+    console.log(`[Onboarding Scout] Raw breakdown: YouTube=${youtubeResults.length}, Instagram=${instagramResults.length}, TikTok=${tiktokResults.length}, Web=${webResults.length}`);
+
+    // =========================================================================
+    // STEP 5: ENRICH SOCIAL RESULTS
+    // 
+    // Run enrichment in parallel for all social platforms.
+    // =========================================================================
+    console.log(`[Onboarding Scout] Enriching social results...`);
+    
+    const [enrichedYouTube, enrichedInstagram, enrichedTikTok] = await Promise.all([
+      enrichYouTubeResults(youtubeResults),
+      enrichInstagramResults(instagramResults),
+      enrichTikTokResults(tiktokResults),
+    ]);
+    
+    console.log(`[Onboarding Scout] Enrichment complete`);
+
+    // =========================================================================
+    // STEP 6: APPLY FILTERING
+    // 
+    // Web: Full filtering (e-commerce block, language, TLD, etc.)
+    // Social: Minimal filtering (enrichment required + language)
+    // =========================================================================
+    console.log(`[Onboarding Scout] Applying filters...`);
+    
+    // Filter Web results
+    const filteredWeb = filterWebResults(webResults, {
+      targetCountry: targetCountry || undefined,
+      targetLanguage: targetLanguage || undefined,
+    });
+    
+    // Filter Social results
+    // January 29, 2026: Added brand exclusion to filter out user's own and competitor accounts
+    const filteredYouTube = filterSocialResults(enrichedYouTube, {
+      requireEnrichment: true,
+      targetLanguage: targetLanguage || undefined,
+      userBrand: userBrand || undefined,
+      excludeBrands: competitors || undefined,
+    });
+    
+    const filteredInstagram = filterSocialResults(enrichedInstagram, {
+      requireEnrichment: true,
+      targetLanguage: targetLanguage || undefined,
+      userBrand: userBrand || undefined,
+      excludeBrands: competitors || undefined,
+    });
+    
+    const filteredTikTok = filterSocialResults(enrichedTikTok, {
+      requireEnrichment: true,
+      targetLanguage: targetLanguage || undefined,
+      userBrand: userBrand || undefined,
+      excludeBrands: competitors || undefined,
+    });
+    
+    console.log(`[Onboarding Scout] Filtered: YouTube=${filteredYouTube.length}, Instagram=${filteredInstagram.length}, TikTok=${filteredTikTok.length}, Web=${filteredWeb.length}`);
+
+    // =========================================================================
+    // STEP 7: SAVE RESULTS TO DATABASE
+    // 
+    // Save all filtered results, collecting web domains for SimilarWeb.
+    // =========================================================================
+    console.log(`[Onboarding Scout] Saving results to database...`);
+    
+    // Use first topic as the primary search keyword for DB
+    const primaryTopic = topics[0] || 'onboarding-search';
+    
+    // Save Web results
+    for (const result of filteredWeb) {
+      if (result.domain && !allWebDomains.includes(result.domain)) {
+        allWebDomains.push(result.domain);
+      }
+      const saved = await saveResultToDb(userId, primaryTopic, result);
+      if (saved) platformResults.web++;
+    }
+    
+    // Save YouTube results
+    for (const result of filteredYouTube) {
+      const saved = await saveResultToDb(userId, primaryTopic, result);
+      if (saved) platformResults.youtube++;
+    }
+    
+    // Save Instagram results
+    for (const result of filteredInstagram) {
+      const saved = await saveResultToDb(userId, primaryTopic, result);
+      if (saved) platformResults.instagram++;
+    }
+    
+    // Save TikTok results
+    for (const result of filteredTikTok) {
+      const saved = await saveResultToDb(userId, primaryTopic, result);
+      if (saved) platformResults.tiktok++;
+    }
 
     const searchDuration = Date.now() - startTime;
-    console.log(`\n[Onboarding Scout] ✅ All searches complete in ${searchDuration}ms`);
+    console.log(`\n[Onboarding Scout] ✅ All results saved in ${searchDuration}ms`);
     console.log(`[Onboarding Scout] Collected ${allWebDomains.length} unique web domains`);
     console.log(`[Onboarding Scout] Results by platform:`);
     console.log(`  - Web: ${platformResults.web}`);
@@ -493,15 +716,10 @@ export async function POST(req: Request): Promise<Response> {
     console.log(`  - TikTok: ${platformResults.tiktok}`);
 
     // =========================================================================
-    // SIMILARWEB ENRICHMENT - January 15th, 2026
+    // STEP 8: SIMILARWEB ENRICHMENT - January 29th, 2026
     // 
-    // Now that all searches are complete, enrich web domains with SimilarWeb.
+    // Now that all results are saved, enrich web domains with SimilarWeb.
     // This adds traffic stats, rankings, etc. to web affiliates.
-    // 
-    // Note: In the parallel architecture, SimilarWeb runs AFTER all searches
-    // because we need all web domains collected first. This is still faster
-    // than the old sequential approach because the searches themselves are
-    // parallel (168s vs 485s).
     // =========================================================================
     if (allWebDomains.length > 0) {
       try {
@@ -531,7 +749,7 @@ export async function POST(req: Request): Promise<Response> {
                          platformResults.instagram + platformResults.tiktok;
     
     console.log(`\n${'='.repeat(70)}`);
-    console.log(`[Onboarding Scout] COMPLETE - PARALLEL ARCHITECTURE`);
+    console.log(`[Onboarding Scout] COMPLETE - APIFY POLLING ARCHITECTURE`);
     console.log(`[Onboarding Scout] User: ${userId}`);
     console.log(`[Onboarding Scout] Topics: ${topics.length}`);
     console.log(`[Onboarding Scout] Total results saved: ${totalResults}`);
@@ -541,7 +759,7 @@ export async function POST(req: Request): Promise<Response> {
     console.log(`  - Instagram: ${platformResults.instagram}`);
     console.log(`  - TikTok: ${platformResults.tiktok}`);
     console.log(`[Onboarding Scout] Duration: ${totalDuration}ms (${(totalDuration/1000).toFixed(1)}s)`);
-    console.log(`[Onboarding Scout] Performance: ${topics.length * 4} operations in parallel`);
+    console.log(`[Onboarding Scout] Architecture: Apify batched run + polling`);
     console.log(`${'='.repeat(70)}\n`);
 
     return Response.json({

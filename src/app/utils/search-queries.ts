@@ -107,40 +107,32 @@ export function extractBrandName(domain: string): string {
 }
 
 // =============================================================================
-// LOCALIZED SEARCH TERMS - January 23, 2026
+// LOCALIZED SEARCH TERMS - January 29, 2026
 //
-// Maps target languages to their localized "review" terms.
-// Only includes terms when they're different from English "review".
-// This prevents wasted API calls on irrelevant language queries.
+// UPDATED: Now imports from shared utility for consistency.
+// Uses FULLY_LOCALIZED_TERMS - no English mixing for non-English targets.
 // =============================================================================
-const LOCALIZED_REVIEW_TERMS: Record<string, string> = {
-  // Only include when different from "review"
-  'German': 'erfahrung',        // German: experience/review
-  'Spanish': 'reseña',          // Spanish: review
-  'French': 'avis',             // French: opinion/review
-  'Portuguese': 'avaliação',    // Portuguese: evaluation/review
-  'Italian': 'recensione',      // Italian: review
-  'Dutch': 'ervaring',          // Dutch: experience
-  'Swedish': 'recension',       // Swedish: review
-  'Danish': 'anmeldelse',       // Danish: review
-  'Norwegian': 'anmeldelse',    // Norwegian: review
-  'Finnish': 'arvostelu',       // Finnish: review
-  'Polish': 'recenzja',         // Polish: review
-  'Czech': 'recenze',           // Czech: review
-  // Note: Japanese, Korean, Arabic, Hebrew use different scripts
-  // and are less commonly searched on Google in Latin script
-};
+import { FULLY_LOCALIZED_TERMS, getLocalizedTerms } from './localized-search';
 
 /**
  * Get the localized "review" term for a target language.
- * Returns null for English (since "review" is already English).
+ * 
+ * January 29, 2026 UPDATED: Now uses shared utility
  * 
  * @param targetLanguage - Language name from onboarding (e.g., "German", "Spanish")
- * @returns Localized term or null if English/unknown
+ * @returns First search term (e.g., "erfahrung" for German, "review" for English)
  */
-function getLocalizedReviewTerm(targetLanguage?: string | null): string | null {
-  if (!targetLanguage) return null;
-  return LOCALIZED_REVIEW_TERMS[targetLanguage] || null;
+function getLocalizedReviewTerm(targetLanguage?: string | null): string {
+  const terms = getLocalizedTerms(targetLanguage);
+  return terms.searchTerms[0]; // First term (erfahrung, review, etc.)
+}
+
+/**
+ * Get the localized discount term for a target language.
+ */
+function getLocalizedDiscountTerm(targetLanguage?: string | null): string {
+  const terms = getLocalizedTerms(targetLanguage);
+  return terms.discount;
 }
 
 // =============================================================================
@@ -170,26 +162,23 @@ export function buildBrandSearchQueries(brand: string, targetLanguage?: string |
   }
 
   // ==========================================================================
-  // BRAND QUERY PATTERNS - January 23, 2026
-  // Updated: January 23, 2026 - Language-aware queries
+  // BRAND QUERY PATTERNS - January 29, 2026
+  // UPDATED: Now uses FULLY LOCALIZED terms - no English mixing
   //
-  // Each query targets a specific type of content:
-  // 1. Reviews - People who have tested/reviewed the product
-  // 2. Affiliates - People with affiliate/referral links
-  // 3. Localized term based on user's target language
-  //
-  // NOTE: We limit to 3 queries to control API costs.
+  // For German: "bedrop erfahrung", "bedrop test", "bedrop bewertung", "bedrop rabatt"
+  // For English: "bedrop review", "bedrop test", "bedrop blog", "bedrop discount"
   // ==========================================================================
-  const queries = [
-    `"${brandName} review"`,           // Find review content (universal)
-    `"${brandName} affiliate"`,        // Find affiliate content (universal)
-  ];
-
-  // Add language-specific query based on user's target language
-  const localizedTerm = getLocalizedReviewTerm(targetLanguage);
-  if (localizedTerm && localizedTerm !== 'review') {
-    queries.push(`"${brandName} ${localizedTerm}"`);
+  const terms = getLocalizedTerms(targetLanguage);
+  
+  const queries: string[] = [];
+  
+  // Add first 3 web terms
+  for (const term of terms.webTerms.slice(0, 3)) {
+    queries.push(`"${brandName} ${term}"`);
   }
+  
+  // Add discount term
+  queries.push(`"${brandName} ${terms.discount}"`);
 
   return queries;
 }
@@ -205,9 +194,9 @@ export function buildBrandSearchQueries(brand: string, targetLanguage?: string |
  * Build search queries to find affiliates of a competitor.
  *
  * These queries help find:
- * - People looking for alternatives to the competitor
  * - Reviewers who cover the competitor's product
- * - Comparison content (competitor vs X)
+ * - People testing/discussing the competitor
+ * - People with discount codes (potential affiliates)
  *
  * @param competitor - The competitor domain (e.g., "leadfeeder.com") or name
  * @param targetLanguage - User's target language from onboarding (optional)
@@ -221,27 +210,27 @@ export function buildCompetitorSearchQueries(competitor: string, targetLanguage?
   }
 
   // ==========================================================================
-  // COMPETITOR QUERY PATTERNS - January 23, 2026
-  // Updated: January 23, 2026 - Language-aware queries
+  // COMPETITOR QUERY PATTERNS - January 29, 2026
+  // UPDATED: Now uses FULLY LOCALIZED terms - no English mixing
   //
-  // Each query targets potential affiliate recruits:
-  // 1. Alternatives - People already looking for alternatives (high intent!)
-  // 2. Reviews - Reviewers who could also review our product
-  // 3. Comparisons - People creating comparison content
+  // OLD (buggy): "bedrop alternative", "bedrop review", "bedrop vs" (English)
+  // NEW: "bedrop erfahrung", "bedrop test", "bedrop bewertung", "bedrop rabatt"
   //
-  // NOTE: We limit to 3 queries to control API costs.
+  // Rationale: "alternative" and "vs" are English words that don't work well
+  // for non-English markets. Use review/test terms instead to find affiliates
+  // who are actually reviewing/promoting the competitor.
   // ==========================================================================
-  const queries = [
-    `"${competitorName} alternative"`,  // Find alternative seekers
-    `"${competitorName} review"`,       // Find competitor reviewers
-    `"${competitorName} vs"`,           // Find comparison content
-  ];
-
-  // Add language-specific query if not English
-  const localizedTerm = getLocalizedReviewTerm(targetLanguage);
-  if (localizedTerm) {
-    queries.push(`"${competitorName} ${localizedTerm}"`);
+  const terms = getLocalizedTerms(targetLanguage);
+  
+  const queries: string[] = [];
+  
+  // Add first 3 web terms
+  for (const term of terms.webTerms.slice(0, 3)) {
+    queries.push(`"${competitorName} ${term}"`);
   }
+  
+  // Add discount term (find people with competitor discount codes)
+  queries.push(`"${competitorName} ${terms.discount}"`);
 
   return queries;
 }

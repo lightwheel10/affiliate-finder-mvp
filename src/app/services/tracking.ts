@@ -16,6 +16,8 @@ export const API_COSTS = {
   apollo_email: 0.03,      // $0.03 per email lookup
   lusha_email: 0.05,       // $0.05 per email lookup (estimate)
   website_scraper: 0,      // $0 - FREE, just HTTP requests (January 16, 2026)
+  // January 29, 2026: Added for polling-based search
+  apify_google_scraper: 0.002, // ~$0.02 per 10 results (pay per compute)
 } as const;
 
 // ============================================================================
