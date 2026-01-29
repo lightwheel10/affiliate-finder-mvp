@@ -277,35 +277,166 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       
       console.log(`🔄 [Search/Status] Enrichment status:`, statuses);
       
-      // Check how long enrichment has been running
-      const enrichmentStartTime = Object.values(statuses).find(s => s.startedAt)?.startedAt;
-      const enrichmentElapsedMs = enrichmentStartTime 
-        ? Date.now() - new Date(enrichmentStartTime).getTime()
-        : 0;
-      const ENRICHMENT_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
-      
-      // Count how many actors have completed
+      // Count completed actors
       const completedActors = Object.values(statuses).filter(
         s => s.status === 'SUCCEEDED' || s.status === 'FAILED' || s.status === 'ABORTED'
       ).length;
       const totalActors = Object.keys(statuses).length;
       
-      if (!allComplete) {
-        // Check if we should timeout and return partial results
-        if (enrichmentElapsedMs > ENRICHMENT_TIMEOUT_MS && completedActors > 0) {
-          console.warn(`⏱️ [Search/Status] Enrichment timeout after ${Math.round(enrichmentElapsedMs/1000)}s. Returning partial results (${completedActors}/${totalActors} actors complete)`);
-          // Continue to process whatever results we have from completed actors
-        } else {
-          // Enrichment still running - return enriching status
-          return NextResponse.json({
-            status: 'enriching',
-            message: `Enriching results with social media data... (${completedActors}/${totalActors} complete)`,
-          });
+      // ==========================================================================
+      // INCREMENTAL SAVING: Save results from completed actors on EVERY poll
+      // This ensures results are saved as soon as each actor completes.
+      // ON CONFLICT DO NOTHING handles duplicates safely.
+      // ==========================================================================
+      const isOnboardingJob = (userSettings as any)?.isOnboarding === true;
+      
+      if (isOnboardingJob && completedActors > 0) {
+        // Fetch results from any completed actors (even if not all complete)
+        const [youtubeEnrichment, instagramEnrichment, tiktokEnrichment, similarwebEnrichment] = await Promise.all([
+          enrichmentRunIds.youtube && statuses.youtube?.status === 'SUCCEEDED'
+            ? fetchYouTubeEnrichmentResults(enrichmentRunIds.youtube)
+            : Promise.resolve(new Map()),
+          enrichmentRunIds.instagram && statuses.instagram?.status === 'SUCCEEDED'
+            ? fetchInstagramEnrichmentResults(enrichmentRunIds.instagram)
+            : Promise.resolve(new Map()),
+          enrichmentRunIds.tiktok && statuses.tiktok?.status === 'SUCCEEDED'
+            ? fetchTikTokEnrichmentResults(enrichmentRunIds.tiktok)
+            : Promise.resolve(new Map()),
+          enrichmentRunIds.similarweb && statuses.similarweb?.status === 'SUCCEEDED'
+            ? fetchSimilarWebEnrichmentResults(enrichmentRunIds.similarweb)
+            : Promise.resolve(new Map<string, SimilarWebData>()),
+        ]);
+        
+        // Apply enrichment and save INCREMENTALLY (duplicates ignored via ON CONFLICT)
+        const onboardingTopics = (userSettings as any)?.topics as string[] | undefined;
+        const primaryTopic = onboardingTopics?.[0] || 'onboarding';
+        
+        // Process and save completed platforms' results
+        let savedThisPoll = 0;
+        
+        // Helper to save enriched results (ON CONFLICT DO NOTHING handles duplicates)
+        const saveEnrichedResult = async (result: SearchResult) => {
+          try {
+            await sql`
+              INSERT INTO crewcast.discovered_affiliates (
+                user_id, search_keyword, title, link, domain, snippet, source,
+                is_affiliate, summary, thumbnail, date, views, highlighted_words,
+                discovery_method_type, discovery_method_value,
+                channel_name, channel_link, channel_thumbnail, channel_verified, channel_subscribers,
+                duration, email,
+                instagram_username, instagram_full_name, instagram_bio, instagram_followers,
+                instagram_following, instagram_posts_count, instagram_is_business, instagram_is_verified,
+                tiktok_username, tiktok_display_name, tiktok_bio, tiktok_followers,
+                tiktok_following, tiktok_likes, tiktok_videos_count, tiktok_is_verified,
+                similarweb_monthly_visits, similarweb_global_rank, similarweb_country_rank,
+                similarweb_bounce_rate, similarweb_pages_per_visit, similarweb_time_on_site
+              )
+              VALUES (
+                ${userId}, ${primaryTopic}, ${result.title}, ${result.link}, ${result.domain},
+                ${result.snippet || 'No description available'}, ${result.source},
+                ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
+                ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
+                ${'topic'}, ${primaryTopic},
+                ${result.channel?.name || null}, ${result.channel?.link || null},
+                ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
+                ${result.channel?.subscribers || null}, ${result.duration || null},
+                ${result.email || null},
+                ${(result as any).instagramUsername || null}, ${(result as any).instagramFullName || null},
+                ${(result as any).instagramBio || null}, ${(result as any).instagramFollowers || null},
+                ${(result as any).instagramFollowing || null}, ${(result as any).instagramPostsCount || null},
+                ${(result as any).instagramIsBusiness || null}, ${(result as any).instagramIsVerified || null},
+                ${(result as any).tiktokUsername || null}, ${(result as any).tiktokDisplayName || null},
+                ${(result as any).tiktokBio || null}, ${(result as any).tiktokFollowers || null},
+                ${(result as any).tiktokFollowing || null}, ${(result as any).tiktokLikes || null},
+                ${(result as any).tiktokVideosCount || null}, ${(result as any).tiktokIsVerified || null},
+                ${(result as any).similarwebMonthlyVisits || null}, ${(result as any).similarwebGlobalRank || null},
+                ${(result as any).similarwebCountryRank || null}, ${(result as any).similarwebBounceRate || null},
+                ${(result as any).similarwebPagesPerVisit || null}, ${(result as any).similarwebTimeOnSite || null}
+              )
+              ON CONFLICT (user_id, link) DO NOTHING
+            `;
+            return true;
+          } catch (e) {
+            return false;
+          }
+        };
+        
+        // Apply enrichment and save YouTube results (if actor completed)
+        if (statuses.youtube?.status === 'SUCCEEDED') {
+          const youtubeResults = rawResults.filter(r => r.source === 'YouTube');
+          for (const result of youtubeResults) {
+            const apifyData = youtubeEnrichment.get(result.link);
+            const enriched = apifyData ? {
+              ...result,
+              channel: { name: apifyData.channelName || 'Unknown', link: apifyData.channelUrl || '', verified: apifyData.isVerified, subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined },
+              views: apifyData.viewCount ? formatNumber(apifyData.viewCount) : undefined,
+              thumbnail: apifyData.thumbnailUrl,
+              title: apifyData.title || result.title,
+            } : result;
+            if (await saveEnrichedResult(enriched)) savedThisPoll++;
+          }
         }
+        
+        // Apply enrichment and save Instagram results (if actor completed)
+        if (statuses.instagram?.status === 'SUCCEEDED') {
+          const instagramResults = rawResults.filter(r => r.source === 'Instagram');
+          for (const result of instagramResults) {
+            const apifyData = instagramEnrichment.get(result.link);
+            const enriched = apifyData ? {
+              ...result,
+              channel: { name: apifyData.fullName || apifyData.username, link: apifyData.url || '', verified: apifyData.verified, subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined },
+              instagramUsername: apifyData.username, instagramFullName: apifyData.fullName, instagramBio: apifyData.biography,
+              instagramFollowers: apifyData.followersCount, instagramFollowing: apifyData.followsCount,
+              instagramPostsCount: apifyData.postsCount, instagramIsBusiness: apifyData.isBusinessAccount, instagramIsVerified: apifyData.verified,
+            } : result;
+            if (await saveEnrichedResult(enriched)) savedThisPoll++;
+          }
+        }
+        
+        // Apply enrichment and save TikTok results (if actor completed)
+        if (statuses.tiktok?.status === 'SUCCEEDED') {
+          const tiktokResults = rawResults.filter(r => r.source === 'TikTok');
+          for (const result of tiktokResults) {
+            const apifyData = tiktokEnrichment.get(result.link);
+            const enriched = apifyData ? {
+              ...result,
+              channel: { name: apifyData.authorMeta?.name || 'Unknown', link: `https://tiktok.com/@${apifyData.authorMeta?.name}`, verified: apifyData.authorMeta?.verified },
+              tiktokUsername: apifyData.authorMeta?.name, tiktokDisplayName: apifyData.authorMeta?.nickName,
+              tiktokFollowers: apifyData.authorMeta?.fans, tiktokLikes: apifyData.authorMeta?.heart,
+              tiktokIsVerified: apifyData.authorMeta?.verified,
+            } : result;
+            if (await saveEnrichedResult(enriched)) savedThisPoll++;
+          }
+        }
+        
+        // Apply enrichment and save Web results with SimilarWeb (if actor completed)
+        if (statuses.similarweb?.status === 'SUCCEEDED') {
+          const webResults = rawResults.filter(r => r.source === 'Web');
+          for (const result of webResults) {
+            const swData = similarwebEnrichment.get(result.domain);
+            const enriched = swData ? {
+              ...result,
+              similarwebMonthlyVisits: swData.monthlyVisits, similarwebGlobalRank: swData.globalRank,
+              similarwebCountryRank: swData.countryRank, similarwebBounceRate: swData.bounceRate,
+              similarwebPagesPerVisit: swData.pagesPerVisit, similarwebTimeOnSite: swData.timeOnSite,
+            } : result;
+            if (await saveEnrichedResult(enriched)) savedThisPoll++;
+          }
+        }
+        
+        console.log(`💾 [Search/Status] Incremental save: ${savedThisPoll} new results saved (${completedActors}/${totalActors} actors complete)`);
       }
       
-      // All enrichment actors complete - process results
-      console.log(`✅ [Search/Status] All enrichment actors complete, processing results...`);
+      // If not all complete, return enriching status (but results are already saved incrementally!)
+      if (!allComplete) {
+        return NextResponse.json({
+          status: 'enriching',
+          message: `Enriching results with social media data... (${completedActors}/${totalActors} complete)`,
+        });
+      }
+      
+      // All enrichment actors complete - mark as done
+      console.log(`✅ [Search/Status] All enrichment actors complete!`);
       
       // Check if any enrichment failed
       const anyFailed = Object.values(statuses).some(s => 
