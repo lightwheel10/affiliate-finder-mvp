@@ -3,27 +3,36 @@
  * 
  * =============================================================================
  * Created: January 29, 2026
+ * Updated: January 30, 2026 - Non-blocking enrichment architecture
  * 
  * PURPOSE:
  * Polls the status of an Apify google-search-scraper run and returns results
- * when complete. Handles enrichment and filtering.
+ * when complete. Now uses non-blocking enrichment to avoid Vercel timeouts.
  * 
- * FLOW:
+ * FLOW (Updated January 30, 2026):
  * 1. Auth check
  * 2. Get job from search_jobs (verify user owns it)
- * 3. Check Apify run status via getRunStatus()
- * 4. If RUNNING: return { status: 'running', elapsed }
- * 5. If SUCCEEDED:
+ * 3. If job.enrichment_status='running' → check enrichment actors, return 'enriching'
+ * 4. Check Apify Google Scraper run status via getRunStatus()
+ * 5. If RUNNING: return { status: 'running', elapsed }
+ * 6. If SUCCEEDED (first time):
  *    a) Fetch raw results via fetchAndProcessResults()
- *    b) Categorize by platform (YouTube, Instagram, TikTok, Web)
- *    c) Enrich each platform (enrichYouTubeByUrls, etc.)
- *    d) Apply filtering (different per platform - see below)
- *    e) Consume credit
- *    f) Update job status
- *    g) Return { status: 'done', results }
- * 6. If FAILED: return error
+ *    b) Save to raw_results column
+ *    c) Start enrichment actors (non-blocking via .start())
+ *    d) Save enrichment_run_ids, set enrichment_status='running'
+ *    e) Return { status: 'enriching' }
+ * 7. When all enrichment actors complete:
+ *    a) Fetch enrichment results from datasets
+ *    b) Apply filtering
+ *    c) Consume credit
+ *    d) Return { status: 'done', results }
  * 
- * FILTERING (January 29, 2026):
+ * WHY NON-BLOCKING (January 30, 2026):
+ * The old approach used blocking .call() for enrichment actors, which took
+ * 20-30 seconds each. With 3 platforms, this exceeded Vercel's timeout limit.
+ * Now we use .start() to begin enrichment actors and poll their status.
+ * 
+ * FILTERING:
  * 
  * WEB results get full filtering:
  *   1. ECOMMERCE_DOMAINS block
@@ -36,7 +45,6 @@
  * SOCIAL results (YouTube/Instagram/TikTok) get minimal filtering:
  *   1. Enrichment required (skip if no metadata)
  *   2. Language filter (franc)
- *   (No domain/shop filtering needed - site: filter already constrains)
  * =============================================================================
  */
 
@@ -55,10 +63,18 @@ import {
   filterWebResults,
   filterSocialResults,
 } from '@/app/services/search';
+// January 30, 2026: Import both blocking (legacy) and non-blocking enrichment functions
 import {
   enrichYouTubeByUrls,
   enrichInstagramByUrls,
   enrichTikTokByUrls,
+  // Non-blocking enrichment functions
+  startAllEnrichment,
+  checkAllEnrichmentStatus,
+  fetchYouTubeEnrichmentResults,
+  fetchInstagramEnrichmentResults,
+  fetchTikTokEnrichmentResults,
+  EnrichmentRunIds,
 } from '@/app/services/apify';
 import { trackApiCall } from '@/app/services/tracking';
 
@@ -92,10 +108,11 @@ export const maxDuration = 120; // 2 minutes
 // =============================================================================
 // REQUEST/RESPONSE TYPES
 // January 29, 2026
+// Updated: January 30, 2026 - Added 'enriching' status for non-blocking enrichment
 // =============================================================================
 
 interface StatusResponse {
-  status: 'running' | 'processing' | 'done' | 'failed' | 'timeout';
+  status: 'running' | 'processing' | 'enriching' | 'done' | 'failed' | 'timeout';
   elapsedSeconds?: number;
   message?: string;
   results?: SearchResult[];
@@ -162,12 +179,14 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // ==========================================================================
     // GET JOB FROM DATABASE
     // January 29, 2026
+    // Updated: January 30, 2026 - Added enrichment columns
     // 
     // Verify user owns this job to prevent unauthorized access.
     // ==========================================================================
     const jobs = await sql`
       SELECT id, user_id, keyword, sources, apify_run_id, status, 
-             created_at, user_settings, results_count
+             created_at, user_settings, results_count,
+             enrichment_status, enrichment_run_ids, raw_results
       FROM crewcast.search_jobs 
       WHERE id = ${jobIdNum} AND user_id = ${userId}
     `;
@@ -187,6 +206,10 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       targetLanguage?: string | null;
       userBrand?: string | null;
     } | null;
+    // January 30, 2026: Non-blocking enrichment state
+    const enrichmentStatus = job.enrichment_status as string | null;
+    const enrichmentRunIds = job.enrichment_run_ids as EnrichmentRunIds | null;
+    const rawResults = job.raw_results as SearchResult[] | null;
     
     // ==========================================================================
     // CHECK IF ALREADY COMPLETE
@@ -206,6 +229,315 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       return NextResponse.json({
         status: jobStatus as 'failed' | 'timeout',
         message: 'Search failed. Please try again.',
+      });
+    }
+    
+    // ==========================================================================
+    // JANUARY 30, 2026: CHECK ENRICHMENT STATUS (NON-BLOCKING)
+    // 
+    // If enrichment actors are running, check their status.
+    // This is the new non-blocking enrichment flow to avoid Vercel timeouts.
+    // ==========================================================================
+    if (enrichmentStatus === 'running' && enrichmentRunIds && rawResults) {
+      console.log(`🔄 [Search/Status] Checking enrichment status...`);
+      
+      const { allComplete, statuses } = await checkAllEnrichmentStatus(enrichmentRunIds);
+      
+      console.log(`🔄 [Search/Status] Enrichment status:`, statuses);
+      
+      if (!allComplete) {
+        // Enrichment still running - return enriching status
+        return NextResponse.json({
+          status: 'enriching',
+          message: 'Enriching results with social media data...',
+        });
+      }
+      
+      // All enrichment actors complete - process results
+      console.log(`✅ [Search/Status] All enrichment actors complete, processing results...`);
+      
+      // Check if any enrichment failed
+      const anyFailed = Object.values(statuses).some(s => 
+        s.status === 'FAILED' || s.status === 'ABORTED'
+      );
+      
+      if (anyFailed) {
+        console.warn(`⚠️ [Search/Status] Some enrichment actors failed, continuing with partial data`);
+      }
+      
+      // Fetch enrichment results from completed runs
+      const [youtubeEnrichment, instagramEnrichment, tiktokEnrichment] = await Promise.all([
+        enrichmentRunIds.youtube && statuses.youtube?.status === 'SUCCEEDED'
+          ? fetchYouTubeEnrichmentResults(enrichmentRunIds.youtube)
+          : Promise.resolve(new Map()),
+        enrichmentRunIds.instagram && statuses.instagram?.status === 'SUCCEEDED'
+          ? fetchInstagramEnrichmentResults(enrichmentRunIds.instagram)
+          : Promise.resolve(new Map()),
+        enrichmentRunIds.tiktok && statuses.tiktok?.status === 'SUCCEEDED'
+          ? fetchTikTokEnrichmentResults(enrichmentRunIds.tiktok)
+          : Promise.resolve(new Map()),
+      ]);
+      
+      console.log(`📥 [Search/Status] Enrichment results fetched: YouTube=${youtubeEnrichment.size}, Instagram=${instagramEnrichment.size}, TikTok=${tiktokEnrichment.size}`);
+      
+      // Apply enrichment to raw results
+      const youtubeResults = rawResults.filter(r => r.source === 'YouTube');
+      const instagramResults = rawResults.filter(r => r.source === 'Instagram');
+      const tiktokResults = rawResults.filter(r => r.source === 'TikTok');
+      const webResults = rawResults.filter(r => r.source === 'Web');
+      
+      // Enrich YouTube results
+      const enrichedYouTube = youtubeResults.map(result => {
+        const apifyData = youtubeEnrichment.get(result.link);
+        if (apifyData) {
+          return {
+            ...result,
+            channel: {
+              name: apifyData.channelName || 'Unknown Channel',
+              link: apifyData.channelUrl || '',
+              verified: apifyData.isVerified,
+              subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined,
+            },
+            views: apifyData.viewCount ? formatNumber(apifyData.viewCount) : undefined,
+            youtubeVideoLikes: apifyData.likes,
+            youtubeVideoComments: apifyData.commentsCount,
+            duration: apifyData.duration,
+            thumbnail: apifyData.thumbnailUrl,
+            title: apifyData.title || result.title,
+            snippet: apifyData.text?.substring(0, 300) || result.snippet,
+            date: apifyData.date || apifyData.uploadDate || result.date,
+          };
+        }
+        return result;
+      });
+      
+      // Enrich Instagram results
+      const enrichedInstagram = instagramResults.map(result => {
+        const apifyData = instagramEnrichment.get(result.link);
+        if (apifyData && apifyData.username) {
+          const firstPost = (apifyData as any).latestPosts?.[0];
+          return {
+            ...result,
+            channel: {
+              name: apifyData.fullName || apifyData.username,
+              link: apifyData.url || `https://www.instagram.com/${apifyData.username}/`,
+              thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+              verified: apifyData.verified,
+              subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
+            },
+            instagramUsername: apifyData.username,
+            instagramFullName: apifyData.fullName,
+            instagramBio: apifyData.biography,
+            instagramFollowers: apifyData.followersCount,
+            instagramFollowing: apifyData.followsCount,
+            instagramPostsCount: apifyData.postsCount,
+            instagramIsBusiness: apifyData.isBusinessAccount,
+            instagramIsVerified: apifyData.verified,
+            instagramPostLikes: firstPost?.likesCount,
+            instagramPostComments: firstPost?.commentsCount,
+            instagramPostViews: firstPost?.videoViewCount,
+            thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+            personName: apifyData.fullName || apifyData.username,
+            title: apifyData.fullName || `@${apifyData.username}` || result.title,
+            snippet: apifyData.biography?.substring(0, 300) || result.snippet,
+          };
+        }
+        return result;
+      });
+      
+      // Enrich TikTok results
+      const enrichedTikTok = tiktokResults.map(result => {
+        const apifyData = tiktokEnrichment.get(result.link);
+        if (apifyData && apifyData.authorMeta) {
+          const author = apifyData.authorMeta;
+          return {
+            ...result,
+            channel: {
+              name: author.nickName || author.name || result.tiktokUsername || 'Unknown',
+              link: author.profileUrl || `https://www.tiktok.com/@${author.name}`,
+              thumbnail: author.avatar,
+              verified: author.verified,
+              subscribers: author.fans ? formatNumber(author.fans) : undefined,
+            },
+            tiktokUsername: author.name || result.tiktokUsername,
+            tiktokDisplayName: author.nickName,
+            tiktokBio: author.signature,
+            tiktokFollowers: author.fans,
+            tiktokLikes: author.heart,
+            tiktokVideosCount: author.video,
+            tiktokIsVerified: author.verified,
+            tiktokVideoPlays: apifyData.playCount,
+            tiktokVideoLikes: apifyData.diggCount,
+            tiktokVideoComments: apifyData.commentCount,
+            tiktokVideoShares: apifyData.shareCount,
+            thumbnail: apifyData.videoMeta?.coverUrl || author.avatar,
+            date: apifyData.createTimeISO || result.date,
+          };
+        }
+        return result;
+      });
+      
+      // Apply filtering
+      const filteredWeb = filterWebResults(webResults, {
+        userBrand: userSettings?.userBrand || undefined,
+        targetCountry: userSettings?.targetCountry || undefined,
+        targetLanguage: userSettings?.targetLanguage || undefined,
+      });
+      
+      const filteredYouTube = filterSocialResults(enrichedYouTube, {
+        requireEnrichment: true,
+        targetLanguage: userSettings?.targetLanguage || undefined,
+        userBrand: userSettings?.userBrand || undefined,
+      });
+      
+      const filteredInstagram = filterSocialResults(enrichedInstagram, {
+        requireEnrichment: true,
+        targetLanguage: userSettings?.targetLanguage || undefined,
+        userBrand: userSettings?.userBrand || undefined,
+      });
+      
+      const filteredTikTok = filterSocialResults(enrichedTikTok, {
+        requireEnrichment: true,
+        targetLanguage: userSettings?.targetLanguage || undefined,
+        userBrand: userSettings?.userBrand || undefined,
+      });
+      
+      // Combine results
+      const allResults = [
+        ...filteredYouTube,
+        ...filteredInstagram,
+        ...filteredTikTok,
+        ...filteredWeb,
+      ];
+      
+      const breakdown = {
+        YouTube: filteredYouTube.length,
+        Instagram: filteredInstagram.length,
+        TikTok: filteredTikTok.length,
+        Web: filteredWeb.length,
+      };
+      
+      console.log(`🔍 [Search/Status] Final results: ${allResults.length}`);
+      console.log(`🔍 [Search/Status] Breakdown: ${JSON.stringify(breakdown)}`);
+      
+      // ==========================================================================
+      // January 30, 2026: Check if this is an onboarding job
+      // If so, save results to discovered_affiliates and skip credit consumption
+      // 
+      // PERFORMANCE FIX: Use parallel inserts with concurrency limit
+      // With 700+ results, sequential inserts would take 30+ seconds and timeout.
+      // Parallel inserts (20 at a time) complete in ~5-10 seconds.
+      // ==========================================================================
+      const isOnboarding = (userSettings as any)?.isOnboarding === true;
+      const onboardingTopics = (userSettings as any)?.topics as string[] | undefined;
+      
+      if (isOnboarding && onboardingTopics && onboardingTopics.length > 0) {
+        console.log(`🎓 [Search/Status] Onboarding job detected, saving ${allResults.length} results to discovered_affiliates...`);
+        
+        const primaryTopic = onboardingTopics[0];
+        let savedCount = 0;
+        let errorCount = 0;
+        
+        // Helper to save a single result
+        const saveResult = async (result: SearchResult) => {
+          try {
+            await sql`
+              INSERT INTO crewcast.discovered_affiliates (
+                user_id, search_keyword, title, link, domain, snippet, source,
+                is_affiliate, summary, thumbnail, date, views, highlighted_words,
+                discovery_method_type, discovery_method_value,
+                channel_name, channel_link, channel_thumbnail, channel_verified, channel_subscribers,
+                duration, email,
+                instagram_username, instagram_full_name, instagram_bio, instagram_followers,
+                instagram_following, instagram_posts_count, instagram_is_business, instagram_is_verified,
+                tiktok_username, tiktok_display_name, tiktok_bio, tiktok_followers,
+                tiktok_following, tiktok_likes, tiktok_videos_count, tiktok_is_verified,
+                tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares,
+                youtube_video_likes, youtube_video_comments
+              )
+              VALUES (
+                ${userId}, ${primaryTopic}, ${result.title}, ${result.link}, ${result.domain},
+                ${result.snippet || 'No description available'}, ${result.source},
+                ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
+                ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
+                ${'topic'}, ${primaryTopic},
+                ${result.channel?.name || null}, ${result.channel?.link || null},
+                ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
+                ${result.channel?.subscribers || null}, ${result.duration || null},
+                ${result.email || null},
+                ${result.instagramUsername || null}, ${result.instagramFullName || null},
+                ${result.instagramBio || null}, ${result.instagramFollowers || null},
+                ${result.instagramFollowing || null}, ${result.instagramPostsCount || null},
+                ${result.instagramIsBusiness || null}, ${result.instagramIsVerified || null},
+                ${result.tiktokUsername || null}, ${result.tiktokDisplayName || null},
+                ${result.tiktokBio || null}, ${result.tiktokFollowers || null},
+                ${result.tiktokFollowing || null}, ${result.tiktokLikes || null},
+                ${result.tiktokVideosCount || null}, ${result.tiktokIsVerified || null},
+                ${result.tiktokVideoPlays || null}, ${result.tiktokVideoLikes || null},
+                ${result.tiktokVideoComments || null}, ${result.tiktokVideoShares || null},
+                ${result.youtubeVideoLikes || null}, ${result.youtubeVideoComments || null}
+              )
+              ON CONFLICT (user_id, link) DO NOTHING
+            `;
+            return true;
+          } catch (e) {
+            return false;
+          }
+        };
+        
+        // Process in parallel batches with concurrency limit
+        // 20 concurrent inserts balances speed vs DB connection limits
+        const CONCURRENCY = 20;
+        for (let i = 0; i < allResults.length; i += CONCURRENCY) {
+          const chunk = allResults.slice(i, i + CONCURRENCY);
+          const results = await Promise.all(chunk.map(saveResult));
+          const chunkSaved = results.filter(Boolean).length;
+          savedCount += chunkSaved;
+          errorCount += results.length - chunkSaved;
+          
+          // Log progress every 100 results
+          if ((i + CONCURRENCY) % 100 < CONCURRENCY) {
+            console.log(`🎓 [Search/Status] Progress: ${savedCount}/${allResults.length} saved`);
+          }
+        }
+        
+        console.log(`🎓 [Search/Status] Saved ${savedCount} results (${errorCount} duplicates/errors) to discovered_affiliates`);
+      } else {
+        // Not onboarding - consume credit
+        if (allResults.length > 0) {
+          await consumeCredits(userId, 'topic_search', 1);
+          console.log(`💳 [Search/Status] Credit consumed for user ${userId}`);
+        }
+      }
+      
+      // Update job status to done
+      await sql`
+        UPDATE crewcast.search_jobs 
+        SET 
+          status = 'done',
+          enrichment_status = 'succeeded',
+          completed_at = NOW(),
+          results_count = ${allResults.length}
+        WHERE id = ${jobIdNum}
+      `;
+      
+      // Track API call
+      await trackApiCall({
+        userId,
+        service: 'apify_google_scraper',
+        endpoint: 'status',
+        keyword: job.keyword as string,
+        status: 'success',
+        resultsCount: allResults.length,
+        apifyRunId,
+        durationMs: Date.now() - startTime,
+      });
+      
+      return NextResponse.json({
+        status: 'done',
+        results: allResults,
+        resultsCount: allResults.length,
+        breakdown,
       });
     }
     
@@ -287,10 +619,19 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     }
     
     // ==========================================================================
-    // HANDLE SUCCEEDED STATUS - FETCH AND PROCESS RESULTS
-    // January 29, 2026
+    // HANDLE SUCCEEDED STATUS - START NON-BLOCKING ENRICHMENT
+    // January 30, 2026: Changed from blocking to non-blocking enrichment
+    // 
+    // When Google Scraper completes, we:
+    // 1. Fetch raw results
+    // 2. Save to raw_results column
+    // 3. Start enrichment actors (non-blocking via .start())
+    // 4. Return { status: 'enriching' }
+    // 
+    // The actual enrichment processing happens on the NEXT poll when
+    // enrichment_status='running' (see code above).
     // ==========================================================================
-    console.log(`🔍 [Search/Status] Run succeeded, processing results...`);
+    console.log(`🔍 [Search/Status] Google Scraper succeeded, starting non-blocking enrichment...`);
     
     // Update job to processing
     await sql`
@@ -298,9 +639,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     `;
     
     // Fetch raw results from Apify
-    let rawResults: SearchResult[];
+    let fetchedRawResults: SearchResult[];
     try {
-      rawResults = await fetchAndProcessResults(apifyRunId, {
+      fetchedRawResults = await fetchAndProcessResults(apifyRunId, {
         targetCountry: userSettings?.targetCountry,
         targetLanguage: userSettings?.targetLanguage,
       });
@@ -319,279 +660,156 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       });
     }
     
-    console.log(`🔍 [Search/Status] Raw results: ${rawResults.length}`);
+    console.log(`🔍 [Search/Status] Raw results: ${fetchedRawResults.length}`);
     
     // ==========================================================================
     // CATEGORIZE BY PLATFORM
-    // January 29, 2026
+    // January 30, 2026
     // ==========================================================================
-    const youtubeResults = rawResults.filter(r => r.source === 'YouTube');
-    const instagramResults = rawResults.filter(r => r.source === 'Instagram');
-    const tiktokResults = rawResults.filter(r => r.source === 'TikTok');
-    const webResults = rawResults.filter(r => r.source === 'Web');
+    const youtubeResults = fetchedRawResults.filter(r => r.source === 'YouTube');
+    const instagramResults = fetchedRawResults.filter(r => r.source === 'Instagram');
+    const tiktokResults = fetchedRawResults.filter(r => r.source === 'TikTok');
+    const webResults = fetchedRawResults.filter(r => r.source === 'Web');
     
     console.log(`🔍 [Search/Status] Breakdown: YouTube=${youtubeResults.length}, Instagram=${instagramResults.length}, TikTok=${tiktokResults.length}, Web=${webResults.length}`);
     
     // ==========================================================================
-    // ENRICH SOCIAL PLATFORMS
-    // January 29, 2026
+    // START NON-BLOCKING ENRICHMENT
+    // January 30, 2026
     // 
-    // Enrichment adds metadata (subscribers, followers, etc.) to social results.
-    // This is done BEFORE filtering because we need metadata for filtering.
+    // Start all enrichment actors in parallel using .start() (not .call()).
+    // This returns immediately with run IDs that we poll on subsequent requests.
     // ==========================================================================
-    let enrichedYouTube = youtubeResults;
-    let enrichedInstagram = instagramResults;
-    let enrichedTikTok = tiktokResults;
-    
-    // Enrich YouTube
-    // January 29, 2026: Maps Apify data to SearchResult format (same as searchYouTubeSerper)
-    if (youtubeResults.length > 0) {
-      try {
-        const urls = youtubeResults.map(r => r.link).filter(Boolean);
-        console.log(`🎬 [Search/Status] Enriching ${urls.length} YouTube URLs...`);
-        
-        const enrichmentMap = await enrichYouTubeByUrls(urls);
-        
-        enrichedYouTube = youtubeResults.map(result => {
-          const apifyData = enrichmentMap.get(result.link);
-          if (apifyData) {
-            return {
-              ...result,
-              // CRITICAL: Populate channel field for UI compatibility
-              channel: {
-                name: apifyData.channelName || 'Unknown Channel',
-                link: apifyData.channelUrl || `https://www.youtube.com/@${apifyData.channelUsername || 'unknown'}`,
-                verified: apifyData.isVerified,
-                subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined,
-              },
-              // Video metadata
-              views: apifyData.viewCount ? formatNumber(apifyData.viewCount) : undefined,
-              youtubeVideoLikes: apifyData.likes,
-              youtubeVideoComments: apifyData.commentsCount,
-              duration: apifyData.duration,
-              thumbnail: apifyData.thumbnailUrl,
-              title: apifyData.title || result.title,
-              snippet: apifyData.text?.substring(0, 300) || result.snippet,
-              date: apifyData.date || apifyData.uploadDate || result.date,
-            };
-          }
-          return result;
-        });
-        
-        console.log(`🎬 [Search/Status] YouTube enrichment complete`);
-      } catch (error: any) {
-        console.warn(`⚠️ [Search/Status] YouTube enrichment failed:`, error.message);
-      }
-    }
-    
-    // Enrich Instagram
-    // January 29, 2026: Maps Apify data to SearchResult format (same as searchInstagramSerper)
-    if (instagramResults.length > 0) {
-      try {
-        const urls = instagramResults.map(r => r.link).filter(Boolean);
-        console.log(`📸 [Search/Status] Enriching ${urls.length} Instagram URLs...`);
-        
-        const enrichmentMap = await enrichInstagramByUrls(urls);
-        
-        enrichedInstagram = instagramResults.map(result => {
-          const apifyData = enrichmentMap.get(result.link);
-          if (apifyData && apifyData.username) {
-            // Get first post for engagement data
-            const firstPost = (apifyData as any).latestPosts?.[0];
-            
-            return {
-              ...result,
-              // CRITICAL: Populate channel field for UI compatibility
-              channel: {
-                name: apifyData.fullName || apifyData.username,
-                link: apifyData.url || `https://www.instagram.com/${apifyData.username}/`,
-                thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-                verified: apifyData.verified,
-                subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
-              },
-              // Profile metadata
-              instagramUsername: apifyData.username,
-              instagramFullName: apifyData.fullName,
-              instagramBio: apifyData.biography,
-              instagramFollowers: apifyData.followersCount,
-              instagramFollowing: apifyData.followsCount,
-              instagramPostsCount: apifyData.postsCount,
-              instagramIsBusiness: apifyData.isBusinessAccount,
-              instagramIsVerified: apifyData.verified,
-              // Latest post engagement
-              instagramPostLikes: firstPost?.likesCount,
-              instagramPostComments: firstPost?.commentsCount,
-              instagramPostViews: firstPost?.videoViewCount,
-              // Profile picture and display name
-              thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-              personName: apifyData.fullName || apifyData.username,
-              title: apifyData.fullName || `@${apifyData.username}` || result.title,
-              snippet: apifyData.biography?.substring(0, 300) || result.snippet,
-            };
-          }
-          return result;
-        });
-        
-        console.log(`📸 [Search/Status] Instagram enrichment complete`);
-      } catch (error: any) {
-        console.warn(`⚠️ [Search/Status] Instagram enrichment failed:`, error.message);
-      }
-    }
-    
-    // Enrich TikTok
-    // January 29, 2026: Maps Apify data to SearchResult format (same as searchTikTokSerper)
-    if (tiktokResults.length > 0) {
-      try {
-        const urls = tiktokResults.map(r => r.link).filter(Boolean);
-        console.log(`🎵 [Search/Status] Enriching ${urls.length} TikTok URLs...`);
-        
-        const enrichmentMap = await enrichTikTokByUrls(urls);
-        
-        enrichedTikTok = tiktokResults.map(result => {
-          const apifyData = enrichmentMap.get(result.link);
-          if (apifyData && apifyData.authorMeta) {
-            const author = apifyData.authorMeta;
-            
-            return {
-              ...result,
-              // CRITICAL: Populate channel field for UI compatibility
-              channel: {
-                name: author.nickName || author.name || result.tiktokUsername || 'Unknown',
-                link: author.profileUrl || `https://www.tiktok.com/@${author.name}`,
-                thumbnail: author.avatar,
-                verified: author.verified,
-                subscribers: author.fans ? formatNumber(author.fans) : undefined,
-              },
-              // Author data
-              tiktokUsername: author.name || result.tiktokUsername,
-              tiktokDisplayName: author.nickName,
-              tiktokBio: author.signature,
-              tiktokFollowers: author.fans,
-              tiktokLikes: author.heart,
-              tiktokVideosCount: author.video,
-              tiktokIsVerified: author.verified,
-              // Video data
-              tiktokVideoPlays: apifyData.playCount,
-              tiktokVideoLikes: apifyData.diggCount,
-              tiktokVideoComments: apifyData.commentCount,
-              tiktokVideoShares: apifyData.shareCount,
-              // Thumbnail and date
-              thumbnail: apifyData.videoMeta?.coverUrl || author.avatar,
-              date: apifyData.createTimeISO || result.date,
-            };
-          }
-          return result;
-        });
-        
-        console.log(`🎵 [Search/Status] TikTok enrichment complete`);
-      } catch (error: any) {
-        console.warn(`⚠️ [Search/Status] TikTok enrichment failed:`, error.message);
-      }
-    }
-    
-    // ==========================================================================
-    // APPLY FILTERING
-    // January 29, 2026
-    // 
-    // IMPORTANT: Different filtering for Web vs Social!
-    // ==========================================================================
-    
-    // Filter Web results (full filtering pipeline)
-    const filteredWeb = filterWebResults(webResults, {
-      userBrand: userSettings?.userBrand || undefined,
-      targetCountry: userSettings?.targetCountry || undefined,
-      targetLanguage: userSettings?.targetLanguage || undefined,
-    });
-    
-    // Filter Social results (enrichment required + language + brand exclusion)
-    // January 29, 2026: Added brand exclusion to filter out user's own social accounts
-    const filteredYouTube = filterSocialResults(enrichedYouTube, {
-      requireEnrichment: true,
-      targetLanguage: userSettings?.targetLanguage || undefined,
-      userBrand: userSettings?.userBrand || undefined,
-    });
-    
-    const filteredInstagram = filterSocialResults(enrichedInstagram, {
-      requireEnrichment: true,
-      targetLanguage: userSettings?.targetLanguage || undefined,
-      userBrand: userSettings?.userBrand || undefined,
-    });
-    
-    const filteredTikTok = filterSocialResults(enrichedTikTok, {
-      requireEnrichment: true,
-      targetLanguage: userSettings?.targetLanguage || undefined,
-      userBrand: userSettings?.userBrand || undefined,
-    });
-    
-    // ==========================================================================
-    // COMBINE RESULTS
-    // January 29, 2026
-    // ==========================================================================
-    const allResults = [
-      ...filteredYouTube,
-      ...filteredInstagram,
-      ...filteredTikTok,
-      ...filteredWeb,
-    ];
-    
-    const breakdown = {
-      YouTube: filteredYouTube.length,
-      Instagram: filteredInstagram.length,
-      TikTok: filteredTikTok.length,
-      Web: filteredWeb.length,
+    const enrichmentUrls = {
+      youtube: youtubeResults.map(r => r.link).filter(Boolean),
+      instagram: instagramResults.map(r => r.link).filter(Boolean),
+      tiktok: tiktokResults.map(r => r.link).filter(Boolean),
     };
     
-    console.log(`🔍 [Search/Status] Final results: ${allResults.length}`);
-    console.log(`🔍 [Search/Status] Breakdown: ${JSON.stringify(breakdown)}`);
+    // Check if there are any social results to enrich
+    const hasSocialResults = 
+      enrichmentUrls.youtube.length > 0 || 
+      enrichmentUrls.instagram.length > 0 || 
+      enrichmentUrls.tiktok.length > 0;
     
-    // ==========================================================================
-    // CONSUME CREDIT
-    // January 29, 2026
-    // 
-    // Only consume credit on successful search with results.
-    // ==========================================================================
-    if (allResults.length > 0) {
-      await consumeCredits(userId, 'topic_search', 1);
-      console.log(`💳 [Search/Status] Credit consumed for user ${userId}`);
+    if (!hasSocialResults) {
+      // No social results - skip enrichment and return done immediately
+      console.log(`🔍 [Search/Status] No social results to enrich, returning web results immediately`);
+      
+      // Apply web filtering
+      const filteredWeb = filterWebResults(webResults, {
+        userBrand: userSettings?.userBrand || undefined,
+        targetCountry: userSettings?.targetCountry || undefined,
+        targetLanguage: userSettings?.targetLanguage || undefined,
+      });
+      
+      const allResults = filteredWeb;
+      const breakdown = {
+        YouTube: 0,
+        Instagram: 0,
+        TikTok: 0,
+        Web: filteredWeb.length,
+      };
+      
+      // ==========================================================================
+      // January 30, 2026: Check if this is an onboarding job (SAME AS ENRICHMENT PATH)
+      // If so, save results to discovered_affiliates and skip credit consumption
+      // ==========================================================================
+      const isOnboarding = (userSettings as any)?.isOnboarding === true;
+      const onboardingTopics = (userSettings as any)?.topics as string[] | undefined;
+      
+      if (isOnboarding && onboardingTopics && onboardingTopics.length > 0) {
+        console.log(`🎓 [Search/Status] Onboarding job (no social), saving ${allResults.length} web results...`);
+        
+        const primaryTopic = onboardingTopics[0];
+        let savedCount = 0;
+        
+        // Helper to save a single result
+        const saveResult = async (result: SearchResult) => {
+          try {
+            await sql`
+              INSERT INTO crewcast.discovered_affiliates (
+                user_id, search_keyword, title, link, domain, snippet, source,
+                is_affiliate, summary, thumbnail, date, views, highlighted_words,
+                discovery_method_type, discovery_method_value,
+                channel_name, channel_link, channel_thumbnail, channel_verified, channel_subscribers,
+                duration, email
+              )
+              VALUES (
+                ${userId}, ${primaryTopic}, ${result.title}, ${result.link}, ${result.domain},
+                ${result.snippet || 'No description available'}, ${result.source},
+                ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
+                ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
+                ${'topic'}, ${primaryTopic},
+                ${result.channel?.name || null}, ${result.channel?.link || null},
+                ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
+                ${result.channel?.subscribers || null}, ${result.duration || null},
+                ${result.email || null}
+              )
+              ON CONFLICT (user_id, link) DO NOTHING
+            `;
+            return true;
+          } catch (e) {
+            return false;
+          }
+        };
+        
+        // Parallel inserts with concurrency limit
+        const CONCURRENCY = 20;
+        for (let i = 0; i < allResults.length; i += CONCURRENCY) {
+          const chunk = allResults.slice(i, i + CONCURRENCY);
+          const results = await Promise.all(chunk.map(saveResult));
+          savedCount += results.filter(Boolean).length;
+        }
+        
+        console.log(`🎓 [Search/Status] Saved ${savedCount} web results to discovered_affiliates`);
+      } else {
+        // Not onboarding - consume credit
+        if (allResults.length > 0) {
+          await consumeCredits(userId, 'topic_search', 1);
+          console.log(`💳 [Search/Status] Credit consumed for user ${userId}`);
+        }
+      }
+      
+      // Update job status
+      await sql`
+        UPDATE crewcast.search_jobs 
+        SET 
+          status = 'done',
+          completed_at = NOW(),
+          results_count = ${allResults.length}
+        WHERE id = ${jobIdNum}
+      `;
+      
+      return NextResponse.json({
+        status: 'done',
+        results: allResults,
+        resultsCount: allResults.length,
+        breakdown,
+      });
     }
     
-    // ==========================================================================
-    // UPDATE JOB STATUS
-    // January 29, 2026
-    // ==========================================================================
+    // Start enrichment actors (non-blocking)
+    console.log(`🚀 [Search/Status] Starting non-blocking enrichment actors...`);
+    const newEnrichmentRunIds = await startAllEnrichment(enrichmentUrls);
+    
+    // Save raw_results and enrichment_run_ids to database
     await sql`
       UPDATE crewcast.search_jobs 
       SET 
-        status = 'done',
-        completed_at = NOW(),
-        results_count = ${allResults.length}
+        status = 'enriching',
+        enrichment_status = 'running',
+        enrichment_run_ids = ${JSON.stringify(newEnrichmentRunIds)}::jsonb,
+        raw_results = ${JSON.stringify(fetchedRawResults)}::jsonb
       WHERE id = ${jobIdNum}
     `;
     
-    // ==========================================================================
-    // TRACK API CALL
-    // January 29, 2026
-    // ==========================================================================
-    await trackApiCall({
-      userId,
-      service: 'apify_google_scraper',
-      endpoint: 'status',
-      keyword: job.keyword as string,
-      status: 'success',
-      resultsCount: allResults.length,
-      apifyRunId,
-      durationMs: Date.now() - startTime,
-    });
+    console.log(`🔍 [Search/Status] Enrichment actors started, returning 'enriching' status`);
     
-    // ==========================================================================
-    // RETURN RESULTS
-    // January 29, 2026
-    // ==========================================================================
+    // Return enriching status - client will poll again
     return NextResponse.json({
-      status: 'done',
-      results: allResults,
-      resultsCount: allResults.length,
-      breakdown,
+      status: 'enriching',
+      message: 'Enriching results with social media data...',
     });
     
   } catch (error: any) {
