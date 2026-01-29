@@ -890,38 +890,40 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
       // ======================================================================
       // PRE-FETCH AFFILIATES - January 15th, 2026
+      // Updated: January 30, 2026 - Non-blocking polling architecture
       // 
       // CRITICAL FEATURE: After payment succeeds and onboarding data is saved,
       // we pre-fetch affiliate results so the user sees results immediately
       // when they land on the dashboard.
       // 
-      // FLOW:
+      // FLOW (January 30, 2026 - Polling Architecture):
       // 1. Payment succeeded ✓
       // 2. Onboarding data saved ✓
-      // 3. If user has topics → search for affiliates NOW
+      // 3. If user has topics:
+      //    a) POST /api/scout/onboarding/start → get jobId
+      //    b) Poll /api/search/status?jobId=X every 3s
+      //    c) Wait for status='done' (results are saved by status endpoint)
       // 4. Show FindingAffiliatesScreen while searching
-      // 5. WAIT for search to complete (no timeout escape!)
-      // 6. Then call onComplete() to redirect to dashboard
+      // 5. Then call onComplete() to redirect to dashboard
       // 
-      // WHY NO TIMEOUT:
-      // - Client explicitly requested user sees results on first login
-      // - Better UX to wait 30 seconds than land on empty dashboard
-      // - API has its own internal timeout (5 minutes max)
+      // WHY POLLING:
+      // - Old synchronous approach caused Vercel 504 timeouts
+      // - Enrichment actors took 60-90 seconds blocking
+      // - Polling allows non-blocking enrichment with no single request >10s
       // 
       // PAID CLIENT PROJECT - This feature MUST work correctly!
       // ======================================================================
       if (topics.length > 0) {
-        console.log('[Onboarding] Topics found, pre-fetching affiliates...');
+        console.log('[Onboarding] Topics found, starting affiliate search...');
         console.log('[Onboarding] Topics:', topics.join(', '));
         
         // Show the FindingAffiliatesScreen and reset completion state
-        // January 21st, 2026: Added isSearchComplete for progress bar animation
         setIsFindingAffiliates(true);
         setIsSearchComplete(false);
         
         try {
-          // Call the onboarding scout API and WAIT for it to complete
-          const scoutRes = await fetch('/api/scout/onboarding', {
+          // January 30, 2026: Start search with new non-blocking endpoint
+          const startRes = await fetch('/api/scout/onboarding/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -931,15 +933,41 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             }),
           });
 
-          const scoutData = await scoutRes.json();
+          const startData = await startRes.json();
           
-          if (scoutRes.ok && scoutData.success) {
-            console.log('[Onboarding] Pre-fetch complete!');
-            console.log('[Onboarding] Results saved:', scoutData.totalResults);
-            console.log('[Onboarding] Topics searched:', scoutData.topicsSearched);
+          if (!startRes.ok || !startData.success) {
+            console.error('[Onboarding] Failed to start search:', startData.error);
+            // Don't fail onboarding - user can still proceed
           } else {
-            // Log error but don't fail - user can still proceed
-            console.error('[Onboarding] Pre-fetch failed:', scoutData.error);
+            const jobId = startData.jobId;
+            console.log('[Onboarding] Search started, jobId:', jobId);
+            
+            // Poll until complete (max 5 minutes to match old timeout)
+            const maxWaitMs = 300000;
+            const pollIntervalMs = 3000;
+            const startTime = Date.now();
+            
+            while (Date.now() - startTime < maxWaitMs) {
+              await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+              
+              const statusRes = await fetch(`/api/search/status?jobId=${jobId}`);
+              const statusData = await statusRes.json();
+              
+              console.log(`[Onboarding] Status: ${statusData.status}`);
+              
+              if (statusData.status === 'done') {
+                console.log('[Onboarding] Search complete!');
+                console.log('[Onboarding] Results:', statusData.resultsCount);
+                break;
+              }
+              
+              if (statusData.status === 'failed' || statusData.status === 'timeout') {
+                console.error('[Onboarding] Search failed:', statusData.message);
+                break;
+              }
+              
+              // Continue polling for 'running', 'processing', 'enriching'
+            }
           }
         } catch (scoutError) {
           // Log error but don't fail - user can still proceed

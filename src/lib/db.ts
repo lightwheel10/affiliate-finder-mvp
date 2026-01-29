@@ -336,6 +336,11 @@ export interface DbApiCall {
 // 1. POST /api/search/start → creates job with status='running'
 // 2. GET /api/search/status?jobId=X → polls until done/failed
 // 3. When Apify completes → results processed, status='done'
+// 
+// January 30, 2026: Added enrichment tracking fields for non-blocking enrichment
+// - enrichment_status: 'pending' | 'running' | 'succeeded' | 'failed' | null
+// - enrichment_run_ids: JSONB containing runIds for each platform
+// - raw_results: JSONB containing raw search results before enrichment
 // =============================================================================
 export interface DbSearchJob {
   id: number;
@@ -343,7 +348,7 @@ export interface DbSearchJob {
   keyword: string;
   sources: string[];
   apify_run_id: string;
-  status: 'pending' | 'running' | 'processing' | 'done' | 'failed' | 'timeout';
+  status: 'pending' | 'running' | 'processing' | 'enriching' | 'done' | 'failed' | 'timeout';
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
@@ -356,6 +361,26 @@ export interface DbSearchJob {
     targetLanguage?: string | null;
     userBrand?: string | null;
   } | null;
+  // ==========================================================================
+  // January 30, 2026: Non-blocking enrichment tracking
+  // 
+  // These fields support the new non-blocking enrichment architecture:
+  // - enrichment_status: Tracks enrichment phase ('running' while actors run)
+  // - enrichment_run_ids: Stores Apify runIds for each platform's enrichment
+  // - raw_results: Stores Google Scraper results before enrichment
+  // 
+  // Flow:
+  // 1. Google Scraper SUCCEEDED → raw_results saved, enrichment actors started
+  // 2. Status returns 'enriching' while enrichment_status='running'
+  // 3. All enrichment actors complete → results fetched, filtered, returned
+  // ==========================================================================
+  enrichment_status: 'pending' | 'running' | 'succeeded' | 'failed' | null;
+  enrichment_run_ids: {
+    youtube?: string;
+    instagram?: string;
+    tiktok?: string;
+  } | null;
+  raw_results: any[] | null; // Raw SearchResult[] from Google Scraper
 }
 
 export interface DbSubscription {

@@ -3,6 +3,20 @@
  * ONBOARDING SCOUT API - January 29th, 2026
  * =============================================================================
  * 
+ * ⚠️ DEPRECATED: January 30, 2026
+ * 
+ * This endpoint is kept for rollback purposes. The new implementation uses:
+ * - POST /api/scout/onboarding/start → returns jobId immediately
+ * - GET /api/search/status?jobId=X → polls until complete
+ * 
+ * The old synchronous approach caused Vercel 504 timeouts because enrichment
+ * actors (YouTube, Instagram, TikTok) blocked for 20-30 seconds each.
+ * 
+ * TO ROLLBACK: Update OnboardingScreen.tsx to call this endpoint instead of
+ * /api/scout/onboarding/start + polling.
+ * 
+ * =============================================================================
+ * 
  * MAJOR REFACTOR: January 29th, 2026 - Apify Polling Architecture
  * 
  * PREVIOUS IMPLEMENTATION (Serper - ~30 seconds):

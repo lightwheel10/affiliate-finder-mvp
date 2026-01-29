@@ -3,13 +3,17 @@
 /**
  * =============================================================================
  * usePollingSearch Hook - January 29, 2026
+ * Updated: January 30, 2026 - Added 'enriching' status for non-blocking enrichment
  * =============================================================================
  * 
  * Handles polling-based search using Apify google-search-scraper.
  * 
- * FLOW:
+ * FLOW (Updated January 30, 2026):
  * 1. startSearch(keyword, sources) → POST /api/search/start → returns jobId
  * 2. pollUntilComplete(jobId) → GET /api/search/status → polls every 3s
+ *    - status='running': Google Scraper searching
+ *    - status='enriching': Enrichment actors running (non-blocking)
+ *    - status='done': Results ready
  * 3. When done, returns SearchResult[] with enriched data
  * 
  * FEATURES:
@@ -34,12 +38,14 @@ import { Platform, SearchResult } from '../services/search';
 
 // =============================================================================
 // TYPES
+// January 30, 2026: Added 'enriching' status for non-blocking enrichment
 // =============================================================================
 
 export type SearchStatus = 
   | 'idle'
   | 'starting'
   | 'running'
+  | 'enriching'  // January 30, 2026: Non-blocking enrichment in progress
   | 'processing'
   | 'done'
   | 'failed'
@@ -71,7 +77,7 @@ export interface StartSearchResponse {
 }
 
 export interface StatusResponse {
-  status: 'running' | 'processing' | 'done' | 'failed' | 'timeout';
+  status: 'running' | 'processing' | 'enriching' | 'done' | 'failed' | 'timeout';
   elapsedSeconds?: number;
   message?: string;
   results?: SearchResult[];
@@ -324,6 +330,17 @@ export function usePollingSearch(): UsePollingSearchReturn {
                 status: 'processing',
                 elapsedSeconds,
                 message: 'Processing results...',
+                jobId,
+                runId,
+              });
+              break;
+            
+            // January 30, 2026: Handle 'enriching' status for non-blocking enrichment
+            case 'enriching':
+              updateProgress({
+                status: 'enriching',
+                elapsedSeconds,
+                message: 'Enriching social media data...',
                 jobId,
                 runId,
               });

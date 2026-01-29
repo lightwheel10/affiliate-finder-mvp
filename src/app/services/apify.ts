@@ -1245,3 +1245,477 @@ export async function enrichDomainsBatch(
   }
 }
 
+// =============================================================================
+// NON-BLOCKING ENRICHMENT FUNCTIONS - January 30, 2026
+// =============================================================================
+// 
+// PURPOSE:
+// These functions use .start() instead of .call() to avoid blocking the request.
+// This is critical for Vercel timeout compliance. The old enrichment functions
+// (enrichYouTubeByUrls, enrichInstagramByUrls, enrichTikTokByUrls) use .call()
+// which BLOCKS until the actor completes (20-30 seconds each). When called
+// sequentially, this causes 60-90+ second requests that timeout on Vercel.
+// 
+// HOW IT WORKS:
+// 1. startXxxEnrichment() - Starts the actor and returns immediately with runId
+// 2. getEnrichmentRunStatus() - Polls the run status (RUNNING/SUCCEEDED/FAILED)
+// 3. fetchXxxEnrichmentResults() - Fetches results from completed run's dataset
+// 
+// USAGE PATTERN:
+// ```typescript
+// // Start all enrichment actors in parallel (non-blocking)
+// const [ytRunId, igRunId, ttRunId] = await Promise.all([
+//   startYouTubeEnrichment(youtubeUrls),
+//   startInstagramEnrichment(instagramUrls),
+//   startTikTokEnrichment(tiktokUrls),
+// ]);
+// 
+// // Return immediately with { status: 'enriching', enrichmentRunIds: {...} }
+// // On next poll, check if all runs are done:
+// const statuses = await Promise.all([
+//   getEnrichmentRunStatus(ytRunId),
+//   getEnrichmentRunStatus(igRunId),
+//   getEnrichmentRunStatus(ttRunId),
+// ]);
+// if (statuses.every(s => s.status === 'SUCCEEDED')) {
+//   // Fetch results from all datasets
+// }
+// ```
+// 
+// BACKWARDS COMPATIBILITY:
+// The old blocking functions (enrichYouTubeByUrls, etc.) are NOT modified.
+// They continue to work for existing code paths (auto-scan cron job).
+// 
+// =============================================================================
+
+/**
+ * Enrichment run status returned by Apify
+ * January 30, 2026
+ */
+export type EnrichmentRunStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'ABORTED' | 'TIMED-OUT';
+
+/**
+ * Response from getEnrichmentRunStatus()
+ * January 30, 2026
+ */
+export interface EnrichmentStatusResult {
+  status: EnrichmentRunStatus;
+  datasetId?: string;
+  startedAt?: string;
+  finishedAt?: string;
+}
+
+/**
+ * Input URLs grouped by platform for starting enrichment
+ * January 30, 2026
+ */
+export interface EnrichmentUrls {
+  youtube: string[];
+  instagram: string[];
+  tiktok: string[];
+}
+
+/**
+ * Run IDs for each platform's enrichment actor
+ * January 30, 2026
+ */
+export interface EnrichmentRunIds {
+  youtube?: string;
+  instagram?: string;
+  tiktok?: string;
+}
+
+// =============================================================================
+// START YOUTUBE ENRICHMENT (NON-BLOCKING)
+// January 30, 2026
+// =============================================================================
+/**
+ * Start YouTube enrichment actor and return immediately with runId.
+ * Does NOT wait for completion - use getEnrichmentRunStatus() to poll.
+ * 
+ * @param videoUrls - Array of YouTube video URLs to enrich
+ * @returns runId for polling, or null if no valid URLs or error
+ */
+export async function startYouTubeEnrichment(videoUrls: string[]): Promise<string | null> {
+  // Guard: Check if Apify client is initialized
+  if (!client) {
+    console.error('❌ [YouTube Enrichment Non-Blocking] Apify client not initialized');
+    return null;
+  }
+
+  // Filter to valid YouTube video URLs only
+  const validUrls = videoUrls.filter(url => 
+    url && (url.includes('youtube.com/watch') || url.includes('youtu.be/'))
+  );
+
+  if (validUrls.length === 0) {
+    console.log('⚠️ [YouTube Enrichment Non-Blocking] No valid YouTube URLs');
+    return null;
+  }
+
+  try {
+    console.log(`🎬 [YouTube Enrichment Non-Blocking] Starting actor for ${validUrls.length} URLs...`);
+    
+    // Use .start() instead of .call() - returns immediately
+    const run = await client.actor(ACTORS.youtube).start({
+      startUrls: validUrls.map(url => ({ url })),
+      maxResults: 1,
+      maxResultsShorts: 0,
+      maxResultStreams: 0,
+    });
+
+    console.log(`🎬 [YouTube Enrichment Non-Blocking] Started: runId=${run.id}`);
+    return run.id;
+  } catch (error: any) {
+    console.error('❌ [YouTube Enrichment Non-Blocking] Failed to start:', error.message);
+    return null;
+  }
+}
+
+// =============================================================================
+// START INSTAGRAM ENRICHMENT (NON-BLOCKING)
+// January 30, 2026
+// =============================================================================
+/**
+ * Start Instagram enrichment actor and return immediately with runId.
+ * Does NOT wait for completion - use getEnrichmentRunStatus() to poll.
+ * 
+ * @param instagramUrls - Array of Instagram URLs to enrich
+ * @returns runId for polling, or null if no valid URLs or error
+ */
+export async function startInstagramEnrichment(instagramUrls: string[]): Promise<string | null> {
+  // Guard: Check if Apify client is initialized
+  if (!client) {
+    console.error('❌ [Instagram Enrichment Non-Blocking] Apify client not initialized');
+    return null;
+  }
+
+  // Filter to valid Instagram URLs and deduplicate
+  const filteredUrls = instagramUrls.filter(url => url && url.includes('instagram.com'));
+  const validUrls = [...new Set(filteredUrls)];
+
+  if (validUrls.length === 0) {
+    console.log('⚠️ [Instagram Enrichment Non-Blocking] No valid Instagram URLs');
+    return null;
+  }
+
+  try {
+    console.log(`📸 [Instagram Enrichment Non-Blocking] Starting actor for ${validUrls.length} URLs...`);
+    
+    // Use .start() instead of .call() - returns immediately
+    const run = await client.actor(ACTORS.instagramProfile).start({
+      directUrls: validUrls,
+      resultsType: 'details',
+      resultsLimit: 1,
+      addParentData: false,
+    });
+
+    console.log(`📸 [Instagram Enrichment Non-Blocking] Started: runId=${run.id}`);
+    return run.id;
+  } catch (error: any) {
+    console.error('❌ [Instagram Enrichment Non-Blocking] Failed to start:', error.message);
+    return null;
+  }
+}
+
+// =============================================================================
+// START TIKTOK ENRICHMENT (NON-BLOCKING)
+// January 30, 2026
+// =============================================================================
+/**
+ * Start TikTok enrichment actor and return immediately with runId.
+ * Does NOT wait for completion - use getEnrichmentRunStatus() to poll.
+ * 
+ * @param videoUrls - Array of TikTok video URLs to enrich
+ * @returns runId for polling, or null if no valid URLs or error
+ */
+export async function startTikTokEnrichment(videoUrls: string[]): Promise<string | null> {
+  // Guard: Check if Apify client is initialized
+  if (!client) {
+    console.error('❌ [TikTok Enrichment Non-Blocking] Apify client not initialized');
+    return null;
+  }
+
+  // Filter to valid TikTok video URLs only
+  const validUrls = videoUrls.filter(url => 
+    url && url.includes('tiktok.com') && url.includes('/video/')
+  );
+
+  if (validUrls.length === 0) {
+    console.log('⚠️ [TikTok Enrichment Non-Blocking] No valid TikTok URLs');
+    return null;
+  }
+
+  try {
+    console.log(`🎵 [TikTok Enrichment Non-Blocking] Starting actor for ${validUrls.length} URLs...`);
+    
+    // Use .start() instead of .call() - returns immediately
+    const run = await client.actor(ACTORS.tiktok).start({
+      postURLs: validUrls,
+      resultsPerPage: 1,
+    });
+
+    console.log(`🎵 [TikTok Enrichment Non-Blocking] Started: runId=${run.id}`);
+    return run.id;
+  } catch (error: any) {
+    console.error('❌ [TikTok Enrichment Non-Blocking] Failed to start:', error.message);
+    return null;
+  }
+}
+
+// =============================================================================
+// GET ENRICHMENT RUN STATUS
+// January 30, 2026
+// =============================================================================
+/**
+ * Check the status of an enrichment actor run.
+ * Use this to poll until the run completes.
+ * 
+ * @param runId - The run ID returned by startXxxEnrichment()
+ * @returns Status object with run state and dataset ID (when complete)
+ */
+export async function getEnrichmentRunStatus(runId: string): Promise<EnrichmentStatusResult> {
+  if (!client) {
+    return { status: 'FAILED' };
+  }
+
+  try {
+    const run = await client.run(runId).get();
+    
+    if (!run) {
+      console.error(`❌ [Enrichment Status] Run not found: ${runId}`);
+      return { status: 'FAILED' };
+    }
+
+    return {
+      status: run.status as EnrichmentRunStatus,
+      datasetId: run.defaultDatasetId,
+      startedAt: run.startedAt?.toISOString(),
+      finishedAt: run.finishedAt?.toISOString(),
+    };
+  } catch (error: any) {
+    console.error(`❌ [Enrichment Status] Error checking run ${runId}:`, error.message);
+    return { status: 'FAILED' };
+  }
+}
+
+// =============================================================================
+// START ALL ENRICHMENT ACTORS (PARALLEL)
+// January 30, 2026
+// =============================================================================
+/**
+ * Start all enrichment actors in parallel and return their run IDs.
+ * This is the main entry point for non-blocking enrichment.
+ * 
+ * @param urls - Object containing URL arrays for each platform
+ * @returns Object containing run IDs for each platform (null if no URLs for that platform)
+ */
+export async function startAllEnrichment(urls: EnrichmentUrls): Promise<EnrichmentRunIds> {
+  console.log(`🚀 [Enrichment Non-Blocking] Starting all enrichment actors in parallel...`);
+  console.log(`   YouTube: ${urls.youtube.length} URLs`);
+  console.log(`   Instagram: ${urls.instagram.length} URLs`);
+  console.log(`   TikTok: ${urls.tiktok.length} URLs`);
+
+  const [youtubeRunId, instagramRunId, tiktokRunId] = await Promise.all([
+    urls.youtube.length > 0 ? startYouTubeEnrichment(urls.youtube) : Promise.resolve(null),
+    urls.instagram.length > 0 ? startInstagramEnrichment(urls.instagram) : Promise.resolve(null),
+    urls.tiktok.length > 0 ? startTikTokEnrichment(urls.tiktok) : Promise.resolve(null),
+  ]);
+
+  const result: EnrichmentRunIds = {};
+  if (youtubeRunId) result.youtube = youtubeRunId;
+  if (instagramRunId) result.instagram = instagramRunId;
+  if (tiktokRunId) result.tiktok = tiktokRunId;
+
+  console.log(`🚀 [Enrichment Non-Blocking] All actors started:`, result);
+  return result;
+}
+
+// =============================================================================
+// CHECK ALL ENRICHMENT RUNS STATUS
+// January 30, 2026
+// =============================================================================
+/**
+ * Check status of all enrichment runs.
+ * Returns true only if ALL runs have completed (SUCCEEDED, FAILED, or ABORTED).
+ * 
+ * @param runIds - Object containing run IDs for each platform
+ * @returns Object with allComplete flag and individual statuses
+ */
+export async function checkAllEnrichmentStatus(runIds: EnrichmentRunIds): Promise<{
+  allComplete: boolean;
+  statuses: Record<string, EnrichmentStatusResult>;
+}> {
+  const statuses: Record<string, EnrichmentStatusResult> = {};
+  const checks: Promise<void>[] = [];
+
+  if (runIds.youtube) {
+    checks.push(
+      getEnrichmentRunStatus(runIds.youtube).then(s => { statuses.youtube = s; })
+    );
+  }
+  if (runIds.instagram) {
+    checks.push(
+      getEnrichmentRunStatus(runIds.instagram).then(s => { statuses.instagram = s; })
+    );
+  }
+  if (runIds.tiktok) {
+    checks.push(
+      getEnrichmentRunStatus(runIds.tiktok).then(s => { statuses.tiktok = s; })
+    );
+  }
+
+  await Promise.all(checks);
+
+  // Check if all runs are complete (not RUNNING)
+  const allComplete = Object.values(statuses).every(
+    s => s.status !== 'RUNNING'
+  );
+
+  return { allComplete, statuses };
+}
+
+// =============================================================================
+// FETCH YOUTUBE ENRICHMENT RESULTS
+// January 30, 2026
+// =============================================================================
+/**
+ * Fetch results from a completed YouTube enrichment run.
+ * Only call this after getEnrichmentRunStatus() returns SUCCEEDED.
+ * 
+ * @param runId - The run ID from startYouTubeEnrichment()
+ * @returns Map of video URL to enriched data
+ */
+export async function fetchYouTubeEnrichmentResults(
+  runId: string
+): Promise<Map<string, ApifyYouTubeResult>> {
+  const results = new Map<string, ApifyYouTubeResult>();
+
+  if (!client) {
+    console.error('❌ [YouTube Enrichment Fetch] Apify client not initialized');
+    return results;
+  }
+
+  try {
+    const run = await client.run(runId).get();
+    if (!run?.defaultDatasetId) {
+      console.error('❌ [YouTube Enrichment Fetch] No dataset found for run:', runId);
+      return results;
+    }
+
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    const apifyResults = items as unknown as ApifyYouTubeResult[];
+
+    console.log(`🎬 [YouTube Enrichment Fetch] Retrieved ${apifyResults.length} results`);
+
+    // Build Map keyed by video URL
+    for (const item of apifyResults) {
+      if (item.url) {
+        results.set(item.url, item);
+      }
+    }
+
+    return results;
+  } catch (error: any) {
+    console.error('❌ [YouTube Enrichment Fetch] Error:', error.message);
+    return results;
+  }
+}
+
+// =============================================================================
+// FETCH INSTAGRAM ENRICHMENT RESULTS
+// January 30, 2026
+// =============================================================================
+/**
+ * Fetch results from a completed Instagram enrichment run.
+ * Only call this after getEnrichmentRunStatus() returns SUCCEEDED.
+ * 
+ * @param runId - The run ID from startInstagramEnrichment()
+ * @returns Map of input URL to enriched profile data
+ */
+export async function fetchInstagramEnrichmentResults(
+  runId: string
+): Promise<Map<string, ApifyInstagramProfileResult>> {
+  const results = new Map<string, ApifyInstagramProfileResult>();
+
+  if (!client) {
+    console.error('❌ [Instagram Enrichment Fetch] Apify client not initialized');
+    return results;
+  }
+
+  try {
+    const run = await client.run(runId).get();
+    if (!run?.defaultDatasetId) {
+      console.error('❌ [Instagram Enrichment Fetch] No dataset found for run:', runId);
+      return results;
+    }
+
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    const apifyResults = items as unknown as ApifyInstagramProfileResult[];
+
+    console.log(`📸 [Instagram Enrichment Fetch] Retrieved ${apifyResults.length} results`);
+
+    // Build Map keyed by input URL
+    for (const item of apifyResults) {
+      if (item.inputUrl) {
+        results.set(item.inputUrl, item);
+      }
+      if (item.url && item.url !== item.inputUrl) {
+        results.set(item.url, item);
+      }
+    }
+
+    return results;
+  } catch (error: any) {
+    console.error('❌ [Instagram Enrichment Fetch] Error:', error.message);
+    return results;
+  }
+}
+
+// =============================================================================
+// FETCH TIKTOK ENRICHMENT RESULTS
+// January 30, 2026
+// =============================================================================
+/**
+ * Fetch results from a completed TikTok enrichment run.
+ * Only call this after getEnrichmentRunStatus() returns SUCCEEDED.
+ * 
+ * @param runId - The run ID from startTikTokEnrichment()
+ * @returns Map of video URL to enriched data
+ */
+export async function fetchTikTokEnrichmentResults(
+  runId: string
+): Promise<Map<string, ApifyTikTokResult>> {
+  const results = new Map<string, ApifyTikTokResult>();
+
+  if (!client) {
+    console.error('❌ [TikTok Enrichment Fetch] Apify client not initialized');
+    return results;
+  }
+
+  try {
+    const run = await client.run(runId).get();
+    if (!run?.defaultDatasetId) {
+      console.error('❌ [TikTok Enrichment Fetch] No dataset found for run:', runId);
+      return results;
+    }
+
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    const apifyResults = items as unknown as ApifyTikTokResult[];
+
+    console.log(`🎵 [TikTok Enrichment Fetch] Retrieved ${apifyResults.length} results`);
+
+    // Build Map keyed by video URL
+    for (const item of apifyResults) {
+      if (item.webVideoUrl) {
+        results.set(item.webVideoUrl, item);
+      }
+    }
+
+    return results;
+  } catch (error: any) {
+    console.error('❌ [TikTok Enrichment Fetch] Error:', error.message);
+    return results;
+  }
+}
+
