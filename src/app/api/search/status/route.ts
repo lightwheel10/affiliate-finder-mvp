@@ -210,7 +210,21 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     } | null;
     // January 30, 2026: Non-blocking enrichment state
     const enrichmentStatus = job.enrichment_status as string | null;
-    const enrichmentRunIds = job.enrichment_run_ids as EnrichmentRunIds | null;
+    
+    // Parse enrichment_run_ids (JSONB may come back as string from database)
+    let enrichmentRunIds: EnrichmentRunIds | null = null;
+    if (job.enrichment_run_ids) {
+      if (typeof job.enrichment_run_ids === 'string') {
+        try {
+          enrichmentRunIds = JSON.parse(job.enrichment_run_ids);
+          console.log(`🔍 [Search/Status] Parsed enrichment_run_ids from string:`, enrichmentRunIds);
+        } catch (e) {
+          console.error(`[Search/Status] Failed to parse enrichment_run_ids:`, e);
+        }
+      } else if (typeof job.enrichment_run_ids === 'object') {
+        enrichmentRunIds = job.enrichment_run_ids as EnrichmentRunIds;
+      }
+    }
     
     // Ensure rawResults is an array (JSONB may come back in unexpected formats)
     let rawResults: SearchResult[] | null = null;
