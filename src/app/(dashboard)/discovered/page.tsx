@@ -6,6 +6,7 @@
  * =============================================================================
  * 
  * Updated: January 3rd, 2026
+ * Updated: January 30th, 2026 - Added enrichment status banner & auto-polling
  * 
  * Shows ALL discovered affiliates from all searches.
  * 
@@ -25,11 +26,12 @@
  * - Bulk selection for save/delete operations (Dec 2025)
  * - Advanced filtering by competitors, topics, subscribers (Dec 2025)
  * - Single item delete with feedback toast (Dec 2025)
+ * - Enrichment status banner with auto-polling (Jan 2026)
  * 
  * =============================================================================
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 // =============================================================================
 // January 17th, 2026: Added Link for "Find Affiliates" button navigation
 // When clicked, routes to /find?openModal=true to auto-open the search modal
@@ -119,6 +121,92 @@ export default function DiscoveredPage() {
   // ============================================================================
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  // ============================================================================
+  // ENRICHMENT STATUS STATE (Added January 30, 2026)
+  // 
+  // Shows a banner when enrichment is in progress and polls for new results.
+  // This ensures users see partial results immediately and get updates as
+  // more affiliates are discovered.
+  // ============================================================================
+  const [enrichmentStatus, setEnrichmentStatus] = useState<{
+    hasActiveJobs: boolean;
+    jobs: Array<{
+      jobId: number;
+      keyword: string;
+      completedActors: number;
+      totalActors: number;
+      platforms: Record<string, string>;
+    }>;
+  } | null>(null);
+  const [isPollingEnrichment, setIsPollingEnrichment] = useState(false);
+  const [previousAffiliateCount, setPreviousAffiliateCount] = useState<number>(0);
+
+  // Check for active enrichment jobs and poll for updates
+  const checkEnrichmentStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/search/enrichment-status');
+      if (!res.ok) return;
+      
+      const data = await res.json();
+      setEnrichmentStatus(data);
+      
+      // If there are active jobs and we have a jobId, poll the status endpoint
+      // to trigger incremental saves
+      if (data.hasActiveJobs && data.jobs.length > 0) {
+        for (const job of data.jobs) {
+          // Poll status endpoint to trigger incremental saves
+          await fetch(`/api/search/status?jobId=${job.jobId}`);
+        }
+      }
+      
+      return data.hasActiveJobs;
+    } catch (error) {
+      console.error('[Discovered] Failed to check enrichment status:', error);
+      return false;
+    }
+  }, []);
+
+  // Start polling when page loads, stop when enrichment completes
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout | null = null;
+    let mounted = true;
+
+    const startPolling = async () => {
+      if (!mounted) return;
+      
+      const hasActive = await checkEnrichmentStatus();
+      
+      if (hasActive && mounted) {
+        setIsPollingEnrichment(true);
+        // Poll every 5 seconds while enrichment is active
+        pollInterval = setInterval(async () => {
+          if (!mounted) return;
+          const stillActive = await checkEnrichmentStatus();
+          if (!stillActive && mounted) {
+            setIsPollingEnrichment(false);
+            if (pollInterval) clearInterval(pollInterval);
+          }
+        }, 5000);
+      }
+    };
+
+    startPolling();
+
+    return () => {
+      mounted = false;
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [checkEnrichmentStatus]);
+
+  // Track affiliate count changes and show toast when new results arrive
+  useEffect(() => {
+    if (previousAffiliateCount > 0 && discoveredAffiliates.length > previousAffiliateCount) {
+      const newCount = discoveredAffiliates.length - previousAffiliateCount;
+      toast.success(`${newCount} new affiliate${newCount > 1 ? 's' : ''} found!`);
+    }
+    setPreviousAffiliateCount(discoveredAffiliates.length);
+  }, [discoveredAffiliates.length, previousAffiliateCount]);
 
   const toggleSave = (item: ResultItem) => {
     if (isAffiliateSaved(item.link)) {
@@ -414,6 +502,54 @@ export default function DiscoveredPage() {
           </Link>
         </div>
       </header>
+
+      {/* =============================================================================
+          ENRICHMENT STATUS BANNER - January 30, 2026
+          
+          Shows when affiliates are still being discovered in the background.
+          Indicates which sources have completed vs still processing.
+          ============================================================================= */}
+      {enrichmentStatus?.hasActiveJobs && (
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b-2 border-amber-200 dark:border-amber-800 px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-5 h-5 border-2 border-amber-500 rounded-full animate-spin border-t-transparent"></div>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                  Still finding more affiliates...
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  {enrichmentStatus.jobs.map(job => {
+                    const platforms = Object.entries(job.platforms || {});
+                    const completed = platforms.filter(([_, status]) => status === 'SUCCEEDED').map(([p]) => p);
+                    const running = platforms.filter(([_, status]) => status === 'RUNNING').map(([p]) => p);
+                    return (
+                      <span key={job.jobId}>
+                        {completed.length > 0 && (
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            ✓ {completed.join(', ')}
+                          </span>
+                        )}
+                        {completed.length > 0 && running.length > 0 && ' • '}
+                        {running.length > 0 && (
+                          <span>Processing: {running.join(', ')}</span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="text-xs font-mono text-amber-600 dark:text-amber-400">
+              {enrichmentStatus.jobs[0] && (
+                <span>{enrichmentStatus.jobs[0].completedActors}/{enrichmentStatus.jobs[0].totalActors} sources</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =============================================================================
           CONTENT AREA - NEW DESIGN (January 6th, 2026)
