@@ -203,11 +203,34 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     const job = jobs[0];
     const apifyRunId = job.apify_run_id as string;
     const jobStatus = job.status as string;
-    const userSettings = job.user_settings as {
+    
+    // January 30, 2026: DEFENSIVE PARSING for user_settings JSONB
+    // JSONB fields can come back as strings from postgres in some cases.
+    // Parse if needed to ensure isOnboarding, topics, etc. are accessible.
+    let userSettings: {
       targetCountry?: string | null;
       targetLanguage?: string | null;
       userBrand?: string | null;
-    } | null;
+      isOnboarding?: boolean;
+      topics?: string[];
+      competitors?: string[];
+    } | null = null;
+    
+    if (job.user_settings) {
+      if (typeof job.user_settings === 'string') {
+        try {
+          userSettings = JSON.parse(job.user_settings);
+          console.log(`🔍 [Search/Status] Parsed user_settings from string, isOnboarding=${userSettings?.isOnboarding}`);
+        } catch (e) {
+          console.error(`[Search/Status] Failed to parse user_settings:`, e);
+        }
+      } else if (typeof job.user_settings === 'object') {
+        userSettings = job.user_settings as typeof userSettings;
+      }
+    }
+    
+    console.log(`🔍 [Search/Status] userSettings: isOnboarding=${userSettings?.isOnboarding}, topics=${userSettings?.topics?.join(',')}`);
+    
     // January 30, 2026: Non-blocking enrichment state
     const enrichmentStatus = job.enrichment_status as string | null;
     
@@ -288,7 +311,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       // This ensures results are saved as soon as each actor completes.
       // ON CONFLICT DO NOTHING handles duplicates safely.
       // ==========================================================================
-      const isOnboardingJob = (userSettings as any)?.isOnboarding === true;
+      const isOnboardingJob = userSettings?.isOnboarding === true;
       
       if (isOnboardingJob && completedActors > 0) {
         // Fetch results from any completed actors (even if not all complete)
@@ -308,7 +331,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         ]);
         
         // Apply enrichment and save INCREMENTALLY (duplicates ignored via ON CONFLICT)
-        const onboardingTopics = (userSettings as any)?.topics as string[] | undefined;
+        const onboardingTopics = userSettings?.topics;
         const primaryTopic = onboardingTopics?.[0] || 'onboarding';
         
         // Process and save completed platforms' results
@@ -634,8 +657,10 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       // With 700+ results, sequential inserts would take 30+ seconds and timeout.
       // Parallel inserts (20 at a time) complete in ~5-10 seconds.
       // ==========================================================================
-      const isOnboarding = (userSettings as any)?.isOnboarding === true;
-      const onboardingTopics = (userSettings as any)?.topics as string[] | undefined;
+      const isOnboarding = userSettings?.isOnboarding === true;
+      const onboardingTopics = userSettings?.topics;
+      
+      console.log(`🎓 [Search/Status] Checking onboarding: isOnboarding=${isOnboarding}, topics=${onboardingTopics?.join(',')}`);
       
       if (isOnboarding && onboardingTopics && onboardingTopics.length > 0) {
         console.log(`🎓 [Search/Status] Onboarding job detected, saving ${allResults.length} results to discovered_affiliates...`);
@@ -945,8 +970,10 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       // January 30, 2026: Check if this is an onboarding job (SAME AS ENRICHMENT PATH)
       // If so, save results to discovered_affiliates and skip credit consumption
       // ==========================================================================
-      const isOnboarding = (userSettings as any)?.isOnboarding === true;
-      const onboardingTopics = (userSettings as any)?.topics as string[] | undefined;
+      const isOnboarding = userSettings?.isOnboarding === true;
+      const onboardingTopics = userSettings?.topics;
+      
+      console.log(`🎓 [Search/Status] Checking onboarding (no social path): isOnboarding=${isOnboarding}, topics=${onboardingTopics?.join(',')}`);
       
       if (isOnboarding && onboardingTopics && onboardingTopics.length > 0) {
         console.log(`🎓 [Search/Status] Onboarding job (no social), saving ${allResults.length} web results...`);
