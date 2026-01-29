@@ -65,21 +65,40 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
     snapshotDate: dbAffiliate.similarweb_snapshot_date || null,
   } : undefined;
 
-  // Build channel info (for YouTube/TikTok)
-  // Priority: channel_name (YouTube) > tiktok_username (TikTok fallback)
+  // Build channel info (for YouTube/TikTok/Instagram)
+  // January 30, 2026: Fix column mismatch - prefer platform-specific followers over channel_subscribers
+  // The issue: we save tiktok_followers/instagram_followers but channel_subscribers was null
+  // So when channel_name exists, we'd show null subscribers instead of actual follower count
+  let channelSubscribers = dbAffiliate.channel_subscribers;
+  
+  // For TikTok: prefer tiktok_followers
+  if (dbAffiliate.source === 'TikTok' && dbAffiliate.tiktok_followers) {
+    channelSubscribers = formatNumber(dbAffiliate.tiktok_followers);
+  }
+  // For Instagram: prefer instagram_followers  
+  if (dbAffiliate.source === 'Instagram' && dbAffiliate.instagram_followers) {
+    channelSubscribers = formatNumber(dbAffiliate.instagram_followers);
+  }
+  
   const channel = dbAffiliate.channel_name ? {
     name: dbAffiliate.channel_name,
     link: dbAffiliate.channel_link || '',
     thumbnail: dbAffiliate.channel_thumbnail,
     verified: dbAffiliate.channel_verified,
-    subscribers: dbAffiliate.channel_subscribers,
+    subscribers: channelSubscribers,
   } : (dbAffiliate.tiktok_username ? {
     // Fallback to TikTok data for channel display (backward compatibility)
     name: dbAffiliate.tiktok_display_name || dbAffiliate.tiktok_username,
     link: `https://www.tiktok.com/@${dbAffiliate.tiktok_username}`,
     verified: dbAffiliate.tiktok_is_verified,
     subscribers: dbAffiliate.tiktok_followers ? formatNumber(dbAffiliate.tiktok_followers) : undefined,
-  } : undefined);
+  } : (dbAffiliate.instagram_username ? {
+    // Fallback to Instagram data for channel display
+    name: dbAffiliate.instagram_full_name || dbAffiliate.instagram_username,
+    link: `https://www.instagram.com/${dbAffiliate.instagram_username}/`,
+    verified: dbAffiliate.instagram_is_verified,
+    subscribers: dbAffiliate.instagram_followers ? formatNumber(dbAffiliate.instagram_followers) : undefined,
+  } : undefined));
 
   return {
     id: dbAffiliate.id,

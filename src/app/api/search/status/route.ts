@@ -437,7 +437,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               : tiktokEnrichment.get(result.link);
             const enriched = apifyData ? {
               ...result,
-              channel: { name: apifyData.authorMeta?.name || 'Unknown', link: `https://tiktok.com/@${apifyData.authorMeta?.name}`, verified: apifyData.authorMeta?.verified },
+              // January 30, 2026: Also set channel.subscribers from fans so UI displays it
+              channel: { 
+                name: apifyData.authorMeta?.name || 'Unknown', 
+                link: `https://tiktok.com/@${apifyData.authorMeta?.name}`, 
+                verified: apifyData.authorMeta?.verified,
+                subscribers: apifyData.authorMeta?.fans ? formatNumber(apifyData.authorMeta.fans) : undefined,
+              },
               tiktokUsername: apifyData.authorMeta?.name, tiktokDisplayName: apifyData.authorMeta?.nickName,
               tiktokFollowers: apifyData.authorMeta?.fans, tiktokLikes: apifyData.authorMeta?.heart,
               tiktokIsVerified: apifyData.authorMeta?.verified,
@@ -680,23 +686,21 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         targetLanguage: userSettings?.targetLanguage || undefined,
       });
       
-      // January 30, 2026: Changed requireEnrichment from true to false
-      // We don't want to drop results just because enrichment data wasn't returned
-      // (rate limits, private accounts, etc.). Show the result even without enrichment.
+      // Filter out results without enrichment data - user wants quality over quantity
       const filteredYouTube = filterSocialResults(enrichedYouTube, {
-        requireEnrichment: false,
+        requireEnrichment: true,
         targetLanguage: userSettings?.targetLanguage || undefined,
         userBrand: userSettings?.userBrand || undefined,
       });
       
       const filteredInstagram = filterSocialResults(enrichedInstagram, {
-        requireEnrichment: false,
+        requireEnrichment: true,
         targetLanguage: userSettings?.targetLanguage || undefined,
         userBrand: userSettings?.userBrand || undefined,
       });
       
       const filteredTikTok = filterSocialResults(enrichedTikTok, {
-        requireEnrichment: false,
+        requireEnrichment: true,
         targetLanguage: userSettings?.targetLanguage || undefined,
         userBrand: userSettings?.userBrand || undefined,
       });
