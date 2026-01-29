@@ -417,10 +417,16 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         }
         
         // Apply enrichment and save TikTok results (if actor completed)
+        // January 30, 2026: Use video ID for lookup to handle URL format mismatches
         if (statuses.tiktok?.status === 'SUCCEEDED') {
           const tiktokResults = rawResults.filter(r => r.source === 'TikTok');
           for (const result of tiktokResults) {
-            const apifyData = tiktokEnrichment.get(result.link);
+            // Extract video ID from the Google search URL and try both ID and full URL lookup
+            const videoIdMatch = result.link.match(/\/video\/(\d+)/);
+            const videoId = videoIdMatch ? videoIdMatch[1] : null;
+            const apifyData = videoId 
+              ? tiktokEnrichment.get(videoId) || tiktokEnrichment.get(result.link)
+              : tiktokEnrichment.get(result.link);
             const enriched = apifyData ? {
               ...result,
               channel: { name: apifyData.authorMeta?.name || 'Unknown', link: `https://tiktok.com/@${apifyData.authorMeta?.name}`, verified: apifyData.authorMeta?.verified },
@@ -554,8 +560,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       });
       
       // Enrich TikTok results
+      // January 30, 2026: Use video ID for lookup to handle URL format mismatches
       const enrichedTikTok = tiktokResults.map(result => {
-        const apifyData = tiktokEnrichment.get(result.link);
+        const videoIdMatch = result.link.match(/\/video\/(\d+)/);
+        const videoId = videoIdMatch ? videoIdMatch[1] : null;
+        const apifyData = videoId 
+          ? tiktokEnrichment.get(videoId) || tiktokEnrichment.get(result.link)
+          : tiktokEnrichment.get(result.link);
         if (apifyData && apifyData.authorMeta) {
           const author = apifyData.authorMeta;
           return {

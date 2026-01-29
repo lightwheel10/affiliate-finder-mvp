@@ -1736,6 +1736,14 @@ export async function fetchInstagramEnrichmentResults(
  * @param runId - The run ID from startTikTokEnrichment()
  * @returns Map of video URL to enriched data
  */
+// Helper to extract TikTok video ID from various URL formats
+// January 30, 2026: Added to fix URL mismatch between Google search URLs and TikTok scraper URLs
+function extractTikTokVideoId(url: string): string | null {
+  // Match /video/DIGITS pattern
+  const match = url.match(/\/video\/(\d+)/);
+  return match ? match[1] : null;
+}
+
 export async function fetchTikTokEnrichmentResults(
   runId: string
 ): Promise<Map<string, ApifyTikTokResult>> {
@@ -1758,13 +1766,23 @@ export async function fetchTikTokEnrichmentResults(
 
     console.log(`🎵 [TikTok Enrichment Fetch] Retrieved ${apifyResults.length} results`);
 
-    // Build Map keyed by video URL
+    // Build Map keyed by video ID (extracted from webVideoUrl)
+    // January 30, 2026: Use video ID instead of full URL to handle URL format mismatches
+    // Google returns: https://www.tiktok.com/@user/video/123
+    // TikTok scraper returns: https://www.tiktok.com/@user/video/123?is_from_webapp=1
+    // Video ID (123) is the common identifier
     for (const item of apifyResults) {
       if (item.webVideoUrl) {
-        results.set(item.webVideoUrl, item);
+        const videoId = extractTikTokVideoId(item.webVideoUrl);
+        if (videoId) {
+          results.set(videoId, item);
+          // Also store by full URL for backwards compatibility
+          results.set(item.webVideoUrl, item);
+        }
       }
     }
 
+    console.log(`🎵 [TikTok Enrichment Fetch] Mapped ${results.size} entries (by video ID + full URL)`);
     return results;
   } catch (error: any) {
     console.error('❌ [TikTok Enrichment Fetch] Error:', error.message);
