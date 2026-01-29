@@ -1686,6 +1686,17 @@ export async function fetchYouTubeEnrichmentResults(
  * @param runId - The run ID from startInstagramEnrichment()
  * @returns Map of input URL to enriched profile data
  */
+// Helper to extract Instagram username from URL
+// January 30, 2026: Added to fix URL mismatch (www vs no-www, trailing slash, etc.)
+function extractInstagramUsername(url: string): string | null {
+  // Match instagram.com/USERNAME pattern (not /p/, /reel/, /stories/, etc.)
+  const match = url.match(/instagram\.com\/([a-zA-Z0-9._]+)\/?(?:\?|$)/);
+  if (match && !['p', 'reel', 'reels', 'stories', 'explore', 'accounts'].includes(match[1])) {
+    return match[1].toLowerCase();
+  }
+  return null;
+}
+
 export async function fetchInstagramEnrichmentResults(
   runId: string
 ): Promise<Map<string, ApifyInstagramProfileResult>> {
@@ -1708,16 +1719,24 @@ export async function fetchInstagramEnrichmentResults(
 
     console.log(`📸 [Instagram Enrichment Fetch] Retrieved ${apifyResults.length} results`);
 
-    // Build Map keyed by input URL
+    // Build Map keyed by multiple identifiers for robust matching
+    // January 30, 2026: Added username-based matching to handle URL format differences
     for (const item of apifyResults) {
+      // Key by input URL (original)
       if (item.inputUrl) {
         results.set(item.inputUrl, item);
       }
+      // Key by canonical URL
       if (item.url && item.url !== item.inputUrl) {
         results.set(item.url, item);
       }
+      // Key by username (most reliable - handles www vs no-www, trailing slash, etc.)
+      if (item.username) {
+        results.set(item.username.toLowerCase(), item);
+      }
     }
 
+    console.log(`📸 [Instagram Enrichment Fetch] Mapped ${results.size} entries (by URL + username)`);
     return results;
   } catch (error: any) {
     console.error('❌ [Instagram Enrichment Fetch] Error:', error.message);

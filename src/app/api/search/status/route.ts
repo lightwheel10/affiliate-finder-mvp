@@ -401,10 +401,18 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         }
         
         // Apply enrichment and save Instagram results (if actor completed)
+        // January 30, 2026: Use username for lookup to handle URL format mismatches
         if (statuses.instagram?.status === 'SUCCEEDED') {
           const instagramResults = rawResults.filter(r => r.source === 'Instagram');
           for (const result of instagramResults) {
-            const apifyData = instagramEnrichment.get(result.link);
+            // Extract username from Google search URL and try multiple lookup strategies
+            const usernameMatch = result.link.match(/instagram\.com\/([a-zA-Z0-9._]+)\/?(?:\?|$)/);
+            const username = usernameMatch && !['p', 'reel', 'reels', 'stories', 'explore', 'accounts'].includes(usernameMatch[1]) 
+              ? usernameMatch[1].toLowerCase() 
+              : null;
+            const apifyData = username 
+              ? instagramEnrichment.get(username) || instagramEnrichment.get(result.link)
+              : instagramEnrichment.get(result.link);
             const enriched = apifyData ? {
               ...result,
               channel: { name: apifyData.fullName || apifyData.username, link: apifyData.url || '', verified: apifyData.verified, subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined },
@@ -467,6 +475,47 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       // All enrichment actors complete - mark as done
       console.log(`✅ [Search/Status] All enrichment actors complete!`);
       
+      // ==========================================================================
+      // JANUARY 30, 2026: FAST PATH FOR ONBOARDING JOBS
+      // 
+      // For onboarding jobs, incremental saves have already saved all results.
+      // Skip the redundant re-fetching, re-enriching, and re-saving that was
+      // causing Vercel timeouts. Just mark the job as done.
+      // ==========================================================================
+      if (isOnboardingJob) {
+        console.log(`🚀 [Search/Status] Onboarding fast path - results already saved incrementally`);
+        
+        // Count actual results in DB for this user
+        const countResult = await sql`
+          SELECT COUNT(*) as count FROM crewcast.discovered_affiliates 
+          WHERE user_id = ${userId}
+        `;
+        const totalSaved = parseInt(countResult[0].count as string) || 0;
+        
+        // Update job status to done
+        await sql`
+          UPDATE crewcast.search_jobs 
+          SET 
+            status = 'done',
+            enrichment_status = 'succeeded',
+            completed_at = NOW(),
+            results_count = ${totalSaved}
+          WHERE id = ${jobIdNum}
+        `;
+        
+        console.log(`✅ [Search/Status] Onboarding complete! Total affiliates: ${totalSaved}`);
+        
+        return NextResponse.json({
+          status: 'done',
+          message: 'Onboarding complete!',
+          resultsCount: totalSaved,
+        });
+      }
+      
+      // ==========================================================================
+      // NON-ONBOARDING PATH (Find Affiliate) - Continue with full processing
+      // ==========================================================================
+      
       // Check if any enrichment failed
       const anyFailed = Object.values(statuses).some(s => 
         s.status === 'FAILED' || s.status === 'ABORTED'
@@ -526,8 +575,15 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       });
       
       // Enrich Instagram results
+      // January 30, 2026: Use username for lookup to handle URL format mismatches
       const enrichedInstagram = instagramResults.map(result => {
-        const apifyData = instagramEnrichment.get(result.link);
+        const usernameMatch = result.link.match(/instagram\.com\/([a-zA-Z0-9._]+)\/?(?:\?|$)/);
+        const username = usernameMatch && !['p', 'reel', 'reels', 'stories', 'explore', 'accounts'].includes(usernameMatch[1]) 
+          ? usernameMatch[1].toLowerCase() 
+          : null;
+        const apifyData = username 
+          ? instagramEnrichment.get(username) || instagramEnrichment.get(result.link)
+          : instagramEnrichment.get(result.link);
         if (apifyData && apifyData.username) {
           const firstPost = (apifyData as any).latestPosts?.[0];
           return {
@@ -624,20 +680,23 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         targetLanguage: userSettings?.targetLanguage || undefined,
       });
       
+      // January 30, 2026: Changed requireEnrichment from true to false
+      // We don't want to drop results just because enrichment data wasn't returned
+      // (rate limits, private accounts, etc.). Show the result even without enrichment.
       const filteredYouTube = filterSocialResults(enrichedYouTube, {
-        requireEnrichment: true,
+        requireEnrichment: false,
         targetLanguage: userSettings?.targetLanguage || undefined,
         userBrand: userSettings?.userBrand || undefined,
       });
       
       const filteredInstagram = filterSocialResults(enrichedInstagram, {
-        requireEnrichment: true,
+        requireEnrichment: false,
         targetLanguage: userSettings?.targetLanguage || undefined,
         userBrand: userSettings?.userBrand || undefined,
       });
       
       const filteredTikTok = filterSocialResults(enrichedTikTok, {
-        requireEnrichment: true,
+        requireEnrichment: false,
         targetLanguage: userSettings?.targetLanguage || undefined,
         userBrand: userSettings?.userBrand || undefined,
       });
