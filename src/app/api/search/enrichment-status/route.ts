@@ -60,7 +60,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     
     // Check status of each job's enrichment actors
     const jobStatuses = await Promise.all(
-      enrichingJobs.map(async (job) => {
+      enrichingJobs.map(async (job: { id: number; keyword: string; enrichment_run_ids: unknown }) => {
         let enrichmentRunIds: EnrichmentRunIds | null = null;
         
         // Parse JSONB if needed
