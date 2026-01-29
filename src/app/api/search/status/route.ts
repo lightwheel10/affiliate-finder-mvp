@@ -74,7 +74,9 @@ import {
   fetchYouTubeEnrichmentResults,
   fetchInstagramEnrichmentResults,
   fetchTikTokEnrichmentResults,
+  fetchSimilarWebEnrichmentResults,
   EnrichmentRunIds,
+  SimilarWebData,
 } from '@/app/services/apify';
 import { trackApiCall } from '@/app/services/tracking';
 
@@ -282,7 +284,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       }
       
       // Fetch enrichment results from completed runs
-      const [youtubeEnrichment, instagramEnrichment, tiktokEnrichment] = await Promise.all([
+      const [youtubeEnrichment, instagramEnrichment, tiktokEnrichment, similarwebEnrichment] = await Promise.all([
         enrichmentRunIds.youtube && statuses.youtube?.status === 'SUCCEEDED'
           ? fetchYouTubeEnrichmentResults(enrichmentRunIds.youtube)
           : Promise.resolve(new Map()),
@@ -292,9 +294,12 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         enrichmentRunIds.tiktok && statuses.tiktok?.status === 'SUCCEEDED'
           ? fetchTikTokEnrichmentResults(enrichmentRunIds.tiktok)
           : Promise.resolve(new Map()),
+        enrichmentRunIds.similarweb && statuses.similarweb?.status === 'SUCCEEDED'
+          ? fetchSimilarWebEnrichmentResults(enrichmentRunIds.similarweb)
+          : Promise.resolve(new Map<string, SimilarWebData>()),
       ]);
       
-      console.log(`📥 [Search/Status] Enrichment results fetched: YouTube=${youtubeEnrichment.size}, Instagram=${instagramEnrichment.size}, TikTok=${tiktokEnrichment.size}`);
+      console.log(`📥 [Search/Status] Enrichment results fetched: YouTube=${youtubeEnrichment.size}, Instagram=${instagramEnrichment.size}, TikTok=${tiktokEnrichment.size}, SimilarWeb=${similarwebEnrichment.size}`);
       
       // Apply enrichment to raw results
       const youtubeResults = rawResults.filter(r => r.source === 'YouTube');
@@ -393,8 +398,29 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         return result;
       });
       
+      // Enrich Web results with SimilarWeb data
+      const enrichedWeb = webResults.map(result => {
+        const swData = similarwebEnrichment.get(result.domain);
+        if (swData) {
+          return {
+            ...result,
+            similarwebMonthlyVisits: swData.monthlyVisits,
+            similarwebGlobalRank: swData.globalRank,
+            similarwebCountryRank: swData.countryRank,
+            similarwebCountryCode: swData.countryCode,
+            similarwebBounceRate: swData.bounceRate,
+            similarwebPagesPerVisit: swData.pagesPerVisit,
+            similarwebTimeOnSite: swData.timeOnSite,
+            similarwebCategory: swData.category,
+            similarwebTrafficSources: swData.trafficSources,
+            similarwebTopCountries: swData.topCountries,
+          };
+        }
+        return result;
+      });
+      
       // Apply filtering
-      const filteredWeb = filterWebResults(webResults, {
+      const filteredWeb = filterWebResults(enrichedWeb, {
         userBrand: userSettings?.userBrand || undefined,
         targetCountry: userSettings?.targetCountry || undefined,
         targetLanguage: userSettings?.targetLanguage || undefined,
@@ -722,17 +748,19 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       youtube: youtubeResults.map(r => r.link).filter(Boolean),
       instagram: instagramResults.map(r => r.link).filter(Boolean),
       tiktok: tiktokResults.map(r => r.link).filter(Boolean),
+      similarweb: webResults.map(r => r.domain).filter(Boolean),
     };
     
-    // Check if there are any social results to enrich
-    const hasSocialResults = 
+    // Check if there are any results to enrich (social or web)
+    const hasResultsToEnrich = 
       enrichmentUrls.youtube.length > 0 || 
       enrichmentUrls.instagram.length > 0 || 
-      enrichmentUrls.tiktok.length > 0;
+      enrichmentUrls.tiktok.length > 0 ||
+      enrichmentUrls.similarweb.length > 0;
     
-    if (!hasSocialResults) {
-      // No social results - skip enrichment and return done immediately
-      console.log(`🔍 [Search/Status] No social results to enrich, returning web results immediately`);
+    if (!hasResultsToEnrich) {
+      // No results to enrich - return done immediately
+      console.log(`🔍 [Search/Status] No results to enrich, returning immediately`);
       
       // Apply web filtering
       const filteredWeb = filterWebResults(webResults, {

@@ -1308,21 +1308,25 @@ export interface EnrichmentStatusResult {
 /**
  * Input URLs grouped by platform for starting enrichment
  * January 30, 2026
+ * Updated: Added similarweb for Web domain enrichment
  */
 export interface EnrichmentUrls {
   youtube: string[];
   instagram: string[];
   tiktok: string[];
+  similarweb: string[]; // Domains for SimilarWeb enrichment
 }
 
 /**
  * Run IDs for each platform's enrichment actor
  * January 30, 2026
+ * Updated: Added similarweb
  */
 export interface EnrichmentRunIds {
   youtube?: string;
   instagram?: string;
   tiktok?: string;
+  similarweb?: string;
 }
 
 // =============================================================================
@@ -1464,6 +1468,47 @@ export async function startTikTokEnrichment(videoUrls: string[]): Promise<string
 }
 
 // =============================================================================
+// START SIMILARWEB ENRICHMENT (NON-BLOCKING)
+// January 30, 2026
+// =============================================================================
+/**
+ * Start SimilarWeb enrichment for Web domains (non-blocking).
+ * Uses .start() instead of .call() to avoid Vercel timeouts.
+ * 
+ * @param domains - Array of domain strings (e.g., ['example.com', 'test.org'])
+ * @returns runId for polling, or null if no domains or error
+ */
+export async function startSimilarWebEnrichment(domains: string[]): Promise<string | null> {
+  if (!client) {
+    console.error('❌ [SimilarWeb Enrichment Non-Blocking] Apify client not initialized');
+    return null;
+  }
+
+  // Deduplicate domains
+  const uniqueDomains = [...new Set(domains.filter(Boolean))];
+
+  if (uniqueDomains.length === 0) {
+    console.log('⚠️ [SimilarWeb Enrichment Non-Blocking] No domains to process');
+    return null;
+  }
+
+  try {
+    console.log(`📊 [SimilarWeb Enrichment Non-Blocking] Starting actor for ${uniqueDomains.length} domains...`);
+    
+    // Use .start() instead of .call() - returns immediately
+    const run = await client.actor(ACTORS.similarweb).start({
+      domains: uniqueDomains,
+    });
+
+    console.log(`📊 [SimilarWeb Enrichment Non-Blocking] Started: runId=${run.id}`);
+    return run.id;
+  } catch (error: any) {
+    console.error('❌ [SimilarWeb Enrichment Non-Blocking] Failed to start:', error.message);
+    return null;
+  }
+}
+
+// =============================================================================
 // GET ENRICHMENT RUN STATUS
 // January 30, 2026
 // =============================================================================
@@ -1515,17 +1560,20 @@ export async function startAllEnrichment(urls: EnrichmentUrls): Promise<Enrichme
   console.log(`   YouTube: ${urls.youtube.length} URLs`);
   console.log(`   Instagram: ${urls.instagram.length} URLs`);
   console.log(`   TikTok: ${urls.tiktok.length} URLs`);
+  console.log(`   SimilarWeb: ${urls.similarweb.length} domains`);
 
-  const [youtubeRunId, instagramRunId, tiktokRunId] = await Promise.all([
+  const [youtubeRunId, instagramRunId, tiktokRunId, similarwebRunId] = await Promise.all([
     urls.youtube.length > 0 ? startYouTubeEnrichment(urls.youtube) : Promise.resolve(null),
     urls.instagram.length > 0 ? startInstagramEnrichment(urls.instagram) : Promise.resolve(null),
     urls.tiktok.length > 0 ? startTikTokEnrichment(urls.tiktok) : Promise.resolve(null),
+    urls.similarweb.length > 0 ? startSimilarWebEnrichment(urls.similarweb) : Promise.resolve(null),
   ]);
 
   const result: EnrichmentRunIds = {};
   if (youtubeRunId) result.youtube = youtubeRunId;
   if (instagramRunId) result.instagram = instagramRunId;
   if (tiktokRunId) result.tiktok = tiktokRunId;
+  if (similarwebRunId) result.similarweb = similarwebRunId;
 
   console.log(`🚀 [Enrichment Non-Blocking] All actors started:`, result);
   return result;
@@ -1562,6 +1610,11 @@ export async function checkAllEnrichmentStatus(runIds: EnrichmentRunIds): Promis
   if (runIds.tiktok) {
     checks.push(
       getEnrichmentRunStatus(runIds.tiktok).then(s => { statuses.tiktok = s; })
+    );
+  }
+  if (runIds.similarweb) {
+    checks.push(
+      getEnrichmentRunStatus(runIds.similarweb).then(s => { statuses.similarweb = s; })
     );
   }
 
@@ -1715,6 +1768,55 @@ export async function fetchTikTokEnrichmentResults(
     return results;
   } catch (error: any) {
     console.error('❌ [TikTok Enrichment Fetch] Error:', error.message);
+    return results;
+  }
+}
+
+// =============================================================================
+// FETCH SIMILARWEB ENRICHMENT RESULTS
+// January 30, 2026
+// =============================================================================
+/**
+ * Fetch results from a completed SimilarWeb enrichment run.
+ * Only call this after getEnrichmentRunStatus() returns SUCCEEDED.
+ * 
+ * @param runId - The run ID from startSimilarWebEnrichment()
+ * @returns Map of domain to enriched data
+ */
+export async function fetchSimilarWebEnrichmentResults(
+  runId: string
+): Promise<Map<string, SimilarWebData>> {
+  const results = new Map<string, SimilarWebData>();
+
+  if (!client) {
+    console.error('❌ [SimilarWeb Enrichment Fetch] Apify client not initialized');
+    return results;
+  }
+
+  try {
+    const run = await client.run(runId).get();
+    if (!run?.defaultDatasetId) {
+      console.error('❌ [SimilarWeb Enrichment Fetch] No dataset found for run:', runId);
+      return results;
+    }
+
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    
+    console.log(`📊 [SimilarWeb Enrichment Fetch] Retrieved ${items.length} results`);
+
+    // Process each result and add to our Map
+    for (const rawItem of items) {
+      const item = rawItem as unknown as ApifySimilarWebResult;
+      const transformedData = transformSimilarWebApiResult(item);
+      
+      if (transformedData) {
+        results.set(item.domain, transformedData);
+      }
+    }
+
+    return results;
+  } catch (error: any) {
+    console.error('❌ [SimilarWeb Enrichment Fetch] Error:', error.message);
     return results;
   }
 }
