@@ -631,6 +631,28 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // The actual enrichment processing happens on the NEXT poll when
     // enrichment_status='running' (see code above).
     // ==========================================================================
+    
+    // ==========================================================================
+    // SAFETY GUARD: Prevent actor-spawning loop (January 30, 2026)
+    // 
+    // If we already have raw_results or enrichment_run_ids, we've already
+    // processed this SUCCEEDED state. This can happen if:
+    // - Previous UPDATE failed (e.g., constraint violation)
+    // - Race condition with multiple concurrent polls
+    // 
+    // Without this guard, each poll would start NEW enrichment actors!
+    // ==========================================================================
+    if (rawResults || enrichmentRunIds) {
+      console.warn(`⚠️ [Search/Status] GUARD: Already processed SUCCEEDED state, skipping actor start`);
+      console.warn(`⚠️ [Search/Status] rawResults: ${rawResults ? 'exists' : 'null'}, enrichmentRunIds: ${enrichmentRunIds ? JSON.stringify(enrichmentRunIds) : 'null'}`);
+      
+      // Try to recover by returning enriching status
+      return NextResponse.json({
+        status: 'enriching',
+        message: 'Enriching results with social media data...',
+      });
+    }
+    
     console.log(`🔍 [Search/Status] Google Scraper succeeded, starting non-blocking enrichment...`);
     
     // Update job to processing
