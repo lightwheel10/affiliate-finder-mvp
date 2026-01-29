@@ -209,7 +209,23 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // January 30, 2026: Non-blocking enrichment state
     const enrichmentStatus = job.enrichment_status as string | null;
     const enrichmentRunIds = job.enrichment_run_ids as EnrichmentRunIds | null;
-    const rawResults = job.raw_results as SearchResult[] | null;
+    
+    // Ensure rawResults is an array (JSONB may come back in unexpected formats)
+    let rawResults: SearchResult[] | null = null;
+    if (job.raw_results) {
+      if (Array.isArray(job.raw_results)) {
+        rawResults = job.raw_results as SearchResult[];
+      } else if (typeof job.raw_results === 'string') {
+        try {
+          const parsed = JSON.parse(job.raw_results);
+          rawResults = Array.isArray(parsed) ? parsed : null;
+        } catch (e) {
+          console.error(`[Search/Status] Failed to parse raw_results:`, e);
+        }
+      } else {
+        console.error(`[Search/Status] raw_results is not an array, type: ${typeof job.raw_results}`);
+      }
+    }
     
     // ==========================================================================
     // CHECK IF ALREADY COMPLETE
