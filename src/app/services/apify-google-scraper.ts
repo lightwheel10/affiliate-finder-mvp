@@ -68,8 +68,9 @@ const GOOGLE_SCRAPER_ACTOR_ID = 'nFJndFXA5zjCTuudP';
 // Results per page (Google standard is 10)
 const RESULTS_PER_PAGE = 10;
 
-// Pages per query (5 pages × 10 results = 50 results per query)
-const MAX_PAGES_PER_QUERY = 5;
+// Pages per query (2 pages × 10 results = 20 results per query)
+// January 30, 2026: Reduced from 5 to 2 to save Apify credits during testing
+const MAX_PAGES_PER_QUERY = 2;
 
 // =============================================================================
 // NOTE: Localized terms and query building logic moved to:
