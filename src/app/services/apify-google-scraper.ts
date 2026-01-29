@@ -237,6 +237,10 @@ export async function startGoogleSearchRun(
     languageCode: locationConfig?.languageCode || 'en',
     countryCode: locationConfig?.countryCode || 'us',
     googleDomain: locationConfig ? `google.${locationConfig.countryCode}` : 'google.com',
+    // CRITICAL: searchLanguage is the lr parameter that RESTRICTS results by language!
+    // Without this, we only set interface language (hl) but don't filter results.
+    // January 30, 2026: Added to fix Chinese/Russian/Arabic results appearing for German users
+    searchLanguage: locationConfig?.languageCode || '',
     
     // Disable features we don't need (saves cost/time)
     mobileResults: false,
