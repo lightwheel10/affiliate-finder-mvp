@@ -277,12 +277,31 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       
       console.log(`🔄 [Search/Status] Enrichment status:`, statuses);
       
+      // Check how long enrichment has been running
+      const enrichmentStartTime = Object.values(statuses).find(s => s.startedAt)?.startedAt;
+      const enrichmentElapsedMs = enrichmentStartTime 
+        ? Date.now() - new Date(enrichmentStartTime).getTime()
+        : 0;
+      const ENRICHMENT_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
+      
+      // Count how many actors have completed
+      const completedActors = Object.values(statuses).filter(
+        s => s.status === 'SUCCEEDED' || s.status === 'FAILED' || s.status === 'ABORTED'
+      ).length;
+      const totalActors = Object.keys(statuses).length;
+      
       if (!allComplete) {
-        // Enrichment still running - return enriching status
-        return NextResponse.json({
-          status: 'enriching',
-          message: 'Enriching results with social media data...',
-        });
+        // Check if we should timeout and return partial results
+        if (enrichmentElapsedMs > ENRICHMENT_TIMEOUT_MS && completedActors > 0) {
+          console.warn(`⏱️ [Search/Status] Enrichment timeout after ${Math.round(enrichmentElapsedMs/1000)}s. Returning partial results (${completedActors}/${totalActors} actors complete)`);
+          // Continue to process whatever results we have from completed actors
+        } else {
+          // Enrichment still running - return enriching status
+          return NextResponse.json({
+            status: 'enriching',
+            message: `Enriching results with social media data... (${completedActors}/${totalActors} complete)`,
+          });
+        }
       }
       
       // All enrichment actors complete - process results

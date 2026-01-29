@@ -942,8 +942,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             const jobId = startData.jobId;
             console.log('[Onboarding] Search started, jobId:', jobId);
             
-            // Poll until complete (max 5 minutes to match old timeout)
-            const maxWaitMs = 300000;
+            // Poll until complete (max 7 minutes for enrichment which can take 6+ minutes)
+            const maxWaitMs = 420000;
             const pollIntervalMs = 3000;
             const startTime = Date.now();
             
