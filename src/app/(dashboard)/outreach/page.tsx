@@ -89,6 +89,7 @@ import {
   CheckCircle2,  // Added January 16, 2026 for verified badge
   Pencil,  // Added January 16, 2026 for edit message functionality
   Save,  // Added January 16, 2026 for save edited message
+  Download,  // Added January 29th, 2026 for export functionality
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -1387,8 +1388,17 @@ export default function OutreachPage() {
             </div>
           </div>
 
-          {/* Right: Actions - NEO-BRUTALIST */}
+          {/* Right: Export + Actions - NEO-BRUTALIST */}
+          {/* January 29th, 2026: Added export button (subscription-gated) */}
           <div className="flex items-center gap-3">
+            {/* Export Button - January 29th, 2026 */}
+            <button
+              className="flex items-center justify-center gap-1.5 h-10 px-3 bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all text-xs font-black uppercase"
+              title="Export to CSV"
+            >
+              <Download size={16} strokeWidth={2.5} />
+              <span>Export</span>
+            </button>
             {selectedAffiliates.size > 0 && (
               <>
                 {/* January 17, 2026: Using i18n translations for selection actions */}

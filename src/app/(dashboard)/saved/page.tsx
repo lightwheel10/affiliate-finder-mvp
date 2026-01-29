@@ -57,7 +57,8 @@ import {
   CheckCircle2,
   AlertCircle,
   XCircle,
-  Clock  // Added January 6th, 2026 for neo-brutalist header
+  Clock,  // Added January 6th, 2026 for neo-brutalist header
+  Download,  // Added January 29th, 2026 for export functionality
 } from 'lucide-react';
 import { FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { FilterPanel } from '../../components/FilterPanel';
@@ -607,10 +608,19 @@ export default function SavedPage() {
             </div>
           </div>
 
-          {/* Right: Advanced Filter */}
+          {/* Right: Export + Advanced Filter */}
           {/* January 13th, 2026: Pass onboarding data for filter options */}
           {/* January 23, 2026: Filter pills now render in dropdown, not inline */}
+          {/* January 29th, 2026: Added export button (subscription-gated) */}
           <div className="flex items-center gap-3">
+            {/* Export Button - January 29th, 2026 */}
+            <button
+              className="flex items-center justify-center gap-1.5 h-10 px-3 bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all text-xs font-black uppercase"
+              title="Export to CSV"
+            >
+              <Download size={16} strokeWidth={2.5} />
+              <span>Export</span>
+            </button>
             <FilterPanel
               affiliates={savedAffiliates}
               activeFilters={advancedFilters}

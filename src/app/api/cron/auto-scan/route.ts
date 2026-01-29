@@ -613,9 +613,12 @@ async function runAutoScan(
       ...filteredTikTok,
     ];
     
+    // Use first topic as primary keyword for DB, or 'auto-scan' if none
+    const primaryKeyword = topics[0] || 'auto-scan';
+    
     for (const result of allFilteredResults) {
       try {
-        await saveDiscoveredAffiliate(userId, combinedKeyword, result);
+        await saveDiscoveredAffiliate(userId, primaryKeyword, result);
         totalResults++;
       } catch (saveError) {
         // Ignore duplicate errors, log others
