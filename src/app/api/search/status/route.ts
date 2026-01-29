@@ -338,6 +338,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         let savedThisPoll = 0;
         
         // Helper to save enriched results (ON CONFLICT DO NOTHING handles duplicates)
+        // January 30, 2026: Added ALL missing columns for TikTok, Instagram, YouTube
         const saveEnrichedResult = async (result: SearchResult) => {
           try {
             await sql`
@@ -347,10 +348,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 discovery_method_type, discovery_method_value,
                 channel_name, channel_link, channel_thumbnail, channel_verified, channel_subscribers,
                 duration, email,
+                youtube_video_likes, youtube_video_comments,
                 instagram_username, instagram_full_name, instagram_bio, instagram_followers,
                 instagram_following, instagram_posts_count, instagram_is_business, instagram_is_verified,
+                instagram_post_likes, instagram_post_comments, instagram_post_views,
                 tiktok_username, tiktok_display_name, tiktok_bio, tiktok_followers,
                 tiktok_following, tiktok_likes, tiktok_videos_count, tiktok_is_verified,
+                tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares,
                 similarweb_monthly_visits, similarweb_global_rank, similarweb_country_rank,
                 similarweb_bounce_rate, similarweb_pages_per_visit, similarweb_time_on_site
               )
@@ -364,14 +368,19 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
                 ${result.channel?.subscribers || null}, ${result.duration || null},
                 ${result.email || null},
+                ${(result as any).youtubeVideoLikes || null}, ${(result as any).youtubeVideoComments || null},
                 ${(result as any).instagramUsername || null}, ${(result as any).instagramFullName || null},
                 ${(result as any).instagramBio || null}, ${(result as any).instagramFollowers || null},
                 ${(result as any).instagramFollowing || null}, ${(result as any).instagramPostsCount || null},
                 ${(result as any).instagramIsBusiness || null}, ${(result as any).instagramIsVerified || null},
+                ${(result as any).instagramPostLikes || null}, ${(result as any).instagramPostComments || null},
+                ${(result as any).instagramPostViews || null},
                 ${(result as any).tiktokUsername || null}, ${(result as any).tiktokDisplayName || null},
                 ${(result as any).tiktokBio || null}, ${(result as any).tiktokFollowers || null},
                 ${(result as any).tiktokFollowing || null}, ${(result as any).tiktokLikes || null},
                 ${(result as any).tiktokVideosCount || null}, ${(result as any).tiktokIsVerified || null},
+                ${(result as any).tiktokVideoPlays || null}, ${(result as any).tiktokVideoLikes || null},
+                ${(result as any).tiktokVideoComments || null}, ${(result as any).tiktokVideoShares || null},
                 ${(result as any).similarwebMonthlyVisits || null}, ${(result as any).similarwebGlobalRank || null},
                 ${(result as any).similarwebCountryRank || null}, ${(result as any).similarwebBounceRate || null},
                 ${(result as any).similarwebPagesPerVisit || null}, ${(result as any).similarwebTimeOnSite || null}
@@ -391,10 +400,19 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             const apifyData = youtubeEnrichment.get(result.link);
             const enriched = apifyData ? {
               ...result,
-              channel: { name: apifyData.channelName || 'Unknown', link: apifyData.channelUrl || '', verified: apifyData.isVerified, subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined },
+              channel: { 
+                name: apifyData.channelName || 'Unknown', 
+                link: apifyData.channelUrl || '', 
+                verified: apifyData.isVerified, 
+                subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined,
+                thumbnail: apifyData.channelId ? `https://yt3.googleusercontent.com/ytc/${apifyData.channelId}` : undefined,
+              },
               views: apifyData.viewCount ? formatNumber(apifyData.viewCount) : undefined,
               thumbnail: apifyData.thumbnailUrl,
               title: apifyData.title || result.title,
+              duration: apifyData.duration,
+              youtubeVideoLikes: apifyData.likes,
+              youtubeVideoComments: apifyData.commentsCount,
             } : result;
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }
@@ -413,12 +431,29 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             const apifyData = username 
               ? instagramEnrichment.get(username) || instagramEnrichment.get(result.link)
               : instagramEnrichment.get(result.link);
+            // Get first post for likes/comments/views
+            const firstPost = (apifyData as any)?.latestPosts?.[0];
             const enriched = apifyData ? {
               ...result,
-              channel: { name: apifyData.fullName || apifyData.username, link: apifyData.url || '', verified: apifyData.verified, subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined },
-              instagramUsername: apifyData.username, instagramFullName: apifyData.fullName, instagramBio: apifyData.biography,
-              instagramFollowers: apifyData.followersCount, instagramFollowing: apifyData.followsCount,
-              instagramPostsCount: apifyData.postsCount, instagramIsBusiness: apifyData.isBusinessAccount, instagramIsVerified: apifyData.verified,
+              channel: { 
+                name: apifyData.fullName || apifyData.username, 
+                link: apifyData.url || '', 
+                verified: apifyData.verified, 
+                subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
+                thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+              },
+              thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+              instagramUsername: apifyData.username, 
+              instagramFullName: apifyData.fullName, 
+              instagramBio: apifyData.biography,
+              instagramFollowers: apifyData.followersCount, 
+              instagramFollowing: apifyData.followsCount,
+              instagramPostsCount: apifyData.postsCount, 
+              instagramIsBusiness: apifyData.isBusinessAccount, 
+              instagramIsVerified: apifyData.verified,
+              instagramPostLikes: firstPost?.likesCount,
+              instagramPostComments: firstPost?.commentsCount,
+              instagramPostViews: firstPost?.videoViewCount,
             } : result;
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }
@@ -438,15 +473,27 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             const enriched = apifyData ? {
               ...result,
               // January 30, 2026: Also set channel.subscribers from fans so UI displays it
+              // Also include thumbnail (video cover) and channel.thumbnail (avatar)
               channel: { 
                 name: apifyData.authorMeta?.name || 'Unknown', 
                 link: `https://tiktok.com/@${apifyData.authorMeta?.name}`, 
                 verified: apifyData.authorMeta?.verified,
                 subscribers: apifyData.authorMeta?.fans ? formatNumber(apifyData.authorMeta.fans) : undefined,
+                thumbnail: apifyData.authorMeta?.avatar,
               },
-              tiktokUsername: apifyData.authorMeta?.name, tiktokDisplayName: apifyData.authorMeta?.nickName,
-              tiktokFollowers: apifyData.authorMeta?.fans, tiktokLikes: apifyData.authorMeta?.heart,
+              thumbnail: apifyData.videoMeta?.coverUrl || apifyData.authorMeta?.avatar,
+              tiktokUsername: apifyData.authorMeta?.name, 
+              tiktokDisplayName: apifyData.authorMeta?.nickName,
+              tiktokBio: apifyData.authorMeta?.signature,
+              tiktokFollowers: apifyData.authorMeta?.fans, 
+              tiktokLikes: apifyData.authorMeta?.heart,
+              tiktokVideosCount: apifyData.authorMeta?.video,
               tiktokIsVerified: apifyData.authorMeta?.verified,
+              // Video stats
+              tiktokVideoPlays: apifyData.playCount,
+              tiktokVideoLikes: apifyData.diggCount,
+              tiktokVideoComments: apifyData.commentCount,
+              tiktokVideoShares: apifyData.shareCount,
             } : result;
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }

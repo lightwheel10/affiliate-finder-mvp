@@ -1474,9 +1474,32 @@ export function useDiscoveredAffiliates() {
   // CRITICAL: Use useMemo to prevent creating a new array on every render.
   // Without this, components that depend on discoveredAffiliates in useEffect
   // would trigger infinite loops because the array reference changes every render.
+  // 
+  // January 30, 2026: Filter to only show results with enrichment data
+  // - TikTok: requires tiktok_followers
+  // - Instagram: requires instagram_followers  
+  // - YouTube: requires channel_subscribers
+  // - Web: show all (direct Google results)
   // ===========================================================================
   const discoveredAffiliates: ResultItem[] = useMemo(() => {
-    return data?.affiliates?.map(transformAffiliate) || [];
+    const transformed = data?.affiliates?.map(transformAffiliate) || [];
+    
+    // Filter to only include results with enrichment data
+    return transformed.filter((item: ResultItem) => {
+      switch (item.source) {
+        case 'TikTok':
+          return item.tiktokFollowers != null;
+        case 'Instagram':
+          return item.instagramFollowers != null;
+        case 'YouTube':
+          return item.channel?.subscribers != null;
+        case 'Web':
+          // Web results: show all (or optionally filter by similarweb data)
+          return true;
+        default:
+          return true;
+      }
+    });
   }, [data]);
   
   // Combined loading state (user loading OR SWR loading)
