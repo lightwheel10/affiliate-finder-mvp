@@ -456,10 +456,12 @@ export async function enrichInstagramByUrls(
   try {
     // Call the Instagram profile scraper with directUrls input
     // IMPORTANT: Using instagramProfile actor (shu8hvrXbJbY3Eb9W), NOT instagram actor
+    // January 30, 2026: Changed resultsLimit from 1 to 5 to get latestPosts
+    // This allows us to show post content in RELEVANT CONTENT column for profile URLs
     const run = await client.actor(ACTORS.instagramProfile).call({
       directUrls: validUrls,
       resultsType: 'details',  // Get full profile details
-      resultsLimit: 1,         // We only need profile data, not posts
+      resultsLimit: 5,         // Get up to 5 latest posts for profile URLs
       addParentData: false,    // We don't need parent data for enrichment
     });
 

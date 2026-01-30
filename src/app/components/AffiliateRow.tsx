@@ -685,8 +685,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 {title || snippet}
               </p>
               <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                {postLikes !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postLikes)} {t.affiliateRow.metrics.likes}</span>}
-                {postComments !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postComments)} {t.affiliateRow.metrics.comments}</span>}
+                {/* FIX January 30, 2026: Changed !== undefined to != null */}
+                {postLikes != null && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postLikes)} {t.affiliateRow.metrics.likes}</span>}
+                {postComments != null && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postComments)} {t.affiliateRow.metrics.comments}</span>}
                 {date && <span className="text-gray-400">{formatDate(date)}</span>}
               </div>
             </div>
@@ -707,7 +708,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-700 dark:text-gray-300 font-medium line-clamp-3 mb-2">{item.title || item.snippet}</p>
                     <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
-                      {item.instagramPostLikes !== undefined && <span>{formatNumber(item.instagramPostLikes)} {t.affiliateRow.metrics.likes}</span>}
+                      {/* FIX January 30, 2026: Changed !== undefined to != null */}
+                      {item.instagramPostLikes != null && <span>{formatNumber(item.instagramPostLikes)} {t.affiliateRow.metrics.likes}</span>}
                       {item.date && <span>• {formatDate(item.date)}</span>}
                     </div>
                   </div>
@@ -1327,12 +1329,14 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   </span>
                 )}
                 {/* Instagram: Show post likes and views */}
-                {source.toLowerCase() === 'instagram' && affiliateData?.instagramPostLikes !== undefined && (
+                {/* FIX January 30, 2026: Changed !== undefined to != null to properly handle NULL from DB */}
+                {/* NULL !== undefined is TRUE in JS, so we were showing "0 likes" for profile URLs */}
+                {source.toLowerCase() === 'instagram' && affiliateData?.instagramPostLikes != null && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
                     ❤️ {formatNumber(affiliateData.instagramPostLikes)} {t.affiliateRow.metrics.likes}
                   </span>
                 )}
-                {source.toLowerCase() === 'instagram' && affiliateData?.instagramPostViews !== undefined && (
+                {source.toLowerCase() === 'instagram' && affiliateData?.instagramPostViews != null && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
                     <Eye size={10} />
                     {formatNumber(affiliateData.instagramPostViews)} {t.affiliateRow.metrics.views}

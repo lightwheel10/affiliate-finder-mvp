@@ -442,35 +442,58 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             const apifyData = username 
               ? instagramEnrichment.get(username) || instagramEnrichment.get(result.link)
               : instagramEnrichment.get(result.link);
-            // January 30, 2026: Fixed field mapping - Apify returns POST data with owner* fields
-            // Post data: caption, displayUrl, likesCount, commentsCount, videoViewCount
-            // Owner data: ownerFullName, ownerUsername, ownerId
+            // January 30, 2026: Fixed field mapping for both POST URLs and PROFILE URLs
+            // POST URLs: displayUrl, caption, likesCount at root level (owner* fields for author)
+            // PROFILE URLs: profilePicUrl at root, post data in latestPosts[0]
+            const isPostUrl = !!(apifyData as any).displayUrl && !apifyData.latestPosts;
+            const firstPost = apifyData.latestPosts?.[0];
+            
+            // For RELEVANT CONTENT: Use post data (from root for POST URLs, from latestPosts[0] for PROFILE URLs)
+            const postThumbnail = isPostUrl 
+              ? (apifyData as any).displayUrl 
+              : firstPost?.displayUrl;
+            const postCaption = isPostUrl 
+              ? (apifyData as any).caption 
+              : firstPost?.caption;
+            const postLikes = isPostUrl 
+              ? (apifyData as any).likesCount 
+              : firstPost?.likesCount;
+            const postComments = isPostUrl 
+              ? (apifyData as any).commentsCount 
+              : firstPost?.commentsCount;
+            const postViews = isPostUrl 
+              ? (apifyData as any).videoViewCount 
+              : firstPost?.videoViewCount;
+            
+            // For AFFILIATE column: Use profile pic (from profilePicUrl for PROFILE URLs, not available for POST URLs)
+            const profilePic = apifyData.profilePicUrlHD || apifyData.profilePicUrl;
+            
             const enriched = apifyData ? {
               ...result,
               channel: { 
                 name: (apifyData as any).ownerFullName || (apifyData as any).ownerUsername || apifyData.fullName || apifyData.username, 
                 link: `https://www.instagram.com/${(apifyData as any).ownerUsername || apifyData.username}/`,
                 verified: (apifyData as any).verified || apifyData.verified, 
-                // Note: followersCount not available in post data, only in profile data
                 subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
-                thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+                // AFFILIATE column thumbnail: profile pic (for PROFILE URLs) or null (for POST URLs)
+                thumbnail: profilePic,
               },
-              // Use post displayUrl as thumbnail, fallback to profile pic
-              thumbnail: (apifyData as any).displayUrl || apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-              // Use post caption as title for RELEVANT CONTENT column
-              title: (apifyData as any).caption?.substring(0, 100) || result.title,
+              // RELEVANT CONTENT thumbnail: post image
+              thumbnail: postThumbnail || profilePic,
+              // RELEVANT CONTENT title: post caption
+              title: postCaption?.substring(0, 100) || result.title,
               instagramUsername: (apifyData as any).ownerUsername || apifyData.username, 
               instagramFullName: (apifyData as any).ownerFullName || apifyData.fullName, 
-              instagramBio: apifyData.biography || (apifyData as any).caption,
+              instagramBio: apifyData.biography,
               instagramFollowers: apifyData.followersCount, 
               instagramFollowing: apifyData.followsCount,
               instagramPostsCount: apifyData.postsCount, 
               instagramIsBusiness: apifyData.isBusinessAccount, 
               instagramIsVerified: (apifyData as any).verified || apifyData.verified,
-              // Post stats - directly from apifyData (the data IS the post)
-              instagramPostLikes: (apifyData as any).likesCount,
-              instagramPostComments: (apifyData as any).commentsCount,
-              instagramPostViews: (apifyData as any).videoViewCount,
+              // Post engagement stats
+              instagramPostLikes: postLikes,
+              instagramPostComments: postComments,
+              instagramPostViews: postViews,
             } : result;
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }

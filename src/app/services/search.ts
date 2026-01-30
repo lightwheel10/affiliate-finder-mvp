@@ -1572,40 +1572,52 @@ export async function searchInstagramSerper(
           results = results.map(result => {
             const apifyData = enrichedData.get(result.link);
             
-            if (apifyData && apifyData.username) {
-              // Get first post for engagement data
+            if (apifyData && (apifyData.username || (apifyData as any).ownerUsername)) {
+              // January 30, 2026: Fixed to handle both POST URLs and PROFILE URLs
+              // POST URLs: displayUrl, caption, likesCount at root level
+              // PROFILE URLs: profilePicUrl at root, post data in latestPosts[0]
+              const isPostUrl = !!(apifyData as any).displayUrl && !apifyData.latestPosts;
               const firstPost = apifyData.latestPosts?.[0];
               
-              // Merge Apify profile data with Serper result
+              // Post data for RELEVANT CONTENT column
+              const postThumbnail = isPostUrl ? (apifyData as any).displayUrl : firstPost?.displayUrl;
+              const postCaption = isPostUrl ? (apifyData as any).caption : firstPost?.caption;
+              const postLikes = isPostUrl ? (apifyData as any).likesCount : firstPost?.likesCount;
+              const postComments = isPostUrl ? (apifyData as any).commentsCount : firstPost?.commentsCount;
+              const postViews = isPostUrl ? (apifyData as any).videoViewCount : firstPost?.videoViewCount;
+              
+              // Profile pic for AFFILIATE column
+              const profilePic = apifyData.profilePicUrlHD || apifyData.profilePicUrl;
+              
+              // Merge Apify data with Serper result
               return {
                 ...result,
-                // CRITICAL: Populate channel field for UI compatibility
-                // The row displays channel?.name, so without this the UI shows "instagram.com"
+                // AFFILIATE column: profile pic + username + followers
                 channel: {
-                  name: apifyData.fullName || apifyData.username,
-                  link: apifyData.url || `https://www.instagram.com/${apifyData.username}/`,
-                  thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+                  name: (apifyData as any).ownerFullName || apifyData.fullName || (apifyData as any).ownerUsername || apifyData.username,
+                  link: apifyData.url || `https://www.instagram.com/${(apifyData as any).ownerUsername || apifyData.username}/`,
+                  thumbnail: profilePic,
                   verified: apifyData.verified,
                   subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
                 },
                 // Profile metadata
-                instagramUsername: apifyData.username,
-                instagramFullName: apifyData.fullName,
+                instagramUsername: (apifyData as any).ownerUsername || apifyData.username,
+                instagramFullName: (apifyData as any).ownerFullName || apifyData.fullName,
                 instagramBio: apifyData.biography,
                 instagramFollowers: apifyData.followersCount,
                 instagramFollowing: apifyData.followsCount,
                 instagramPostsCount: apifyData.postsCount,
                 instagramIsBusiness: apifyData.isBusinessAccount,
                 instagramIsVerified: apifyData.verified,
-                // Latest post engagement (for quality assessment)
-                instagramPostLikes: firstPost?.likesCount,
-                instagramPostComments: firstPost?.commentsCount,
-                instagramPostViews: firstPost?.videoViewCount,
-                // January 30, 2026: Use post displayUrl as thumbnail, caption as title
-                thumbnail: (apifyData as any).displayUrl || apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+                // Post engagement stats
+                instagramPostLikes: postLikes,
+                instagramPostComments: postComments,
+                instagramPostViews: postViews,
+                // RELEVANT CONTENT: post thumbnail + caption
+                thumbnail: postThumbnail || profilePic,
                 personName: (apifyData as any).ownerFullName || apifyData.fullName || (apifyData as any).ownerUsername || apifyData.username,
-                title: (apifyData as any).caption?.substring(0, 100) || result.title,
-                snippet: (apifyData as any).caption?.substring(0, 300) || apifyData.biography?.substring(0, 300) || result.snippet,
+                title: postCaption?.substring(0, 100) || result.title,
+                snippet: postCaption?.substring(0, 300) || apifyData.biography?.substring(0, 300) || result.snippet,
               };
             }
             
