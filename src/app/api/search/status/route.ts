@@ -416,7 +416,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 link: apifyData.channelUrl || '', 
                 verified: apifyData.isVerified, 
                 subscribers: apifyData.numberOfSubscribers ? formatNumber(apifyData.numberOfSubscribers) : undefined,
-                thumbnail: apifyData.channelId ? `https://yt3.googleusercontent.com/ytc/${apifyData.channelId}` : undefined,
+                // January 30, 2026: Use banner.yt service for YouTube channel avatars
+                // The previous yt3.googleusercontent.com/ytc pattern was invalid - you can't construct avatar URLs from channelId
+                thumbnail: apifyData.channelId ? `https://www.banner.yt/${apifyData.channelId}/avatar` : undefined,
               },
               views: apifyData.viewCount ? formatNumber(apifyData.viewCount) : undefined,
               thumbnail: apifyData.thumbnailUrl,
