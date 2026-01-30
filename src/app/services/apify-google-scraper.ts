@@ -31,7 +31,7 @@
  */
 
 import { ApifyClient } from 'apify-client';
-import { Platform, SearchResult } from './search';
+import { Platform, SearchResult, isEcommerceDomain } from './search';
 import { getLocationConfig, LocationConfig } from './location';
 import { 
   buildAllLocalizedQueries, 
@@ -363,6 +363,13 @@ export async function fetchAndProcessResults(
       // Categorize by URL domain
       const platform = categorizePlatform(organic.url);
       const domain = extractDomain(organic.url);
+      
+      // January 30, 2026: Filter out blocked domains for Web results
+      // (Social platforms are handled separately, only filter Web)
+      if (platform === 'Web' && isEcommerceDomain(domain)) {
+        console.log(`🚫 [GoogleScraper] Blocked domain: ${domain}`);
+        continue;
+      }
       
       const result: SearchResult = {
         title: organic.title || '',

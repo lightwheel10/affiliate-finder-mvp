@@ -103,7 +103,8 @@ function formatNumber(num: number): string {
 // - Big-box retailers
 // - Fashion/department stores
 // =============================================================================
-const ECOMMERCE_DOMAINS = [
+// Exported for use in apify-google-scraper.ts
+export const ECOMMERCE_DOMAINS = [
   // Amazon (all regions)
   'amazon.com', 'amazon.de', 'amazon.co.uk', 'amazon.fr', 'amazon.es', 
   'amazon.it', 'amazon.ca', 'amazon.com.au', 'amazon.co.jp', 'amazon.in',
@@ -173,6 +174,10 @@ const ECOMMERCE_DOMAINS = [
   'cnn.com', 'bbc.com', 'bbc.co.uk',
   'theguardian.com', 'independent.co.uk',
   'usatoday.com', 'huffpost.com',
+  'msn.com',  // January 30, 2026: Microsoft News aggregator
+  
+  // Yahoo properties (shopping, news)
+  'yahoo.com', 'shopping.yahoo.com',
   
   // Review aggregators (corporate, not individual creators)
   'consumerreports.org', 'rtings.com',
@@ -718,8 +723,9 @@ export interface WebSearchOptions {
 
 /**
  * Check if a domain is an e-commerce/shop domain
+ * Exported for use in apify-google-scraper.ts
  */
-function isEcommerceDomain(domain: string): boolean {
+export function isEcommerceDomain(domain: string): boolean {
   const normalizedDomain = domain.toLowerCase().replace(/^www\./, '');
   
   return ECOMMERCE_DOMAINS.some(blocked => {
