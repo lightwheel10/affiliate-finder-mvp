@@ -504,6 +504,148 @@ export default function SavedPage() {
   ];
 
   // ==========================================================================
+  // CSV EXPORT FUNCTIONALITY - January 29th, 2026
+  // 
+  // Exports affiliate data to CSV format. Handles both "Export All" (current
+  // filtered view) and "Export Selected" (only selected affiliates).
+  // 
+  // CSV Columns:
+  // - Name: Title or person name
+  // - Email: Only included if email was found (emailStatus === 'found')
+  // - Platform: Source (Web, YouTube, Instagram, TikTok)
+  // - Domain: Website domain
+  // - Link: Full URL
+  // - Followers: Platform-specific follower/subscriber count
+  // - Discovery Method: How the affiliate was found (competitor, topic, etc.)
+  // - Saved Date: When the affiliate was saved to pipeline
+  // 
+  // NOTE: This is a client-side export. No API call is made.
+  // ==========================================================================
+  
+  /**
+   * Escapes a value for CSV format
+   * - Wraps in quotes if contains comma, quote, or newline
+   * - Escapes quotes by doubling them
+   */
+  const escapeCSVValue = (value: string | number | null | undefined): string => {
+    if (value === null || value === undefined) return '';
+    const str = String(value);
+    // If contains comma, quote, or newline, wrap in quotes and escape internal quotes
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  /**
+   * Gets follower/subscriber count based on platform
+   */
+  const getFollowerCount = (item: typeof filteredResults[0]): string => {
+    if (item.source === 'YouTube' && item.channel?.subscribers) {
+      return item.channel.subscribers;
+    }
+    if (item.source === 'Instagram' && item.instagramFollowers) {
+      return item.instagramFollowers.toLocaleString();
+    }
+    if (item.source === 'TikTok' && item.tiktokFollowers) {
+      return item.tiktokFollowers.toLocaleString();
+    }
+    if (item.source === 'Web' && item.similarWeb?.monthlyVisitsFormatted) {
+      return `${item.similarWeb.monthlyVisitsFormatted} visits`;
+    }
+    return '';
+  };
+
+  /**
+   * Converts affiliate data to CSV string
+   */
+  const generateCSV = (affiliates: typeof filteredResults): string => {
+    // CSV Header
+    const headers = [
+      'Name',
+      'Email',
+      'Platform',
+      'Domain',
+      'Link',
+      'Followers',
+      'Discovery Method',
+      'Saved Date'
+    ];
+    
+    // CSV Rows
+    const rows = affiliates.map(item => [
+      escapeCSVValue(item.personName || item.title),
+      // Only include email if it was found through paid lookup
+      escapeCSVValue(item.emailStatus === 'found' ? item.email : ''),
+      escapeCSVValue(item.source),
+      escapeCSVValue(item.domain),
+      escapeCSVValue(item.link),
+      escapeCSVValue(getFollowerCount(item)),
+      escapeCSVValue(item.discoveryMethod ? `${item.discoveryMethod.type}: ${item.discoveryMethod.value}` : ''),
+      escapeCSVValue(item.savedAt ? new Date(item.savedAt).toLocaleDateString() : '')
+    ]);
+    
+    // Combine header and rows
+    return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+  };
+
+  /**
+   * Triggers CSV download in browser
+   */
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  /**
+   * Handles "Export All" - exports all affiliates in current filtered view
+   */
+  const handleExportAll = () => {
+    if (filteredResults.length === 0) {
+      toast.error('No affiliates to export');
+      setIsExportModalOpen(false);
+      return;
+    }
+    
+    const csv = generateCSV(filteredResults);
+    const date = new Date().toISOString().split('T')[0];
+    downloadCSV(csv, `saved-affiliates-${date}.csv`);
+    
+    toast.success(`Exported ${filteredResults.length} affiliates`);
+    setIsExportModalOpen(false);
+  };
+
+  /**
+   * Handles "Export Selected" - exports only selected affiliates
+   */
+  const handleExportSelected = () => {
+    if (visibleSelectedLinks.size === 0) {
+      toast.error('No affiliates selected');
+      setIsExportModalOpen(false);
+      return;
+    }
+    
+    // Filter to only selected affiliates
+    const selectedAffiliates = filteredResults.filter(item => 
+      visibleSelectedLinks.has(item.link)
+    );
+    
+    const csv = generateCSV(selectedAffiliates);
+    const date = new Date().toISOString().split('T')[0];
+    downloadCSV(csv, `saved-affiliates-selected-${date}.csv`);
+    
+    toast.success(`Exported ${selectedAffiliates.length} affiliates`);
+    setIsExportModalOpen(false);
+  };
+
+  // ==========================================================================
   // RENDER - January 3rd, 2026
   // 
   // Note: The outer container with Sidebar is now handled by the layout.
@@ -875,10 +1017,7 @@ export default function SavedPage() {
           
           {/* Export All Option */}
           <button
-            onClick={() => {
-              // TODO: Implement export all functionality
-              setIsExportModalOpen(false);
-            }}
+            onClick={handleExportAll}
             className="w-full flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
           >
             <div className="w-10 h-10 bg-[#ffbf23] border-2 border-black flex items-center justify-center shrink-0">
@@ -894,10 +1033,7 @@ export default function SavedPage() {
 
           {/* Export Selected Option */}
           <button
-            onClick={() => {
-              // TODO: Implement export selected functionality
-              setIsExportModalOpen(false);
-            }}
+            onClick={handleExportSelected}
             disabled={visibleSelectedLinks.size === 0}
             className={cn(
               "w-full flex items-center gap-3 p-4 border-2 transition-all group",
