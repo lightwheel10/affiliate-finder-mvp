@@ -449,3 +449,72 @@ export function buildSingleKeywordQueries(
     targetLanguage,
   });
 }
+
+// =============================================================================
+// DISCOVERY METHOD EXTRACTION
+// 
+// January 30, 2026:
+// Extract the actual topic or competitor that generated a search result.
+// 
+// PROBLEM SOLVED:
+// Previously, ALL results were saved with the FIRST topic as discovery_method,
+// even if the result was found via a different topic or competitor search.
+// 
+// HOW IT WORKS:
+// 1. Takes the searchQuery from the result (e.g., "Bienencreme site:youtube.com erfahrung")
+// 2. Checks which topic or competitor appears in the query string
+// 3. Returns the matched value and type ('topic' or 'competitor')
+// 
+// USAGE:
+// const { type, value } = extractDiscoveryMethod(result.searchQuery, topics, competitors);
+// // type = 'topic' or 'competitor'
+// // value = 'Bienencreme' (the actual matched keyword)
+// =============================================================================
+
+export interface DiscoveryMethod {
+  type: 'topic' | 'competitor';
+  value: string;
+}
+
+/**
+ * Extract the discovery method (topic or competitor) from a search query.
+ * 
+ * @param searchQuery - The full search query string from Apify results
+ * @param topics - Array of user's topic keywords
+ * @param competitors - Array of user's competitor domains
+ * @returns The matched discovery method, or fallback to first topic
+ */
+export function extractDiscoveryMethod(
+  searchQuery: string | undefined,
+  topics: string[],
+  competitors: string[]
+): DiscoveryMethod {
+  // Fallback if no search query
+  if (!searchQuery) {
+    return { type: 'topic', value: topics[0] || 'unknown' };
+  }
+  
+  const lowerQuery = searchQuery.toLowerCase();
+  
+  // Check topics first (more common)
+  for (const topic of topics) {
+    if (lowerQuery.includes(topic.toLowerCase())) {
+      return { type: 'topic', value: topic };
+    }
+  }
+  
+  // Check competitors (extract brand name from domain for matching)
+  for (const competitor of competitors) {
+    // competitor is a domain like "bedrop.de" or "manukahealth.shop"
+    // Extract brand name: bedrop.de -> bedrop
+    const brandName = competitor.replace(/\.(com|de|shop|co\.uk|net|org|io)$/i, '').toLowerCase();
+    
+    if (lowerQuery.includes(brandName)) {
+      return { type: 'competitor', value: competitor };
+    }
+  }
+  
+  // Fallback: return first topic if no match found
+  // This handles edge cases where query format might differ
+  return { type: 'topic', value: topics[0] || 'unknown' };
+}

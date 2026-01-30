@@ -79,6 +79,8 @@ import {
   SimilarWebData,
 } from '@/app/services/apify';
 import { trackApiCall } from '@/app/services/tracking';
+// January 30, 2026: Import discovery method extraction for correct topic/competitor attribution
+import { extractDiscoveryMethod } from '@/app/utils/localized-search';
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -331,16 +333,25 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         ]);
         
         // Apply enrichment and save INCREMENTALLY (duplicates ignored via ON CONFLICT)
-        const onboardingTopics = userSettings?.topics;
-        const primaryTopic = onboardingTopics?.[0] || 'onboarding';
+        // January 30, 2026: Extract correct discovery method from searchQuery
+        const onboardingTopics = userSettings?.topics || [];
+        const onboardingCompetitors = userSettings?.competitors || [];
         
         // Process and save completed platforms' results
         let savedThisPoll = 0;
         
         // Helper to save enriched results (ON CONFLICT DO NOTHING handles duplicates)
         // January 30, 2026: Added ALL missing columns for TikTok, Instagram, YouTube
+        // January 30, 2026: Now extracts correct discovery method from result.searchQuery
         const saveEnrichedResult = async (result: SearchResult) => {
           try {
+            // Extract the actual topic/competitor that found this result
+            const discovery = extractDiscoveryMethod(
+              result.searchQuery,
+              onboardingTopics,
+              onboardingCompetitors
+            );
+            
             await sql`
               INSERT INTO crewcast.discovered_affiliates (
                 user_id, search_keyword, title, link, domain, snippet, source,
@@ -359,11 +370,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 similarweb_bounce_rate, similarweb_pages_per_visit, similarweb_time_on_site
               )
               VALUES (
-                ${userId}, ${primaryTopic}, ${result.title}, ${result.link}, ${result.domain},
+                ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
                 ${result.snippet || 'No description available'}, ${result.source},
                 ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
                 ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
-                ${'topic'}, ${primaryTopic},
+                ${discovery.type}, ${discovery.value},
                 ${result.channel?.name || null}, ${result.channel?.link || null},
                 ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
                 ${result.channel?.subscribers || null}, ${result.duration || null},
@@ -797,13 +808,22 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       if (isOnboarding && onboardingTopics && onboardingTopics.length > 0) {
         console.log(`🎓 [Search/Status] Onboarding job detected, saving ${allResults.length} results to discovered_affiliates...`);
         
-        const primaryTopic = onboardingTopics[0];
+        // January 30, 2026: Get competitors for discovery method extraction
+        const onboardingCompetitors = userSettings?.competitors || [];
         let savedCount = 0;
         let errorCount = 0;
         
         // Helper to save a single result
+        // January 30, 2026: Now extracts correct discovery method from result.searchQuery
         const saveResult = async (result: SearchResult) => {
           try {
+            // Extract the actual topic/competitor that found this result
+            const discovery = extractDiscoveryMethod(
+              result.searchQuery,
+              onboardingTopics,
+              onboardingCompetitors
+            );
+            
             await sql`
               INSERT INTO crewcast.discovered_affiliates (
                 user_id, search_keyword, title, link, domain, snippet, source,
@@ -819,11 +839,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 youtube_video_likes, youtube_video_comments
               )
               VALUES (
-                ${userId}, ${primaryTopic}, ${result.title}, ${result.link}, ${result.domain},
+                ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
                 ${result.snippet || 'No description available'}, ${result.source},
                 ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
                 ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
-                ${'topic'}, ${primaryTopic},
+                ${discovery.type}, ${discovery.value},
                 ${result.channel?.name || null}, ${result.channel?.link || null},
                 ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
                 ${result.channel?.subscribers || null}, ${result.duration || null},
@@ -1110,12 +1130,21 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       if (isOnboarding && onboardingTopics && onboardingTopics.length > 0) {
         console.log(`🎓 [Search/Status] Onboarding job (no social), saving ${allResults.length} web results...`);
         
-        const primaryTopic = onboardingTopics[0];
+        // January 30, 2026: Get competitors for discovery method extraction
+        const onboardingCompetitors = userSettings?.competitors || [];
         let savedCount = 0;
         
         // Helper to save a single result
+        // January 30, 2026: Now extracts correct discovery method from result.searchQuery
         const saveResult = async (result: SearchResult) => {
           try {
+            // Extract the actual topic/competitor that found this result
+            const discovery = extractDiscoveryMethod(
+              result.searchQuery,
+              onboardingTopics,
+              onboardingCompetitors
+            );
+            
             await sql`
               INSERT INTO crewcast.discovered_affiliates (
                 user_id, search_keyword, title, link, domain, snippet, source,
@@ -1125,11 +1154,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 duration, email
               )
               VALUES (
-                ${userId}, ${primaryTopic}, ${result.title}, ${result.link}, ${result.domain},
+                ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
                 ${result.snippet || 'No description available'}, ${result.source},
                 ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
                 ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
-                ${'topic'}, ${primaryTopic},
+                ${discovery.type}, ${discovery.value},
                 ${result.channel?.name || null}, ${result.channel?.link || null},
                 ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
                 ${result.channel?.subscribers || null}, ${result.duration || null},

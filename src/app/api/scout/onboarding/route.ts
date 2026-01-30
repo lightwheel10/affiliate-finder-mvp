@@ -68,6 +68,8 @@ import {
   fetchAndProcessResults,
 } from '../../../services/apify-google-scraper';
 import { sql } from '@/lib/db';
+// January 30, 2026: Import discovery method extraction for correct topic/competitor attribution
+import { extractDiscoveryMethod, DiscoveryMethod } from '../../../utils/localized-search';
 
 // =============================================================================
 // VERCEL FUNCTION CONFIGURATION - January 29th, 2026
@@ -276,9 +278,10 @@ async function enrichTikTokResults(results: SearchResult[]): Promise<SearchResul
 // 
 // January 29th, 2026: Updated for Apify polling architecture
 // =============================================================================
+// January 30, 2026: Updated to accept discovery method for correct topic/competitor attribution
 async function saveResultToDb(
   userId: number,
-  topic: string,
+  discovery: DiscoveryMethod,
   result: SearchResult
 ): Promise<boolean> {
   try {
@@ -293,6 +296,7 @@ async function saveResultToDb(
     }
 
     // Insert new discovered affiliate with ALL fields
+    // January 30, 2026: Now uses discovery.type and discovery.value for correct attribution
     await sql`
       INSERT INTO crewcast.discovered_affiliates (
         user_id,
@@ -345,7 +349,7 @@ async function saveResultToDb(
       )
       VALUES (
         ${userId},
-        ${topic},
+        ${discovery.value},
         ${result.title},
         ${result.link},
         ${result.domain},
@@ -357,8 +361,8 @@ async function saveResultToDb(
         ${result.date || null},
         ${result.views || null},
         ${result.highlightedWords || null},
-        ${'topic'},
-        ${topic},
+        ${discovery.type},
+        ${discovery.value},
         ${result.channel?.name || null},
         ${result.channel?.link || null},
         ${result.channel?.thumbnail || null},
@@ -691,33 +695,37 @@ export async function POST(req: Request): Promise<Response> {
     // =========================================================================
     console.log(`[Onboarding Scout] Saving results to database...`);
     
-    // Use first topic as the primary search keyword for DB
-    const primaryTopic = topics[0] || 'onboarding-search';
+    // January 30, 2026: Extract discovery method from each result's searchQuery
+    // This ensures each result is attributed to the correct topic/competitor
     
     // Save Web results
     for (const result of filteredWeb) {
       if (result.domain && !allWebDomains.includes(result.domain)) {
         allWebDomains.push(result.domain);
       }
-      const saved = await saveResultToDb(userId, primaryTopic, result);
+      const discovery = extractDiscoveryMethod(result.searchQuery, topics, competitors || []);
+      const saved = await saveResultToDb(userId, discovery, result);
       if (saved) platformResults.web++;
     }
     
     // Save YouTube results
     for (const result of filteredYouTube) {
-      const saved = await saveResultToDb(userId, primaryTopic, result);
+      const discovery = extractDiscoveryMethod(result.searchQuery, topics, competitors || []);
+      const saved = await saveResultToDb(userId, discovery, result);
       if (saved) platformResults.youtube++;
     }
     
     // Save Instagram results
     for (const result of filteredInstagram) {
-      const saved = await saveResultToDb(userId, primaryTopic, result);
+      const discovery = extractDiscoveryMethod(result.searchQuery, topics, competitors || []);
+      const saved = await saveResultToDb(userId, discovery, result);
       if (saved) platformResults.instagram++;
     }
     
     // Save TikTok results
     for (const result of filteredTikTok) {
-      const saved = await saveResultToDb(userId, primaryTopic, result);
+      const discovery = extractDiscoveryMethod(result.searchQuery, topics, competitors || []);
+      const saved = await saveResultToDb(userId, discovery, result);
       if (saved) platformResults.tiktok++;
     }
 
