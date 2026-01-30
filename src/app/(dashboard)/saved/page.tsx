@@ -38,6 +38,7 @@ import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { AffiliateRow } from '../../components/AffiliateRow';
 import { ScanCountdown } from '../../components/ScanCountdown';
 import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
+import { Modal } from '../../components/Modal';
 import { CreditsDisplay } from '../../components/CreditsDisplay';
 import { useSavedAffiliates } from '../../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
@@ -140,6 +141,11 @@ export default function SavedPage() {
   // ============================================================================
   const [advancedFilters, setAdvancedFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  // ============================================================================
+  // EXPORT MODAL STATE (Added January 29th, 2026)
+  // ============================================================================
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const handleRemove = async (link: string) => {
     await removeAffiliate(link);
@@ -615,6 +621,7 @@ export default function SavedPage() {
           <div className="flex items-center gap-3">
             {/* Export Button - January 29th, 2026 */}
             <button
+              onClick={() => setIsExportModalOpen(true)}
               className="flex items-center justify-center gap-1.5 h-10 px-3 bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all text-xs font-black uppercase"
               title="Export to CSV"
             >
@@ -850,6 +857,86 @@ export default function SavedPage() {
         isDeleting={isBulkDeleting}
         itemType="affiliate"
       />
+
+      {/* =============================================================================
+          EXPORT MODAL - January 29th, 2026
+          Asks user whether to export all affiliates or just selected ones
+          ============================================================================= */}
+      <Modal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Export Affiliates"
+        width="max-w-sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Choose what to export to CSV:
+          </p>
+          
+          {/* Export All Option */}
+          <button
+            onClick={() => {
+              // TODO: Implement export all functionality
+              setIsExportModalOpen(false);
+            }}
+            className="w-full flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
+          >
+            <div className="w-10 h-10 bg-[#ffbf23] border-2 border-black flex items-center justify-center shrink-0">
+              <Users size={20} className="text-black" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">Export All</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {filteredResults.length} affiliates in current view
+              </p>
+            </div>
+          </button>
+
+          {/* Export Selected Option */}
+          <button
+            onClick={() => {
+              // TODO: Implement export selected functionality
+              setIsExportModalOpen(false);
+            }}
+            disabled={visibleSelectedLinks.size === 0}
+            className={cn(
+              "w-full flex items-center gap-3 p-4 border-2 transition-all group",
+              visibleSelectedLinks.size > 0
+                ? "bg-white dark:bg-gray-900 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+                : "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60"
+            )}
+          >
+            <div className={cn(
+              "w-10 h-10 border-2 border-black flex items-center justify-center shrink-0",
+              visibleSelectedLinks.size > 0 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
+            )}>
+              <Check size={20} className={visibleSelectedLinks.size > 0 ? "text-black" : "text-gray-400"} />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className={cn(
+                "text-sm font-black uppercase",
+                visibleSelectedLinks.size > 0 ? "text-gray-900 dark:text-white" : "text-gray-400"
+              )}>
+                Export Selected
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {visibleSelectedLinks.size > 0 
+                  ? `${visibleSelectedLinks.size} affiliates selected`
+                  : "No affiliates selected"
+                }
+              </p>
+            </div>
+          </button>
+
+          {/* Cancel Button */}
+          <button
+            onClick={() => setIsExportModalOpen(false)}
+            className="w-full py-2 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
 
       {/* =============================================================================
           DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN

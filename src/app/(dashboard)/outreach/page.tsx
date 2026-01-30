@@ -60,6 +60,7 @@ import Link from 'next/link';
 // January 17, 2026: Now using custom neo-brutalist toast component (see showToast function)
 import { ScanCountdown } from '../../components/ScanCountdown';
 import { CreditsDisplay } from '../../components/CreditsDisplay';
+import { Modal } from '../../components/Modal';
 import { useSavedAffiliates } from '../../hooks/useAffiliates';
 import { cn } from '@/lib/utils';
 import { ResultItem } from '../../types';
@@ -296,6 +297,11 @@ export default function OutreachPage() {
     }, 4000);
   };
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // =========================================================================
+  // EXPORT MODAL STATE (Added January 29th, 2026)
+  // =========================================================================
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const { savedAffiliates, isLoading: loading } = useSavedAffiliates();
   
@@ -1393,6 +1399,7 @@ export default function OutreachPage() {
           <div className="flex items-center gap-3">
             {/* Export Button - January 29th, 2026 */}
             <button
+              onClick={() => setIsExportModalOpen(true)}
               className="flex items-center justify-center gap-1.5 h-10 px-3 bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all text-xs font-black uppercase"
               title="Export to CSV"
             >
@@ -2492,6 +2499,86 @@ export default function OutreachPage() {
         )}
 
       </div>
+
+      {/* =============================================================================
+          EXPORT MODAL - January 29th, 2026
+          Asks user whether to export all affiliates or just selected ones
+          ============================================================================= */}
+      <Modal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Export Contacts"
+        width="max-w-sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Choose what to export to CSV:
+          </p>
+          
+          {/* Export All Option */}
+          <button
+            onClick={() => {
+              // TODO: Implement export all functionality
+              setIsExportModalOpen(false);
+            }}
+            className="w-full flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
+          >
+            <div className="w-10 h-10 bg-[#ffbf23] border-2 border-black flex items-center justify-center shrink-0">
+              <Users size={20} className="text-black" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">Export All</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {filteredResults.length} contacts in current view
+              </p>
+            </div>
+          </button>
+
+          {/* Export Selected Option */}
+          <button
+            onClick={() => {
+              // TODO: Implement export selected functionality
+              setIsExportModalOpen(false);
+            }}
+            disabled={selectedAffiliates.size === 0}
+            className={cn(
+              "w-full flex items-center gap-3 p-4 border-2 transition-all group",
+              selectedAffiliates.size > 0
+                ? "bg-white dark:bg-gray-900 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+                : "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60"
+            )}
+          >
+            <div className={cn(
+              "w-10 h-10 border-2 border-black flex items-center justify-center shrink-0",
+              selectedAffiliates.size > 0 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
+            )}>
+              <Check size={20} className={selectedAffiliates.size > 0 ? "text-black" : "text-gray-400"} />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className={cn(
+                "text-sm font-black uppercase",
+                selectedAffiliates.size > 0 ? "text-gray-900 dark:text-white" : "text-gray-400"
+              )}>
+                Export Selected
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {selectedAffiliates.size > 0 
+                  ? `${selectedAffiliates.size} contacts selected`
+                  : "No contacts selected"
+                }
+              </p>
+            </div>
+          </button>
+
+          {/* Cancel Button */}
+          <button
+            onClick={() => setIsExportModalOpen(false)}
+            className="w-full py-2 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
 
       {/* =============================================================================
           CUSTOM TOAST NOTIFICATION - NEO-BRUTALIST DESIGN (January 17, 2026)
