@@ -1595,13 +1595,11 @@ export async function searchInstagramSerper(
                 instagramPostLikes: firstPost?.likesCount,
                 instagramPostComments: firstPost?.commentsCount,
                 instagramPostViews: firstPost?.videoViewCount,
-                // Profile picture and display name
-                thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-                personName: apifyData.fullName || apifyData.username,
-                // Use Apify's title if better
-                title: apifyData.fullName || `@${apifyData.username}` || result.title,
-                // Use bio as snippet if available (more informative)
-                snippet: apifyData.biography?.substring(0, 300) || result.snippet,
+                // January 30, 2026: Use post displayUrl as thumbnail, caption as title
+                thumbnail: (apifyData as any).displayUrl || apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+                personName: (apifyData as any).ownerFullName || apifyData.fullName || (apifyData as any).ownerUsername || apifyData.username,
+                title: (apifyData as any).caption?.substring(0, 100) || result.title,
+                snippet: (apifyData as any).caption?.substring(0, 300) || apifyData.biography?.substring(0, 300) || result.snippet,
               };
             }
             

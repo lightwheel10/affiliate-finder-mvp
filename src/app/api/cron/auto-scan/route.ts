@@ -389,10 +389,11 @@ async function enrichInstagramResults(results: SearchResult[]): Promise<SearchRe
           instagramPostLikes: firstPost?.likesCount,
           instagramPostComments: firstPost?.commentsCount,
           instagramPostViews: firstPost?.videoViewCount,
-          thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-          personName: apifyData.fullName || apifyData.username,
-          title: apifyData.fullName || `@${apifyData.username}` || result.title,
-          snippet: apifyData.biography?.substring(0, 300) || result.snippet,
+          // January 30, 2026: Use post displayUrl as thumbnail, caption as title
+          thumbnail: (apifyData as any).displayUrl || apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+          personName: (apifyData as any).ownerFullName || apifyData.fullName || (apifyData as any).ownerUsername || apifyData.username,
+          title: (apifyData as any).caption?.substring(0, 100) || result.title,
+          snippet: (apifyData as any).caption?.substring(0, 300) || apifyData.biography?.substring(0, 300) || result.snippet,
         };
       }
       return result;
