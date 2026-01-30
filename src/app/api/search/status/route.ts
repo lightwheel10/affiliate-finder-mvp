@@ -431,29 +431,35 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             const apifyData = username 
               ? instagramEnrichment.get(username) || instagramEnrichment.get(result.link)
               : instagramEnrichment.get(result.link);
-            // Get first post for likes/comments/views
-            const firstPost = (apifyData as any)?.latestPosts?.[0];
+            // January 30, 2026: Fixed field mapping - Apify returns POST data with owner* fields
+            // Post data: caption, displayUrl, likesCount, commentsCount, videoViewCount
+            // Owner data: ownerFullName, ownerUsername, ownerId
             const enriched = apifyData ? {
               ...result,
               channel: { 
-                name: apifyData.fullName || apifyData.username, 
-                link: apifyData.url || '', 
-                verified: apifyData.verified, 
+                name: (apifyData as any).ownerFullName || (apifyData as any).ownerUsername || apifyData.fullName || apifyData.username, 
+                link: `https://www.instagram.com/${(apifyData as any).ownerUsername || apifyData.username}/`,
+                verified: (apifyData as any).verified || apifyData.verified, 
+                // Note: followersCount not available in post data, only in profile data
                 subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
                 thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
               },
-              thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-              instagramUsername: apifyData.username, 
-              instagramFullName: apifyData.fullName, 
-              instagramBio: apifyData.biography,
+              // Use post displayUrl as thumbnail, fallback to profile pic
+              thumbnail: (apifyData as any).displayUrl || apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+              // Use post caption as title for RELEVANT CONTENT column
+              title: (apifyData as any).caption?.substring(0, 100) || result.title,
+              instagramUsername: (apifyData as any).ownerUsername || apifyData.username, 
+              instagramFullName: (apifyData as any).ownerFullName || apifyData.fullName, 
+              instagramBio: apifyData.biography || (apifyData as any).caption,
               instagramFollowers: apifyData.followersCount, 
               instagramFollowing: apifyData.followsCount,
               instagramPostsCount: apifyData.postsCount, 
               instagramIsBusiness: apifyData.isBusinessAccount, 
-              instagramIsVerified: apifyData.verified,
-              instagramPostLikes: firstPost?.likesCount,
-              instagramPostComments: firstPost?.commentsCount,
-              instagramPostViews: firstPost?.videoViewCount,
+              instagramIsVerified: (apifyData as any).verified || apifyData.verified,
+              // Post stats - directly from apifyData (the data IS the post)
+              instagramPostLikes: (apifyData as any).likesCount,
+              instagramPostComments: (apifyData as any).commentsCount,
+              instagramPostViews: (apifyData as any).videoViewCount,
             } : result;
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }
@@ -628,7 +634,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       });
       
       // Enrich Instagram results
-      // January 30, 2026: Use username for lookup to handle URL format mismatches
+      // January 30, 2026: Fixed field mapping - Apify returns POST data with owner* fields
       const enrichedInstagram = instagramResults.map(result => {
         const usernameMatch = result.link.match(/instagram\.com\/([a-zA-Z0-9._]+)\/?(?:\?|$)/);
         const username = usernameMatch && !['p', 'reel', 'reels', 'stories', 'explore', 'accounts'].includes(usernameMatch[1]) 
@@ -637,32 +643,37 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         const apifyData = username 
           ? instagramEnrichment.get(username) || instagramEnrichment.get(result.link)
           : instagramEnrichment.get(result.link);
-        if (apifyData && apifyData.username) {
-          const firstPost = (apifyData as any).latestPosts?.[0];
+        // Check for either profile data (username) or post data (ownerUsername)
+        const ownerUsername = (apifyData as any)?.ownerUsername || apifyData?.username;
+        const ownerFullName = (apifyData as any)?.ownerFullName || apifyData?.fullName;
+        if (apifyData && ownerUsername) {
           return {
             ...result,
             channel: {
-              name: apifyData.fullName || apifyData.username,
-              link: apifyData.url || `https://www.instagram.com/${apifyData.username}/`,
+              name: ownerFullName || ownerUsername,
+              link: `https://www.instagram.com/${ownerUsername}/`,
               thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-              verified: apifyData.verified,
+              verified: (apifyData as any).verified || apifyData.verified,
               subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
             },
-            instagramUsername: apifyData.username,
-            instagramFullName: apifyData.fullName,
-            instagramBio: apifyData.biography,
+            instagramUsername: ownerUsername,
+            instagramFullName: ownerFullName,
+            instagramBio: apifyData.biography || (apifyData as any).caption,
             instagramFollowers: apifyData.followersCount,
             instagramFollowing: apifyData.followsCount,
             instagramPostsCount: apifyData.postsCount,
             instagramIsBusiness: apifyData.isBusinessAccount,
-            instagramIsVerified: apifyData.verified,
-            instagramPostLikes: firstPost?.likesCount,
-            instagramPostComments: firstPost?.commentsCount,
-            instagramPostViews: firstPost?.videoViewCount,
-            thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-            personName: apifyData.fullName || apifyData.username,
-            title: apifyData.fullName || `@${apifyData.username}` || result.title,
-            snippet: apifyData.biography?.substring(0, 300) || result.snippet,
+            instagramIsVerified: (apifyData as any).verified || apifyData.verified,
+            // Post stats - directly from apifyData (the data IS the post)
+            instagramPostLikes: (apifyData as any).likesCount,
+            instagramPostComments: (apifyData as any).commentsCount,
+            instagramPostViews: (apifyData as any).videoViewCount,
+            // Use post displayUrl as thumbnail
+            thumbnail: (apifyData as any).displayUrl || apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+            personName: ownerFullName || ownerUsername,
+            // Use post caption for title/snippet
+            title: (apifyData as any).caption?.substring(0, 100) || ownerFullName || `@${ownerUsername}` || result.title,
+            snippet: (apifyData as any).caption?.substring(0, 300) || apifyData.biography?.substring(0, 300) || result.snippet,
           };
         }
         return result;
