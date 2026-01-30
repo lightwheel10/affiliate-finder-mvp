@@ -312,8 +312,98 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       // INCREMENTAL SAVING: Save results from completed actors on EVERY poll
       // This ensures results are saved as soon as each actor completes.
       // ON CONFLICT DO NOTHING handles duplicates safely.
+      // 
+      // January 30, 2026: Added brand filtering during incremental saves.
+      // Previously, filtering was only applied at the end (which was never
+      // reached for onboarding jobs). Now we filter BEFORE saving to prevent
+      // the user's own brand accounts from being saved as discovered affiliates.
       // ==========================================================================
       const isOnboardingJob = userSettings?.isOnboarding === true;
+      
+      // ==========================================================================
+      // BRAND FILTERING HELPER - January 30, 2026
+      // 
+      // Extracts the brand name from a domain for filtering purposes.
+      // This is a local copy of the logic from search.ts to avoid circular deps.
+      // Example: "bedrop.de" → "bedrop", "https://www.example.com" → "example"
+      // ==========================================================================
+      const extractBrandName = (domain: string | null | undefined): string | null => {
+        if (!domain || typeof domain !== 'string') return null;
+        
+        let cleaned = domain.trim().toLowerCase();
+        
+        // Remove protocol
+        cleaned = cleaned.replace(/^https?:\/\//, '');
+        
+        // Remove www
+        cleaned = cleaned.replace(/^www\./, '');
+        
+        // Remove path
+        cleaned = cleaned.replace(/\/.*$/, '');
+        
+        // Remove common TLDs
+        cleaned = cleaned.replace(/\.(com|de|co\.uk|net|org|io|app|shop|store|eu|at|ch|fr|es|it|nl|be|pl|se|no|dk|fi)$/i, '');
+        
+        // Handle compound domains - take the main part
+        const parts = cleaned.split('.');
+        if (parts.length > 1) {
+          cleaned = parts[parts.length - 1] || parts[0];
+        }
+        
+        return cleaned || null;
+      };
+      
+      // Get the user's brand name for filtering (null if not set)
+      const userBrandName = extractBrandName(userSettings?.userBrand);
+      
+      if (userBrandName) {
+        console.log(`🏷️ [Search/Status] Brand filtering active: "${userSettings?.userBrand}" → "${userBrandName}"`);
+      }
+      
+      // ==========================================================================
+      // shouldExcludeResult - January 30, 2026
+      // 
+      // Checks if a result should be excluded because it belongs to the user's
+      // own brand. This prevents saving the user's own social accounts or website
+      // as "discovered affiliates".
+      // 
+      // Checks performed based on source:
+      // - YouTube: channel name
+      // - Instagram: channel name (username)  
+      // - TikTok: username, display name, channel name
+      // - Web: domain
+      // ==========================================================================
+      const shouldExcludeResult = (
+        source: string,
+        channelName: string | null | undefined,
+        username: string | null | undefined,
+        domain: string | null | undefined
+      ): boolean => {
+        // No brand set = no filtering
+        if (!userBrandName) return false;
+        
+        const brandLower = userBrandName.toLowerCase();
+        
+        // Check channel name (all platforms)
+        if (channelName && channelName.toLowerCase().includes(brandLower)) {
+          return true;
+        }
+        
+        // Check username (TikTok, Instagram)
+        if (username && username.toLowerCase().includes(brandLower)) {
+          return true;
+        }
+        
+        // Check domain (Web)
+        if (source === 'Web' && domain) {
+          const domainLower = domain.toLowerCase().replace(/^www\./, '');
+          if (domainLower.includes(brandLower)) {
+            return true;
+          }
+        }
+        
+        return false;
+      };
       
       if (isOnboardingJob && completedActors > 0) {
         // Fetch results from any completed actors (even if not all complete)
@@ -427,6 +517,14 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               youtubeVideoLikes: apifyData.likes,
               youtubeVideoComments: apifyData.commentsCount,
             } : result;
+            
+            // January 30, 2026: Brand filtering - skip if this is user's own brand channel
+            const ytChannelName = enriched.channel?.name;
+            if (shouldExcludeResult('YouTube', ytChannelName, null, null)) {
+              console.log(`🚫 [Incremental] Excluded YouTube (user's brand): ${ytChannelName}`);
+              continue;
+            }
+            
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }
         }
@@ -497,6 +595,15 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               instagramPostComments: postComments,
               instagramPostViews: postViews,
             } : result;
+            
+            // January 30, 2026: Brand filtering - skip if this is user's own brand account
+            const igChannelName = enriched.channel?.name;
+            const igUsername = (enriched as any).instagramUsername;
+            if (shouldExcludeResult('Instagram', igChannelName, igUsername, null)) {
+              console.log(`🚫 [Incremental] Excluded Instagram (user's brand): @${igUsername || igChannelName}`);
+              continue;
+            }
+            
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }
         }
@@ -537,6 +644,17 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               tiktokVideoComments: apifyData.commentCount,
               tiktokVideoShares: apifyData.shareCount,
             } : result;
+            
+            // January 30, 2026: Brand filtering - skip if this is user's own brand account
+            const ttChannelName = enriched.channel?.name;
+            const ttUsername = (enriched as any).tiktokUsername;
+            const ttDisplayName = (enriched as any).tiktokDisplayName;
+            if (shouldExcludeResult('TikTok', ttChannelName, ttUsername, null) ||
+                shouldExcludeResult('TikTok', ttDisplayName, null, null)) {
+              console.log(`🚫 [Incremental] Excluded TikTok (user's brand): @${ttUsername || ttChannelName}`);
+              continue;
+            }
+            
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }
         }
@@ -545,6 +663,12 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         if (statuses.similarweb?.status === 'SUCCEEDED') {
           const webResults = rawResults.filter(r => r.source === 'Web');
           for (const result of webResults) {
+            // January 30, 2026: Brand filtering - skip if this is user's own brand website
+            if (shouldExcludeResult('Web', null, null, result.domain)) {
+              console.log(`🚫 [Incremental] Excluded Web (user's brand): ${result.domain}`);
+              continue;
+            }
+            
             const swData = similarwebEnrichment.get(result.domain);
             const enriched = swData ? {
               ...result,
