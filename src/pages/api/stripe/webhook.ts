@@ -56,6 +56,7 @@ import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan } from '@/lib/credits';
+import { sendEventToN8N } from '@/lib/n8n-webhook';
 
 // =============================================================================
 // CRITICAL: Disable Next.js body parsing
@@ -394,11 +395,11 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
  * Handle subscription canceled
  * 
  * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
+ * February 2026: Added N8N webhook for subscription_canceled email notification.
  */
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   console.log(`[Webhook] Processing subscription cancellation: ${subscription.id}`);
 
-  // Safely extract customer ID (can be string or Customer object)
   const customerId = typeof subscription.customer === 'string' 
     ? subscription.customer 
     : (subscription.customer as { id: string })?.id;
@@ -408,8 +409,10 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
     return;
   }
 
+  // Extended query to include email/name for notification
   const users = await sql`
-    SELECT u.id FROM crewcast.users u
+    SELECT u.id, u.email, u.name, u.plan
+    FROM crewcast.users u
     JOIN crewcast.subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
@@ -419,7 +422,8 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
     return;
   }
 
-  const dbUserId = users[0].id;
+  const user = users[0];
+  const dbUserId = user.id;
 
   await sql`
     UPDATE crewcast.subscriptions
@@ -439,30 +443,70 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
     WHERE id = ${dbUserId}
   `;
 
-  console.log(`[Webhook] Subscription canceled for user ${dbUserId}`);
+  // Fire N8N webhook for subscription_canceled email (fire-and-forget)
+  sendEventToN8N({
+    event_type: 'subscription_canceled',
+    email: user.email,
+    name: user.name || 'User',
+    plan: user.plan || 'pro',
+  });
+
+  console.log(`[Webhook] Subscription canceled for user ${dbUserId}, notification sent`);
 }
 
 /**
  * Handle trial ending soon (3 days before)
  * 
  * 29th December 2025 (REV-58):
- * Stripe sends this event 3 days before trial ends. Currently we just log it.
- * Email notifications are planned for a future update (see separate issue).
+ * Stripe sends this event 3 days before trial ends.
  * 
- * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
+ * February 2026: Added N8N webhook for trial_ending email notification.
  */
 async function handleTrialWillEnd(subscription: Stripe.Subscription) {
   console.log(`[Webhook] Trial will end soon for subscription: ${subscription.id}`);
   
-  // Safely extract customer ID (can be string or Customer object)
   const customerId = typeof subscription.customer === 'string' 
     ? subscription.customer 
     : (subscription.customer as { id: string })?.id;
     
-  console.log(`[Webhook] Trial ending soon for customer: ${customerId || 'unknown'}`);
+  if (!customerId) {
+    console.error(`[Webhook] Subscription ${subscription.id} has no customer ID`);
+    return;
+  }
+
+  // Fetch user for email notification
+  const users = await sql`
+    SELECT u.email, u.name, u.plan
+    FROM crewcast.users u
+    JOIN crewcast.subscriptions s ON u.id = s.user_id
+    WHERE s.stripe_customer_id = ${customerId}
+  `;
+
+  if (users.length === 0) {
+    console.error(`[Webhook] No user found for customer: ${customerId}`);
+    return;
+  }
+
+  const user = users[0];
   
-  // TODO (29th Dec 2025): Send email notification to user about trial ending
-  // See separate Linear issue for email notifications implementation
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const subObj = subscription as any;
+  const trialEndTimestamp = typeof subObj.trial_end === 'number' ? subObj.trial_end : null;
+  const trialEndsAt = trialEndTimestamp 
+    ? new Date(trialEndTimestamp * 1000).toISOString() 
+    : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Fire N8N webhook for trial_ending email (fire-and-forget)
+  sendEventToN8N({
+    event_type: 'trial_ending',
+    email: user.email,
+    name: user.name || 'User',
+    plan: user.plan || 'pro',
+    trialEndsAt,
+    daysRemaining: 3,
+  });
+  
+  console.log(`[Webhook] Trial ending notification sent for: ${user.email}`);
 }
 
 /**
@@ -545,9 +589,10 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   // ==========================================================================
   // FIND USER BY CUSTOMER ID
+  // Extended query includes name for email notification (February 2026)
   // ==========================================================================
   const users = await sql`
-    SELECT u.id, u.email, u.plan, s.stripe_subscription_id, s.status, s.first_payment_at
+    SELECT u.id, u.email, u.name, u.plan, s.stripe_subscription_id, s.status, s.first_payment_at
     FROM crewcast.users u
     JOIN crewcast.subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
@@ -559,6 +604,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   const dbUserId = users[0].id;
+  const userEmail = users[0].email;
+  const userName = users[0].name;
   const userPlan = users[0].plan;
   const dbSubscriptionId = users[0].stripe_subscription_id;
 
@@ -684,17 +731,32 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     // Non-critical: Don't fail the webhook if auto-scan scheduling fails
     console.error(`[Webhook] Failed to set auto-scan schedule for user ${dbUserId}:`, autoScanError);
   }
+
+  // ==========================================================================
+  // N8N EMAIL NOTIFICATION - February 2026
+  // Fire webhook for payment_success email (fire-and-forget)
+  // ==========================================================================
+  sendEventToN8N({
+    event_type: 'payment_success',
+    email: userEmail,
+    name: userName || 'User',
+    plan: userPlan || 'pro',
+    amountPaid: amountPaid,
+    currency: 'usd',
+  });
+
+  console.log(`[Webhook] Payment success notification sent for: ${userEmail}`);
 }
 
 /**
  * Handle failed invoice payment
  * 
  * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
+ * February 2026: Added N8N webhook for payment_failed email notification.
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   console.log(`[Webhook] Invoice payment failed: ${invoice.id}`);
 
-  // Safely extract customer ID (can be string or Customer object)
   const customerId = typeof invoice.customer === 'string' 
     ? invoice.customer 
     : (invoice.customer as { id: string })?.id;
@@ -704,8 +766,10 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     return;
   }
 
+  // Extended query to include email/name for notification
   const users = await sql`
-    SELECT u.id FROM crewcast.users u
+    SELECT u.id, u.email, u.name, u.plan
+    FROM crewcast.users u
     JOIN crewcast.subscriptions s ON u.id = s.user_id
     WHERE s.stripe_customer_id = ${customerId}
   `;
@@ -715,7 +779,8 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     return;
   }
 
-  const dbUserId = users[0].id;
+  const user = users[0];
+  const dbUserId = user.id;
 
   await sql`
     UPDATE crewcast.subscriptions
@@ -725,7 +790,15 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     WHERE user_id = ${dbUserId}
   `;
 
-  console.log(`[Webhook] Payment failed for user ${dbUserId} - status set to past_due`);
+  // Fire N8N webhook for payment_failed email (fire-and-forget)
+  sendEventToN8N({
+    event_type: 'payment_failed',
+    email: user.email,
+    name: user.name || 'User',
+    plan: user.plan || 'pro',
+  });
+
+  console.log(`[Webhook] Payment failed for user ${dbUserId} - status set to past_due, notification sent`);
 }
 
 /**
