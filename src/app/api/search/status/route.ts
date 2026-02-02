@@ -964,7 +964,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         
         // Helper to save a single result
         // January 30, 2026: Now extracts correct discovery method from result.searchQuery
-        const saveResult = async (result: SearchResult) => {
+        // February 2, 2026: Added SimilarWeb fields - were missing, causing traffic sources to show 0% in UI
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const saveResult = async (result: SearchResult & Record<string, any>) => {
           try {
             // Extract the actual topic/competitor that found this result
             const discovery = extractDiscoveryMethod(
@@ -972,6 +974,20 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               onboardingTopics,
               onboardingCompetitors
             );
+            
+            // SimilarWeb fields are added dynamically during enrichment (line ~880)
+            const sw = {
+              monthlyVisits: result.similarwebMonthlyVisits || null,
+              globalRank: result.similarwebGlobalRank || null,
+              countryRank: result.similarwebCountryRank || null,
+              countryCode: result.similarwebCountryCode || null,
+              bounceRate: result.similarwebBounceRate || null,
+              pagesPerVisit: result.similarwebPagesPerVisit || null,
+              timeOnSite: result.similarwebTimeOnSite || null,
+              category: result.similarwebCategory || null,
+              trafficSources: result.similarwebTrafficSources ? JSON.stringify(result.similarwebTrafficSources) : null,
+              topCountries: result.similarwebTopCountries ? JSON.stringify(result.similarwebTopCountries) : null,
+            };
             
             await sql`
               INSERT INTO crewcast.discovered_affiliates (
@@ -985,7 +1001,10 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 tiktok_username, tiktok_display_name, tiktok_bio, tiktok_followers,
                 tiktok_following, tiktok_likes, tiktok_videos_count, tiktok_is_verified,
                 tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares,
-                youtube_video_likes, youtube_video_comments
+                youtube_video_likes, youtube_video_comments,
+                similarweb_monthly_visits, similarweb_global_rank, similarweb_country_rank,
+                similarweb_country_code, similarweb_bounce_rate, similarweb_pages_per_visit,
+                similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries
               )
               VALUES (
                 ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
@@ -1007,7 +1026,10 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 ${result.tiktokVideosCount || null}, ${result.tiktokIsVerified || null},
                 ${result.tiktokVideoPlays || null}, ${result.tiktokVideoLikes || null},
                 ${result.tiktokVideoComments || null}, ${result.tiktokVideoShares || null},
-                ${result.youtubeVideoLikes || null}, ${result.youtubeVideoComments || null}
+                ${result.youtubeVideoLikes || null}, ${result.youtubeVideoComments || null},
+                ${sw.monthlyVisits}, ${sw.globalRank}, ${sw.countryRank}, ${sw.countryCode},
+                ${sw.bounceRate}, ${sw.pagesPerVisit}, ${sw.timeOnSite}, ${sw.category},
+                ${sw.trafficSources}, ${sw.topCountries}
               )
               ON CONFLICT (user_id, link) DO NOTHING
             `;
