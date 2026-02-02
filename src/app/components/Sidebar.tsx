@@ -354,8 +354,8 @@ export const Sidebar: React.FC = () => {
               </button>
             </div>
             
-            {/* Theme toggle */}
-            <ThemeSwitcher variant="compact" />
+            {/* Theme toggle - February 2, 2026: Changed to navbar variant for animated sun/moon toggle */}
+            <ThemeSwitcher variant="navbar" />
           </div>
 
           {/* Plan Card - Neo-brutalist style - Translated (January 9th, 2026) */}

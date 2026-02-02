@@ -1264,10 +1264,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Relevant Content - col-span-3 for all views (expanded for better content display) */}
+      {/* Relevant Content - col-span-3 for all views */}
       {/* Updated January 16, 2026: Added max-w-[200px] wrapper and break-words to prevent layout shifts */}
-      {/* Updated January 25, 2026: Changed pipeline from col-span-2 to col-span-3 for more space */}
-      {/*                           (Discovery Method reduced from col-span-2 to col-span-1 to compensate) */}
+      {/* February 2, 2026: Back to col-span-3 for all views, reduced Action column instead */}
       <div className="col-span-3 min-w-0 overflow-hidden">
         <div className="flex items-start gap-3">
           {/* Video/Post Thumbnail for social media - Neo-brutalist with bold borders */}
@@ -1380,11 +1379,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Discovery Method - col-span-1 for pipeline, col-span-2 for find/discovered */}
+      {/* Discovery Method - col-span-2 for all views */}
       {/* Updated January 16, 2026: Added h-8 flex items-center for consistent height */}
       {/* Updated January 22, 2026: DiscoveryReasonsPopover removed (feature rollback) */}
-      {/* Updated January 25, 2026: Made conditional - pipeline uses col-span-1 (gave space to Relevant Content) */}
-      <div className={`${isPipelineView ? "col-span-1" : "col-span-2"} h-8 flex items-center`}>
+      {/* February 2, 2026: Pipeline back to col-span-2 for better spacing from Email column */}
+      <div className="col-span-2 h-8 flex items-center">
          {renderDiscoveryMethod()}
       </div>
 
@@ -1494,10 +1493,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
          </div>
       )}
 
-      {/* Actions - col-span-2 (NEW DESIGN January 6th, 2026) */}
+      {/* Actions - col-span-1 for pipeline, col-span-2 for find/discovered */}
       {/* Updated January 10th, 2026 - i18n migration */}
       {/* Updated January 16, 2026: Added h-8 for consistent height */}
-      <div className="col-span-2 h-8 flex items-center justify-end gap-2">
+      {/* February 2, 2026: Pipeline uses col-span-1 (buttons are compact, gave space to Relevant Content) */}
+      <div className={`${isPipelineView ? "col-span-1" : "col-span-2"} h-8 flex items-center justify-end gap-2`}>
         {/* Delete Button - Neo-brutalist style */}
         <button 
           onClick={handleDeleteClick}
