@@ -96,21 +96,24 @@ export interface N8NUserData {
 }
 
 // =============================================================================
-// MAIN FUNCTION: Send any event to N8N
+// TRANSACTIONAL EMAILS: Send events to N8N
+// Uses N8N_TRANSACTIONAL_EMAILS_URL env var
 // =============================================================================
 
 /**
- * Send event data to n8n webhook for email notifications.
+ * Send event data to n8n webhook for transactional email notifications.
  * N8N routes by event_type field to send appropriate email template.
+ * 
+ * ENV VAR: N8N_TRANSACTIONAL_EMAILS_URL
  * 
  * @param data Event data with event_type field
  * @returns Promise that resolves when webhook completes (fire-and-forget)
  */
 export function sendEventToN8N(data: N8NEventData): Promise<void> {
-  const webhookUrl = process.env.N8N_WEBHOOK_URL;
+  const webhookUrl = process.env.N8N_TRANSACTIONAL_EMAILS_URL;
 
   if (!webhookUrl) {
-    console.log('[N8N] ⚠️ Webhook URL not configured, skipping');
+    console.log('[N8N] ⚠️ N8N_TRANSACTIONAL_EMAILS_URL not configured, skipping');
     return Promise.resolve();
   }
 
@@ -141,18 +144,48 @@ export function sendEventToN8N(data: N8NEventData): Promise<void> {
 }
 
 // =============================================================================
-// LEGACY FUNCTION (backwards compatibility with existing signup code)
+// LEGACY FUNCTION (backwards compatibility with existing signup webhook)
+// Uses N8N_WEBHOOK_URL env var (existing integration)
 // =============================================================================
 
 /**
  * Send user signup data to n8n webhook (legacy function).
- * Kept for backwards compatibility - internally calls sendEventToN8N.
+ * Uses separate N8N_WEBHOOK_URL for backwards compatibility with existing integration.
+ * 
+ * ENV VAR: N8N_WEBHOOK_URL
  */
 export function sendUserToN8N(data: N8NUserData): Promise<void> {
-  return sendEventToN8N({
-    event_type: 'signup',
-    ...data,
-  });
+  const webhookUrl = process.env.N8N_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    console.log('[N8N] ⚠️ N8N_WEBHOOK_URL not configured, skipping legacy signup webhook');
+    return Promise.resolve();
+  }
+
+  console.log(`[N8N] 🚀 Firing legacy signup webhook for: ${data.email}`);
+
+  const startTime = Date.now();
+
+  return fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'CrewCast-Studio/1.0',
+    },
+    body: JSON.stringify({
+      ...data,
+      source: 'crewcast_signup',
+      timestamp: new Date().toISOString(),
+    }),
+  })
+    .then((response) => {
+      const elapsed = Date.now() - startTime;
+      console.log(`[N8N] ✅ Legacy signup: ${response.status} in ${elapsed}ms for ${data.email}`);
+    })
+    .catch((error) => {
+      const elapsed = Date.now() - startTime;
+      console.log(`[N8N] ❌ Legacy signup failed after ${elapsed}ms for ${data.email}: ${error.message}`);
+    });
 }
 
 /**
