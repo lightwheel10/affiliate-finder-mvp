@@ -44,6 +44,7 @@ interface FindingAffiliatesScreenProps {
 
 // =============================================================================
 // CONSTANTS - January 21st, 2026
+// February 2, 2026: Updated timings to reflect 8-10 minute search duration
 // =============================================================================
 
 /** 
@@ -55,9 +56,9 @@ const MAX_PROGRESS_BEFORE_COMPLETE = 95;
 
 /**
  * Estimated total search time in seconds.
- * Based on parallel architecture: ~120 seconds average.
+ * February 2, 2026: Increased from 120s to 540s (9 minutes) for enrichment.
  */
-const ESTIMATED_TOTAL_SECONDS = 120;
+const ESTIMATED_TOTAL_SECONDS = 540;
 
 /**
  * How often to check and update progress (milliseconds).
@@ -66,9 +67,9 @@ const PROGRESS_UPDATE_INTERVAL = 100;
 
 /**
  * Base interval for advancing to next step (seconds).
- * ~20 seconds per step = 6 steps over 120 seconds
+ * February 2, 2026: Increased from 20s to 90s (6 steps × 90s = 540s)
  */
-const STEP_ADVANCE_INTERVAL = 20;
+const STEP_ADVANCE_INTERVAL = 90;
 
 // =============================================================================
 // COMPONENT - January 21st, 2026 (Enhanced with Checklist)

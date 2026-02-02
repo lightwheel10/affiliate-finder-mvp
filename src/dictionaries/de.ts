@@ -1140,7 +1140,7 @@ export const de: Dictionary = {
     // Elapsed time suffix
     elapsed: 'vergangen',
     // Estimated time note at bottom
-    estimatedTime: 'Geschätzte Zeit: ~3 Minuten',
+    estimatedTime: 'Geschätzte Zeit: 8-10 Minuten',
     // Legacy fields kept for backwards compatibility
     thankYou: 'Vielen Dank!',
     preparingDashboard: 'Dein Dashboard wird vorbereitet...',

@@ -942,8 +942,9 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             const jobId = startData.jobId;
             console.log('[Onboarding] Search started, jobId:', jobId);
             
-            // Poll until complete (max 7 minutes for enrichment which can take 6+ minutes)
-            const maxWaitMs = 420000;
+            // Poll until complete (max 10 minutes for enrichment which can take 8-10 minutes)
+            // February 2, 2026: Increased from 7 to 10 minutes
+            const maxWaitMs = 600000;
             const pollIntervalMs = 3000;
             const startTime = Date.now();
             
