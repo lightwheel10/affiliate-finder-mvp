@@ -566,7 +566,7 @@ export const de: Dictionary = {
         noKeywordsYet: 'Noch keine Keywords hinzugefügt',
         ctaButton: 'Affiliates finden',
         searching: 'Suche läuft...',
-        tip: '💡 Tipp: Verwende spezifische Keywords wie "beste CRM-Software" anstatt nur "CRM"',
+        tip: '💡 Tipp: Gib Keywords in deiner Zielsprache ein für beste Ergebnisse (z.B. "nail serum" für Englisch)',
       },
       bulkActions: {
         selected: 'ausgewählt',

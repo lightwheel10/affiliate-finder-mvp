@@ -566,7 +566,7 @@ export const en: Dictionary = {
         noKeywordsYet: 'No keywords added yet',
         ctaButton: 'Find Affiliates',
         searching: 'Searching...',
-        tip: '💡 Tip: Use specific keywords like "best CRM software" instead of just "CRM"',
+        tip: '💡 Tip: Enter keywords in your target language for best results (e.g. "Nagelserum" for German)',
       },
       bulkActions: {
         selected: 'selected',

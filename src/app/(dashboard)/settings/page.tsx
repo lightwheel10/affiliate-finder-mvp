@@ -44,7 +44,6 @@ import { useSubscription } from '../../hooks/useSubscription';
 import { 
   User, 
   CreditCard, 
-  Bell, 
   Shield, 
   Mail, 
   Zap,
@@ -70,7 +69,7 @@ import {
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type SettingsTab = 'profile' | 'plan' | 'notifications' | 'security';
+type SettingsTab = 'profile' | 'plan' | 'security';
 
 // =============================================================================
 // SETTINGS PAGE - January 3rd, 2026
@@ -93,10 +92,10 @@ export default function SettingsPage() {
   const [isCanceling, setIsCanceling] = useState(false);
 
   // Tabs - Translated (January 9th, 2026)
+  // February 2, 2026: Removed notifications tab - was non-functional placeholder UI
   const tabs = [
     { id: 'profile', label: t.dashboard.settings.tabs.profile.label, icon: <User size={16} />, description: t.dashboard.settings.tabs.profile.description },
     { id: 'plan', label: t.dashboard.settings.tabs.plan.label, icon: <CreditCard size={16} />, description: t.dashboard.settings.tabs.plan.description },
-    { id: 'notifications', label: t.dashboard.settings.tabs.notifications.label, icon: <Bell size={16} />, description: t.dashboard.settings.tabs.notifications.description },
     { id: 'security', label: t.dashboard.settings.tabs.security.label, icon: <Shield size={16} />, description: t.dashboard.settings.tabs.security.description },
   ];
 
@@ -181,7 +180,6 @@ export default function SettingsPage() {
                       userId={userId}
                     />
                   )}
-                  {activeTab === 'notifications' && <NotificationSettings />}
                   {activeTab === 'security' && <SecuritySettings user={supabaseUser} neonUserId={userId} />}  {/* January 19th, 2026: Changed from Stack user */}
                 </div>
               </div>
@@ -362,24 +360,34 @@ const COUNTRIES = [
 
 // =============================================================================
 // LANGUAGES LIST - January 13th, 2026
-// Same list as onboarding for consistency
+// February 2, 2026: Updated to use flags instead of symbols (matching onboarding)
+// - Replaced 'symbol' with 'code' for flag country codes
+// - Added 'nameDE' for German translations
+// - Uses flagcdn.com for flag images (same as countries dropdown)
 // =============================================================================
 const LANGUAGES = [
-  { name: 'English', symbol: 'Aa' },
-  { name: 'Spanish', symbol: 'Ñ' },
-  { name: 'German', symbol: 'ß' },
-  { name: 'French', symbol: 'Ç' },
-  { name: 'Italian', symbol: 'È' },
-  { name: 'Portuguese', symbol: 'Ã' },
-  { name: 'Dutch', symbol: 'IJ' },
-  { name: 'Swedish', symbol: 'Å' },
-  { name: 'Polish', symbol: 'Ł' },
-  { name: 'Danish', symbol: 'Ø' },
-  { name: 'Norwegian', symbol: 'Æ' },
-  { name: 'Japanese', symbol: '日' },
-  { name: 'Korean', symbol: '한' },
-  { name: 'Chinese', symbol: '中' },
-  { name: 'Arabic', symbol: 'ع' },
+  // Major Western Languages
+  { name: 'English', nameDE: 'Englisch', code: 'gb' },
+  { name: 'Spanish', nameDE: 'Spanisch', code: 'es' },
+  { name: 'German', nameDE: 'Deutsch', code: 'de' },
+  { name: 'French', nameDE: 'Französisch', code: 'fr' },
+  { name: 'Portuguese', nameDE: 'Portugiesisch', code: 'pt' },
+  { name: 'Italian', nameDE: 'Italienisch', code: 'it' },
+  { name: 'Dutch', nameDE: 'Niederländisch', code: 'nl' },
+  // Nordic Languages
+  { name: 'Swedish', nameDE: 'Schwedisch', code: 'se' },
+  { name: 'Danish', nameDE: 'Dänisch', code: 'dk' },
+  { name: 'Norwegian', nameDE: 'Norwegisch', code: 'no' },
+  { name: 'Finnish', nameDE: 'Finnisch', code: 'fi' },
+  // Central/Eastern European
+  { name: 'Polish', nameDE: 'Polnisch', code: 'pl' },
+  { name: 'Czech', nameDE: 'Tschechisch', code: 'cz' },
+  // Asian Languages
+  { name: 'Japanese', nameDE: 'Japanisch', code: 'jp' },
+  { name: 'Korean', nameDE: 'Koreanisch', code: 'kr' },
+  // Middle Eastern
+  { name: 'Arabic', nameDE: 'Arabisch', code: 'sa' },
+  { name: 'Hebrew', nameDE: 'Hebräisch', code: 'il' },
 ];
 
 function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, currentLanguage, onProfileUpdated }: ProfileSettingsProps) {
@@ -486,10 +494,13 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
     return COUNTRIES.find(c => c.name === countryName)?.code || '';
   };
 
-  // Get language symbol (January 13th, 2026)
-  const getLanguageSymbol = (langName: string) => {
-    return LANGUAGES.find(l => l.name === langName)?.symbol || '';
+  // February 2, 2026: Updated to use flag codes instead of symbols (matching onboarding)
+  const getLanguageCode = (langName: string) => {
+    return LANGUAGES.find(l => l.name === langName)?.code || '';
   };
+  
+  // Flag URL helper - same pattern as onboarding and countries dropdown
+  const getFlagUrl = (code: string) => `https://flagcdn.com/w20/${code}.png`;
   
   return (
     <div className="space-y-6">
@@ -628,11 +639,14 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                   disabled={isSaving}
                   className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-[#ffbf23] text-sm text-left flex items-center justify-between focus:outline-none disabled:opacity-50"
                 >
+                  {/* February 2, 2026: Updated to show flag instead of symbol */}
                   {editLanguage ? (
                     <span className="flex items-center gap-2">
-                      <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                        {getLanguageSymbol(editLanguage)}
-                      </span>
+                      <img 
+                        src={getFlagUrl(getLanguageCode(editLanguage))}
+                        alt={editLanguage}
+                        className="w-5 h-4 object-cover border border-gray-200"
+                      />
                       <span className="text-gray-900 dark:text-white">{editLanguage}</span>
                     </span>
                   ) : (
@@ -641,7 +655,7 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                   <ChevronDown size={14} className={cn("text-gray-400 transition-transform", isLanguageOpen && "rotate-180")} />
                 </button>
                 
-                {/* Language Dropdown Menu */}
+                {/* Language Dropdown Menu - February 2, 2026: Updated to show flags */}
                 {isLanguageOpen && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 max-h-48 overflow-y-auto">
                     {LANGUAGES.map((lang) => (
@@ -657,9 +671,11 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                           editLanguage === lang.name && "bg-[#ffbf23]/20"
                         )}
                       >
-                        <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                          {lang.symbol}
-                        </span>
+                        <img 
+                          src={getFlagUrl(lang.code)}
+                          alt={lang.name}
+                          className="w-5 h-4 object-cover border border-gray-200"
+                        />
                         <span className="text-gray-900 dark:text-white">{lang.name}</span>
                         {editLanguage === lang.name && <Check size={14} className="ml-auto text-[#ffbf23]" />}
                       </button>
@@ -668,12 +684,15 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                 )}
               </>
             ) : (
+              /* February 2, 2026: Updated to show flag instead of symbol */
               <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center gap-2">
                 {currentLanguage ? (
                   <>
-                    <span className="w-6 h-6 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                      {getLanguageSymbol(currentLanguage)}
-                    </span>
+                    <img 
+                      src={getFlagUrl(getLanguageCode(currentLanguage))}
+                      alt={currentLanguage}
+                      className="w-5 h-4 object-cover border border-gray-200"
+                    />
                     <span>{currentLanguage}</span>
                   </>
                 ) : (
@@ -1176,79 +1195,6 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// =============================================================================
-// NOTIFICATION SETTINGS - NEO-BRUTALIST (Updated January 8th, 2026)
-// 
-// Design updates:
-// - Sharp-edged notification rows
-// - Bold checkboxes with yellow accent
-// - Bold typography
-// 
-// January 17, 2026: Added i18n support
-// =============================================================================
-function NotificationSettings() {
-  // January 17, 2026: Added i18n support
-  const { t } = useLanguage();
-  
-  // Email notification options with translations
-  const emailOptions = [
-    { id: 'emailMatches', label: t.dashboard.settings.notifications.options.newMatches.label, desc: t.dashboard.settings.notifications.options.newMatches.description },
-    { id: 'emailReports', label: t.dashboard.settings.notifications.options.weeklyReport.label, desc: t.dashboard.settings.notifications.options.weeklyReport.description },
-    { id: 'emailUpdates', label: t.dashboard.settings.notifications.options.productUpdates.label, desc: t.dashboard.settings.notifications.options.productUpdates.description }
-  ];
-  
-  // App notification options with translations
-  const appOptions = [
-    { id: 'appReplies', label: t.dashboard.settings.notifications.options.successfulReplies.label, desc: t.dashboard.settings.notifications.options.successfulReplies.description },
-    { id: 'appReminders', label: t.dashboard.settings.notifications.options.taskReminders.label, desc: t.dashboard.settings.notifications.options.taskReminders.description }
-  ];
-  
-  return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.settings.notifications.emailNotifications}</h3>
-        
-        {emailOptions.map((item) => (
-          <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors -mx-3 border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700">
-            <div className="relative flex items-center mt-0.5">
-              <input 
-                type="checkbox" 
-                defaultChecked={true}
-                className="peer h-5 w-5 border-2 border-black dark:border-gray-600 accent-[#ffbf23] cursor-pointer" 
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-sm font-bold text-gray-900 dark:text-white block cursor-pointer">{item.label}</label>
-              <p className="text-xs text-gray-500">{item.desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="h-0.5 bg-gray-200 dark:bg-gray-700" />
-
-      <div className="space-y-4">
-        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.settings.notifications.appNotifications}</h3>
-        {appOptions.map((item) => (
-          <div key={item.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors -mx-3 border-2 border-transparent hover:border-gray-200 dark:hover:border-gray-700">
-             <div className="relative flex items-center mt-0.5">
-              <input 
-                type="checkbox" 
-                defaultChecked={true}
-                className="peer h-5 w-5 border-2 border-black dark:border-gray-600 accent-[#ffbf23] cursor-pointer" 
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-sm font-bold text-gray-900 dark:text-white block cursor-pointer">{item.label}</label>
-              <p className="text-xs text-gray-500">{item.desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
