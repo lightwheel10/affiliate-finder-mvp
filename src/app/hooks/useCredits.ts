@@ -202,7 +202,6 @@ export function useCredits(): UseCreditsResult {
   // ==========================================================================
   useEffect(() => {
     const handleCreditsUpdate = () => {
-      console.log('[useCredits] Received credits-updated event, refetching...');
       fetchCredits();
     };
 

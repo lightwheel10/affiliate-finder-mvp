@@ -185,8 +185,6 @@ export function useSupabaseUser() {
     // Subscribe to auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('[useSupabaseUser] Auth state changed:', event);
-        
         setSession(newSession);
         setSupabaseUser(newSession?.user ?? null);
         

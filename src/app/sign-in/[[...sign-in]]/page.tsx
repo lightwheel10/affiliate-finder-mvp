@@ -199,7 +199,6 @@ export default function SignInPage() {
             // AuthGuard will handle onboarding check
             if (!isRedirectingRef.current) {
               isRedirectingRef.current = true;
-              console.log('[Sign In] User already authenticated, redirecting to home');
               router.replace('/');
             }
           }
@@ -225,7 +224,6 @@ export default function SignInPage() {
           setIsAuthenticated(true);
           if (!isRedirectingRef.current) {
             isRedirectingRef.current = true;
-            console.log('[Sign In] Auth state changed to SIGNED_IN, redirecting');
             router.replace('/');
           }
         }
@@ -253,7 +251,6 @@ export default function SignInPage() {
     // - Auth state listener hasn't redirected yet
     // - User quickly submits the form
     if (isAuthenticated) {
-      console.log('[Sign In] User is authenticated, skipping form submission');
       router.replace('/');
       return;
     }
@@ -288,7 +285,6 @@ export default function SignInPage() {
 
       // Success! Show confirmation message
       setFormState('sent');
-      console.log('[Sign In] Magic link sent to:', email);
       
     } catch (err) {
       console.error('[Sign In] Unexpected error:', err);
@@ -340,7 +336,6 @@ export default function SignInPage() {
 
       // Success! Session is automatically set by Supabase
       if (data.session) {
-        console.log('[Sign In] OTP verified successfully, user:', data.session.user.email);
         // The auth state listener will detect the new session and redirect
         // But we can also redirect immediately
         router.replace('/');

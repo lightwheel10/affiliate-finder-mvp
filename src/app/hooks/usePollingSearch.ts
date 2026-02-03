@@ -228,7 +228,6 @@ export function usePollingSearch(): UsePollingSearchReturn {
       const startData: StartSearchResponse = await startResponse.json();
       const { jobId, runId } = startData;
       
-      console.log(`[usePollingSearch] Search started: jobId=${jobId}, runId=${runId}`);
       
       updateProgress({
         status: 'running',
@@ -357,9 +356,7 @@ export function usePollingSearch(): UsePollingSearchReturn {
               });
               setIsSearching(false);
               
-              console.log(`[usePollingSearch] Search complete: ${statusData.resultsCount} results`);
-              console.log(`[usePollingSearch] Breakdown:`, statusData.breakdown);
-              
+
               return statusData.results || [];
               
             case 'failed':

@@ -596,14 +596,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       setSuggestedCompetitors(data.competitors || []);
       setSuggestedTopics(data.topics || []);
       
-      console.log('[AI Suggestions] Generated:', {
-        competitors: data.competitors?.length || 0,
-        topics: data.topics?.length || 0,
-        industry: data.industry,
-        country,
-        language,
-      });
-      
       return true;
       
     } catch (error) {
@@ -813,7 +805,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
     try {
       // Step 1: Create SetupIntent to securely collect card
-      console.log('[Stripe] Creating SetupIntent...');
       const setupRes = await fetch('/api/stripe/create-setup-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -829,7 +820,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       }
 
       const { clientSecret, customerId } = await setupRes.json();
-      console.log('[Stripe] SetupIntent created, confirming card...');
 
       // Step 2: Confirm card setup with Stripe (handles 3D Secure)
       const setupResult = await confirmSetup(clientSecret, cardholderName);
@@ -838,7 +828,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         throw new Error(setupResult.error || 'Card verification failed');
       }
 
-      console.log('[Stripe] Card verified, creating subscription...');
 
       // Step 3: Create subscription with the verified PaymentMethod
       const subscriptionRes = await fetch('/api/stripe/create-subscription', {
@@ -859,7 +848,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       }
 
       const subscriptionData = await subscriptionRes.json();
-      console.log('[Stripe] Subscription created:', subscriptionData.subscription?.id);
 
       // Step 4: Complete onboarding data
       const onboardingRes = await fetch('/api/users/onboarding', {
@@ -914,9 +902,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       // PAID CLIENT PROJECT - This feature MUST work correctly!
       // ======================================================================
       if (topics.length > 0) {
-        console.log('[Onboarding] Topics found, starting affiliate search...');
-        console.log('[Onboarding] Topics:', topics.join(', '));
-        
         // Show the FindingAffiliatesScreen and reset completion state
         setIsFindingAffiliates(true);
         setIsSearchComplete(false);
@@ -940,7 +925,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             // Don't fail onboarding - user can still proceed
           } else {
             const jobId = startData.jobId;
-            console.log('[Onboarding] Search started, jobId:', jobId);
             
             // Poll until complete (max 10 minutes for enrichment which can take 8-10 minutes)
             // February 2, 2026: Increased from 7 to 10 minutes
@@ -954,11 +938,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               const statusRes = await fetch(`/api/search/status?jobId=${jobId}`);
               const statusData = await statusRes.json();
               
-              console.log(`[Onboarding] Status: ${statusData.status}`);
-              
               if (statusData.status === 'done') {
-                console.log('[Onboarding] Search complete!');
-                console.log('[Onboarding] Results:', statusData.resultsCount);
                 break;
               }
               
@@ -986,8 +966,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         
         // Hide the FindingAffiliatesScreen
         setIsFindingAffiliates(false);
-      } else {
-        console.log('[Onboarding] No topics selected, skipping pre-fetch');
       }
 
       // Success - subscription, onboarding data, and affiliates all ready!

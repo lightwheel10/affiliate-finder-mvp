@@ -421,7 +421,6 @@ export default function FindNewPage() {
       // Each search takes 40-95 seconds on Apify, so sequential is fine.
       // ==========================================================================
       for (const kw of keywords) {
-        console.log(`[handleFindAffiliates] Starting search for keyword: "${kw}"`);
         
         try {
           // ====================================================================
@@ -434,12 +433,9 @@ export default function FindNewPage() {
           // ====================================================================
           const searchResults = await searchWithPolling(kw, sources, {
             onProgress: (progress) => {
-              // Progress updates are handled by the hook's state
-              console.log(`[handleFindAffiliates] Progress: ${progress.status} (${progress.elapsedSeconds}s)`);
             },
           });
           
-          console.log(`[handleFindAffiliates] Got ${searchResults.length} results for "${kw}"`);
           
           // ==================================================================
           // PROCESS RESULTS
@@ -521,7 +517,6 @@ export default function FindNewPage() {
           
           // Cancelled
           if (searchErr.name === 'AbortError' || searchErr.code === 'CANCELLED') {
-            console.log('[handleFindAffiliates] Search cancelled');
             break;
           }
           

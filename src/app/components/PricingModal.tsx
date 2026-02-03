@@ -266,8 +266,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       }
 
       // Success!
-      console.log('[PricingModal] Plan changed successfully:', data);
-      
       // =========================================================================
       // DISPATCH EVENTS TO REFRESH UI STATE
       // 

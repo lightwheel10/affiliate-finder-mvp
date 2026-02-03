@@ -457,7 +457,6 @@ export default function OutreachPage() {
             
             if (isInProgress) {
               inProgressIds.add(messageKey);
-              console.log(`[Outreach] 🔄 Detected in-progress generation for ${messageKey} (started ${Math.round((now - startedAt) / 1000)}s ago)`);
             } else if (generatedAt >= startedAt) {
               // Generation completed - mark for removal from generatingIds
               completedIds.add(messageKey);
@@ -476,7 +475,6 @@ export default function OutreachPage() {
         // Remove completed IDs (generation finished)
         completedIds.forEach(id => {
           if (updated.has(id)) {
-            console.log(`[Outreach] ✅ Generation completed for ${id} - removing spinner`);
             updated.delete(id);
           }
         });
@@ -811,7 +809,6 @@ export default function OutreachPage() {
     // is async. This prevents race conditions when user clicks rapidly.
     // =========================================================================
     if (inFlightGenerations.current.has(messageKey)) {
-      console.log(`[Outreach] ⚠️ Ignoring duplicate generation request for ${messageKey} - already in flight`);
       return;
     }
     
@@ -917,7 +914,6 @@ export default function OutreachPage() {
         // When user refreshes or the data reloads, they'll see the message.
         // =====================================================================
         if (response.status === 409 && data.inProgress) {
-          console.log(`[Outreach] ℹ️ Generation already in progress for ${messageKey} - keeping spinner`);
           skipCleanup = true; // Don't remove from generatingIds in finally block
           showToast('info', 'Email generation is already in progress. Please wait.');
           return; // Exit early, finally will still run but skipCleanup prevents removal
@@ -1017,7 +1013,6 @@ export default function OutreachPage() {
     // This synchronous check catches rapid clicks before state updates.
     // =========================================================================
     if (isBulkGenerationInFlight.current) {
-      console.log('[Outreach] ⚠️ Ignoring duplicate bulk generation request - already in flight');
       return;
     }
     
@@ -1053,7 +1048,6 @@ export default function OutreachPage() {
       // somehow triggers generation through both bulk and single paths.
       // =========================================================================
       if (inFlightGenerations.current.has(messageKey)) {
-        console.log(`[Outreach] ⚠️ Skipping ${messageKey} in bulk - already in flight`);
         continue;
       }
       

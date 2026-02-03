@@ -502,13 +502,11 @@ export function useSavedAffiliates() {
     // consumed once per email lookup.
     // ==========================================================================
     if (inFlightEmailLookups.current.has(affiliateId)) {
-      console.log(`[findEmail] Ignoring duplicate call - already in flight for affiliate ${affiliateId}`);
       return null;
     }
 
     // Mark this affiliate as in-flight
     inFlightEmailLookups.current.add(affiliateId);
-    console.log(`[findEmail] Started email lookup for affiliate ${affiliateId}`);
 
     // ==========================================================================
     // SOCIAL MEDIA BIO EMAIL CHECK - January 14, 2026
@@ -623,7 +621,6 @@ export function useSavedAffiliates() {
         // Return the error data so UI can display appropriate message.
         // ======================================================================
         if (res.status === 402) {
-          console.log('[findEmail] Insufficient credits for bio email extraction');
           return {
             ...data,
             status: 'credit_error' as const,
@@ -728,7 +725,6 @@ export function useSavedAffiliates() {
         // This ensures the user can retry after an error.
         // ======================================================================
         inFlightEmailLookups.current.delete(affiliateId);
-        console.log(`[findEmail] Completed email lookup for affiliate ${affiliateId}`);
       }
     }
     // ==========================================================================
@@ -935,7 +931,6 @@ export function useSavedAffiliates() {
       // This ensures the user can retry after an error.
       // ========================================================================
       inFlightEmailLookups.current.delete(affiliateId);
-      console.log(`[findEmail] Completed email lookup for web affiliate ${affiliateId}`);
     }
   }, [userId, mutate]);
 

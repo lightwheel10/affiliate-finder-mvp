@@ -446,7 +446,6 @@ export function useStripeCardSetup() {
         ? setupIntent.payment_method
         : setupIntent.payment_method.id;
 
-      console.log('[Stripe] Card setup successful:', paymentMethodId);
       return { success: true, paymentMethodId };
 
     } catch (err) {

@@ -201,7 +201,6 @@ export function useSubscription(userId: number | null) {
   // ==========================================================================
   useEffect(() => {
     const handleSubscriptionUpdate = () => {
-      console.log('[useSubscription] Received subscription-updated event, refetching...');
       fetchSubscription();
     };
 

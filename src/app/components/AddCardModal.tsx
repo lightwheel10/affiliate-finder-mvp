@@ -86,7 +86,6 @@ const CardForm: React.FC<{
 
     try {
       // Step 1: Create SetupIntent to securely collect card
-      console.log('[AddCard] Creating SetupIntent...');
       const setupRes = await fetch('/api/stripe/create-setup-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,7 +101,6 @@ const CardForm: React.FC<{
       }
 
       const { clientSecret, customerId } = await setupRes.json();
-      console.log('[AddCard] SetupIntent created, confirming card...');
 
       // Step 2: Confirm card setup with Stripe (handles 3D Secure)
       const setupResult = await confirmSetup(clientSecret, cardholderName);
@@ -111,7 +109,6 @@ const CardForm: React.FC<{
         throw new Error(setupResult.error || 'Card verification failed');
       }
 
-      console.log('[AddCard] Card verified successfully:', setupResult.paymentMethodId);
 
       // Step 3: Update the subscription's payment method (if user already has subscription)
       // This attaches the new payment method as the default for the subscription
