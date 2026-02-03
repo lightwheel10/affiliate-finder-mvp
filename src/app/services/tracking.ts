@@ -7,8 +7,8 @@
 import { sql } from '@/lib/db';
 
 // Cost estimates per API call (USD)
+// February 3, 2026: Removed 'serper' - migrated to Apify Google Scraper
 export const API_COSTS = {
-  serper: 0.001,           // $0.001 per search
   apify_youtube: 0.005,    // $0.005 per video (~$5/1000)
   apify_instagram: 0.0016, // $0.0016 per profile (~$1.60/1000)
   apify_tiktok: 0.0002,    // $0.0002 per video

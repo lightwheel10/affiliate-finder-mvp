@@ -313,6 +313,7 @@ export interface DbSearch {
 export interface DbApiCall {
   id: number;
   user_id: number;
+  // Note: 'serper' kept for historical records (migrated to apify_google_scraper in Feb 2026)
   service: 'serper' | 'apify_youtube' | 'apify_instagram' | 'apify_tiktok' | 'apify_similarweb' | 'apollo_email' | 'lusha_email' | 'apify_google_scraper';
   endpoint: string | null;
   keyword: string | null;

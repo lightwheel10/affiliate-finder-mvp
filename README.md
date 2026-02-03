@@ -76,7 +76,6 @@ NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=your_publishable_key
 STACK_SECRET_SERVER_KEY=your_secret_key
 
 # Search & Discovery APIs
-SERPER_API_KEY=your_serper_key
 APIFY_API_TOKEN=your_apify_token
 
 # Email Enrichment (Optional)
