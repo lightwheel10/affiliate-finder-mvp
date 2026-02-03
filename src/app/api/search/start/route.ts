@@ -53,10 +53,8 @@ interface StartSearchRequest {
 
 interface StartSearchResponse {
   jobId: number;
-  runId: string;
   status: 'started';
   message: string;
-  queries: string[];
 }
 
 interface ErrorResponse {
@@ -239,10 +237,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
     // ==========================================================================
     return NextResponse.json({
       jobId,
-      runId: runResult.runId,
       status: 'started',
       message: 'Search started. Poll /api/search/status?jobId=' + jobId + ' for results.',
-      queries,
     });
     
   } catch (error: any) {

@@ -48,7 +48,6 @@ interface OnboardingStartRequest {
 interface OnboardingStartResponse {
   success: boolean;
   jobId?: number;
-  runId?: string;
   message: string;
   error?: string;
 }
@@ -202,7 +201,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<OnboardingSta
     return NextResponse.json({
       success: true,
       jobId,
-      runId,
       message: 'Onboarding search started. Poll /api/search/status for results.',
     });
 

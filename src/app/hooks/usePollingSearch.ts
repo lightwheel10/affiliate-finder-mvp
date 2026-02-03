@@ -57,7 +57,6 @@ export interface SearchProgress {
   elapsedSeconds: number;
   message: string;
   jobId?: number;
-  runId?: string;
 }
 
 export interface SearchError {
@@ -70,10 +69,8 @@ export interface SearchError {
 
 export interface StartSearchResponse {
   jobId: number;
-  runId: string;
   status: 'started';
   message: string;
-  queries: string[];
 }
 
 export interface StatusResponse {
@@ -226,15 +223,13 @@ export function usePollingSearch(): UsePollingSearchReturn {
       }
       
       const startData: StartSearchResponse = await startResponse.json();
-      const { jobId, runId } = startData;
-      
+      const { jobId } = startData;
       
       updateProgress({
         status: 'running',
         elapsedSeconds: 0,
         message: 'Searching...',
         jobId,
-        runId,
       });
       
       // ========================================================================
@@ -320,7 +315,6 @@ export function usePollingSearch(): UsePollingSearchReturn {
                 elapsedSeconds,
                 message: `Searching... (${elapsedSeconds}s)`,
                 jobId,
-                runId,
               });
               break;
               
@@ -330,7 +324,6 @@ export function usePollingSearch(): UsePollingSearchReturn {
                 elapsedSeconds,
                 message: 'Processing results...',
                 jobId,
-                runId,
               });
               break;
             
@@ -341,7 +334,6 @@ export function usePollingSearch(): UsePollingSearchReturn {
                 elapsedSeconds,
                 message: 'Enriching social media data...',
                 jobId,
-                runId,
               });
               break;
               
@@ -352,7 +344,6 @@ export function usePollingSearch(): UsePollingSearchReturn {
                 elapsedSeconds,
                 message: `Found ${statusData.resultsCount || 0} results`,
                 jobId,
-                runId,
               });
               setIsSearching(false);
               
