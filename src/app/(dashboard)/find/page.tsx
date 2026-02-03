@@ -78,6 +78,14 @@ import { Platform } from '../../services/search';
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
 
+// Helper to format traffic numbers (e.g., 1234567 → "1.2M")
+function formatTraffic(num: number): string {
+  if (num >= 1000000000) return `${(num / 1000000000).toFixed(1)}B`;
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toString();
+}
+
 const MAX_KEYWORDS = 5;
 
 export default function FindNewPage() {
@@ -467,12 +475,39 @@ export default function FindNewPage() {
               };
             }
             
+            // February 3, 2026: Construct nested similarWeb object from flat API properties
+            // This standardizes the data format so modal and save functions work correctly
+            const similarWeb = result.similarwebMonthlyVisits ? {
+              domain: result.domain,
+              monthlyVisits: result.similarwebMonthlyVisits,
+              monthlyVisitsFormatted: formatTraffic(result.similarwebMonthlyVisits),
+              globalRank: result.similarwebGlobalRank || null,
+              countryRank: result.similarwebCountryRank || null,
+              countryCode: result.similarwebCountryCode || null,
+              bounceRate: result.similarwebBounceRate || 0,
+              pagesPerVisit: result.similarwebPagesPerVisit || 0,
+              timeOnSite: result.similarwebTimeOnSite || 0,
+              trafficSources: result.similarwebTrafficSources || {
+                direct: 0, search: 0, social: 0, referrals: 0, mail: 0, paid: 0
+              },
+              topCountries: result.similarwebTopCountries || [],
+              category: result.similarwebCategory || null,
+              siteTitle: result.similarwebSiteTitle || null,
+              siteDescription: result.similarwebSiteDescription || null,
+              screenshot: result.similarwebScreenshot || null,
+              categoryRank: result.similarwebCategoryRank || null,
+              monthlyVisitsHistory: result.similarwebMonthlyVisitsHistory || null,
+              topKeywords: result.similarwebTopKeywords || null,
+              snapshotDate: result.similarwebSnapshotDate || null,
+            } : undefined;
+            
             const enhancedResult: ResultItem = {
               ...result,
               rank: result.rank || allResults.length + i + 1,
               keyword: result.keyword || kw,
               discoveryMethod,
               date: result.date || undefined,
+              similarWeb,  // Add the nested object
             };
             
             allResults.push(enhancedResult);

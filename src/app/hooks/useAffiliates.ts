@@ -315,24 +315,26 @@ function buildAffiliatePayloadWithoutUserId(a: ResultItem) {
     youtubeVideoComments: a.youtubeVideoComments,
     
     // SimilarWeb fields
-    similarwebMonthlyVisits: a.similarWeb?.monthlyVisits,
-    similarwebGlobalRank: a.similarWeb?.globalRank,
-    similarwebCountryRank: a.similarWeb?.countryRank,
-    similarwebCountryCode: a.similarWeb?.countryCode,
-    similarwebBounceRate: a.similarWeb?.bounceRate,
-    similarwebPagesPerVisit: a.similarWeb?.pagesPerVisit,
-    similarwebTimeOnSite: a.similarWeb?.timeOnSite,
-    similarwebCategory: a.similarWeb?.category,
-    similarwebTrafficSources: a.similarWeb?.trafficSources,
-    similarwebTopCountries: a.similarWeb?.topCountries,
+    // February 3, 2026: Added fallbacks for flat properties from search API results
+    // Search results have flat props (a.similarwebXxx), DB records have nested (a.similarWeb.xxx)
+    similarwebMonthlyVisits: a.similarWeb?.monthlyVisits ?? (a as any).similarwebMonthlyVisits,
+    similarwebGlobalRank: a.similarWeb?.globalRank ?? (a as any).similarwebGlobalRank,
+    similarwebCountryRank: a.similarWeb?.countryRank ?? (a as any).similarwebCountryRank,
+    similarwebCountryCode: a.similarWeb?.countryCode ?? (a as any).similarwebCountryCode,
+    similarwebBounceRate: a.similarWeb?.bounceRate ?? (a as any).similarwebBounceRate,
+    similarwebPagesPerVisit: a.similarWeb?.pagesPerVisit ?? (a as any).similarwebPagesPerVisit,
+    similarwebTimeOnSite: a.similarWeb?.timeOnSite ?? (a as any).similarwebTimeOnSite,
+    similarwebCategory: a.similarWeb?.category ?? (a as any).similarwebCategory,
+    similarwebTrafficSources: a.similarWeb?.trafficSources ?? (a as any).similarwebTrafficSources,
+    similarwebTopCountries: a.similarWeb?.topCountries ?? (a as any).similarwebTopCountries,
     // NEW SimilarWeb fields (Dec 2025)
-    similarwebSiteTitle: a.similarWeb?.siteTitle,
-    similarwebSiteDescription: a.similarWeb?.siteDescription,
-    similarwebScreenshot: a.similarWeb?.screenshot,
-    similarwebCategoryRank: a.similarWeb?.categoryRank,
-    similarwebMonthlyVisitsHistory: a.similarWeb?.monthlyVisitsHistory,
-    similarwebTopKeywords: a.similarWeb?.topKeywords,
-    similarwebSnapshotDate: a.similarWeb?.snapshotDate,
+    similarwebSiteTitle: a.similarWeb?.siteTitle ?? (a as any).similarwebSiteTitle,
+    similarwebSiteDescription: a.similarWeb?.siteDescription ?? (a as any).similarwebSiteDescription,
+    similarwebScreenshot: a.similarWeb?.screenshot ?? (a as any).similarwebScreenshot,
+    similarwebCategoryRank: a.similarWeb?.categoryRank ?? (a as any).similarwebCategoryRank,
+    similarwebMonthlyVisitsHistory: a.similarWeb?.monthlyVisitsHistory ?? (a as any).similarwebMonthlyVisitsHistory,
+    similarwebTopKeywords: a.similarWeb?.topKeywords ?? (a as any).similarwebTopKeywords,
+    similarwebSnapshotDate: a.similarWeb?.snapshotDate ?? (a as any).similarwebSnapshotDate,
   };
 }
 

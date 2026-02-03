@@ -670,11 +670,20 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             }
             
             const swData = similarwebEnrichment.get(result.domain);
+            // February 3, 2026: Added missing fields (trafficSources, countryCode, category, topCountries)
+            // These were missing from incremental save, causing traffic sources to show 0% in UI
             const enriched = swData ? {
               ...result,
-              similarwebMonthlyVisits: swData.monthlyVisits, similarwebGlobalRank: swData.globalRank,
-              similarwebCountryRank: swData.countryRank, similarwebBounceRate: swData.bounceRate,
-              similarwebPagesPerVisit: swData.pagesPerVisit, similarwebTimeOnSite: swData.timeOnSite,
+              similarwebMonthlyVisits: swData.monthlyVisits,
+              similarwebGlobalRank: swData.globalRank,
+              similarwebCountryRank: swData.countryRank,
+              similarwebCountryCode: swData.countryCode,
+              similarwebBounceRate: swData.bounceRate,
+              similarwebPagesPerVisit: swData.pagesPerVisit,
+              similarwebTimeOnSite: swData.timeOnSite,
+              similarwebCategory: swData.category,
+              similarwebTrafficSources: swData.trafficSources,
+              similarwebTopCountries: swData.topCountries,
             } : result;
             if (await saveEnrichedResult(enriched)) savedThisPoll++;
           }
