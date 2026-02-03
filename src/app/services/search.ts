@@ -121,6 +121,143 @@ export const ECOMMERCE_DOMAINS = [
   'buzzfeed.com', 'boredpanda.com',
   'ranker.com', 'list25.com',
   
+  // ==========================================================================
+  // SPAM BLOG PLATFORMS - February 3, 2026
+  // 
+  // Free WordPress.com hosted blogs used for keyword-stuffed spam content.
+  // These are NOT real content creators - they're SEO spam.
+  // ==========================================================================
+  'home.blog',      // WordPress free blogs (e.g., healthn26s6.home.blog)
+  'design.blog',    // WordPress design blogs
+  'art.blog',       // WordPress art blogs
+  'wordpress.com',  // WordPress.com hosted (not self-hosted WordPress sites)
+  
+  // ==========================================================================
+  // SPAM/SCRAPER SITES - February 3, 2026
+  // 
+  // Sites that scrape and republish content, or are completely irrelevant.
+  // Found in actual search results analysis.
+  // ==========================================================================
+  'jeuxvideo.com',      // French gaming forum - not affiliate content
+  'intimomuolo.com',    // Scraper/spam site
+  'szortelenits.hu',    // Scraper/spam site
+  'estudio.name',       // Spam site
+  'burnoutbikes.ch',    // Random e-commerce
+  'rsiasitihawa.co.id', // Indonesian hospital - completely irrelevant
+  
+  // ==========================================================================
+  // E-COMMERCE (Additional) - February 3, 2026
+  // ==========================================================================
+  'koala.ch',           // Swiss e-commerce
+  'weareeves.com',      // E-commerce/retail
+  'otto.de',            // Major German e-commerce
+  'douglas.at',         // Austrian beauty e-commerce
+  'douglas.de',         // German beauty e-commerce
+  'galaxus.ch',         // Swiss electronics e-commerce
+  'greenist.de',        // German health e-commerce
+  'stylevana.com',      // K-beauty e-commerce
+  'yesstyle.com',       // Asian fashion e-commerce
+  'caretobeauty.com',   // Beauty e-commerce
+  'boutiqueglamor.com', // Fashion e-commerce
+  'esta-trading.ch',    // Swiss trading
+  'stylight.de',        // Fashion aggregator
+  'newpharma.de',       // Pharmacy e-commerce
+  'medpex.de',          // Pharmacy e-commerce
+  'shop-apotheke.at',   // Austrian pharmacy
+  'redcare-apotheke.ch', // Swiss pharmacy
+  
+  // ==========================================================================
+  // GERMAN PUBLICATIONS - February 3, 2026
+  // 
+  // Major German media that won't respond to partnership requests.
+  // ==========================================================================
+  'stern.de',           // News magazine
+  'welt.de',            // News
+  'zeit.de',            // News
+  'faz.net',            // Frankfurter Allgemeine
+  'spiegel.de',         // News magazine
+  'chip.de',            // Tech publication
+  'cosmopolitan.de',    // Women's magazine
+  'elle.de',            // Fashion magazine
+  'harpersbazaar.de',   // Fashion magazine
+  'grazia-magazin.de',  // Fashion magazine
+  'freundin.de',        // Women's magazine
+  'fuersie.de',         // Women's magazine
+  'wunderweib.de',      // Women's lifestyle
+  'esquire.de',         // Men's magazine
+  'desired.de',         // Women's lifestyle
+  'familie.de',         // Family magazine
+  'rtl.de',             // TV/Entertainment
+  'merkur.de',          // Regional news
+  'infranken.de',       // Regional news
+  'dzonline.de',        // Regional news
+  'aerztezeitung.de',   // Medical news
+  'oekotest.de',        // Test magazine
+  'test.de',            // Stiftung Warentest
+  'konsument.at',       // Austrian consumer magazine
+  'ok-magazin.de',      // Celebrity magazine
+  
+  // ==========================================================================
+  // REVIEW AGGREGATORS - February 3, 2026
+  // ==========================================================================
+  'testbericht.de',     // Review aggregator
+  'testberichte.de',    // Review aggregator
+  'erfahrungenscout.de', // Review aggregator
+  'vergleich.org',      // Comparison site (corporate, not individual)
+  
+  // ==========================================================================
+  // FORUMS & COMMUNITIES - February 3, 2026
+  // ==========================================================================
+  'alopezie.de',        // Hair loss forum
+  'beautyjunkies.de',   // Beauty forum
+  'dogforum.de',        // Dog forum
+  'pferd.de',           // Horse forum
+  
+  // ==========================================================================
+  // IRRELEVANT BUSINESS TYPES - February 3, 2026
+  // 
+  // Business categories that aren't useful for affiliate discovery.
+  // Pattern blocking handles most, but some specific domains added here.
+  // ==========================================================================
+  'bibifans.com',       // Fan site
+  'mein-adventskalender.de', // Seasonal site
+  'de.hand-picked-hotels.com', // Hotel booking
+  
+  // ==========================================================================
+  // BRAND OFFICIAL SITES - February 3, 2026
+  // 
+  // These are brand's own websites, not affiliates promoting brands.
+  // ==========================================================================
+  'gehwol.de',          // Foot care brand
+  'physiogel.de',       // Skincare brand
+  'little-bee-fresh.de', // Bee product brand
+  'junglueck.de',       // Cosmetics brand
+  'puraliv.com',        // Health brand
+  'nextmune.com',       // Pet health brand
+  'omegadx.com',        // Health brand
+  'youneeq.de',         // Cosmetics brand
+  
+  // ==========================================================================
+  // ACADEMIC & MEDICAL INSTITUTIONS - February 3, 2026
+  // ==========================================================================
+  'link.springer.com',  // Academic publisher
+  'meduniwien.ac.at',   // Medical university
+  'd-nb.info',          // German National Library
+  
+  // ==========================================================================
+  // MISCELLANEOUS SPAM/IRRELEVANT - February 3, 2026
+  // ==========================================================================
+  'albarakahmfb.com',   // Spam
+  'anywheremoversutah.com', // Spam
+  'toukimontreal.com',  // Spam
+  'kvap.fi',            // Finnish unrelated
+  'edcasesoresfiscales.com', // Spam
+  'nanomax.md',         // Spam
+  'missionescienza.it', // Italian unrelated
+  'wallentin.cc',       // Unrelated
+  'k-kare.com',         // Unrelated
+  'bee-care.gr',        // Greek bee shop
+  
   // Social/community platforms (find creators ON these, not the platforms)
   'reddit.com', 'quora.com',
   'pinterest.com', 'tumblr.com',
@@ -157,6 +294,46 @@ export const ECOMMERCE_DOMAINS = [
   
   // Client domains (don't need to find themselves)
   'selecdoo.com',
+];
+
+// =============================================================================
+// BLOCKED DOMAIN PATTERNS - February 3, 2026
+// 
+// Regex patterns to block domains by category. These catch small local businesses
+// and category-specific sites that aren't in the main blocklist.
+// 
+// WHY THIS EXISTS:
+// The ECOMMERCE_DOMAINS list can only catch KNOWN sites. Small German pharmacies,
+// local hotels, bee farms, etc. slip through because we can't pre-list every one.
+// Pattern matching catches them by category.
+// =============================================================================
+const BLOCKED_DOMAIN_PATTERNS: RegExp[] = [
+  // Pharmacies (German: Apotheke)
+  /apotheke/i,
+  /pharmacy/i,
+  /pharma(?!ceutical)/i,  // pharma but not pharmaceutical (could be info site)
+  
+  // Hotels & Accommodation
+  /hotel/i,
+  /hostel/i,
+  /pension\./i,           // German B&B (pension.de, etc.)
+  
+  // Medical practices & clinics
+  /zahnarzt/i,            // Dentist
+  /arztpraxis/i,          // Doctor's practice
+  /klinik/i,              // Clinic
+  /praxis(?!test)/i,      // Practice (but not "praxistest" which is product testing)
+  
+  // Associations & Organizations
+  /verein\./i,            // Association (e.g., bienenzuchtverein-edelsfeld.de)
+  /verband\./i,           // Federation
+  
+  // Local businesses that aren't affiliates
+  /imkerei/i,             // Bee farms
+  /bauernhof/i,           // Farms
+  /metzgerei/i,           // Butcher
+  /bäckerei/i,            // Bakery
+  /baeckerei/i,           // Bakery (ASCII)
 ];
 
 // =============================================================================
@@ -375,6 +552,18 @@ export function isEcommerceDomain(domain: string): boolean {
 }
 
 /**
+ * Check if a domain matches any blocked pattern (pharmacies, hotels, clinics, etc.)
+ * 
+ * February 3, 2026: Added to catch small local businesses by category
+ * that aren't in the main ECOMMERCE_DOMAINS blocklist.
+ */
+export function matchesBlockedDomainPattern(domain: string): boolean {
+  const normalizedDomain = domain.toLowerCase().replace(/^www\./, '');
+  
+  return BLOCKED_DOMAIN_PATTERNS.some(pattern => pattern.test(normalizedDomain));
+}
+
+/**
  * Check if a URL has shop-like patterns
  */
 function hasShopUrlPattern(url: string): boolean {
@@ -460,6 +649,13 @@ function filterAndPrioritizeResults(
     // 1. Exclude e-commerce domains
     if (isEcommerceDomain(domain)) {
       console.log(`🚫 Excluded (e-commerce): ${domain}`);
+      return false;
+    }
+    
+    // 1b. Exclude domains matching blocked patterns (pharmacies, hotels, clinics, etc.)
+    // February 3, 2026: Pattern-based blocking for category-specific filtering
+    if (matchesBlockedDomainPattern(domain)) {
+      console.log(`🚫 Excluded (pattern match): ${domain}`);
       return false;
     }
     
