@@ -8,7 +8,7 @@
  * This endpoint generates AI-powered competitor and topic suggestions for a 
  * user's brand during onboarding. It uses:
  * 1. Firecrawl - To scrape the brand's website content
- * 2. OpenAI (gpt-4o-mini) - To analyze content and generate suggestions
+ * 2. Anthropic Claude (claude-haiku-4-5) - To analyze content and generate suggestions
  * 
  * =============================================================================
  * FLOW
@@ -54,7 +54,7 @@
  * COST CONSIDERATIONS
  * =============================================================================
  * - Firecrawl: ~$0.001 per scrape
- * - OpenAI gpt-4o-mini: ~$0.01-0.02 per request
+ * - Anthropic claude-haiku-4-5: ~$0.01-0.02 per request ($1/MTok input, $5/MTok output)
  * - Total per onboarding: ~$0.02-0.03
  * 
  * =============================================================================
@@ -68,24 +68,23 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import { zodResponseFormat } from 'openai/helpers/zod';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
 const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1/scrape';
-const OPENAI_MODEL = 'gpt-4o-mini'; // Cost-efficient model
+const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001'; // Claude Haiku 4.5 - cost-efficient model
 const MAX_CONTENT_LENGTH = 8000; // Truncate content to stay within token limits
 const DOMAIN_VALIDATION_TIMEOUT = 5000; // 5 seconds per domain
 
 // =============================================================================
 // ZOD SCHEMA FOR STRUCTURED AI OUTPUT (January 3rd, 2026)
 // 
-// This schema ensures OpenAI returns properly structured data.
-// Using Zod with OpenAI's zodResponseFormat for type-safe responses.
+// This schema ensures Claude returns properly structured data.
+// Using Zod with Anthropic's tool use for type-safe responses.
 // =============================================================================
 // January 28th, 2026 (v2): Updated schema descriptions - translation is mandatory
 const SuggestionsSchema = z.object({
@@ -243,10 +242,11 @@ async function scrapeWebsite(url: string): Promise<{ content: string; title?: st
 }
 
 // =============================================================================
-// HELPER: GENERATE SUGGESTIONS WITH OPENAI (January 3rd, 2026)
+// HELPER: GENERATE SUGGESTIONS WITH ANTHROPIC CLAUDE (January 3rd, 2026)
 // Updated: January 17th, 2026
+// Migrated to Anthropic: February 3rd, 2026
 // 
-// Uses OpenAI's structured output feature for reliable JSON responses.
+// Uses Anthropic's tool use feature for reliable structured JSON responses.
 // The Zod schema ensures type-safe parsing of AI output.
 // 
 // Prompt is carefully crafted to:
@@ -268,14 +268,14 @@ async function generateWithAI(
   targetCountry: string | null,
   targetLanguage: string | null
 ): Promise<SuggestionsResponse | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   
   if (!apiKey) {
-    console.error('[suggestions/generate] OPENAI_API_KEY not configured');
+    console.error('[suggestions/generate] ANTHROPIC_API_KEY not configured');
     return null;
   }
   
-  const client = new OpenAI({ apiKey });
+  const client = new Anthropic({ apiKey });
   
   // Truncate content if too long
   const truncatedContent = websiteContent.length > MAX_CONTENT_LENGTH
@@ -359,14 +359,8 @@ async function generateWithAI(
     return parts.length > 0 ? '\n   - ' + parts.join('\n   - ') : '';
   })();
   
-  try {
-    const completion = await client.chat.completions.parse({
-      model: OPENAI_MODEL,
-      messages: [
-        {
-          // January 28th, 2026 (v2): Much stricter translation enforcement
-          role: 'system',
-          content: `You are a competitive analysis expert specializing in affiliate marketing.
+  // Build the system prompt
+  const systemPrompt = `You are a competitive analysis expert specializing in affiliate marketing.
 
 Your task is to analyze a website and identify competitors and search keywords.
 
@@ -395,12 +389,12 @@ Keywords should be based on the website content but TRANSLATED to target languag
 - BAD: "Bee Cream", "Royal Jelly" (not translated to German)
 - GOOD: "Bienencreme", "Gelee Royal", "Propolis Tinktur" (specific + German)
 
-Be specific and practical. Generic or wrong-language keywords fail.`
-        },
-        {
-          // January 28th, 2026 (v2): Even clearer user message with translation emphasis
-          role: 'user',
-          content: `Analyze this website and provide competitor and topic suggestions.
+Be specific and practical. Generic or wrong-language keywords fail.
+
+You MUST use the extract_suggestions tool to provide your response in the correct structured format.`;
+
+  // Build the user message
+  const userMessage = `Analyze this website and provide competitor and topic suggestions.
 
 Website: ${websiteUrl}
 ${targetCountry ? `Target Market: ${targetCountry}` : ''}
@@ -414,24 +408,85 @@ MANDATORY: Translate ALL keywords to ${targetLanguage}!
 
 Analyze the website content below. Extract product/ingredient keywords, then TRANSLATE them to ${targetLanguage || 'the appropriate language'}:
 
-${truncatedContent}`
-        }
+${truncatedContent}
+
+Use the extract_suggestions tool to provide your structured response.`;
+
+  // Define the tool for structured output extraction
+  const extractSuggestionsTool: Anthropic.Tool = {
+    name: 'extract_suggestions',
+    description: 'Extract and return the competitor and topic suggestions in a structured format',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        competitors: {
+          type: 'array',
+          description: '12 direct competitors to this business',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Company or product name' },
+              domain: { type: 'string', description: 'Website domain without http/https (e.g., competitor.com)' },
+            },
+            required: ['name', 'domain'],
+          },
+        },
+        topics: {
+          type: 'array',
+          description: '10 specific keywords TRANSLATED to target language',
+          items: {
+            type: 'object',
+            properties: {
+              keyword: { type: 'string', description: 'Short keyword (1-3 words) in the target language' },
+            },
+            required: ['keyword'],
+          },
+        },
+        industry: { type: 'string', description: 'The primary industry/category of this business' },
+        targetAudience: { type: 'string', description: 'Brief description of target customers' },
+      },
+      required: ['competitors', 'topics', 'industry', 'targetAudience'],
+    },
+  };
+
+  try {
+    const message = await client.messages.create({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 2048,
+      system: systemPrompt,
+      tools: [extractSuggestionsTool],
+      tool_choice: { type: 'tool', name: 'extract_suggestions' }, // Force tool use
+      messages: [
+        { role: 'user', content: userMessage }
       ],
-      response_format: zodResponseFormat(SuggestionsSchema, 'suggestions'),
     });
     
-    const message = completion.choices[0]?.message;
+    // Extract the tool use result
+    const toolUseBlock = message.content.find(
+      (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
+    );
     
-    if (message?.parsed) {
-      return message.parsed;
-    } else if (message?.refusal) {
-      console.error('[suggestions/generate] AI refused request:', message.refusal);
-      return null;
+    if (toolUseBlock && toolUseBlock.name === 'extract_suggestions') {
+      // Validate with Zod schema
+      const parseResult = SuggestionsSchema.safeParse(toolUseBlock.input);
+      
+      if (parseResult.success) {
+        return parseResult.data;
+      } else {
+        console.error('[suggestions/generate] Zod validation failed:', parseResult.error);
+        // Try to return the raw input if it has the basic structure
+        const rawInput = toolUseBlock.input as SuggestionsResponse;
+        if (rawInput.competitors && rawInput.topics) {
+          return rawInput;
+        }
+        return null;
+      }
     }
     
+    console.error('[suggestions/generate] No tool use block found in response');
     return null;
   } catch (error) {
-    console.error('[suggestions/generate] OpenAI error:', error);
+    console.error('[suggestions/generate] Anthropic error:', error);
     return null;
   }
 }
