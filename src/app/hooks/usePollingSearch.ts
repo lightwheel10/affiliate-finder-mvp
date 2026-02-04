@@ -9,7 +9,8 @@
  * Handles polling-based search using Apify google-search-scraper.
  * 
  * FLOW (Updated January 30, 2026):
- * 1. startSearch(keyword, sources) → POST /api/search/start → returns jobId
+ * February 4, 2026: Changed to keywords[] for batched search (1 credit per session)
+ * 1. startSearch(keywords[], sources) → POST /api/search/start → returns jobId
  * 2. pollUntilComplete(jobId) → GET /api/search/status → polls every 3s
  *    - status='running': Google Scraper searching
  *    - status='enriching': Enrichment actors running (non-blocking)
@@ -26,7 +27,8 @@
  * ```typescript
  * const { searchWithPolling, isSearching, progress, error, cancelSearch } = usePollingSearch();
  * 
- * const results = await searchWithPolling('propolis', ['YouTube', 'Instagram'], {
+ * // February 4, 2026: Pass keywords array (1 credit per session, not per keyword)
+ * const results = await searchWithPolling(['propolis', 'honey'], ['YouTube', 'Instagram'], {
  *   onProgress: (p) => console.log(`Status: ${p.status}, Elapsed: ${p.elapsedSeconds}s`)
  * });
  * ```
@@ -92,9 +94,10 @@ export interface UsePollingSearchReturn {
   /**
    * Start a search and poll until complete.
    * Returns results array when done, throws on error.
+   * February 4, 2026: Changed to keywords[] for batched search (1 credit per session)
    */
   searchWithPolling: (
-    keyword: string, 
+    keywords: string[], 
     sources: Platform[], 
     options?: SearchOptions
   ) => Promise<SearchResult[]>;
@@ -154,9 +157,10 @@ export function usePollingSearch(): UsePollingSearchReturn {
   
   /**
    * Start search and poll until complete
+   * February 4, 2026: Changed to keywords[] for batched search (1 credit per session)
    */
   const searchWithPolling = useCallback(async (
-    keyword: string,
+    keywords: string[],
     sources: Platform[],
     options: SearchOptions = {}
   ): Promise<SearchResult[]> => {
@@ -186,10 +190,11 @@ export function usePollingSearch(): UsePollingSearchReturn {
       // ========================================================================
       updateProgress({ status: 'starting', elapsedSeconds: 0, message: 'Starting search...' });
       
+      // February 4, 2026: Send keywords[] for batched search (1 credit per session)
       const startResponse = await fetch('/api/search/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, sources }),
+        body: JSON.stringify({ keywords, sources }),
         signal,
       });
       

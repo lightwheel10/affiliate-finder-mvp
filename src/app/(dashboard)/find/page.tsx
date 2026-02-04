@@ -383,6 +383,7 @@ export default function FindNewPage() {
 
   // ==========================================================================
   // HANDLE FIND AFFILIATES - Updated January 29, 2026
+  // February 4, 2026: Batched search - all keywords in 1 API call, 1 credit per session
   // 
   // MIGRATION: Changed from streaming /api/scout to polling-based approach:
   // - POST /api/search/start → returns jobId
@@ -393,7 +394,7 @@ export default function FindNewPage() {
   // in the background while the frontend shows progress.
   // 
   // FLOW:
-  // 1. For each keyword: start search → poll until done → process results
+  // 1. Send ALL keywords in single API call → poll until done → process results
   // 2. Results are enriched server-side (YouTube, Instagram, TikTok metadata)
   // 3. Filtering is applied server-side (language, TLD, e-commerce block)
   // 4. Final results saved to discovered_affiliates via existing hooks
@@ -418,146 +419,107 @@ export default function FindNewPage() {
     }
 
     const combinedKeyword = keywords.join(' | ');
-    const allResults: ResultItem[] = [];
     const sources: Platform[] = ['Web', 'YouTube', 'Instagram', 'TikTok'];
 
     try {
       // ==========================================================================
-      // SEQUENTIAL KEYWORD SEARCHES
+      // BATCHED KEYWORD SEARCH - February 4, 2026
       // 
-      // Process keywords one at a time to show progress clearly.
-      // Each search takes 40-95 seconds on Apify, so sequential is fine.
+      // All keywords are sent in a single API call. This ensures:
+      // - 1 Apify run for all keywords (batched)
+      // - 1 credit consumed per search session (not per keyword)
       // ==========================================================================
-      for (const kw of keywords) {
+      const searchResults = await searchWithPolling(keywords, sources, {
+        onProgress: (progress) => {
+        },
+      });
+      
+      // ==================================================================
+      // PROCESS RESULTS
+      // 
+      // Add discovery method (if not present) and save to discovered.
+      // Server already provides discoveryMethod, but we add fallback.
+      // 
+      // NOTE: SearchResult type doesn't include all ResultItem fields,
+      // but the status endpoint actually returns enriched data with
+      // these fields. We cast to any to access them safely.
+      // ==================================================================
+      const allResults: ResultItem[] = [];
+      
+      for (let i = 0; i < searchResults.length; i++) {
+        // Cast to any to access additional fields from status endpoint
+        const result = searchResults[i] as any;
         
+        // Use server's discoveryMethod if present, else fallback to first keyword
+        let discoveryMethod = result.discoveryMethod;
+        if (!discoveryMethod) {
+          const firstKw = keywords[0] || '';
+          const isCompetitor = firstKw.toLowerCase().includes('alternative') || 
+                             firstKw.toLowerCase().includes('vs') || 
+                             firstKw.toLowerCase().includes('competitor');
+          let methodValue = firstKw;
+          if (isCompetitor) {
+            methodValue = firstKw.replace(/alternative|vs|competitor/gi, '').trim();
+          }
+          discoveryMethod = {
+            type: isCompetitor ? 'competitor' as const : 'keyword' as const,
+            value: methodValue || firstKw
+          };
+        }
+        
+        // February 3, 2026: Construct nested similarWeb object from flat API properties
+        // This standardizes the data format so modal and save functions work correctly
+        const similarWeb = result.similarwebMonthlyVisits ? {
+          domain: result.domain,
+          monthlyVisits: result.similarwebMonthlyVisits,
+          monthlyVisitsFormatted: formatTraffic(result.similarwebMonthlyVisits),
+          globalRank: result.similarwebGlobalRank || null,
+          countryRank: result.similarwebCountryRank || null,
+          countryCode: result.similarwebCountryCode || null,
+          bounceRate: result.similarwebBounceRate || 0,
+          pagesPerVisit: result.similarwebPagesPerVisit || 0,
+          timeOnSite: result.similarwebTimeOnSite || 0,
+          trafficSources: result.similarwebTrafficSources || {
+            direct: 0, search: 0, social: 0, referrals: 0, mail: 0, paid: 0
+          },
+          topCountries: result.similarwebTopCountries || [],
+          category: result.similarwebCategory || null,
+          siteTitle: result.similarwebSiteTitle || null,
+          siteDescription: result.similarwebSiteDescription || null,
+          screenshot: result.similarwebScreenshot || null,
+          categoryRank: result.similarwebCategoryRank || null,
+          monthlyVisitsHistory: result.similarwebMonthlyVisitsHistory || null,
+          topKeywords: result.similarwebTopKeywords || null,
+          snapshotDate: result.similarwebSnapshotDate || null,
+        } : undefined;
+        
+        const enhancedResult: ResultItem = {
+          ...result,
+          rank: result.rank || i + 1,
+          keyword: result.keyword || combinedKeyword,
+          discoveryMethod,
+          date: result.date || undefined,
+          similarWeb,  // Add the nested object
+        };
+        
+        allResults.push(enhancedResult);
+      }
+      
+      // Update UI with all results
+      setResults(allResults);
+      
+      // Batch save all results
+      if (allResults.length > 0) {
         try {
-          // ====================================================================
-          // POLLING SEARCH
-          // 
-          // Uses the new usePollingSearch hook which:
-          // 1. Calls POST /api/search/start
-          // 2. Polls GET /api/search/status until done
-          // 3. Returns enriched, filtered results
-          // ====================================================================
-          const searchResults = await searchWithPolling(kw, sources, {
-            onProgress: (progress) => {
-            },
-          });
-          
-          
-          // ==================================================================
-          // PROCESS RESULTS
-          // 
-          // Add discovery method (if not present) and save to discovered.
-          // Server already provides discoveryMethod, but we add fallback.
-          // 
-          // NOTE: SearchResult type doesn't include all ResultItem fields,
-          // but the status endpoint actually returns enriched data with
-          // these fields. We cast to any to access them safely.
-          // ==================================================================
-          for (let i = 0; i < searchResults.length; i++) {
-            // Cast to any to access additional fields from status endpoint
-            const result = searchResults[i] as any;
-            
-            // Use server's discoveryMethod if present, else fallback to keyword
-            let discoveryMethod = result.discoveryMethod;
-            if (!discoveryMethod) {
-              const isCompetitor = kw.toLowerCase().includes('alternative') || 
-                                 kw.toLowerCase().includes('vs') || 
-                                 kw.toLowerCase().includes('competitor');
-              let methodValue = kw;
-              if (isCompetitor) {
-                methodValue = kw.replace(/alternative|vs|competitor/gi, '').trim();
-              }
-              discoveryMethod = {
-                type: isCompetitor ? 'competitor' as const : 'keyword' as const,
-                value: methodValue || kw
-              };
-            }
-            
-            // February 3, 2026: Construct nested similarWeb object from flat API properties
-            // This standardizes the data format so modal and save functions work correctly
-            const similarWeb = result.similarwebMonthlyVisits ? {
-              domain: result.domain,
-              monthlyVisits: result.similarwebMonthlyVisits,
-              monthlyVisitsFormatted: formatTraffic(result.similarwebMonthlyVisits),
-              globalRank: result.similarwebGlobalRank || null,
-              countryRank: result.similarwebCountryRank || null,
-              countryCode: result.similarwebCountryCode || null,
-              bounceRate: result.similarwebBounceRate || 0,
-              pagesPerVisit: result.similarwebPagesPerVisit || 0,
-              timeOnSite: result.similarwebTimeOnSite || 0,
-              trafficSources: result.similarwebTrafficSources || {
-                direct: 0, search: 0, social: 0, referrals: 0, mail: 0, paid: 0
-              },
-              topCountries: result.similarwebTopCountries || [],
-              category: result.similarwebCategory || null,
-              siteTitle: result.similarwebSiteTitle || null,
-              siteDescription: result.similarwebSiteDescription || null,
-              screenshot: result.similarwebScreenshot || null,
-              categoryRank: result.similarwebCategoryRank || null,
-              monthlyVisitsHistory: result.similarwebMonthlyVisitsHistory || null,
-              topKeywords: result.similarwebTopKeywords || null,
-              snapshotDate: result.similarwebSnapshotDate || null,
-            } : undefined;
-            
-            const enhancedResult: ResultItem = {
-              ...result,
-              rank: result.rank || allResults.length + i + 1,
-              keyword: result.keyword || kw,
-              discoveryMethod,
-              date: result.date || undefined,
-              similarWeb,  // Add the nested object
-            };
-            
-            allResults.push(enhancedResult);
-          }
-          
-          // Update UI with results so far
-          setResults([...allResults]);
-          
-          // Batch save results for this keyword
-          if (searchResults.length > 0) {
-            try {
-              const resultsToSave = searchResults.map((r, i) => {
-                const result = r as any;
-                return {
-                  ...result,
-                  rank: result.rank || allResults.length - searchResults.length + i + 1,
-                  keyword: result.keyword || kw,
-                  discoveryMethod: result.discoveryMethod || { type: 'keyword' as const, value: kw },
-                } as ResultItem;
-              });
-              await saveDiscoveredAffiliates(resultsToSave, combinedKeyword);
-            } catch (saveErr) {
-              console.error('Failed to save discovered affiliates:', saveErr);
-            }
-          }
-          
-        } catch (searchErr: any) {
-          // ====================================================================
-          // ERROR HANDLING
-          // ====================================================================
-          
-          // Credit error
-          if (searchErr.creditError) {
-            setCreditError({
-              message: searchErr.message || 'Insufficient topic search credits',
-              remaining: searchErr.remaining ?? 0,
-            });
-            toast.warning(t.toasts.warning.insufficientCredits);
-            // Don't stop - continue with other keywords if any
-            continue;
-          }
-          
-          // Cancelled
-          if (searchErr.name === 'AbortError' || searchErr.code === 'CANCELLED') {
-            break;
-          }
-          
-          // Other errors
-          console.error(`[handleFindAffiliates] Search error for "${kw}":`, searchErr);
-          toast.error(t.toasts.error.searchFailed);
+          const resultsToSave = allResults.map((result, i) => ({
+            ...result,
+            rank: result.rank || i + 1,
+            keyword: result.keyword || combinedKeyword,
+            discoveryMethod: result.discoveryMethod || { type: 'keyword' as const, value: keywords[0] || '' },
+          } as ResultItem));
+          await saveDiscoveredAffiliates(resultsToSave, combinedKeyword);
+        } catch (saveErr) {
+          console.error('Failed to save discovered affiliates:', saveErr);
         }
       }
 
@@ -571,12 +533,23 @@ export default function FindNewPage() {
         window.dispatchEvent(new CustomEvent('credits-updated'));
       }
       
-    } catch (e: unknown) {
-      const error = e as Error;
-      if (error.name === 'AbortError') {
+    } catch (searchErr: any) {
+      // ====================================================================
+      // ERROR HANDLING
+      // ====================================================================
+      
+      // Credit error
+      if (searchErr.creditError) {
+        setCreditError({
+          message: searchErr.message || 'Insufficient topic search credits',
+          remaining: searchErr.remaining ?? 0,
+        });
+        toast.warning(t.toasts.warning.insufficientCredits);
+      } else if (searchErr.name === 'AbortError' || searchErr.code === 'CANCELLED') {
         // Search cancelled by user - no notification needed
       } else {
-        console.error('Search error:', e);
+        // Other errors
+        console.error('[handleFindAffiliates] Search error:', searchErr);
         toast.error(t.toasts.error.searchFailed);
       }
     } finally {

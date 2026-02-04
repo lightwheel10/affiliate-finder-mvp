@@ -29,7 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { sql } from '@/lib/db';
 import { checkCredits } from '@/lib/credits';
-import { startGoogleSearchRun, buildBatchedQueries } from '@/app/services/apify-google-scraper';
+import { startGoogleSearchRun } from '@/app/services/apify-google-scraper';
 import { Platform } from '@/app/services/search';
 import { trackApiCall } from '@/app/services/tracking';
 
@@ -44,10 +44,12 @@ export const maxDuration = 30; // 30 seconds is plenty
 // =============================================================================
 // REQUEST/RESPONSE TYPES
 // January 29, 2026
+// February 4, 2026: Added keywords[] for multi-keyword batching (1 credit per session)
 // =============================================================================
 
 interface StartSearchRequest {
-  keyword: string;
+  keyword?: string;        // Single keyword (backward compat)
+  keywords?: string[];     // February 4, 2026: Multi-keyword batch (preferred)
   sources?: Platform[];
 }
 
@@ -73,12 +75,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
   try {
     // Parse request body
     const body = await req.json() as StartSearchRequest;
-    const { keyword, sources = ['Web', 'YouTube', 'Instagram', 'TikTok'] } = body;
+    const { keyword, keywords, sources = ['Web', 'YouTube', 'Instagram', 'TikTok'] } = body;
     
-    // Validate keyword
-    if (!keyword || typeof keyword !== 'string' || keyword.trim().length === 0) {
+    // February 4, 2026: Support both single keyword and keywords array
+    // Prefer keywords[] for multi-keyword batch (1 credit per session)
+    const keywordList: string[] = keywords && keywords.length > 0 
+      ? keywords.map(k => k.trim()).filter(k => k.length > 0)
+      : keyword ? [keyword.trim()] : [];
+    
+    // Validate keywords
+    if (keywordList.length === 0) {
       return NextResponse.json(
-        { error: 'Keyword is required', code: 'MISSING_KEYWORD' },
+        { error: 'At least one keyword is required', code: 'MISSING_KEYWORD' },
         { status: 400 }
       );
     }
@@ -94,7 +102,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
       );
     }
     
-    console.log(`🔍 [Search/Start] Keyword: "${keyword}", Sources: ${filteredSources.join(', ')}`);
+    // February 4, 2026: Log all keywords in batch
+    const combinedKeyword = keywordList.join(' | ');
+    console.log(`🔍 [Search/Start] Keywords: "${combinedKeyword}", Sources: ${filteredSources.join(', ')}`);
     
     // ==========================================================================
     // AUTHENTICATION CHECK
@@ -160,24 +170,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
     // ==========================================================================
     // START APIFY RUN
     // January 29, 2026
+    // February 4, 2026: Use keywords[] for batched search (1 Apify run for all keywords)
     // 
     // This returns immediately with a runId. The actual search runs
     // in the background on Apify's servers.
     // ==========================================================================
     const runResult = await startGoogleSearchRun({
-      keyword: keyword.trim(),
+      keywords: keywordList,  // February 4, 2026: Batch all keywords in single run
       sources: filteredSources,
       targetCountry,
       targetLanguage,
     });
     
     console.log(`🔍 [Search/Start] Apify run started: ${runResult.runId}`);
-    
-    // ==========================================================================
-    // BUILD QUERIES FOR LOGGING
-    // January 29, 2026
-    // ==========================================================================
-    const queries = buildBatchedQueries(keyword.trim(), filteredSources, targetLanguage);
     
     // ==========================================================================
     // INSERT JOB INTO DATABASE
@@ -194,6 +199,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
     
     const sourcesArray = `{${filteredSources.join(',')}}`;
     
+    // February 4, 2026: Store combined keywords for display/attribution
     const jobs = await sql`
       INSERT INTO crewcast.search_jobs (
         user_id,
@@ -204,7 +210,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
         user_settings
       ) VALUES (
         ${userId},
-        ${keyword.trim()},
+        ${combinedKeyword},
         ${sourcesArray}::text[],
         ${runResult.runId},
         'running',
@@ -221,11 +227,12 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
     // TRACK API CALL
     // January 29, 2026
     // ==========================================================================
+    // February 4, 2026: Track with combined keywords
     await trackApiCall({
       userId,
       service: 'apify_google_scraper',
       endpoint: 'start',
-      keyword: keyword.trim(),
+      keyword: combinedKeyword,
       status: 'success',
       apifyRunId: runResult.runId,
       durationMs: Date.now() - startTime,
