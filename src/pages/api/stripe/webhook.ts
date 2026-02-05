@@ -59,6 +59,13 @@ import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan } from 
 import { sendEventToN8N } from '@/lib/n8n-webhook';
 
 // =============================================================================
+// CRITICAL: Track pending N8N webhook calls
+// In serverless, we need to ensure async operations complete before the function
+// terminates. We collect all pending promises and await them at the end.
+// =============================================================================
+let pendingN8NCalls: Promise<void>[] = [];
+
+// =============================================================================
 // CRITICAL: Disable Next.js body parsing
 // This is the key difference from App Router - we MUST have raw bytes
 // =============================================================================
@@ -215,6 +222,18 @@ export default async function handler(
 
       default:
         console.log(`[Webhook] Unhandled event type: ${event.type}`);
+    }
+
+    // =========================================================================
+    // CRITICAL: Wait for all N8N webhook calls to complete before returning
+    // In serverless environments, the function can terminate before async
+    // operations complete. This ensures emails are actually sent.
+    // =========================================================================
+    if (pendingN8NCalls.length > 0) {
+      console.log(`[Webhook] ⏳ Waiting for ${pendingN8NCalls.length} pending N8N call(s) to complete...`);
+      await Promise.all(pendingN8NCalls);
+      console.log(`[Webhook] ✅ All N8N calls completed`);
+      pendingN8NCalls = []; // Reset for next invocation
     }
 
     return res.status(200).json({ received: true });
@@ -443,15 +462,19 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
     WHERE id = ${dbUserId}
   `;
 
-  // Fire N8N webhook for subscription_canceled email (fire-and-forget)
-  sendEventToN8N({
-    event_type: 'subscription_canceled',
-    email: user.email,
-    name: user.name || 'User',
-    plan: user.plan || 'pro',
-  });
+  // Fire N8N webhook for subscription_canceled email
+  // CRITICAL: Push to pendingN8NCalls so we await it before function terminates
+  console.log(`[Webhook] 📧 About to send subscription_canceled email to N8N for: ${user.email}`);
+  pendingN8NCalls.push(
+    sendEventToN8N({
+      event_type: 'subscription_canceled',
+      email: user.email,
+      name: user.name || 'User',
+      plan: user.plan || 'pro',
+    })
+  );
 
-  console.log(`[Webhook] Subscription canceled for user ${dbUserId}, notification sent`);
+  console.log(`[Webhook] ✅ Subscription canceled for user ${dbUserId}, N8N notification queued`);
 }
 
 /**
@@ -496,17 +519,21 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
     ? new Date(trialEndTimestamp * 1000).toISOString() 
     : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Fire N8N webhook for trial_ending email (fire-and-forget)
-  sendEventToN8N({
-    event_type: 'trial_ending',
-    email: user.email,
-    name: user.name || 'User',
-    plan: user.plan || 'pro',
-    trialEndsAt,
-    daysRemaining: 3,
-  });
+  // Fire N8N webhook for trial_ending email
+  // CRITICAL: Push to pendingN8NCalls so we await it before function terminates
+  console.log(`[Webhook] 📧 About to send trial_ending email to N8N for: ${user.email}`);
+  pendingN8NCalls.push(
+    sendEventToN8N({
+      event_type: 'trial_ending',
+      email: user.email,
+      name: user.name || 'User',
+      plan: user.plan || 'pro',
+      trialEndsAt,
+      daysRemaining: 3,
+    })
+  );
   
-  console.log(`[Webhook] Trial ending notification sent for: ${user.email}`);
+  console.log(`[Webhook] ✅ Trial ending N8N notification queued for: ${user.email}`);
 }
 
 /**
@@ -734,18 +761,22 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   // ==========================================================================
   // N8N EMAIL NOTIFICATION - February 2026
-  // Fire webhook for payment_success email (fire-and-forget)
+  // CRITICAL: Push to pendingN8NCalls so we await it before function terminates
   // ==========================================================================
-  sendEventToN8N({
-    event_type: 'payment_success',
-    email: userEmail,
-    name: userName || 'User',
-    plan: userPlan || 'pro',
-    amountPaid: amountPaid,
-    currency: 'usd',
-  });
+  console.log(`[Webhook] 📧 About to send payment_success email to N8N for: ${userEmail}`);
+  console.log(`[Webhook] 📧 Payment details: amount=${amountPaid}, plan=${userPlan}`);
+  pendingN8NCalls.push(
+    sendEventToN8N({
+      event_type: 'payment_success',
+      email: userEmail,
+      name: userName || 'User',
+      plan: userPlan || 'pro',
+      amountPaid: amountPaid,
+      currency: 'eur',  // EUR since Stripe is configured in EUR
+    })
+  );
 
-  console.log(`[Webhook] Payment success notification sent for: ${userEmail}`);
+  console.log(`[Webhook] ✅ Payment success N8N notification queued for: ${userEmail}`);
 }
 
 /**
@@ -790,15 +821,19 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     WHERE user_id = ${dbUserId}
   `;
 
-  // Fire N8N webhook for payment_failed email (fire-and-forget)
-  sendEventToN8N({
-    event_type: 'payment_failed',
-    email: user.email,
-    name: user.name || 'User',
-    plan: user.plan || 'pro',
-  });
+  // Fire N8N webhook for payment_failed email
+  // CRITICAL: Push to pendingN8NCalls so we await it before function terminates
+  console.log(`[Webhook] 📧 About to send payment_failed email to N8N for: ${user.email}`);
+  pendingN8NCalls.push(
+    sendEventToN8N({
+      event_type: 'payment_failed',
+      email: user.email,
+      name: user.name || 'User',
+      plan: user.plan || 'pro',
+    })
+  );
 
-  console.log(`[Webhook] Payment failed for user ${dbUserId} - status set to past_due, notification sent`);
+  console.log(`[Webhook] ✅ Payment failed for user ${dbUserId} - status set to past_due, N8N notification queued`);
 }
 
 /**

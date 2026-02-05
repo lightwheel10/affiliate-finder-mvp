@@ -112,12 +112,25 @@ export interface N8NUserData {
 export function sendEventToN8N(data: N8NEventData): Promise<void> {
   const webhookUrl = process.env.N8N_TRANSACTIONAL_EMAILS_URL;
 
+  // Enhanced logging for debugging - February 2026
+  console.log(`[N8N] 📧 sendEventToN8N called with event_type: ${data.event_type}`);
+  console.log(`[N8N] 📧 N8N_TRANSACTIONAL_EMAILS_URL configured: ${webhookUrl ? 'YES (' + webhookUrl.substring(0, 50) + '...)' : 'NO'}`);
+
   if (!webhookUrl) {
-    console.log('[N8N] ⚠️ N8N_TRANSACTIONAL_EMAILS_URL not configured, skipping');
+    console.error('[N8N] ❌ N8N_TRANSACTIONAL_EMAILS_URL is NOT configured in environment variables!');
+    console.error('[N8N] ❌ Transactional email will NOT be sent for:', data.event_type, data.email);
     return Promise.resolve();
   }
 
+  const payload = {
+    ...data,
+    source: 'crewcast',
+    timestamp: new Date().toISOString(),
+  };
+
   console.log(`[N8N] 🚀 Firing ${data.event_type} event for: ${data.email}`);
+  console.log(`[N8N] 🚀 Webhook URL: ${webhookUrl}`);
+  console.log(`[N8N] 🚀 Payload: ${JSON.stringify(payload)}`);
 
   const startTime = Date.now();
 
@@ -127,19 +140,23 @@ export function sendEventToN8N(data: N8NEventData): Promise<void> {
       'Content-Type': 'application/json',
       'User-Agent': 'CrewCast-Studio/1.0',
     },
-    body: JSON.stringify({
-      ...data,
-      source: 'crewcast',
-      timestamp: new Date().toISOString(),
-    }),
+    body: JSON.stringify(payload),
   })
-    .then((response) => {
+    .then(async (response) => {
       const elapsed = Date.now() - startTime;
-      console.log(`[N8N] ✅ ${data.event_type}: ${response.status} in ${elapsed}ms for ${data.email}`);
+      const responseText = await response.text().catch(() => 'Could not read response body');
+      console.log(`[N8N] ✅ ${data.event_type}: HTTP ${response.status} in ${elapsed}ms for ${data.email}`);
+      console.log(`[N8N] ✅ Response body: ${responseText.substring(0, 200)}`);
+      
+      if (!response.ok) {
+        console.error(`[N8N] ⚠️ Non-OK response: ${response.status} ${response.statusText}`);
+      }
     })
     .catch((error) => {
       const elapsed = Date.now() - startTime;
-      console.log(`[N8N] ❌ ${data.event_type} failed after ${elapsed}ms for ${data.email}: ${error.message}`);
+      console.error(`[N8N] ❌ ${data.event_type} FAILED after ${elapsed}ms for ${data.email}`);
+      console.error(`[N8N] ❌ Error details:`, error.message);
+      console.error(`[N8N] ❌ Error stack:`, error.stack);
     });
 }
 
