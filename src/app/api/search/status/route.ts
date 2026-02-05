@@ -433,6 +433,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         // Helper to save enriched results (ON CONFLICT DO NOTHING handles duplicates)
         // January 30, 2026: Added ALL missing columns for TikTok, Instagram, YouTube
         // January 30, 2026: Now extracts correct discovery method from result.searchQuery
+        // February 4, 2026: BUG FIX - Added 4 missing SimilarWeb columns (country_code, category,
+        // traffic_sources, top_countries). These were being fetched but not saved, causing
+        // traffic sources to show 0% in UI for onboarding results.
         const saveEnrichedResult = async (result: SearchResult) => {
           try {
             // Extract the actual topic/competitor that found this result
@@ -441,6 +444,14 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               onboardingTopics,
               onboardingCompetitors
             );
+            
+            // February 4, 2026: Serialize JSON fields for SimilarWeb traffic data
+            const swTrafficSources = (result as any).similarwebTrafficSources 
+              ? JSON.stringify((result as any).similarwebTrafficSources) 
+              : null;
+            const swTopCountries = (result as any).similarwebTopCountries 
+              ? JSON.stringify((result as any).similarwebTopCountries) 
+              : null;
             
             await sql`
               INSERT INTO crewcast.discovered_affiliates (
@@ -457,7 +468,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 tiktok_following, tiktok_likes, tiktok_videos_count, tiktok_is_verified,
                 tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares,
                 similarweb_monthly_visits, similarweb_global_rank, similarweb_country_rank,
-                similarweb_bounce_rate, similarweb_pages_per_visit, similarweb_time_on_site
+                similarweb_country_code, similarweb_bounce_rate, similarweb_pages_per_visit,
+                similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries
               )
               VALUES (
                 ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
@@ -483,8 +495,10 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                 ${(result as any).tiktokVideoPlays || null}, ${(result as any).tiktokVideoLikes || null},
                 ${(result as any).tiktokVideoComments || null}, ${(result as any).tiktokVideoShares || null},
                 ${(result as any).similarwebMonthlyVisits || null}, ${(result as any).similarwebGlobalRank || null},
-                ${(result as any).similarwebCountryRank || null}, ${(result as any).similarwebBounceRate || null},
-                ${(result as any).similarwebPagesPerVisit || null}, ${(result as any).similarwebTimeOnSite || null}
+                ${(result as any).similarwebCountryRank || null}, ${(result as any).similarwebCountryCode || null},
+                ${(result as any).similarwebBounceRate || null}, ${(result as any).similarwebPagesPerVisit || null},
+                ${(result as any).similarwebTimeOnSite || null}, ${(result as any).similarwebCategory || null},
+                ${swTrafficSources}, ${swTopCountries}
               )
               ON CONFLICT (user_id, link) DO NOTHING
             `;
