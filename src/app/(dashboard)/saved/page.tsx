@@ -24,6 +24,7 @@
  * - Bulk selection for delete operations (Dec 2025)
  * - Bulk email finding (Dec 2025)
  * - Advanced filtering by competitors, topics, subscribers (Dec 2025)
+ * - CSV Export with subscription gate (Feb 9th, 2026) — trial users see upgrade modal
  * 
  * =============================================================================
  */
@@ -65,6 +66,13 @@ import { FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../t
 import { FilterPanel } from '../../components/FilterPanel';
 import { useNeonUser } from '../../hooks/useNeonUser';
 // =============================================================================
+// SUBSCRIPTION GATE FOR EXPORT - February 9th, 2026
+// Trial users see export button but clicking opens PricingModal to upgrade.
+// Paid users (first_payment_at && status === 'active') get normal export.
+// =============================================================================
+import { useSubscription } from '../../hooks/useSubscription';
+import { PricingModal } from '../../components/PricingModal';
+// =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
@@ -75,6 +83,13 @@ export default function SavedPage() {
   const { t } = useLanguage();
   // User data for filter options (January 13th, 2026)
   const { user } = useNeonUser();
+  // ==========================================================================
+  // SUBSCRIPTION CHECK FOR EXPORT GATE - February 9th, 2026
+  // Uses hasAutoScanAccess (first_payment_at && status === 'active') to
+  // determine if user is a paid subscriber. Trial users are prompted to upgrade.
+  // ==========================================================================
+  const { subscription, hasAutoScanAccess, isTrialing, refetch: refetchSubscription } = useSubscription(user?.id ?? null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   
@@ -762,10 +777,11 @@ export default function SavedPage() {
           {/* January 29th, 2026: Added export button (subscription-gated) */}
           <div className="flex items-center gap-3">
             {/* Export Button - January 29th, 2026 */}
+            {/* February 9th, 2026: Subscription-gated — trial users see upgrade modal */}
             <button
-              onClick={() => setIsExportModalOpen(true)}
+              onClick={() => hasAutoScanAccess ? setIsExportModalOpen(true) : setIsUpgradeModalOpen(true)}
               className="flex items-center justify-center gap-1.5 h-10 px-3 bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all text-xs font-black uppercase"
-              title="Export to CSV"
+              title={hasAutoScanAccess ? "Export to CSV" : "Upgrade to export"}
             >
               <Download size={16} strokeWidth={2.5} />
               <span>Export</span>
@@ -1074,6 +1090,22 @@ export default function SavedPage() {
           </button>
         </div>
       </Modal>
+
+      {/* =============================================================================
+          UPGRADE MODAL (EXPORT GATE) - February 9th, 2026
+          Shown when trial users click the Export button. Opens PricingModal
+          so they can upgrade to a paid plan to unlock CSV export.
+          Uses same PricingModal pattern as ScanCountdown component.
+          ============================================================================= */}
+      <PricingModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        userId={user?.id ?? null}
+        currentPlan={subscription?.plan || null}
+        currentBillingInterval={subscription?.billing_interval || null}
+        isTrialing={isTrialing}
+        onSuccess={refetchSubscription}
+      />
 
       {/* =============================================================================
           DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN

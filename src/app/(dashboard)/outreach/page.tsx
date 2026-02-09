@@ -26,6 +26,7 @@
  * - Progress tracking for bulk operations
  * - Error handling with inline notifications (not alerts)
  * - Credit consumption per generation
+ * - CSV Export with subscription gate (Feb 9th, 2026) — trial users see upgrade modal
  * 
  * VISUAL STATES (December 17, 2025):
  * 1. Default: Yellow "Generate" button
@@ -93,6 +94,14 @@ import {
   Download,  // Added January 29th, 2026 for export functionality
 } from 'lucide-react';
 // =============================================================================
+// SUBSCRIPTION GATE FOR EXPORT - February 9th, 2026
+// Trial users see export button but clicking opens PricingModal to upgrade.
+// Paid users (first_payment_at && status === 'active') get normal export.
+// =============================================================================
+import { useNeonUser } from '../../hooks/useNeonUser';
+import { useSubscription } from '../../hooks/useSubscription';
+import { PricingModal } from '../../components/PricingModal';
+// =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
@@ -156,6 +165,15 @@ interface ContactPickerState {
 export default function OutreachPage() {
   // Translation hook (January 9th, 2026)
   const { t } = useLanguage();
+
+  // ==========================================================================
+  // SUBSCRIPTION CHECK FOR EXPORT GATE - February 9th, 2026
+  // Uses hasAutoScanAccess (first_payment_at && status === 'active') to
+  // determine if user is a paid subscriber. Trial users are prompted to upgrade.
+  // ==========================================================================
+  const { userId } = useNeonUser();
+  const { subscription, hasAutoScanAccess, isTrialing, refetch: refetchSubscription } = useSubscription(userId);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   
   // =========================================================================
   // STATE MANAGEMENT
@@ -1609,10 +1627,11 @@ export default function OutreachPage() {
           {/* January 29th, 2026: Added export button (subscription-gated) */}
           <div className="flex items-center gap-3">
             {/* Export Button - January 29th, 2026 */}
+            {/* February 9th, 2026: Subscription-gated — trial users see upgrade modal */}
             <button
-              onClick={() => setIsExportModalOpen(true)}
+              onClick={() => hasAutoScanAccess ? setIsExportModalOpen(true) : setIsUpgradeModalOpen(true)}
               className="flex items-center justify-center gap-1.5 h-10 px-3 bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all text-xs font-black uppercase"
-              title="Export to CSV"
+              title={hasAutoScanAccess ? "Export to CSV" : "Upgrade to export"}
             >
               <Download size={16} strokeWidth={2.5} />
               <span>Export</span>
@@ -2784,6 +2803,22 @@ export default function OutreachPage() {
           </button>
         </div>
       </Modal>
+
+      {/* =============================================================================
+          UPGRADE MODAL (EXPORT GATE) - February 9th, 2026
+          Shown when trial users click the Export button. Opens PricingModal
+          so they can upgrade to a paid plan to unlock CSV export.
+          Uses same PricingModal pattern as ScanCountdown component.
+          ============================================================================= */}
+      <PricingModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        userId={userId ?? null}
+        currentPlan={subscription?.plan || null}
+        currentBillingInterval={subscription?.billing_interval || null}
+        isTrialing={isTrialing}
+        onSuccess={refetchSubscription}
+      />
 
       {/* =============================================================================
           CUSTOM TOAST NOTIFICATION - NEO-BRUTALIST DESIGN (January 17, 2026)
