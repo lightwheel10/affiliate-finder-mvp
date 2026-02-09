@@ -964,8 +964,9 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         setIsSearchComplete(true);
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Hide the FindingAffiliatesScreen
-        setIsFindingAffiliates(false);
+        // February 9th, 2026: Removed setIsFindingAffiliates(false) here.
+        // It was causing Step 7 (card form) to flash briefly before navigation.
+        // The component unmounts on navigation anyway. Error path handled in catch.
       }
 
       // Success - subscription, onboarding data, and affiliates all ready!
@@ -975,6 +976,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       const errorMessage = error instanceof Error ? error.message : 'Payment failed. Please try again.';
       console.error('[Stripe] Payment flow error:', error);
       setStripeError(errorMessage);
+      // February 9th, 2026: Reset here so user sees the error on Step 7, not a stuck loading screen
+      setIsFindingAffiliates(false);
     } finally {
       setIsLoading(false);
     }
