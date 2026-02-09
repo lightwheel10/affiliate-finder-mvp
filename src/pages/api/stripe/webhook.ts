@@ -259,6 +259,10 @@ export default async function handler(
 /**
  * Handle one-time credit pack purchase (checkout.session.completed, mode=payment).
  * Validates metadata and price, then adds top-up credits via addTopupCredits (idempotent).
+ * 
+ * IMPORTANT (February 2026): This function now THROWS on DB failures instead of
+ * silently returning. This ensures Stripe gets a 500 response and retries the event.
+ * Validation errors (bad metadata, etc.) still return silently since retrying won't help.
  */
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   if (session.mode !== 'payment' || session.payment_status !== 'paid') {
@@ -301,11 +305,21 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
+  console.log(`[Webhook] Processing credit pack: user=${userId}, type=${creditType}, amount=${amount}, session=${sessionId}`);
+
   const ok = await addTopupCredits(userId, creditType, amount, sessionId);
   if (!ok) {
-    console.error('[Webhook] checkout.session.completed: addTopupCredits failed for user', userId);
-  } else {
-    console.log(`[Webhook] ✅ Credit pack completed: ${amount} ${creditType} for user ${userId}`);
+    // CRITICAL: Throw so the main handler returns 500 and Stripe retries.
+    // addTopupCredits returns false when DB operations fail.
+    // Stripe will retry the event up to ~16 times over 72 hours.
+    const errorMsg = `[Webhook] checkout.session.completed: addTopupCredits FAILED for user ${userId}, session ${sessionId}. Throwing to trigger Stripe retry.`;
+    console.error(errorMsg);
+    throw new Error(errorMsg);
+  }
+  
+  console.log(`[Webhook] ✅ Credit pack completed: ${amount} ${creditType} for user ${userId}`);
+  
+  try {
     const users = await sql`
       SELECT email, name FROM crewcast.users WHERE id = ${userId}
     `;
@@ -326,6 +340,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       );
       console.log(`[Webhook] 📧 Queued credit_purchase_success email for: ${user.email}`);
     }
+  } catch (notifyError) {
+    // Don't throw for notification failures - credits were already added
+    console.error('[Webhook] Failed to send notification (credits already added):', notifyError);
   }
 }
 

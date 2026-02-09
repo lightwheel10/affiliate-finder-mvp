@@ -840,7 +840,19 @@ export async function addTopupCredits(
     console.log(`[Credits] Added ${amount} ${creditType} topup for user ${userId} (session ${checkoutSessionId})`);
     return true;
   } catch (error) {
-    console.error('[Credits] Error adding topup credits:', error);
+    // CRITICAL: Log full error details so we can diagnose failures in Vercel logs
+    const err = error as Error;
+    console.error('[Credits] ❌ TOPUP CREDITS FAILED:', {
+      userId,
+      creditType,
+      amount,
+      checkoutSessionId,
+      errorName: err?.name,
+      errorMessage: err?.message,
+      errorStack: err?.stack,
+      // Log full error object in case it has non-standard properties (e.g., DB errors)
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error || {})),
+    });
     return false;
   }
 }

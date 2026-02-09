@@ -107,7 +107,29 @@ export default function SettingsPage() {
       setCreditPurchaseSuccess(true);
       setCreditPurchaseCancelled(false);
       setActiveTab('buy_credits');
-      window.dispatchEvent(new CustomEvent('credits-updated'));
+      // February 2026: Fallback fulfillment -- call /api/credits/fulfill to process
+      // any pending purchases in case the Stripe webhook hasn't fired yet.
+      // This is safe because addTopupCredits is idempotent (won't double-add).
+      if (userId) {
+        fetch('/api/credits/fulfill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        })
+          .then(r => r.json())
+          .then(data => {
+            console.log('[Settings] Fulfill response:', data);
+            // Refresh credits after fulfillment attempt
+            window.dispatchEvent(new CustomEvent('credits-updated'));
+          })
+          .catch(err => {
+            console.error('[Settings] Fulfill failed:', err);
+            // Still try to refresh credits (webhook may have handled it)
+            window.dispatchEvent(new CustomEvent('credits-updated'));
+          });
+      } else {
+        window.dispatchEvent(new CustomEvent('credits-updated'));
+      }
       const url = new URL(window.location.href);
       url.searchParams.delete('credit_purchase');
       window.history.replaceState({}, '', url.toString());
