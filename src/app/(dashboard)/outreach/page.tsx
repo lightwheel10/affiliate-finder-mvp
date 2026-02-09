@@ -381,13 +381,26 @@ export default function OutreachPage() {
           }
           
           // Load legacy single message (backwards compatibility)
-          // Only if we haven't already loaded a per-contact message for this email
+          // Only if NO per-contact JSONB messages were loaded for this affiliate.
+          // 
+          // BUG FIX (February 9th, 2026): Previously, this loaded the legacy message
+          // keyed by affiliate.email (primary email). But the JSONB entries use the
+          // actual contact emails (e.g. redaktion@sz.de). Since primary email differs
+          // from contact emails, the legacy message was added as a DUPLICATE entry
+          // under a different key, inflating the message count.
+          //
+          // Fix: Skip legacy load entirely when JSONB messages exist — the legacy
+          // field is always a copy of the most recent JSONB entry.
+          //
           // BUG FIX (January 22, 2026): Validate message is a non-empty string
-          if (affiliate.aiGeneratedMessage && typeof affiliate.aiGeneratedMessage === 'string' && affiliate.aiGeneratedMessage.trim()) {
+          const hasJsonbMessages = affiliate.aiGeneratedMessages 
+            && typeof affiliate.aiGeneratedMessages === 'object'
+            && Object.keys(affiliate.aiGeneratedMessages).length > 0;
+          
+          if (!hasJsonbMessages && affiliate.aiGeneratedMessage && typeof affiliate.aiGeneratedMessage === 'string' && affiliate.aiGeneratedMessage.trim()) {
             const key = affiliate.email 
               ? `${affiliate.id}:${affiliate.email}` 
               : `${affiliate.id}`;
-            // Don't override per-contact messages
             if (!savedMessages.has(key)) {
               savedMessages.set(key, affiliate.aiGeneratedMessage);
             }
@@ -762,6 +775,10 @@ export default function OutreachPage() {
   
   // =========================================================================
   // GENERATE FOR SELECTED CONTACTS (December 25, 2025)
+  // Updated: February 9th, 2026 - Fixed notification bug: now tracks
+  //   success/fail counts and shows a summary toast instead of per-email
+  //   toasts. Passes silent=true to handleGenerateForContact to suppress
+  //   individual notifications.
   //
   // Called when user confirms selection in the contact picker modal.
   // Generates emails for each selected contact sequentially.
@@ -771,32 +788,50 @@ export default function OutreachPage() {
     
     const affiliate = contactPicker.affiliate;
     const selectedEmails = Array.from(contactPicker.selectedContacts);
+    const total = selectedEmails.length;
     
     // Close the modal
     setContactPicker(prev => ({ ...prev, isOpen: false }));
     
-    // Generate for each selected contact
+    let successCount = 0;
+    let failCount = 0;
+    
+    // Generate for each selected contact (silent=true to suppress per-email toasts)
     for (const email of selectedEmails) {
-      // Find the contact details
       const contact = contactPicker.contacts.find(c => c.email === email);
-      if (!contact) continue;
+      if (!contact) { failCount++; continue; }
       
-      await handleGenerateForContact(affiliate, contact);
+      const success = await handleGenerateForContact(affiliate, contact, true);
+      if (success) { successCount++; } else { failCount++; }
+    }
+    
+    // February 9th, 2026: Show summary toast with count (matches handleGenerateMessages pattern)
+    if (failCount === 0 && successCount > 0) {
+      showToast('success', `${successCount} ${successCount !== 1 ? t.dashboard.outreach.emails : t.dashboard.outreach.email} generated!`, t.toasts.success.bulkEmailsGenerated);
+    } else if (failCount > 0 && successCount > 0) {
+      showToast('warning', `${successCount}/${total} emails generated. ${failCount} failed.`);
+    } else if (failCount > 0 && successCount === 0) {
+      showToast('error', t.toasts.error.aiGenerationFailed);
     }
   };
   
   // =========================================================================
   // SINGLE CONTACT EMAIL GENERATION (December 25, 2025)
   // Updated: January 24th, 2026 - Added in-flight duplicate prevention
+  // Updated: February 9th, 2026 - Added silent param for bulk/multi-contact
+  //   calls to suppress individual toasts (summary shown by caller instead)
   //
   // Generates an AI email for a specific contact. This is the core generation
   // function that handles both single-contact affiliates and individual
   // contacts from multi-contact affiliates.
+  //
+  // Returns true on success, false on failure (used by callers for counting).
   // =========================================================================
   const handleGenerateForContact = async (
     affiliate: ResultItem,
-    contact?: SelectableContact
-  ) => {
+    contact?: SelectableContact,
+    silent?: boolean
+  ): Promise<boolean> => {
     const messageKey = getMessageKey(affiliate.id!, contact?.email || affiliate.email);
     
     // =========================================================================
@@ -809,7 +844,7 @@ export default function OutreachPage() {
     // is async. This prevents race conditions when user clicks rapidly.
     // =========================================================================
     if (inFlightGenerations.current.has(messageKey)) {
-      return;
+      return false;
     }
     
     // Mark as in-flight IMMEDIATELY (synchronous) before any async operations
@@ -871,15 +906,16 @@ export default function OutreachPage() {
             return next;
           });
           
-          // Show success notification
+          // Show success notification (skip when called from bulk/multi-contact)
           // i18n: January 10th, 2026
-          showToast('success', t.toasts.success.emailGenerated);
+          // February 9th, 2026: silent param suppresses toast for bulk callers
+          if (!silent) showToast('success', t.toasts.success.emailGenerated);
         } else {
           // API returned success but message is empty - treat as error
           console.error('[Outreach] ❌ API returned success but message is empty:', data);
           setFailedIds(prev => new Set(prev).add(messageKey));
-          showToast('error', t.toasts.error.aiGenerationFailed);
-          return; // Exit early to skip credits refresh
+          if (!silent) showToast('error', t.toasts.error.aiGenerationFailed);
+          return false; // Exit early to skip credits refresh
         }
 
         // =====================================================================
@@ -893,6 +929,7 @@ export default function OutreachPage() {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('credits-updated'));
         }
+        return true;
       } else {
         // =====================================================================
         // FAILURE: Mark as failed and show notification
@@ -915,8 +952,8 @@ export default function OutreachPage() {
         // =====================================================================
         if (response.status === 409 && data.inProgress) {
           skipCleanup = true; // Don't remove from generatingIds in finally block
-          showToast('info', 'Email generation is already in progress. Please wait.');
-          return; // Exit early, finally will still run but skipCleanup prevents removal
+          if (!silent) showToast('info', 'Email generation is already in progress. Please wait.');
+          return false; // Exit early, finally will still run but skipCleanup prevents removal
         }
         
         console.error('AI generation failed:', data.error);
@@ -925,13 +962,17 @@ export default function OutreachPage() {
         // Show user-friendly error message based on error type
         // January 5th, 2026: Using global Sonner toast instead of local notification
         // i18n: January 10th, 2026
-        if (response.status === 402) {
-          showToast('warning', t.toasts.warning.insufficientAICredits);
-        } else if (data.error?.includes('webhook not configured')) {
-          showToast('error', t.toasts.error.aiServiceNotConfigured);
-        } else {
-          showToast('error', data.error || t.toasts.error.aiGenerationFailed);
+        // February 9th, 2026: silent param suppresses toasts for bulk callers
+        if (!silent) {
+          if (response.status === 402) {
+            showToast('warning', t.toasts.warning.insufficientAICredits);
+          } else if (data.error?.includes('webhook not configured')) {
+            showToast('error', t.toasts.error.aiServiceNotConfigured);
+          } else {
+            showToast('error', data.error || t.toasts.error.aiGenerationFailed);
+          }
         }
+        return false;
       }
     } catch (error) {
       // =====================================================================
@@ -941,7 +982,8 @@ export default function OutreachPage() {
       // =====================================================================
       console.error('Error generating message:', error);
       setFailedIds(prev => new Set(prev).add(messageKey));
-      showToast('error', t.toasts.error.aiConnectionFailed);
+      if (!silent) showToast('error', t.toasts.error.aiConnectionFailed);
+      return false;
     } finally {
       // =========================================================================
       // CLEANUP (Updated January 24th, 2026)
