@@ -91,15 +91,6 @@ const PLANS: PlanConfig[] = [
     features: PLAN_PRICING.business.features,
     popular: true,
   },
-  {
-    name: 'Enterprise',
-    id: 'enterprise',
-    description: 'Custom solutions for large organizations with specific needs.',
-    monthlyPrice: null,  // Custom pricing
-    annualPrice: null,
-    features: PLAN_PRICING.enterprise.features,
-    popular: false,
-  },
 ];
 
 // =============================================================================
@@ -160,11 +151,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // Get the CTA button text based on context
   // Updated December 2025: Trial users can "Buy Now" their current plan
   // Updated January 10th, 2026: i18n migration
+  // Updated February 2026: Removed Enterprise plan from modal
   const getButtonText = (plan: PlanConfig): string => {
-    if (plan.id === 'enterprise') {
-      return t.pricingModal.contactSales;
-    }
-
     const changeType = getChangeType(plan.id, billingInterval);
     
     switch (changeType) {
@@ -186,9 +174,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   // Check if button should be disabled
   // Updated December 2025: Trial users can click their current plan to "Buy Now"
+  // Updated February 2026: Removed Enterprise plan from modal
   const isButtonDisabled = (plan: PlanConfig): boolean => {
     if (isLoading) return true;
-    if (plan.id === 'enterprise') return false; // Enterprise is always clickable (opens contact)
     
     const changeType = getChangeType(plan.id, billingInterval);
     
@@ -206,13 +194,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // =========================================================================
 
   const handlePlanSelect = async (plan: PlanConfig) => {
-    // Enterprise plan - open contact (no API call)
-    if (plan.id === 'enterprise') {
-      // TODO: Open contact form or redirect to contact page
-      window.open('mailto:sales@crewcaststudio.com?subject=Enterprise%20Plan%20Inquiry', '_blank');
-      return;
-    }
-
     // Validation
     if (!userId) {
       setError(t.pricingModal.signInRequired);
@@ -329,20 +310,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
           {/* Current Plan Badge - NEO-BRUTALIST */}
           {currentPlan && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 mb-6">
-              <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">{t.pricingModal.currentPlan}:</span>
-              <span className="text-sm font-black text-gray-900 dark:text-white uppercase">{currentPlan}</span>
-              {isTrialing && (
-                <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 border border-blue-500 font-bold">
-                  <Clock size={10} />
-                  {t.pricingModal.trial}
-                </span>
-              )}
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">{t.pricingModal.currentPlan}:</span>
+                <span className="text-sm font-black text-gray-900 dark:text-white uppercase">{currentPlan}</span>
+                {isTrialing && (
+                  <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 border border-blue-500 font-bold">
+                    <Clock size={10} />
+                    {t.pricingModal.trial}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
           {/* Billing Toggle - NEO-BRUTALIST */}
-          <div className="inline-flex items-center bg-gray-100 dark:bg-gray-800 p-1 border-2 border-black dark:border-gray-600 relative">
+          <div className="flex justify-center">
+            <div className="inline-flex items-center bg-gray-100 dark:bg-gray-800 p-1 border-2 border-black dark:border-gray-600 relative">
             <button
               onClick={() => setBillingInterval('monthly')}
               className={cn(
@@ -362,6 +346,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               {t.pricingModal.annual}
               <span className="bg-[#ffbf23] text-black text-[10px] font-black px-1.5 py-0.5 border border-black uppercase tracking-wide">{t.pricingModal.save20}</span>
             </button>
+            </div>
           </div>
         </div>
 
@@ -427,7 +412,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         {/* ================================================================= */}
         {/* PRICING GRID - NEO-BRUTALIST (Updated January 8th, 2026) */}
         {/* ================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {PLANS.map((plan) => {
             const price = billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
             const isPopular = plan.popular;
@@ -519,7 +504,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </button>
 
                   {/* Change Type Indicator - NEO-BRUTALIST - i18n January 10th, 2026 */}
-                  {currentPlan && changeType !== 'same' && changeType !== 'new' && plan.id !== 'enterprise' && (
+                  {currentPlan && changeType !== 'same' && changeType !== 'new' && (
                     <div className={cn(
                       "mb-4 px-3 py-2 text-xs text-center border-2 font-bold",
                       changeType === 'upgrade' && "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-500",
