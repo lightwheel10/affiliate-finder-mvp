@@ -113,7 +113,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // STATE
   // =========================================================================
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>(
-    (currentBillingInterval as 'monthly' | 'annual') || 'annual'
+    (currentBillingInterval as 'monthly' | 'annual') || 'monthly'
   );
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

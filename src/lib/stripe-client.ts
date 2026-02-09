@@ -63,8 +63,6 @@ export const PLAN_PRICING = {
       '5 Brand Projects',
       'Advanced Competitor Analysis',
       'Priority Chat Support',
-      'API Access',
-      'Team Collaboration (5 seats)',
     ],
     popular: true,
   },

@@ -218,7 +218,6 @@ export const en: Dictionary = {
           'Unlimited verified emails',
           'Unlimited brand portfolio',
           'Unlimited team access',
-          'API access & webhooks',
           '24/7 priority support',
         ],
       },
@@ -358,8 +357,6 @@ export const en: Dictionary = {
             '5 Brand Projects',
             'Advanced Competitor Analysis',
             'Priority Chat Support',
-            'API Access',
-            'Team Collaboration (5 seats)',
           ],
         },
         enterprise: {

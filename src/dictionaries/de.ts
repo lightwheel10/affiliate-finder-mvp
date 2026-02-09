@@ -217,7 +217,6 @@ export const de: Dictionary = {
           'Unbegrenzte verifizierte E-Mails',
           'Unbegrenztes Marken-Portfolio',
           'Unbegrenzter Team-Zugang',
-          'API-Zugang und Webhooks',
           '24/7 Priority-Support',
         ],
       },
@@ -358,8 +357,6 @@ export const de: Dictionary = {
             '5 Markenprojekte',
             'Erweiterte Wettbewerber-Analyse',
             'Prioritäts-Chat-Support',
-            'API-Zugang',
-            'Team-Zusammenarbeit (5 Plätze)',
           ],
         },
         enterprise: {
