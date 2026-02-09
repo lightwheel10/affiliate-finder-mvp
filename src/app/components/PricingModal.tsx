@@ -371,26 +371,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         {/* Updated January 10th, 2026 - i18n migration */}
         {/* ================================================================= */}
         {showTrialEndOption && pendingPlanChange && (
-          <div className="mb-6 p-4 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500">
+          <div className="mb-6 p-4 bg-[#ffbf23]/10 dark:bg-[#ffbf23]/10 border-2 border-[#ffbf23]">
             <div className="flex items-start gap-3">
-              <Clock size={20} className="text-blue-500 shrink-0 mt-0.5" />
+              <Clock size={20} className="text-[#ffbf23] shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="text-sm font-black text-blue-900 dark:text-blue-300 mb-1 uppercase">{t.pricingModal.trialTitle}</h4>
-                <p className="text-xs text-blue-700 dark:text-blue-400 mb-4">
+                <h4 className="text-sm font-black text-gray-900 dark:text-white mb-1 uppercase">{t.pricingModal.trialTitle}</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
                   {t.pricingModal.trialMessage}
                 </p>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => handleTrialEndDecision(false)}
-                    disabled={isLoading !== null}
-                    className="px-4 py-2 bg-white dark:bg-gray-900 text-blue-700 dark:text-blue-400 text-xs font-black border-2 border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-all uppercase"
-                  >
-                    {t.pricingModal.keepTrialChangePlan}
-                  </button>
-                  <button
                     onClick={() => handleTrialEndDecision(true)}
                     disabled={isLoading !== null}
-                    className="px-4 py-2 bg-blue-600 text-white text-xs font-black border-2 border-black hover:bg-blue-700 transition-all uppercase"
+                    className="px-4 py-2 bg-[#ffbf23] text-black text-xs font-black border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all uppercase"
                   >
                     {t.pricingModal.endTrialStartBilling}
                   </button>
@@ -478,16 +471,22 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   </div>
 
                   {/* CTA Button - NEO-BRUTALIST */}
+                  {/* February 2026: Trial users on their current plan see a bold "Buy Now" button.
+                      Other plans (upgrade) get a lighter secondary style so "Buy Now" stands out. */}
                   <button
                     onClick={() => handlePlanSelect(plan)}
                     disabled={buttonDisabled}
                     className={cn(
                       "w-full py-3 text-sm font-black mb-8 transition-all duration-200 flex items-center justify-center gap-2 uppercase border-2",
-                      isCurrentPlan
+                      isCurrentPlan && !isTrialing
                         ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
-                        : isPopular 
-                          ? "bg-[#ffbf23] text-black border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]" 
-                          : "bg-black text-white border-black hover:bg-gray-800",
+                        : isCurrentPlan && isTrialing
+                          ? "bg-[#ffbf23] text-black border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]"
+                          : isTrialing
+                            ? "bg-[#ffbf23]/20 text-[#ffbf23] border-[#ffbf23]/50 hover:bg-[#ffbf23]/40 hover:border-[#ffbf23]"
+                            : isPopular
+                              ? "bg-[#ffbf23] text-black border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]"
+                              : "bg-black text-white border-black hover:bg-gray-800",
                       buttonDisabled && !isCurrentPlan && "opacity-50 cursor-not-allowed"
                     )}
                   >
