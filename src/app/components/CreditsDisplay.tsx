@@ -282,14 +282,14 @@ export function CreditsDisplay({ showTopicSearches = true, variant = 'default' }
   }
 
   // ==========================================================================
-  // CASE 4: Success - show real credits
-  // Translated (January 9th, 2026)
-  // Fixed January 13th, 2026: AI credits now use formatCreditDisplay for
-  // consistent remaining/total format (e.g., "30/30" instead of just "30")
+  // CASE 4: Success - show real credits (remaining includes subscription + top-up)
+  // When topup > 0, append "+N" to indicate top-up balance (February 2026)
   // ==========================================================================
-  const topicSearchDisplay = formatCreditDisplay(credits.topicSearches);
-  const emailDisplay = formatCreditDisplay(credits.email);
-  const aiDisplay = formatCreditDisplay(credits.ai);
+  const withTopupHint = (display: string, topup: number | undefined) =>
+    topup && topup > 0 ? `${display} +${topup}` : display;
+  const topicSearchDisplay = withTopupHint(formatCreditDisplay(credits.topicSearches), credits.topicSearches.topup);
+  const emailDisplay = withTopupHint(formatCreditDisplay(credits.email), credits.email.topup);
+  const aiDisplay = withTopupHint(formatCreditDisplay(credits.ai), credits.ai.topup);
 
   return (
     <>

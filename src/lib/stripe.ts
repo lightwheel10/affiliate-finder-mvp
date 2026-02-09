@@ -64,6 +64,35 @@ export const PLAN_DETAILS = {
 } as const;
 
 // =============================================================================
+// ONE-TIME CREDIT PACK PRICE IDs (February 2026)
+// Used for Buy Credits checkout sessions and webhook validation
+// =============================================================================
+export const CREDIT_PACK_PRICES: Record<string, { priceId: string; creditType: 'email' | 'ai' | 'topic_search'; credits: number }> = {
+  email_50: { priceId: process.env.STRIPE_PRICE_EMAIL_50!, creditType: 'email', credits: 50 },
+  email_150: { priceId: process.env.STRIPE_PRICE_EMAIL_150!, creditType: 'email', credits: 150 },
+  email_500: { priceId: process.env.STRIPE_PRICE_EMAIL_500!, creditType: 'email', credits: 500 },
+  ai_50: { priceId: process.env.STRIPE_PRICE_AI_50!, creditType: 'ai', credits: 50 },
+  ai_150: { priceId: process.env.STRIPE_PRICE_AI_150!, creditType: 'ai', credits: 150 },
+  ai_500: { priceId: process.env.STRIPE_PRICE_AI_500!, creditType: 'ai', credits: 500 },
+  search_5: { priceId: process.env.STRIPE_PRICE_SEARCH_5!, creditType: 'topic_search', credits: 5 },
+  search_15: { priceId: process.env.STRIPE_PRICE_SEARCH_15!, creditType: 'topic_search', credits: 15 },
+};
+
+export const CREDIT_PACK_IDS = Object.keys(CREDIT_PACK_PRICES) as string[];
+
+export function getCreditPackPriceId(packId: string): string | null {
+  return CREDIT_PACK_PRICES[packId]?.priceId ?? null;
+}
+
+export function getCreditPackDetails(packId: string): { priceId: string; creditType: 'email' | 'ai' | 'topic_search'; credits: number } | null {
+  return CREDIT_PACK_PRICES[packId] ?? null;
+}
+
+export function isValidCreditPackId(packId: string): boolean {
+  return packId in CREDIT_PACK_PRICES;
+}
+
+// =============================================================================
 // TRIAL CONFIGURATION
 // =============================================================================
 export const TRIAL_DAYS = parseInt(process.env.STRIPE_TRIAL_DAYS || '3', 10);

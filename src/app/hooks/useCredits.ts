@@ -30,6 +30,7 @@ export interface CreditBalance {
   used: number;
   remaining: number;
   unlimited: boolean;
+  topup?: number;
 }
 
 export interface CreditsData {

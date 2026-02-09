@@ -55,7 +55,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan } from '@/lib/credits';
+import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan, addTopupCredits } from '@/lib/credits';
+import { getCreditPackDetails, CREDIT_PACK_PRICES } from '@/lib/stripe';
 import { sendEventToN8N } from '@/lib/n8n-webhook';
 
 // =============================================================================
@@ -220,6 +221,13 @@ export default async function handler(
         break;
       }
 
+      // ONE-TIME CREDIT PACK PURCHASE (February 2026)
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutSessionCompleted(session);
+        break;
+      }
+
       default:
         console.log(`[Webhook] Unhandled event type: ${event.type}`);
     }
@@ -247,6 +255,79 @@ export default async function handler(
 // =============================================================================
 // EVENT HANDLERS
 // =============================================================================
+
+/**
+ * Handle one-time credit pack purchase (checkout.session.completed, mode=payment).
+ * Validates metadata and price, then adds top-up credits via addTopupCredits (idempotent).
+ */
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  if (session.mode !== 'payment' || session.payment_status !== 'paid') {
+    return;
+  }
+  const metadata = session.metadata;
+  if (!metadata?.user_id || !metadata?.pack_id || !metadata?.credit_type || !metadata?.credits_amount) {
+    console.error('[Webhook] checkout.session.completed: missing metadata for credit purchase');
+    return;
+  }
+
+  const packId = metadata.pack_id as string;
+  const packDetails = getCreditPackDetails(packId);
+  if (!packDetails || packDetails.creditType !== metadata.credit_type || packDetails.credits !== parseInt(String(metadata.credits_amount), 10)) {
+    console.error('[Webhook] checkout.session.completed: metadata does not match allowed pack', { packId, metadata });
+    return;
+  }
+
+  const allowedPriceIds = Object.values(CREDIT_PACK_PRICES).map((p) => p.priceId);
+  const lineItems = session.line_items?.data ?? (session as { line_items?: { data?: Stripe.LineItem[] } }).line_items?.data;
+  if (lineItems && lineItems.length > 0) {
+    const priceId = typeof lineItems[0].price === 'string' ? lineItems[0].price : lineItems[0].price?.id;
+    if (priceId && !allowedPriceIds.includes(priceId)) {
+      console.error('[Webhook] checkout.session.completed: price ID not in allowlist', priceId);
+      return;
+    }
+  }
+
+  const userId = parseInt(String(metadata.user_id), 10);
+  if (isNaN(userId)) {
+    console.error('[Webhook] checkout.session.completed: invalid user_id', metadata.user_id);
+    return;
+  }
+
+  const creditType = metadata.credit_type as 'email' | 'ai' | 'topic_search';
+  const amount = packDetails.credits;
+  const sessionId = session.id;
+  if (!sessionId) {
+    console.error('[Webhook] checkout.session.completed: no session id');
+    return;
+  }
+
+  const ok = await addTopupCredits(userId, creditType, amount, sessionId);
+  if (!ok) {
+    console.error('[Webhook] checkout.session.completed: addTopupCredits failed for user', userId);
+  } else {
+    console.log(`[Webhook] ✅ Credit pack completed: ${amount} ${creditType} for user ${userId}`);
+    const users = await sql`
+      SELECT email, name FROM crewcast.users WHERE id = ${userId}
+    `;
+    if (users.length > 0) {
+      const user = users[0];
+      const amountPaid = session.amount_total ?? 0;
+      const currency = (session.currency ?? 'eur').toUpperCase();
+      pendingN8NCalls.push(
+        sendEventToN8N({
+          event_type: 'credit_purchase_success',
+          email: user.email,
+          name: user.name ?? user.email?.split('@')[0] ?? 'User',
+          creditType,
+          creditsAmount: amount,
+          amountPaid,
+          currency,
+        })
+      );
+      console.log(`[Webhook] 📧 Queued credit_purchase_success email for: ${user.email}`);
+    }
+  }
+}
 
 /**
  * Handle subscription created or updated

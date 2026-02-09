@@ -31,6 +31,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 // January 19th, 2026: Removed Stack Auth import
 // import { useUser } from '@stackframe/stack';
@@ -41,6 +42,7 @@ import { Modal } from '../../components/Modal';
 // January 19th, 2026: Migrated from useNeonUser to useSupabaseUser
 import { useSupabaseUser } from '../../hooks/useSupabaseUser';
 import { useSubscription } from '../../hooks/useSubscription';
+import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
 import { 
   User, 
   CreditCard, 
@@ -61,7 +63,11 @@ import {
   Globe,        // January 13th, 2026: Added for country/language section
   Eye,          // January 13th, 2026: Added for password visibility toggle
   EyeOff,       // January 13th, 2026: Added for password visibility toggle
-  Trash2        // January 13th, 2026: Added for delete account
+  Trash2,       // January 13th, 2026: Added for delete account
+  Coins,        // February 2026: Added for Buy Credits tab
+  Sparkles,     // February 2026: Added for AI credits
+  Search,       // February 2026: Added for search credits
+  ShoppingCart  // February 2026: Added for buy credits
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -69,7 +75,7 @@ import {
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type SettingsTab = 'profile' | 'plan' | 'security';
+type SettingsTab = 'profile' | 'plan' | 'buy_credits' | 'security';
 
 // =============================================================================
 // SETTINGS PAGE - January 3rd, 2026
@@ -78,24 +84,49 @@ type SettingsTab = 'profile' | 'plan' | 'security';
 // This component only renders the header and main content area.
 // =============================================================================
 export default function SettingsPage() {
-  // Translation hook (January 9th, 2026)
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
   
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-  // January 19th, 2026: Migrated from Stack Auth useUser() + useNeonUser() to useSupabaseUser()
-  // const user = useUser(); // Removed - Stack Auth
   const { userId, user: neonUser, refetch: refetchNeonUser, supabaseUser } = useSupabaseUser();
   const { subscription, isLoading: subscriptionLoading, isTrialing, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [creditPurchaseSuccess, setCreditPurchaseSuccess] = useState(false);
+  const [creditPurchaseCancelled, setCreditPurchaseCancelled] = useState(false);
+
+  // Sync tab from URL and handle credit_purchase=success | cancelled
+  useEffect(() => {
+    if (!searchParams) return;
+    const tab = searchParams.get('tab');
+    if (tab === 'buy_credits') setActiveTab('buy_credits');
+    const purchase = searchParams.get('credit_purchase');
+    if (purchase === 'success') {
+      setCreditPurchaseSuccess(true);
+      setCreditPurchaseCancelled(false);
+      setActiveTab('buy_credits');
+      window.dispatchEvent(new CustomEvent('credits-updated'));
+      const url = new URL(window.location.href);
+      url.searchParams.delete('credit_purchase');
+      window.history.replaceState({}, '', url.toString());
+    } else if (purchase === 'cancelled') {
+      setCreditPurchaseCancelled(true);
+      setCreditPurchaseSuccess(false);
+      setActiveTab('buy_credits');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('credit_purchase');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
 
   // Tabs - Translated (January 9th, 2026)
   // February 2, 2026: Removed notifications tab - was non-functional placeholder UI
   const tabs = [
     { id: 'profile', label: t.dashboard.settings.tabs.profile.label, icon: <User size={16} />, description: t.dashboard.settings.tabs.profile.description },
     { id: 'plan', label: t.dashboard.settings.tabs.plan.label, icon: <CreditCard size={16} />, description: t.dashboard.settings.tabs.plan.description },
+    { id: 'buy_credits', label: t.dashboard.settings.tabs.buyCredits.label, icon: <Coins size={16} />, description: t.dashboard.settings.tabs.buyCredits.description },
     { id: 'security', label: t.dashboard.settings.tabs.security.label, icon: <Shield size={16} />, description: t.dashboard.settings.tabs.security.description },
   ];
 
@@ -178,6 +209,16 @@ export default function SettingsPage() {
                       onAddCard={() => setIsAddCardModalOpen(true)}
                       onCancelPlan={() => setIsCancelModalOpen(true)}
                       userId={userId}
+                    />
+                  )}
+                  {activeTab === 'buy_credits' && (
+                    <BuyCreditsSettings
+                      userId={userId}
+                      isTrialing={isTrialing}
+                      creditPurchaseSuccess={creditPurchaseSuccess}
+                      creditPurchaseCancelled={creditPurchaseCancelled}
+                      onDismissPurchaseSuccess={() => setCreditPurchaseSuccess(false)}
+                      onDismissPurchaseCancelled={() => setCreditPurchaseCancelled(false)}
                     />
                   )}
                   {activeTab === 'security' && <SecuritySettings user={supabaseUser} neonUserId={userId} />}  {/* January 19th, 2026: Changed from Stack user */}
@@ -1195,6 +1236,273 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// =============================================================================
+// BUY CREDITS SETTINGS - NEO-BRUTALIST (February 2026)
+//
+// One-time credit top-up purchase UI.
+// Credits are added on top of the monthly plan allocation.
+// Top-up credits never expire and persist across billing cycles.
+//
+// Credit packs: Email credits, AI Outreach credits, Topic Searches
+// Stripe one-time payment (not subscription).
+// =============================================================================
+
+const CREDIT_PACKS = {
+  email: [
+    { id: 'email_50', credits: 50, price: 19 },
+    { id: 'email_150', credits: 150, price: 49 },
+    { id: 'email_500', credits: 500, price: 129 },
+  ],
+  ai: [
+    { id: 'ai_50', credits: 50, price: 19 },
+    { id: 'ai_150', credits: 150, price: 49 },
+    { id: 'ai_500', credits: 500, price: 129 },
+  ],
+  search: [
+    { id: 'search_5', credits: 5, price: 29 },
+    { id: 'search_15', credits: 15, price: 69 },
+  ],
+} as const;
+
+interface BuyCreditsSettingsProps {
+  userId: number | null;
+  isTrialing?: boolean;
+  creditPurchaseSuccess?: boolean;
+  creditPurchaseCancelled?: boolean;
+  onDismissPurchaseSuccess?: () => void;
+  onDismissPurchaseCancelled?: () => void;
+}
+
+function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess = false, creditPurchaseCancelled = false, onDismissPurchaseSuccess, onDismissPurchaseCancelled }: BuyCreditsSettingsProps) {
+  const { t } = useLanguage();
+  const [selectedCategory, setSelectedCategory] = useState<'email' | 'ai' | 'search'>('email');
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+
+  const categories = [
+    { id: 'email' as const, label: 'Email Credits', icon: <Mail size={16} />, description: 'Verified email lookups for affiliates' },
+    { id: 'ai' as const, label: 'AI Outreach', icon: <Sparkles size={16} />, description: 'AI-generated personalized outreach emails' },
+    { id: 'search' as const, label: 'Topic Searches', icon: <Search size={16} />, description: 'Find new affiliates by topic' },
+  ];
+
+  const handlePurchase = async (packId: string) => {
+    if (!userId) return;
+    setPurchasingId(packId);
+    setPurchaseError(null);
+    try {
+      const res = await fetch('/api/stripe/buy-credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, packId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPurchaseError(data.error || 'Failed to start checkout');
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setPurchaseError('Invalid response from server');
+    } catch (err) {
+      setPurchaseError('Network error. Please try again.');
+    } finally {
+      setPurchasingId(null);
+    }
+  };
+
+  const currentPacks = CREDIT_PACKS[selectedCategory];
+
+  return (
+    <div className="space-y-8">
+      {creditPurchaseSuccess && (
+        <div className="p-4 bg-green-500/10 border-2 border-green-500 flex items-center justify-between">
+          <span className="text-sm font-bold text-green-800 dark:text-green-200">Credits added successfully. Your balance has been updated.</span>
+          {onDismissPurchaseSuccess && (
+            <button type="button" onClick={onDismissPurchaseSuccess} className="text-green-700 dark:text-green-300 hover:underline text-xs font-black uppercase">
+              Dismiss
+            </button>
+          )}
+        </div>
+      )}
+      {creditPurchaseCancelled && (
+        <div className="p-4 bg-gray-200 dark:bg-gray-700 border-2 border-gray-400 dark:border-gray-600 flex items-center justify-between">
+          <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Purchase cancelled. You can try again whenever you’re ready.</span>
+          {onDismissPurchaseCancelled && (
+            <button type="button" onClick={onDismissPurchaseCancelled} className="text-gray-600 dark:text-gray-300 hover:underline text-xs font-black uppercase">
+              Dismiss
+            </button>
+          )}
+        </div>
+      )}
+      {isTrialing && (
+        <div className="p-4 bg-amber-500/10 border-2 border-amber-500 flex items-start gap-3">
+          <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Credit packs are for paid subscribers only</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">Subscribe or end your trial to purchase add-on credits.</p>
+          </div>
+        </div>
+      )}
+      {purchaseError && (
+        <div className="p-4 bg-red-500/10 border-2 border-red-500 flex items-center justify-between">
+          <span className="text-sm font-bold text-red-800 dark:text-red-200">{purchaseError}</span>
+          <button type="button" onClick={() => setPurchaseError(null)} className="text-red-700 dark:text-red-300 hover:underline text-xs font-black uppercase">
+            Dismiss
+          </button>
+        </div>
+      )}
+      {/* Header */}
+      <div className="p-4 bg-[#ffbf23]/10 border-2 border-[#ffbf23]">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-[#ffbf23] border-2 border-black">
+            <Coins size={20} className="text-black" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase">Top Up Credits</h3>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              Purchase additional credits instantly. Top-up credits never expire and are used after your monthly plan credits.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Selector */}
+      <div>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Select Credit Type</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={cn(
+                "p-4 border-2 text-left transition-all duration-200",
+                selectedCategory === cat.id
+                  ? "bg-[#ffbf23]/10 border-[#ffbf23] shadow-[3px_3px_0px_0px_#ffbf23]"
+                  : "bg-white dark:bg-[#0f0f0f] border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
+              )}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className={cn(
+                  selectedCategory === cat.id ? "text-[#ffbf23]" : "text-gray-400"
+                )}>
+                  {cat.icon}
+                </span>
+                <span className={cn(
+                  "text-xs font-black uppercase",
+                  selectedCategory === cat.id ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"
+                )}>
+                  {cat.label}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 leading-relaxed">{cat.description}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Credit Packs */}
+      <div>
+        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Choose a Pack</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {currentPacks.map((pack, idx) => {
+            const isPopular = idx === 1;
+            const isPurchasing = purchasingId === pack.id;
+
+            return (
+              <div
+                key={pack.id}
+                className={cn(
+                  "relative p-5 border-2 flex flex-col transition-all duration-200",
+                  isPopular
+                    ? "border-[#ffbf23] shadow-[4px_4px_0px_0px_#ffbf23] bg-white dark:bg-[#0f0f0f]"
+                    : "border-black dark:border-gray-600 shadow-[3px_3px_0px_0px_#000000] dark:shadow-[3px_3px_0px_0px_#333333] bg-white dark:bg-[#0f0f0f]"
+                )}
+              >
+                {isPopular && (
+                  <div className="absolute -top-3 left-0 right-0 flex justify-center">
+                    <span className="bg-black text-[#ffbf23] text-[10px] font-black uppercase tracking-wide px-2 py-0.5 border-2 border-[#ffbf23]">
+                      Best Value
+                    </span>
+                  </div>
+                )}
+
+                {/* Credits amount */}
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={cn(
+                      selectedCategory === 'email' ? "text-blue-500" : selectedCategory === 'ai' ? "text-purple-500" : "text-[#ffbf23]"
+                    )}>
+                      {selectedCategory === 'email' ? <Mail size={16} /> : selectedCategory === 'ai' ? <Sparkles size={16} /> : <Search size={16} />}
+                    </span>
+                    <span className="text-2xl font-black text-gray-900 dark:text-white">{pack.credits}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wide">credits</p>
+                </div>
+
+                {/* Price */}
+                <div className="mb-4">
+                  <span className="text-2xl font-black text-gray-900 dark:text-white">{CURRENCY_SYMBOL}{pack.price}</span>
+                </div>
+
+                {/* Buy button */}
+                <button
+                  onClick={() => handlePurchase(pack.id)}
+                  disabled={isPurchasing || !userId || isTrialing}
+                  className={cn(
+                    "w-full py-2.5 text-xs font-black uppercase border-2 transition-all duration-200 flex items-center justify-center gap-2",
+                    isPopular
+                      ? "bg-[#ffbf23] text-black border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]"
+                      : "bg-black text-white border-black hover:bg-gray-800",
+                    (isPurchasing || !userId || isTrialing) && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  {isPurchasing ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <>
+                      <ShoppingCart size={12} />
+                      Buy Now
+                    </>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Info footer */}
+      <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-gray-500">
+          <div className="flex items-start gap-2">
+            <Clock size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
+            <div>
+              <p className="font-black text-gray-900 dark:text-white uppercase">Never Expire</p>
+              <p>Top-up credits stay in your account forever</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Zap size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
+            <div>
+              <p className="font-black text-gray-900 dark:text-white uppercase">Instant Delivery</p>
+              <p>Credits added to your account immediately</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Shield size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
+            <div>
+              <p className="font-black text-gray-900 dark:text-white uppercase">Secure Payment</p>
+              <p>Processed securely through Stripe</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

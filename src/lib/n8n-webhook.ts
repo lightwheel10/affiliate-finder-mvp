@@ -10,6 +10,7 @@
  * - payment_success: Invoice paid (Stripe: invoice.paid)
  * - payment_failed: Invoice payment failed (Stripe: invoice.payment_failed)
  * - subscription_canceled: Subscription deleted (Stripe: customer.subscription.deleted)
+ * - credit_purchase_success: One-time credit pack purchased (Stripe: checkout.session.completed)
  * 
  * SECURITY:
  * - Server-side only (never expose webhook URL to client)
@@ -30,7 +31,8 @@ export type N8NEventType =
   | 'trial_ending'
   | 'payment_success'
   | 'payment_failed'
-  | 'subscription_canceled';
+  | 'subscription_canceled'
+  | 'credit_purchase_success';
 
 // Base event data - all events include these fields
 export interface N8NBaseEvent {
@@ -75,13 +77,23 @@ export interface N8NSubscriptionCanceledEvent extends N8NBaseEvent {
   plan: string;
 }
 
+// Credit purchase success (one-time pack)
+export interface N8NCreditPurchaseSuccessEvent extends N8NBaseEvent {
+  event_type: 'credit_purchase_success';
+  creditType: 'email' | 'ai' | 'topic_search';
+  creditsAmount: number;
+  amountPaid: number; // in cents
+  currency: string;
+}
+
 // Union type for all events
 export type N8NEventData = 
   | N8NSignupEvent
   | N8NTrialEndingEvent
   | N8NPaymentSuccessEvent
   | N8NPaymentFailedEvent
-  | N8NSubscriptionCanceledEvent;
+  | N8NSubscriptionCanceledEvent
+  | N8NCreditPurchaseSuccessEvent;
 
 // =============================================================================
 // LEGACY TYPE (backwards compatibility)

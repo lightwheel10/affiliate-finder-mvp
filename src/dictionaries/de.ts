@@ -731,6 +731,10 @@ export const de: Dictionary = {
           label: 'Sicherheit',
           description: 'Schütze dein Konto',
         },
+        buyCredits: {
+          label: 'Credits kaufen',
+          description: 'Zusätzliche Credits erwerben',
+        },
       },
       // =======================================================================
       // PROFILE SECTION - Updated January 17, 2026

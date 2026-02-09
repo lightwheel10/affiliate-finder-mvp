@@ -62,18 +62,21 @@ export interface UserCredits {
     used: number;
     remaining: number;
     unlimited: boolean;
+    topup: number;
   };
   email: {
     total: number;
     used: number;
     remaining: number;
     unlimited: boolean;
+    topup: number;
   };
   ai: {
     total: number;
     used: number;
     remaining: number;
     unlimited: boolean;
+    topup: number;
   };
   period: {
     start: string;
@@ -100,6 +103,9 @@ export interface DbUserCredits {
   topic_search_credits_used: number;
   email_credits_used: number;
   ai_credits_used: number;
+  topic_search_credits_topup?: number;
+  email_credits_topup?: number;
+  ai_credits_topup?: number;
   period_start: string;
   period_end: string;
   is_trial_period: boolean;
@@ -132,29 +138,39 @@ export async function getUserCredits(userId: number): Promise<UserCredits | null
     const periodEnd = new Date(row.period_end);
     const daysRemaining = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
 
-    // Check if unlimited (-1 means unlimited)
+    const tsTopup = row.topic_search_credits_topup ?? 0;
+    const emailTopup = row.email_credits_topup ?? 0;
+    const aiTopup = row.ai_credits_topup ?? 0;
+
     const isTopicSearchUnlimited = row.topic_search_credits_total === -1;
     const isEmailUnlimited = row.email_credits_total === -1;
     const isAiUnlimited = row.ai_credits_total === -1;
+
+    const tsSubRem = isTopicSearchUnlimited ? -1 : Math.max(0, row.topic_search_credits_total - row.topic_search_credits_used);
+    const emailSubRem = isEmailUnlimited ? -1 : Math.max(0, row.email_credits_total - row.email_credits_used);
+    const aiSubRem = isAiUnlimited ? -1 : Math.max(0, row.ai_credits_total - row.ai_credits_used);
 
     return {
       topicSearches: {
         total: isTopicSearchUnlimited ? -1 : row.topic_search_credits_total,
         used: row.topic_search_credits_used,
-        remaining: isTopicSearchUnlimited ? -1 : Math.max(0, row.topic_search_credits_total - row.topic_search_credits_used),
+        remaining: isTopicSearchUnlimited ? -1 : tsSubRem + tsTopup,
         unlimited: isTopicSearchUnlimited,
+        topup: tsTopup,
       },
       email: {
         total: isEmailUnlimited ? -1 : row.email_credits_total,
         used: row.email_credits_used,
-        remaining: isEmailUnlimited ? -1 : Math.max(0, row.email_credits_total - row.email_credits_used),
+        remaining: isEmailUnlimited ? -1 : emailSubRem + emailTopup,
         unlimited: isEmailUnlimited,
+        topup: emailTopup,
       },
       ai: {
         total: isAiUnlimited ? -1 : row.ai_credits_total,
         used: row.ai_credits_used,
-        remaining: isAiUnlimited ? -1 : Math.max(0, row.ai_credits_total - row.ai_credits_used),
+        remaining: isAiUnlimited ? -1 : aiSubRem + aiTopup,
         unlimited: isAiUnlimited,
+        topup: aiTopup,
       },
       period: {
         start: row.period_start,
@@ -191,10 +207,13 @@ export async function checkCredits(
       SELECT 
         topic_search_credits_total,
         topic_search_credits_used,
+        topic_search_credits_topup,
         email_credits_total,
         email_credits_used,
+        email_credits_topup,
         ai_credits_total,
         ai_credits_used,
+        ai_credits_topup,
         period_end
       FROM crewcast.user_credits 
       WHERE user_id = ${userId}
@@ -225,22 +244,26 @@ export async function checkCredits(
       };
     }
 
-    // Get the relevant credit values based on type
+    // Get the relevant credit values based on type (include topup)
     let total: number;
     let used: number;
-    
+    let topup: number;
+
     switch (creditType) {
       case 'topic_search':
         total = row.topic_search_credits_total;
         used = row.topic_search_credits_used;
+        topup = row.topic_search_credits_topup ?? 0;
         break;
       case 'email':
         total = row.email_credits_total;
         used = row.email_credits_used;
+        topup = row.email_credits_topup ?? 0;
         break;
       case 'ai':
         total = row.ai_credits_total;
         used = row.ai_credits_used;
+        topup = row.ai_credits_topup ?? 0;
         break;
       default:
         return {
@@ -262,7 +285,8 @@ export async function checkCredits(
       };
     }
 
-    const remaining = Math.max(0, total - used);
+    const subRemaining = Math.max(0, total - used);
+    const remaining = subRemaining + topup;
     const allowed = remaining >= amount;
 
     return {
@@ -306,47 +330,84 @@ export async function consumeCredits(
   referenceType?: string
 ): Promise<{ success: boolean; newBalance: number }> {
   try {
-    // SECURITY: Validate amount is positive to prevent credit injection
     if (amount <= 0 || !Number.isInteger(amount)) {
       console.error(`[Credits] SECURITY: Invalid amount ${amount} rejected for user ${userId}`);
       return { success: false, newBalance: 0 };
     }
 
+    const rowResult = await sql`
+      SELECT 
+        topic_search_credits_total, topic_search_credits_used, topic_search_credits_topup,
+        email_credits_total, email_credits_used, email_credits_topup,
+        ai_credits_total, ai_credits_used, ai_credits_topup
+      FROM crewcast.user_credits
+      WHERE user_id = ${userId}
+    `;
+    if (rowResult.length === 0) {
+      return { success: false, newBalance: 0 };
+    }
+
+    const r = rowResult[0];
+    let total: number; let used: number; let topup: number;
+    switch (creditType) {
+      case 'topic_search':
+        total = r.topic_search_credits_total; used = r.topic_search_credits_used; topup = r.topic_search_credits_topup ?? 0;
+        break;
+      case 'email':
+        total = r.email_credits_total; used = r.email_credits_used; topup = r.email_credits_topup ?? 0;
+        break;
+      case 'ai':
+        total = r.ai_credits_total; used = r.ai_credits_used; topup = r.ai_credits_topup ?? 0;
+        break;
+      default:
+        return { success: false, newBalance: 0 };
+    }
+
+    const subRem = total === -1 ? Infinity : Math.max(0, total - used);
+    const totalAvailable = (total === -1 ? used + amount : subRem) + topup;
+    if (total === -1) {
+      // unlimited subscription: just add to used (conceptually we have unlimited so no topup needed)
+    } else if (totalAvailable < amount) {
+      console.error('[Credits] Failed to consume credits - insufficient or no record');
+      return { success: false, newBalance: 0 };
+    }
+
+    const fromSub = total === -1 ? amount : Math.min(amount, subRem);
+    const fromTopup = amount - fromSub;
+
     let updateResult;
-    
-    // Use separate queries for each credit type (Neon doesn't support dynamic column names)
     switch (creditType) {
       case 'topic_search':
         updateResult = await sql`
           UPDATE crewcast.user_credits
           SET 
-            topic_search_credits_used = topic_search_credits_used + ${amount},
+            topic_search_credits_used = topic_search_credits_used + ${fromSub},
+            topic_search_credits_topup = GREATEST(0, COALESCE(topic_search_credits_topup, 0) - ${fromTopup}),
             updated_at = NOW()
           WHERE user_id = ${userId}
-            AND (topic_search_credits_total = -1 OR topic_search_credits_total - topic_search_credits_used >= ${amount})
-          RETURNING topic_search_credits_total as total, topic_search_credits_used as used
+          RETURNING topic_search_credits_total as total, topic_search_credits_used as used, topic_search_credits_topup as topup
         `;
         break;
       case 'email':
         updateResult = await sql`
           UPDATE crewcast.user_credits
           SET 
-            email_credits_used = email_credits_used + ${amount},
+            email_credits_used = email_credits_used + ${fromSub},
+            email_credits_topup = GREATEST(0, COALESCE(email_credits_topup, 0) - ${fromTopup}),
             updated_at = NOW()
           WHERE user_id = ${userId}
-            AND (email_credits_total = -1 OR email_credits_total - email_credits_used >= ${amount})
-          RETURNING email_credits_total as total, email_credits_used as used
+          RETURNING email_credits_total as total, email_credits_used as used, email_credits_topup as topup
         `;
         break;
       case 'ai':
         updateResult = await sql`
           UPDATE crewcast.user_credits
           SET 
-            ai_credits_used = ai_credits_used + ${amount},
+            ai_credits_used = ai_credits_used + ${fromSub},
+            ai_credits_topup = GREATEST(0, COALESCE(ai_credits_topup, 0) - ${fromTopup}),
             updated_at = NOW()
           WHERE user_id = ${userId}
-            AND (ai_credits_total = -1 OR ai_credits_total - ai_credits_used >= ${amount})
-          RETURNING ai_credits_total as total, ai_credits_used as used
+          RETURNING ai_credits_total as total, ai_credits_used as used, ai_credits_topup as topup
         `;
         break;
       default:
@@ -354,14 +415,12 @@ export async function consumeCredits(
     }
 
     if (updateResult.length === 0) {
-      console.error('[Credits] Failed to consume credits - insufficient or no record');
       return { success: false, newBalance: 0 };
     }
 
-    const { total, used } = updateResult[0];
-    const newBalance = total === -1 ? -1 : Math.max(0, total - used);
+    const u = updateResult[0];
+    const newBalance = u.total === -1 ? -1 : Math.max(0, u.total - u.used) + (u.topup ?? 0);
 
-    // Log the transaction
     await sql`
       INSERT INTO crewcast.credit_transactions (
         user_id, credit_type, amount, balance_after, reason, reference_id, reference_type
@@ -371,7 +430,6 @@ export async function consumeCredits(
     `;
 
     console.log(`[Credits] Consumed ${amount} ${creditType} credit(s) for user ${userId}. New balance: ${newBalance}`);
-    
     return { success: true, newBalance };
   } catch (error) {
     console.error('[Credits] Error consuming credits:', error);
@@ -684,6 +742,105 @@ export async function resetCreditsForNewPeriod(
     return true;
   } catch (error) {
     console.error('[Credits] Error resetting credits:', error);
+    return false;
+  }
+}
+
+// =============================================================================
+// ADD TOP-UP CREDITS (One-time purchase from Stripe Checkout)
+// Idempotent: checks credit_purchases table before adding.
+// =============================================================================
+
+/**
+ * Add top-up credits after successful one-time purchase.
+ * Called from Stripe webhook checkout.session.completed.
+ *
+ * @param userId - Database user ID
+ * @param creditType - 'email' | 'ai' | 'topic_search'
+ * @param amount - Credits to add
+ * @param checkoutSessionId - Stripe checkout session ID (for idempotency)
+ * @returns true if credits were added or already completed, false on error
+ */
+export async function addTopupCredits(
+  userId: number,
+  creditType: CreditType,
+  amount: number,
+  checkoutSessionId: string
+): Promise<boolean> {
+  try {
+    if (amount <= 0 || !Number.isInteger(amount)) {
+      console.error(`[Credits] SECURITY: Invalid topup amount ${amount} rejected`);
+      return false;
+    }
+
+    const existing = await sql`
+      SELECT id, status FROM crewcast.credit_purchases
+      WHERE stripe_checkout_session_id = ${checkoutSessionId}
+    `;
+    if (existing.length === 0) {
+      console.error(`[Credits] No credit_purchases row for session ${checkoutSessionId}`);
+      return false;
+    }
+    if (existing[0].status === 'completed') {
+      console.log(`[Credits] Idempotency: session ${checkoutSessionId} already completed`);
+      return true;
+    }
+
+    let updateResult;
+    switch (creditType) {
+      case 'topic_search':
+        updateResult = await sql`
+          UPDATE crewcast.user_credits
+          SET topic_search_credits_topup = COALESCE(topic_search_credits_topup, 0) + ${amount},
+              updated_at = NOW()
+          WHERE user_id = ${userId}
+          RETURNING topic_search_credits_topup as topup
+        `;
+        break;
+      case 'email':
+        updateResult = await sql`
+          UPDATE crewcast.user_credits
+          SET email_credits_topup = COALESCE(email_credits_topup, 0) + ${amount},
+              updated_at = NOW()
+          WHERE user_id = ${userId}
+          RETURNING email_credits_topup as topup
+        `;
+        break;
+      case 'ai':
+        updateResult = await sql`
+          UPDATE crewcast.user_credits
+          SET ai_credits_topup = COALESCE(ai_credits_topup, 0) + ${amount},
+              updated_at = NOW()
+          WHERE user_id = ${userId}
+          RETURNING ai_credits_topup as topup
+        `;
+        break;
+      default:
+        return false;
+    }
+
+    if (updateResult.length === 0) {
+      console.error(`[Credits] No user_credits row for user ${userId} - cannot add topup`);
+      return false;
+    }
+
+    const newBalance = updateResult[0].topup ?? amount;
+
+    await sql`
+      INSERT INTO crewcast.credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
+      VALUES (${userId}, ${creditType}, ${amount}, ${newBalance}, 'topup_purchase', 'credit_purchase')
+    `;
+
+    await sql`
+      UPDATE crewcast.credit_purchases
+      SET status = 'completed', completed_at = NOW()
+      WHERE stripe_checkout_session_id = ${checkoutSessionId}
+    `;
+
+    console.log(`[Credits] Added ${amount} ${creditType} topup for user ${userId} (session ${checkoutSessionId})`);
+    return true;
+  } catch (error) {
+    console.error('[Credits] Error adding topup credits:', error);
     return false;
   }
 }

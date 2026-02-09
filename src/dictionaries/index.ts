@@ -705,6 +705,10 @@ export interface Dictionary {
           label: string;
           description: string;
         };
+        buyCredits: {
+          label: string;
+          description: string;
+        };
       };
       // =======================================================================
       // PROFILE SECTION - Updated January 17, 2026
