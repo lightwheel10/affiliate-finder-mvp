@@ -573,6 +573,10 @@ export const de: Dictionary = {
         deleteSelected: 'Ausgewählte löschen',
         saveToPipeline: 'In Pipeline speichern',
         allAlreadySaved: 'Alle bereits gespeichert',
+        blockDomains: 'Domain(s) sperren',
+        blockLimitReached: 'Sperrlimit erreicht (max. 10)',
+        blockDomainDone: 'Domain gesperrt',
+        blockDomainsDone: 'Domains gesperrt',
       },
       newSearchWarning: {
         title: 'Neue Suche gestartet',
@@ -735,6 +739,21 @@ export const de: Dictionary = {
           label: 'Credits kaufen',
           description: 'Zusätzliche Credits erwerben',
         },
+        blockedDomains: {
+          label: 'Gesperrte Domains',
+          description: 'Von dir gesperrte Domains',
+        },
+      },
+      blockedDomains: {
+        title: 'Gesperrte Domains',
+        description: 'Gesperrte Domains erscheinen nicht mehr in deinen Suchergebnissen.',
+        counter: '{count} / 10 Domains gesperrt',
+        emptyTitle: 'Keine gesperrten Domains',
+        emptySubtitle: 'Domains kannst du in den Affiliate-Zeilen (Finden, Entdeckt, Gespeichert) sperren.',
+        unblock: 'Entsperren',
+        confirmUnblock: 'Bestätigen?',
+        domainBlockedOn: 'Gesperrt am',
+        limitReached: 'Sperrlimit erreicht (max. 10)',
       },
       // =======================================================================
       // PROFILE SECTION - Updated January 17, 2026
@@ -1339,6 +1358,9 @@ export const de: Dictionary = {
       delete: 'Löschen',
       view: 'Ansehen',
     },
+    blockDomain: 'Domain sperren',
+    confirmBlock: 'Bestätigen?',
+    blockLimitReached: 'Sperrlimit erreicht (max. 10)',
     contentModal: {
       title: 'Relevanter Inhalt',
       articles: 'Artikel',

@@ -68,6 +68,13 @@ export interface DbUser {
   updated_at: string;
 }
 
+export interface DbUserBlockedDomain {
+  id: number;
+  user_id: number;
+  domain: string;
+  created_at: string;
+}
+
 export interface DbSavedAffiliate {
   id: number;
   user_id: number;

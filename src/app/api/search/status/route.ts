@@ -919,12 +919,16 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         }
         return result;
       });
-      
+
+      const blockedDomainsRows = await sql`SELECT domain FROM crewcast.user_blocked_domains WHERE user_id = ${userId}`;
+      const excludeDomains = (blockedDomainsRows as { domain: string }[]).map(r => r.domain);
+
       // Apply filtering
       const filteredWeb = filterWebResults(enrichedWeb, {
         userBrand: userSettings?.userBrand || undefined,
         targetCountry: userSettings?.targetCountry || undefined,
         targetLanguage: userSettings?.targetLanguage || undefined,
+        excludeDomains,
       });
       
       // Filter out results without enrichment data - user wants quality over quantity
@@ -1296,12 +1300,15 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     if (!hasResultsToEnrich) {
       // No results to enrich - return done immediately
       console.log(`🔍 [Search/Status] No results to enrich, returning immediately`);
-      
+      const blockedDomainsRowsNoEnrich = await sql`SELECT domain FROM crewcast.user_blocked_domains WHERE user_id = ${userId}`;
+      const excludeDomainsNoEnrich = (blockedDomainsRowsNoEnrich as { domain: string }[]).map(r => r.domain);
+
       // Apply web filtering
       const filteredWeb = filterWebResults(webResults, {
         userBrand: userSettings?.userBrand || undefined,
         targetCountry: userSettings?.targetCountry || undefined,
         targetLanguage: userSettings?.targetLanguage || undefined,
+        excludeDomains: excludeDomainsNoEnrich,
       });
       
       const allResults = filteredWeb;

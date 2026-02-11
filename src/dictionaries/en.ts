@@ -573,6 +573,10 @@ export const en: Dictionary = {
         deleteSelected: 'Delete Selected',
         saveToPipeline: 'Save to Pipeline',
         allAlreadySaved: 'All Already Saved',
+        blockDomains: 'Block domain(s)',
+        blockLimitReached: 'Block limit reached (10 max)',
+        blockDomainDone: 'Domain blocked',
+        blockDomainsDone: 'domains blocked',
       },
       newSearchWarning: {
         title: 'New search started',
@@ -735,6 +739,21 @@ export const en: Dictionary = {
           label: 'Buy Credits',
           description: 'Purchase additional credits',
         },
+        blockedDomains: {
+          label: 'Blocked Domains',
+          description: 'Domains you blocked from results',
+        },
+      },
+      blockedDomains: {
+        title: 'Blocked Domains',
+        description: "Domains you've blocked won't appear in your search results.",
+        counter: '{count} / 10 domains blocked',
+        emptyTitle: 'No blocked domains',
+        emptySubtitle: 'Block domains from affiliate rows on Find, Discovered, or Saved pages.',
+        unblock: 'Unblock',
+        confirmUnblock: 'Confirm?',
+        domainBlockedOn: 'Blocked on',
+        limitReached: 'Block limit reached (10 max)',
       },
       // =======================================================================
       // PROFILE SECTION - Updated January 17, 2026
@@ -1343,6 +1362,9 @@ export const en: Dictionary = {
       delete: 'Delete',
       view: 'View',
     },
+    blockDomain: 'Block domain',
+    confirmBlock: 'Confirm?',
+    blockLimitReached: 'Block limit reached (10 max)',
     contentModal: {
       title: 'Relevant Content',
       articles: 'articles',

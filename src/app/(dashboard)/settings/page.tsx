@@ -67,15 +67,17 @@ import {
   Coins,        // February 2026: Added for Buy Credits tab
   Sparkles,     // February 2026: Added for AI credits
   Search,       // February 2026: Added for search credits
-  ShoppingCart  // February 2026: Added for buy credits
+  ShoppingCart, // February 2026: Added for buy credits
+  Ban           // February 2026: Added for Blocked Domains tab
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useBlockedDomains } from '../../hooks/useBlockedDomains';
 
-type SettingsTab = 'profile' | 'plan' | 'buy_credits' | 'security';
+type SettingsTab = 'profile' | 'plan' | 'buy_credits' | 'security' | 'blocked_domains';
 
 // =============================================================================
 // SETTINGS PAGE - January 3rd, 2026
@@ -149,6 +151,7 @@ export default function SettingsPage() {
     { id: 'profile', label: t.dashboard.settings.tabs.profile.label, icon: <User size={16} />, description: t.dashboard.settings.tabs.profile.description },
     { id: 'plan', label: t.dashboard.settings.tabs.plan.label, icon: <CreditCard size={16} />, description: t.dashboard.settings.tabs.plan.description },
     { id: 'buy_credits', label: t.dashboard.settings.tabs.buyCredits.label, icon: <Coins size={16} />, description: t.dashboard.settings.tabs.buyCredits.description },
+    { id: 'blocked_domains', label: t.dashboard.settings.tabs.blockedDomains.label, icon: <Ban size={16} />, description: t.dashboard.settings.tabs.blockedDomains.description },
     { id: 'security', label: t.dashboard.settings.tabs.security.label, icon: <Shield size={16} />, description: t.dashboard.settings.tabs.security.description },
   ];
 
@@ -244,6 +247,7 @@ export default function SettingsPage() {
                       onDismissPurchaseCancelled={() => setCreditPurchaseCancelled(false)}
                     />
                   )}
+                  {activeTab === 'blocked_domains' && <BlockedDomainsSettings />}
                   {activeTab === 'security' && <SecuritySettings user={supabaseUser} neonUserId={userId} />}  {/* January 19th, 2026: Changed from Stack user */}
                 </div>
               </div>
@@ -1555,6 +1559,95 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// BLOCKED DOMAINS SETTINGS - February 2026
+// =============================================================================
+function BlockedDomainsSettings() {
+  const { t } = useLanguage();
+  const { rawData, unblockDomain, count, isLoading } = useBlockedDomains();
+  const [unblockConfirming, setUnblockConfirming] = useState<string | null>(null);
+  const unblockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleUnblockClick = (domain: string) => {
+    if (unblockConfirming === domain) {
+      if (unblockTimeoutRef.current) clearTimeout(unblockTimeoutRef.current);
+      setUnblockConfirming(null);
+      unblockDomain(domain);
+    } else {
+      setUnblockConfirming(domain);
+      unblockTimeoutRef.current = setTimeout(() => setUnblockConfirming(null), 3000);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (unblockTimeoutRef.current) clearTimeout(unblockTimeoutRef.current);
+    };
+  }, []);
+
+  const st = t.dashboard.settings.blockedDomains;
+  const title = st.title;
+  const description = st.description;
+  const counter = st.counter;
+  const emptyTitle = st.emptyTitle;
+  const emptySubtitle = st.emptySubtitle;
+  const unblockBtn = st.unblock;
+  const confirmUnblock = st.confirmUnblock;
+  const domainBlockedOn = st.domainBlockedOn;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 size={24} className="animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wide">{title}</h2>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{description}</p>
+        <p className="mt-2 text-xs font-bold text-gray-500 dark:text-gray-500">
+          {counter.replace('{count}', String(count))}
+        </p>
+      </div>
+      {rawData.length === 0 ? (
+        <div className="py-12 border-2 border-gray-200 dark:border-gray-700 rounded-lg text-center">
+          <p className="font-bold text-gray-900 dark:text-white">{emptyTitle}</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{emptySubtitle}</p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {rawData.map((row: { domain: string; created_at: string }) => (
+            <li
+              key={row.domain}
+              className="flex items-center justify-between gap-4 py-3 px-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700"
+            >
+              <div>
+                <span className="font-bold text-gray-900 dark:text-white">{row.domain}</span>
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                  {domainBlockedOn} {row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}
+                </span>
+              </div>
+              <button
+                onClick={() => handleUnblockClick(row.domain)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border-2 transition-all ${
+                  unblockConfirming === row.domain
+                    ? 'bg-red-500 text-white border-red-600 animate-pulse'
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
+                }`}
+              >
+                {unblockConfirming === row.domain ? confirmUnblock : unblockBtn}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

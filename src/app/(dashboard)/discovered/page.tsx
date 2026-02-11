@@ -43,6 +43,7 @@ import { ScanCountdown } from '../../components/ScanCountdown';
 import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
 import { CreditsDisplay } from '../../components/CreditsDisplay';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../../hooks/useAffiliates';
+import { useBlockedDomains } from '../../hooks/useBlockedDomains';
 import { cn } from '@/lib/utils';
 import { 
   Search, 
@@ -89,6 +90,8 @@ export default function DiscoveredPage() {
     isAffiliateSaved,
     saveAffiliatesBulk
   } = useSavedAffiliates();
+
+  const { blockDomain, isBlocked, blockedDomains, isAtLimit: isBlockLimitReached } = useBlockedDomains();
 
   // ============================================================================
   // BULK SELECTION STATE (Added Dec 2025)
@@ -328,9 +331,12 @@ export default function DiscoveredPage() {
     }
   };
 
+  const normalizeDomainForCompare = (d: string) => (d || '').toLowerCase().replace(/^www\./, '');
+
   // Filter and Search Logic
   const filteredResults = useMemo(() => {
     return discoveredAffiliates.filter(item => {
+      if (isBlocked(item.domain)) return false;
       if (activeFilter !== 'All' && item.source !== activeFilter) return false;
 
       if (searchQuery) {
@@ -420,7 +426,7 @@ export default function DiscoveredPage() {
 
       return true;
     });
-  }, [discoveredAffiliates, activeFilter, searchQuery, advancedFilters]);
+  }, [discoveredAffiliates, activeFilter, searchQuery, advancedFilters, isBlocked]);
 
   const visibleSelectedLinks = useMemo(() => {
     const visibleLinks = new Set(filteredResults.map(r => r.link));
@@ -432,6 +438,35 @@ export default function DiscoveredPage() {
     });
     return visible;
   }, [selectedLinks, filteredResults]);
+
+  const [isBulkBlocking, setIsBulkBlocking] = useState(false);
+  const handleBulkBlockDomains = useCallback(async () => {
+    if (visibleSelectedLinks.size === 0) return;
+    const selectedItems = filteredResults.filter(r => selectedLinks.has(r.link));
+    const domainsToBlock = [...new Set(selectedItems.map(r => normalizeDomainForCompare(r.domain)))];
+    const canAdd = Math.max(0, 10 - blockedDomains.length);
+    const toBlock = domainsToBlock.slice(0, canAdd);
+    if (toBlock.length === 0) {
+      toast.error(t.dashboard.find.bulkActions.blockLimitReached);
+      return;
+    }
+    setIsBulkBlocking(true);
+    try {
+      for (const domain of toBlock) {
+        await blockDomain(domain);
+      }
+      setSelectedLinks(prev => {
+        const next = new Set(prev);
+        selectedItems.filter(r => toBlock.includes(normalizeDomainForCompare(r.domain))).forEach(r => next.delete(r.link));
+        return next;
+      });
+      toast.success(toBlock.length === 1 ? t.dashboard.find.bulkActions.blockDomainDone : `${toBlock.length} ${t.dashboard.find.bulkActions.blockDomainsDone}`);
+    } catch (e) {
+      toast.error((e as Error)?.message ?? 'Failed to block domain');
+    } finally {
+      setIsBulkBlocking(false);
+    }
+  }, [visibleSelectedLinks.size, filteredResults, selectedLinks, blockedDomains.length, blockDomain, t.dashboard.find.bulkActions]);
 
   const counts = useMemo(() => {
     return {
@@ -675,6 +710,16 @@ export default function DiscoveredPage() {
                 <X size={14} />
                 {t.common.cancel}
               </button>
+              {/* Block domain(s) */}
+              <button
+                onClick={handleBulkBlockDomains}
+                disabled={isBlockLimitReached || isBulkBlocking}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-amber-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isBlockLimitReached ? t.dashboard.find.bulkActions.blockLimitReached : t.dashboard.find.bulkActions.blockDomains}
+              >
+                {isBulkBlocking ? <Loader2 size={14} className="animate-spin" /> : null}
+                {t.dashboard.find.bulkActions.blockDomains}
+              </button>
               {/* Delete button - Neo-brutalist red */}
               <button
                 onClick={handleBulkDelete}
@@ -763,7 +808,6 @@ export default function DiscoveredPage() {
                 isSaving={savingLinks.has(item.link)}
                 onDelete={() => handleSingleDelete(item.link)}
                 affiliateData={item}
-                // Match reasons in View Modal (Discovered page) - January 22, 2026
                 currentUser={user}
               />
             ))

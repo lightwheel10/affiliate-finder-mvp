@@ -69,6 +69,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../../hooks/useAffiliates';
+import { useBlockedDomains } from '../../hooks/useBlockedDomains';
 import { usePollingSearch, SearchProgress } from '../../hooks/usePollingSearch';
 import { FilterPanel } from '../../components/FilterPanel';
 import { Platform } from '../../services/search';
@@ -141,6 +142,8 @@ export default function FindNewPage() {
     removeDiscoveredAffiliatesBulk,
     isLoading: discoveredLoading
   } = useDiscoveredAffiliates();
+
+  const { blockedDomains, blockDomain, isBlocked, isAtLimit: isBlockLimitReached } = useBlockedDomains();
 
   // ==========================================================================
   // POLLING SEARCH HOOK - January 29, 2026
@@ -673,6 +676,9 @@ export default function FindNewPage() {
   const filteredResults = useMemo(() => {
     let filtered = results;
 
+    // Filter by user-blocked domains (hide blocked for this user)
+    filtered = filtered.filter(r => !isBlocked(r.domain));
+
     // Filter by source
     if (activeFilter !== 'All') {
       filtered = filtered.filter(r => r.source === activeFilter);
@@ -783,7 +789,7 @@ export default function FindNewPage() {
     }
 
     return filtered;
-  }, [results, activeFilter, searchQuery, advancedFilters]);
+  }, [results, activeFilter, searchQuery, advancedFilters, isBlocked]);
 
   // Group filtered results by domain OR show all individually
   const groupedResults = useMemo(() => {
@@ -956,6 +962,38 @@ export default function FindNewPage() {
     setTimeout(() => {
       setDeleteResult(prev => prev ? { ...prev, show: false } : null);
     }, 3000);
+  };
+
+  const normalizeDomainForCompare = (d: string) => (d || '').toLowerCase().replace(/^www\./, '');
+  const [isBulkBlocking, setIsBulkBlocking] = useState(false);
+  const handleBulkBlockDomains = async () => {
+    if (visibleSelectedLinks.size === 0) return;
+    const selectedItems = filteredResults.filter(r => selectedLinks.has(r.link));
+    const domainsToBlock = [...new Set(selectedItems.map(r => normalizeDomainForCompare(r.domain)))];
+    const canAdd = Math.max(0, 10 - blockedDomains.length);
+    const toBlock = domainsToBlock.slice(0, canAdd);
+    if (toBlock.length === 0) {
+      toast.error(t.dashboard.find.bulkActions.blockLimitReached);
+      return;
+    }
+    setIsBulkBlocking(true);
+    try {
+      for (const domain of toBlock) {
+        await blockDomain(domain);
+      }
+      const blockedSet = new Set(toBlock);
+      setResults(prev => prev.filter(r => !blockedSet.has(normalizeDomainForCompare(r.domain))));
+      setSelectedLinks(prev => {
+        const next = new Set(prev);
+        selectedItems.filter(r => blockedSet.has(normalizeDomainForCompare(r.domain))).forEach(r => next.delete(r.link));
+        return next;
+      });
+      toast.success(toBlock.length === 1 ? t.dashboard.find.bulkActions.blockDomainDone : `${toBlock.length} ${t.dashboard.find.bulkActions.blockDomainsDone}`);
+    } catch (e) {
+      toast.error((e as Error)?.message ?? 'Failed to block domain');
+    } finally {
+      setIsBulkBlocking(false);
+    }
   };
 
   // ==========================================================================
@@ -1183,6 +1221,17 @@ export default function FindNewPage() {
                 {t.common.cancel}
               </button>
 
+              {/* Block domain(s) - only when selection has domains not already at limit */}
+              <button
+                onClick={handleBulkBlockDomains}
+                disabled={isBlockLimitReached || isBulkBlocking}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-amber-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isBlockLimitReached ? t.dashboard.find.bulkActions.blockLimitReached : t.dashboard.find.bulkActions.blockDomains}
+              >
+                {isBulkBlocking ? <Loader2 size={14} className="animate-spin" /> : null}
+                {t.dashboard.find.bulkActions.blockDomains}
+              </button>
+
               {/* Delete button - Neo-brutalist red */}
               <button
                 onClick={handleBulkDelete}
@@ -1317,7 +1366,6 @@ export default function FindNewPage() {
                         isSaving={savingLinks.has(group.main.link)}
                         onDelete={() => handleSingleDelete(group.main.link)}
                         affiliateData={group.main}
-                        // Match reasons in View Modal (Find page) - January 22, 2026
                         currentUser={user}
                       />
                     </div>
@@ -1368,7 +1416,6 @@ export default function FindNewPage() {
                       isSaving={savingLinks.has(group.main.link)}
                       onDelete={() => handleSingleDelete(group.main.link)}
                       affiliateData={group.main}
-                      // Match reasons in View Modal (Find page) - January 22, 2026
                       currentUser={user}
                     />
                   </div>

@@ -548,6 +548,10 @@ export interface Dictionary {
         deleteSelected: string;
         saveToPipeline: string;
         allAlreadySaved: string;
+        blockDomains: string;
+        blockLimitReached: string;
+        blockDomainDone: string;
+        blockDomainsDone: string;
       };
       newSearchWarning: {
         title: string;
@@ -709,6 +713,21 @@ export interface Dictionary {
           label: string;
           description: string;
         };
+        blockedDomains: {
+          label: string;
+          description: string;
+        };
+      };
+      blockedDomains: {
+        title: string;
+        description: string;
+        counter: string;
+        emptyTitle: string;
+        emptySubtitle: string;
+        unblock: string;
+        confirmUnblock: string;
+        domainBlockedOn: string;
+        limitReached: string;
       };
       // =======================================================================
       // PROFILE SECTION - Updated January 17, 2026
@@ -1299,6 +1318,9 @@ export interface Dictionary {
       delete: string;
       view: string;
     };
+    blockDomain: string;
+    confirmBlock: string;
+    blockLimitReached: string;
     // Relevant content modal
     contentModal: {
       title: string;
