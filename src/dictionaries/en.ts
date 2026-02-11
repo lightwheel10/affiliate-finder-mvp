@@ -771,6 +771,8 @@ export const en: Dictionary = {
         active: 'Active',
         trial: 'Trial',
         cancelled: 'Cancelled',
+        pastDue: 'Past Due',
+        expired: 'Expired',
         daysLeft: 'days left in trial',
         trialEndsToday: 'Trial ends today',
         nextBilling: 'Next billing',
@@ -781,6 +783,14 @@ export const en: Dictionary = {
         trialEndingSoon: {
           title: 'Your trial is ending soon',
           subtitle: 'Add a payment method to continue using all features.',
+        },
+        paymentFailedBanner: {
+          title: 'Payment failed',
+          subtitle: 'Please update your payment method to continue using all features.',
+        },
+        subscriptionEndedBanner: {
+          title: 'Your subscription has ended',
+          subtitle: 'Subscribe again to regain access to all features.',
         },
         paymentMethod: 'Payment Method',
         noPaymentMethod: {
@@ -944,6 +954,10 @@ export const en: Dictionary = {
       upgradeAvailable: 'Upgrade Available',
       managePlan: 'Manage Plan',
       upgradePlan: 'Upgrade Plan',
+      paymentFailed: 'Payment Failed',
+      subscribeNow: 'Subscribe Now',
+      cancelled: 'Cancelled',
+      resubscribe: 'Resubscribe',
     },
     profile: {
       settings: 'Settings',

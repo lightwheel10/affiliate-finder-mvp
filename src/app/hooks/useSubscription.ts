@@ -20,6 +20,8 @@ export interface SubscriptionData extends DbSubscription {
   isTrialing: boolean;
   isActive: boolean;
   isCanceled: boolean;
+  isPastDue: boolean;
+  isExpired: boolean;
   daysLeftInTrial: number | null;
   formattedPrice: string;
   nextBillingDate: string | null;
@@ -133,6 +135,9 @@ export function useSubscription(userId: number | null) {
         // Production (Vercel) is not affected.
         // ======================================================================
         const hasAutoScanAccess = !!(sub.first_payment_at && sub.status === 'active');
+        const isPastDue = sub.status === 'past_due';
+        const periodEnded = sub.current_period_end ? new Date(sub.current_period_end) < now : false;
+        const isExpired = sub.status === 'canceled' || (isPastDue && periodEnded);
         const nextScanAt = sub.next_auto_scan_at ? new Date(sub.next_auto_scan_at) : null;
         const lastScanAt = sub.last_auto_scan_at ? new Date(sub.last_auto_scan_at) : null;
         
@@ -163,6 +168,8 @@ export function useSubscription(userId: number | null) {
           isTrialing: sub.status === 'trialing',
           isActive: sub.status === 'active' || sub.status === 'trialing',
           isCanceled: sub.status === 'canceled' || sub.cancel_at_period_end,
+          isPastDue,
+          isExpired,
           daysLeftInTrial,
           formattedPrice,
           nextBillingDate,
@@ -302,6 +309,8 @@ export function useSubscription(userId: number | null) {
     isTrialing: subscription?.isTrialing ?? false,
     isActive: subscription?.isActive ?? false,
     isCanceled: subscription?.isCanceled ?? false,
+    isPastDue: subscription?.isPastDue ?? false,
+    isExpired: subscription?.isExpired ?? false,
     plan: subscription?.plan ?? null,
     daysLeftInTrial: subscription?.daysLeftInTrial ?? null,
     // Whether we've completed fetching for the current userId

@@ -744,6 +744,8 @@ export interface Dictionary {
         active: string;
         trial: string;
         cancelled: string;
+        pastDue: string;
+        expired: string;
         daysLeft: string;
         trialEndsToday: string;
         nextBilling: string;
@@ -752,6 +754,14 @@ export interface Dictionary {
         upgradePlan: string;
         managePlan: string;
         trialEndingSoon: {
+          title: string;
+          subtitle: string;
+        };
+        paymentFailedBanner: {
+          title: string;
+          subtitle: string;
+        };
+        subscriptionEndedBanner: {
           title: string;
           subtitle: string;
         };
@@ -912,6 +922,10 @@ export interface Dictionary {
       upgradeAvailable: string;
       managePlan: string;
       upgradePlan: string;
+      paymentFailed: string;
+      subscribeNow: string;
+      cancelled: string;
+      resubscribe: string;
     };
     profile: {
       settings: string;

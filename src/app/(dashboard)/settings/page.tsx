@@ -89,7 +89,7 @@ export default function SettingsPage() {
   
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const { userId, user: neonUser, refetch: refetchNeonUser, supabaseUser } = useSupabaseUser();
-  const { subscription, isLoading: subscriptionLoading, isTrialing, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
+  const { subscription, isLoading: subscriptionLoading, isTrialing, isPastDue, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -226,6 +226,7 @@ export default function SettingsPage() {
                       subscription={subscription}
                       isLoading={subscriptionLoading}
                       isTrialing={isTrialing}
+                      isPastDue={isPastDue}
                       daysLeftInTrial={daysLeftInTrial}
                       onUpgrade={() => setIsPricingModalOpen(true)}
                       onAddCard={() => setIsAddCardModalOpen(true)}
@@ -814,6 +815,7 @@ interface PlanSettingsProps {
   subscription: any;
   isLoading: boolean;
   isTrialing: boolean;
+  isPastDue?: boolean;
   daysLeftInTrial: number | null;
   onUpgrade: () => void;
   onAddCard: () => void;
@@ -839,7 +841,7 @@ interface Invoice {
   description: string | null;
 }
 
-function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, onUpgrade, onAddCard, onCancelPlan, userId }: PlanSettingsProps) {
+function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, daysLeftInTrial, onUpgrade, onAddCard, onCancelPlan, userId }: PlanSettingsProps) {
   // January 17, 2026: Added i18n support
   const { t } = useLanguage();
   
@@ -946,6 +948,12 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
     if (subscription?.status === 'active') {
       return { label: t.dashboard.settings.plan.active.toUpperCase(), bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
     }
+    if (subscription?.status === 'past_due') {
+      return { label: t.dashboard.settings.plan.pastDue.toUpperCase(), bg: 'bg-red-500', text: 'text-white', border: 'border-black' };
+    }
+    if (subscription?.status === 'canceled') {
+      return { label: t.dashboard.settings.plan.expired.toUpperCase(), bg: 'bg-gray-500', text: 'text-white', border: 'border-black' };
+    }
     return { label: t.dashboard.settings.plan.active.toUpperCase(), bg: 'bg-[#ffbf23]', text: 'text-black', border: 'border-black' };
   };
 
@@ -1033,6 +1041,28 @@ function PlanSettings({ subscription, isLoading, isTrialing, daysLeftInTrial, on
             <div className="text-xs text-amber-800 dark:text-amber-300">
               <p className="font-black">{t.dashboard.settings.plan.trialEndingSoon.title}</p>
               <p className="text-amber-700 dark:text-amber-400">{t.dashboard.settings.plan.trialEndingSoon.subtitle}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Payment failed - past_due */}
+        {isPastDue && (
+          <div className="flex items-start gap-2 p-3 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
+            <AlertTriangle size={14} className="text-red-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-red-800 dark:text-red-300">
+              <p className="font-black">{t.dashboard.settings.plan.paymentFailedBanner.title}</p>
+              <p className="text-red-700 dark:text-red-400">{t.dashboard.settings.plan.paymentFailedBanner.subtitle}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Subscription ended - canceled */}
+        {subscription?.status === 'canceled' && !subscription?.cancel_at_period_end && (
+          <div className="flex items-start gap-2 p-3 bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500">
+            <AlertTriangle size={14} className="text-orange-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-orange-800 dark:text-orange-300">
+              <p className="font-black">{t.dashboard.settings.plan.subscriptionEndedBanner.title}</p>
+              <p className="text-orange-700 dark:text-orange-400">{t.dashboard.settings.plan.subscriptionEndedBanner.subtitle}</p>
             </div>
           </div>
         )}

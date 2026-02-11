@@ -172,7 +172,7 @@ export const Sidebar: React.FC = () => {
   // January 19th, 2026: Migrated from Stack Auth useUser() + useNeonUser() to useSupabaseUser()
   // const user = useUser(); // Removed - Stack Auth
   const { userId, user, supabaseUser, userName: hookUserName, isLoading: userLoading, signOut } = useSupabaseUser();
-  const { subscription, isTrialing, daysLeftInTrial, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription(userId);
+  const { subscription, isTrialing, isPastDue, daysLeftInTrial, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription(userId);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
@@ -373,22 +373,37 @@ export const Sidebar: React.FC = () => {
                     ? `${subscription?.plan || 'Trial'} ${t.sidebar.planCard.planSuffix}`
                     : subscription?.status === 'active'
                       ? `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} ${t.sidebar.planCard.planSuffix}`
-                      : 'Free Plan'
+                      : subscription?.status === 'past_due' || subscription?.status === 'canceled'
+                        ? `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} ${t.sidebar.planCard.planSuffix}`
+                        : 'Free Plan'
                   }
                 </h5>
                 <p className="text-[10px] text-gray-300 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  <span className={cn(
+                    'w-1.5 h-1.5 rounded-full',
+                    subscription?.status === 'past_due' ? 'bg-red-500' : subscription?.status === 'canceled' ? 'bg-orange-500' : 'bg-green-500'
+                  )}></span>
                   {isTrialing 
                     ? `${daysLeftInTrial} ${t.sidebar.planCard.daysLeft}`
                     : subscription?.status === 'active'
                       ? t.sidebar.planCard.activeSubscription
-                      : t.sidebar.planCard.upgradeAvailable
+                      : isPastDue
+                        ? t.sidebar.planCard.paymentFailed
+                        : subscription?.status === 'canceled'
+                          ? t.sidebar.planCard.cancelled
+                          : t.sidebar.planCard.upgradeAvailable
                   }
                 </p>
               </div>
             </div>
             <button className="w-full py-1.5 bg-[#ffbf23] text-black text-xs font-bold uppercase rounded hover:bg-white transition-colors flex items-center justify-center gap-1">
-              {subscription?.status === 'active' ? t.sidebar.planCard.managePlan : t.sidebar.planCard.upgradePlan} <ChevronRight size={10} />
+              {subscription?.status === 'active' 
+                ? t.sidebar.planCard.managePlan 
+                : isPastDue 
+                  ? t.sidebar.planCard.subscribeNow 
+                  : subscription?.status === 'canceled' 
+                    ? t.sidebar.planCard.resubscribe 
+                    : t.sidebar.planCard.upgradePlan} <ChevronRight size={10} />
             </button>
           </div>
         </div>

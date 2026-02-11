@@ -771,6 +771,8 @@ export const de: Dictionary = {
         active: 'Aktiv',
         trial: 'Testversion',
         cancelled: 'Gekündigt',
+        pastDue: 'Überfällig',
+        expired: 'Abgelaufen',
         daysLeft: 'Tage in der Testversion übrig',
         trialEndsToday: 'Testversion endet heute',
         nextBilling: 'Nächste Abrechnung',
@@ -781,6 +783,14 @@ export const de: Dictionary = {
         trialEndingSoon: {
           title: 'Deine Testversion endet bald',
           subtitle: 'Füge eine Zahlungsmethode hinzu, um alle Funktionen weiter nutzen zu können.',
+        },
+        paymentFailedBanner: {
+          title: 'Zahlung fehlgeschlagen',
+          subtitle: 'Bitte aktualisiere deine Zahlungsmethode, um alle Funktionen weiter nutzen zu können.',
+        },
+        subscriptionEndedBanner: {
+          title: 'Dein Abonnement ist beendet',
+          subtitle: 'Abonniere erneut, um wieder Zugriff auf alle Funktionen zu erhalten.',
         },
         paymentMethod: 'Zahlungsmethode',
         noPaymentMethod: {
@@ -944,6 +954,10 @@ export const de: Dictionary = {
       upgradeAvailable: 'Upgrade verfügbar',
       managePlan: 'Plan verwalten',
       upgradePlan: 'Plan upgraden',
+      paymentFailed: 'Zahlung fehlgeschlagen',
+      subscribeNow: 'Jetzt abonnieren',
+      cancelled: 'Gekündigt',
+      resubscribe: 'Erneut abonnieren',
     },
     profile: {
       settings: 'Einstellungen',
