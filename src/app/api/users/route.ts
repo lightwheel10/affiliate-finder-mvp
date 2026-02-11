@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbUser } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { sendEventToN8N } from '@/lib/n8n-webhook';
 import { waitUntil } from '@vercel/functions';
 
 // GET /api/users?email=xxx - Get user by email
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
     const id = searchParams.get('id');
@@ -15,10 +21,16 @@ export async function GET(request: NextRequest) {
       if (users.length === 0) {
         return NextResponse.json({ user: null });
       }
+      if (authUser.email !== (users[0] as { email: string }).email) {
+        return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+      }
       return NextResponse.json({ user: users[0] as DbUser });
     }
 
     if (email) {
+      if (authUser.email !== email) {
+        return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+      }
       const users = await sql`SELECT * FROM crewcast.users WHERE email = ${email}`;
       if (users.length === 0) {
         return NextResponse.json({ user: null });
@@ -36,11 +48,20 @@ export async function GET(request: NextRequest) {
 // POST /api/users - Create or update user (upsert)
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { email, name, isOnboarded, onboardingStep, hasSubscription, plan } = body;
 
     if (!email || !name) {
       return NextResponse.json({ error: 'Email and name are required' }, { status: 400 });
+    }
+
+    if (authUser.email !== email) {
+      return NextResponse.json({ error: 'Not authorized to create or access this user' }, { status: 403 });
     }
 
     // Use INSERT ... ON CONFLICT to handle race conditions
@@ -83,11 +104,24 @@ export async function POST(request: NextRequest) {
 // PATCH /api/users - Update user profile
 export async function PATCH(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { id, ...updates } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${id}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
     }
 
     // Build dynamic update query

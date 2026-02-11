@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbUser } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 
 // POST /api/users/onboarding - Complete onboarding
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       id,
@@ -19,6 +25,14 @@ export async function POST(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${id}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
     }
 
     const updatedUsers = await sql`

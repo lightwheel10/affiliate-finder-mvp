@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 
 /**
  * POST /api/affiliates/saved/batch
@@ -34,11 +35,24 @@ import { sql } from '@/lib/db';
  */
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { userId, affiliates } = body;
 
     if (!userId || !affiliates || !Array.isArray(affiliates)) {
       return NextResponse.json({ error: 'Missing required fields: userId and affiliates array' }, { status: 400 });
+    }
+
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
     }
 
     const insertedIds: number[] = [];
@@ -206,11 +220,24 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { userId, links } = body;
 
     if (!userId || !links || !Array.isArray(links) || links.length === 0) {
       return NextResponse.json({ error: 'Missing required fields: userId and links array' }, { status: 400 });
+    }
+
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
     }
 
     // Delete all matching affiliates in one query using ANY

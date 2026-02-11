@@ -70,6 +70,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 
 // =============================================================================
 // CONFIGURATION
@@ -505,6 +506,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<SuccessRe
   console.log('[suggestions/generate] Request received');
   
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized',
+        userMessage: 'Please sign in to use this feature.',
+      }, { status: 401 });
+    }
+
     const body = await request.json();
     // January 17th, 2026: Now accepting targetCountry and targetLanguage
     const { brandUrl, targetCountry, targetLanguage } = body;

@@ -32,6 +32,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { startGoogleSearchRun } from '@/app/services/apify-google-scraper';
 import { Platform } from '@/app/services/search';
 
@@ -61,6 +62,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<OnboardingSta
   const startTime = Date.now();
   
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Unauthorized',
+        error: 'UNAUTHORIZED'
+      }, { status: 401 });
+    }
+
     // =========================================================================
     // PARSE REQUEST
     // =========================================================================
@@ -97,7 +107,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<OnboardingSta
     // VERIFY USER EXISTS AND GET TARGET SETTINGS
     // =========================================================================
     const userCheck = await sql`
-      SELECT id, target_country, target_language, brand 
+      SELECT id, email, target_country, target_language, brand 
       FROM crewcast.users 
       WHERE id = ${userId}
     `;
@@ -109,6 +119,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<OnboardingSta
         message: 'User not found',
         error: 'USER_NOT_FOUND'
       }, { status: 404 });
+    }
+
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Not authorized to access this resource',
+        error: 'FORBIDDEN'
+      }, { status: 403 });
     }
 
     const targetCountry = userCheck[0].target_country as string | null;

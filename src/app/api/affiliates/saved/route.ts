@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbSavedAffiliate } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { checkCredits, consumeCredits } from '@/lib/credits';
 
 // =============================================================================
@@ -17,6 +18,11 @@ function isCreditEnforcementEnabled(): boolean {
 // GET /api/affiliates/saved?userId=xxx - Get all saved affiliates for a user
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -24,9 +30,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
+    const userIdNum = parseInt(userId);
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+    }
+
     const affiliates = await sql`
       SELECT * FROM crewcast.saved_affiliates 
-      WHERE user_id = ${parseInt(userId)}
+      WHERE user_id = ${userIdNum}
       ORDER BY saved_at DESC
     `;
 
@@ -40,6 +55,11 @@ export async function GET(request: NextRequest) {
 // POST /api/affiliates/saved - Save an affiliate
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       userId,
@@ -113,6 +133,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+    }
+
     // Check for duplicate
     const existing = await sql`
       SELECT id FROM crewcast.saved_affiliates 
@@ -182,6 +210,11 @@ export async function POST(request: NextRequest) {
 // DELETE /api/affiliates/saved - Remove a saved affiliate
 export async function DELETE(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const link = searchParams.get('link');
@@ -190,9 +223,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User ID and link are required' }, { status: 400 });
     }
 
+    const userIdNum = parseInt(userId);
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+    }
+
     await sql`
       DELETE FROM crewcast.saved_affiliates 
-      WHERE user_id = ${parseInt(userId)} AND link = ${link}
+      WHERE user_id = ${userIdNum} AND link = ${link}
     `;
 
     return NextResponse.json({ success: true });
@@ -247,6 +289,11 @@ export async function DELETE(request: NextRequest) {
 // =============================================================================
 export async function PATCH(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { 
       affiliateId, 
@@ -262,6 +309,14 @@ export async function PATCH(request: NextRequest) {
         { error: 'affiliateId and userId are required' }, 
         { status: 400 }
       );
+    }
+
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
     }
 
     if (!emailStatus || !['found', 'not_found'].includes(emailStatus)) {

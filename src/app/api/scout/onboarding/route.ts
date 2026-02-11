@@ -68,6 +68,7 @@ import {
   fetchAndProcessResults,
 } from '../../../services/apify-google-scraper';
 import { sql } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 // January 30, 2026: Import discovery method extraction for correct topic/competitor attribution
 import { extractDiscoveryMethod, DiscoveryMethod } from '../../../utils/localized-search';
 
@@ -469,6 +470,18 @@ export async function POST(req: Request): Promise<Response> {
   const startTime = Date.now();
   
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return Response.json({ 
+        success: false, 
+        totalResults: 0,
+        topicsSearched: 0,
+        platformResults: { web: 0, youtube: 0, instagram: 0, tiktok: 0 },
+        durationMs: 0,
+        error: 'Unauthorized' 
+      } as OnboardingScoutResponse, { status: 401 });
+    }
+
     // =========================================================================
     // PARSE REQUEST
     // =========================================================================
@@ -503,7 +516,7 @@ export async function POST(req: Request): Promise<Response> {
     // VERIFY USER EXISTS AND GET TARGET SETTINGS
     // =========================================================================
     const userCheck = await sql`
-      SELECT id, target_country, target_language, brand FROM crewcast.users WHERE id = ${userId}
+      SELECT id, email, target_country, target_language, brand FROM crewcast.users WHERE id = ${userId}
     `;
 
     if (userCheck.length === 0) {
@@ -512,6 +525,13 @@ export async function POST(req: Request): Promise<Response> {
         success: false, 
         error: 'User not found' 
       } as OnboardingScoutResponse, { status: 404 });
+    }
+
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return Response.json({ 
+        success: false, 
+        error: 'Not authorized to access this resource' 
+      } as OnboardingScoutResponse, { status: 403 });
     }
 
     const targetCountry = userCheck[0].target_country as string | null;

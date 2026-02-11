@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbDiscoveredAffiliate } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 
 // GET /api/affiliates/discovered?userId=xxx - Get all discovered affiliates for a user
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -11,9 +17,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
+    const userIdNum = parseInt(userId);
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+    }
+
     const affiliates = await sql`
       SELECT * FROM crewcast.discovered_affiliates 
-      WHERE user_id = ${parseInt(userId)}
+      WHERE user_id = ${userIdNum}
       ORDER BY discovered_at DESC
     `;
 
@@ -27,6 +42,11 @@ export async function GET(request: NextRequest) {
 // POST /api/affiliates/discovered - Save a discovered affiliate
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       userId,
@@ -107,6 +127,14 @@ export async function POST(request: NextRequest) {
 
     if (!userId || !searchKeyword || !title || !link || !domain || !snippet || !source) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
     }
 
     // Check for duplicate
@@ -197,6 +225,11 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 export async function PATCH(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       userId,
@@ -206,6 +239,14 @@ export async function PATCH(request: NextRequest) {
 
     if (!userId || !domain) {
       return NextResponse.json({ error: 'userId and domain are required' }, { status: 400 });
+    }
+
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
     }
 
     if (!similarWeb) {
@@ -253,6 +294,11 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/affiliates/discovered - Remove or clear discovered affiliates
 export async function DELETE(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const link = searchParams.get('link');
@@ -262,11 +308,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
+    const userIdNum = parseInt(userId);
+    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
+    if (userCheck.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (authUser.email !== (userCheck[0] as { email: string }).email) {
+      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+    }
+
     if (clearAll === 'true') {
       // Clear all discovered affiliates for the user
       await sql`
         DELETE FROM crewcast.discovered_affiliates 
-        WHERE user_id = ${parseInt(userId)}
+        WHERE user_id = ${userIdNum}
       `;
       return NextResponse.json({ success: true, cleared: true });
     }
@@ -277,7 +332,7 @@ export async function DELETE(request: NextRequest) {
 
     await sql`
       DELETE FROM crewcast.discovered_affiliates 
-      WHERE user_id = ${parseInt(userId)} AND link = ${link}
+      WHERE user_id = ${userIdNum} AND link = ${link}
     `;
 
     return NextResponse.json({ success: true });

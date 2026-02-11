@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { enrichDomainWithSimilarWeb, enrichDomainsWithSimilarWeb } from '../../services/apify';
 
 /**
@@ -20,8 +22,23 @@ import { enrichDomainWithSimilarWeb, enrichDomainsWithSimilarWeb } from '../../s
  */
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { domain, domains, userId } = body;
+
+    if (userId != null) {
+      const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
+      if (userCheck.length === 0) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      if (authUser.email !== (userCheck[0] as { email: string }).email) {
+        return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+      }
+    }
 
     // Single domain enrichment
     if (domain && typeof domain === 'string') {
