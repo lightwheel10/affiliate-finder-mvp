@@ -73,6 +73,7 @@ import { useBlockedDomains } from '../../hooks/useBlockedDomains';
 import { usePollingSearch, SearchProgress } from '../../hooks/usePollingSearch';
 import { FilterPanel } from '../../components/FilterPanel';
 import { Platform } from '../../services/search';
+import { extractDiscoveryMethod } from '@/app/utils/localized-search';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
@@ -88,6 +89,7 @@ function formatTraffic(num: number): string {
 }
 
 const MAX_KEYWORDS = 5;
+const MAX_COMPETITORS = 5;
 
 export default function FindNewPage() {
   // Translation hook (January 9th, 2026)
@@ -162,6 +164,10 @@ export default function FindNewPage() {
   // Multiple keywords support
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState('');
+
+  // Editable competitors (pre-filled from onboarding, add/remove per run)
+  const [competitors, setCompetitors] = useState<string[]>([]);
+  const [competitorInput, setCompetitorInput] = useState('');
   
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -267,6 +273,23 @@ export default function FindNewPage() {
     setKeywords(keywords.filter(k => k !== keywordToRemove));
   };
 
+  // Add competitor to list (normalize: trim, lowercase for display consistency)
+  const addCompetitor = () => {
+    const raw = competitorInput.trim();
+    if (!raw) return;
+    // Normalize to domain-like: ensure no protocol, lowercase
+    const normalized = raw.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim().toLowerCase();
+    if (normalized && !competitors.some(c => c.toLowerCase() === normalized) && competitors.length < MAX_COMPETITORS) {
+      setCompetitors([...competitors, normalized]);
+      setCompetitorInput('');
+    }
+  };
+
+  // Remove competitor from list
+  const removeCompetitor = (competitorToRemove: string) => {
+    setCompetitors(competitors.filter(c => c !== competitorToRemove));
+  };
+
   // ==========================================================================
   // KEYWORDS INITIALIZATION - January 4th, 2026
   // ==========================================================================
@@ -302,9 +325,18 @@ export default function FindNewPage() {
   // 
   // ==========================================================================
   const keywordsInitRef = useRef<'pending' | 'topics' | 'restored' | 'none'>('pending');
+  const competitorsInitRef = useRef<'pending' | 'done'>('pending');
   const [hasPrePopulated, setHasPrePopulated] = useState(false);
 
   useEffect(() => {
+    const userDataReady = user !== undefined && user !== null;
+    if (userDataReady && competitorsInitRef.current === 'pending') {
+      if (user?.competitors && user.competitors.length > 0) {
+        setCompetitors(user.competitors.slice(0, MAX_COMPETITORS));
+      }
+      competitorsInitRef.current = 'done';
+    }
+
     // Already initialized - don't run again
     if (keywordsInitRef.current !== 'pending') {
       return;
@@ -312,7 +344,6 @@ export default function FindNewPage() {
 
     // Wait for user data to load before making any decisions
     // This prevents the restore effect from "winning" just because SWR is faster
-    const userDataReady = user !== undefined && user !== null;
     const discoveredDataReady = !discoveredLoading;
 
     // If user data isn't ready yet, wait (don't let restore effect win by default)
@@ -435,6 +466,7 @@ export default function FindNewPage() {
       const searchResults = await searchWithPolling(keywords, sources, {
         onProgress: (progress) => {
         },
+        competitors: competitors.length > 0 ? competitors : undefined,
       });
       
       // ==================================================================
@@ -453,21 +485,17 @@ export default function FindNewPage() {
         // Cast to any to access additional fields from status endpoint
         const result = searchResults[i] as any;
         
-        // Use server's discoveryMethod if present, else fallback to first keyword
+        // Use server's discoveryMethod if present; else derive from searchQuery (competitor vs keyword)
         let discoveryMethod = result.discoveryMethod;
-        if (!discoveryMethod) {
-          const firstKw = keywords[0] || '';
-          const isCompetitor = firstKw.toLowerCase().includes('alternative') || 
-                             firstKw.toLowerCase().includes('vs') || 
-                             firstKw.toLowerCase().includes('competitor');
-          let methodValue = firstKw;
-          if (isCompetitor) {
-            methodValue = firstKw.replace(/alternative|vs|competitor/gi, '').trim();
-          }
+        if (!discoveryMethod && result.searchQuery) {
+          const discovery = extractDiscoveryMethod(result.searchQuery, keywords, competitors);
           discoveryMethod = {
-            type: isCompetitor ? 'competitor' as const : 'keyword' as const,
-            value: methodValue || firstKw
+            type: discovery.type === 'competitor' ? 'competitor' as const : 'keyword' as const,
+            value: discovery.value
           };
+        }
+        if (!discoveryMethod) {
+          discoveryMethod = { type: 'keyword' as const, value: keywords[0] || '' };
         }
         
         // February 3, 2026: Construct nested similarWeb object from flat API properties
@@ -1570,7 +1598,28 @@ export default function FindNewPage() {
             </p>
           </div>
 
-          {/* Two Column Layout */}
+          {/* Website context - no border so it reads as read-only, not editable */}
+          <div className="flex items-center gap-2 px-0 py-1 text-gray-600 dark:text-gray-400">
+            <Globe size={14} className="text-gray-500 shrink-0" />
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              {t.dashboard.find.modal.websiteLabel}:
+            </span>
+            {user?.brand ? (
+              <>
+                <img
+                  src={`https://www.google.com/s2/favicons?domain=${user.brand}&sz=16`}
+                  alt=""
+                  className="w-4 h-4 shrink-0"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{user.brand}</span>
+              </>
+            ) : (
+              <span className="text-sm italic text-gray-400">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
+            )}
+          </div>
+
+          {/* Two Column Layout - Keywords | Competitors (equal structure, aligned) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Left Column - Keywords - NEO-BRUTALIST - Translated (January 9th, 2026) */}
             <div className="flex flex-col">
@@ -1644,63 +1693,78 @@ export default function FindNewPage() {
               </div>
             </div>
 
-            {/* RIGHT COLUMN - Website & Competitors - Translated (January 9th, 2026) */}
+            {/* Right Column - Competitors - same structure as Keywords for alignment */}
             <div className="flex flex-col">
               <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 uppercase tracking-wide">
-                <Globe size={14} className="text-gray-500" />
-                {t.dashboard.find.modal.websiteLabel}
-              </label>
-              <div className={`px-3 py-2.5 border-2 text-sm mt-2 flex items-center gap-2 ${
-                user?.brand 
-                  ? 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300' 
-                  : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-400 italic'
-              }`}>
-                {user?.brand && (
-                  <img 
-                    src={`https://www.google.com/s2/favicons?domain=${user.brand}&sz=16`}
-                    alt=""
-                    className="w-4 h-4"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                )}
-                <span className="font-medium">{user?.brand || t.dashboard.find.modal.notSetDuringOnboarding}</span>
-              </div>
-
-              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 mt-3 uppercase tracking-wide">
                 <svg className="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
-                {t.dashboard.find.modal.competitorsLabel}
-                {user?.competitors && user.competitors.length > 0 && (
-                  <span className="ml-auto text-[10px] text-gray-500 font-bold">
-                    {user.competitors.length} {t.dashboard.find.modal.competitorsAdded}
-                  </span>
-                )}
+                {t.dashboard.find.modal.competitorsInputLabel}
+                <span className="ml-auto text-xs font-bold text-gray-400">
+                  {competitors.length}/{MAX_COMPETITORS}
+                </span>
               </label>
-              {user?.competitors && user.competitors.length > 0 ? (
-                <div className="p-2 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 mt-2 overflow-y-auto max-h-[80px]">
-                  <div className="flex flex-wrap gap-1.5">
-                    {user.competitors.map((competitor, idx) => (
-                      <span 
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium border border-gray-200 dark:border-gray-600"
+              <div className="relative mt-2">
+                <input
+                  type="text"
+                  value={competitorInput}
+                  onChange={(e) => setCompetitorInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addCompetitor();
+                    }
+                  }}
+                  placeholder={t.dashboard.find.modal.competitorsPlaceholder}
+                  disabled={competitors.length >= MAX_COMPETITORS}
+                  className="w-full px-3 py-2.5 pr-16 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-black dark:focus:border-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <button
+                  onClick={addCompetitor}
+                  disabled={!competitorInput.trim() || competitors.length >= MAX_COMPETITORS}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black hover:bg-yellow-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300 disabled:cursor-not-allowed transition-all"
+                >
+                  {t.dashboard.find.modal.addCompetitorButton}
+                </button>
+              </div>
+              <div className="flex-1 min-h-[140px] max-h-[140px] overflow-y-auto no-scrollbar space-y-1.5 p-2 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 mt-2">
+                {competitors.length > 0 ? (
+                  competitors.map((comp, idx) => (
+                    <div
+                      key={comp}
+                      className="flex items-center gap-2 px-2.5 py-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-sm group hover:border-red-400 transition-all"
+                    >
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${comp}&sz=16`}
+                        alt=""
+                        className="w-3.5 h-3.5 shrink-0"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <span className="text-gray-700 dark:text-gray-300 truncate flex-1 font-medium text-xs">{comp}</span>
+                      <button
+                        onClick={() => removeCompetitor(comp)}
+                        className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shrink-0 font-bold"
                       >
-                        <img 
-                          src={`https://www.google.com/s2/favicons?domain=${competitor}&sz=16`}
-                          alt=""
-                          className="w-3.5 h-3.5"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                        {competitor}
-                      </span>
-                    ))}
+                        ×
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-xs font-medium">
+                    {t.dashboard.find.modal.noCompetitorsYet}
                   </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 mt-2">
-                  <p className="text-center text-gray-400 text-xs font-medium">{t.dashboard.find.modal.noCompetitors}</p>
-                </div>
-              )}
+                )}
+              </div>
+              <div className="h-5 mt-1.5">
+                {competitors.length > 0 && (
+                  <button
+                    onClick={() => setCompetitors([])}
+                    className="text-xs text-gray-400 hover:text-red-500 transition-colors font-bold"
+                  >
+                    {t.dashboard.find.modal.clearAllCompetitors}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

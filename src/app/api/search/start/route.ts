@@ -51,6 +51,7 @@ interface StartSearchRequest {
   keyword?: string;        // Single keyword (backward compat)
   keywords?: string[];     // February 4, 2026: Multi-keyword batch (preferred)
   sources?: Platform[];
+  competitors?: string[];  // Optional competitor domains for Find Affiliates run
 }
 
 interface StartSearchResponse {
@@ -75,7 +76,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
   try {
     // Parse request body
     const body = await req.json() as StartSearchRequest;
-    const { keyword, keywords, sources = ['Web', 'YouTube', 'Instagram', 'TikTok'] } = body;
+    const { keyword, keywords, sources = ['Web', 'YouTube', 'Instagram', 'TikTok'], competitors: rawCompetitors } = body;
+
+    // Normalize competitors: trim, strip protocol, lowercase (optional for Find run)
+    const competitorList: string[] = Array.isArray(rawCompetitors)
+      ? rawCompetitors
+          .map((c) => typeof c === 'string' ? c.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').toLowerCase() : '')
+          .filter((c) => c.length > 0)
+      : [];
     
     // February 4, 2026: Support both single keyword and keywords array
     // Prefer keywords[] for multi-keyword batch (1 credit per session)
@@ -177,6 +185,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
     // ==========================================================================
     const runResult = await startGoogleSearchRun({
       keywords: keywordList,  // February 4, 2026: Batch all keywords in single run
+      competitors: competitorList.length > 0 ? competitorList : undefined,
       sources: filteredSources,
       targetCountry,
       targetLanguage,
@@ -189,12 +198,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
     // January 29, 2026
     // 
     // Store job with user settings so status endpoint can apply filtering.
-    // user_settings JSON contains: targetCountry, targetLanguage, userBrand
+    // user_settings JSON contains: targetCountry, targetLanguage, userBrand, competitors
     // ==========================================================================
     const userSettings = JSON.stringify({
       targetCountry,
       targetLanguage,
       userBrand,
+      competitors: competitorList,
     });
     
     const sourcesArray = `{${filteredSources.join(',')}}`;

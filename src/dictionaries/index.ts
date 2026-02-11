@@ -531,6 +531,11 @@ export interface Dictionary {
         addButton: string;
         websiteLabel: string;
         competitorsLabel: string;
+        competitorsInputLabel: string;
+        competitorsPlaceholder: string;
+        addCompetitorButton: string;
+        noCompetitorsYet: string;
+        clearAllCompetitors: string;
         competitorsAdded: string;
         noCompetitors: string;
         notSetDuringOnboarding: string;

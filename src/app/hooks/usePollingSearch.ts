@@ -88,6 +88,8 @@ export interface SearchOptions {
   onProgress?: (progress: SearchProgress) => void;
   pollIntervalMs?: number;
   maxRetries?: number;
+  /** Competitor domains for this run (optional; used with keywords for Find Affiliates) */
+  competitors?: string[];
 }
 
 export interface UsePollingSearchReturn {
@@ -168,6 +170,7 @@ export function usePollingSearch(): UsePollingSearchReturn {
       onProgress,
       pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
       maxRetries = DEFAULT_MAX_RETRIES,
+      competitors,
     } = options;
     
     // Reset state
@@ -191,10 +194,11 @@ export function usePollingSearch(): UsePollingSearchReturn {
       updateProgress({ status: 'starting', elapsedSeconds: 0, message: 'Starting search...' });
       
       // February 4, 2026: Send keywords[] for batched search (1 credit per session)
+      // Competitors optional: when provided, search runs keyword + competitor queries
       const startResponse = await fetch('/api/search/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keywords, sources }),
+        body: JSON.stringify({ keywords, sources, competitors: competitors ?? [] }),
         signal,
       });
       

@@ -1114,10 +1114,24 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         durationMs: Date.now() - startTime,
       });
       
+      // For Find (non-onboarding): tag each result with discovery method for client
+      const findTopics = (job.keyword as string)?.split(' | ').filter(Boolean) ?? [];
+      const findCompetitors = userSettings?.competitors ?? [];
+      const resultsForClient = allResults.map((r: SearchResult & { searchQuery?: string }) => {
+        const discovery = extractDiscoveryMethod(r.searchQuery, findTopics, findCompetitors);
+        return {
+          ...r,
+          discoveryMethod: {
+            type: discovery.type === 'competitor' ? 'competitor' : 'keyword',
+            value: discovery.value,
+          },
+        };
+      });
+      
       return NextResponse.json({
         status: 'done',
-        results: allResults,
-        resultsCount: allResults.length,
+        results: resultsForClient,
+        resultsCount: resultsForClient.length,
         breakdown,
       });
     }
