@@ -54,7 +54,11 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   
   // Optional: Get the 'next' parameter for custom redirect after auth
-  const next = searchParams.get('next') ?? '/';
+  // Security fix: Validate 'next' is a safe relative path to prevent open redirect attacks
+  let next = searchParams.get('next') ?? '/';
+  if (!next.startsWith('/') || next.startsWith('//')) {
+    next = '/';
+  }
 
   // ============================================================================
   // STEP 2: Handle errors from Supabase (e.g., expired link)

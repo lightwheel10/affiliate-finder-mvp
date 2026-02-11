@@ -36,7 +36,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid URL' }, { status: 400 });
     }
 
-    const isAllowed = allowedDomains.some(domain => url.hostname.includes(domain));
+    // Security fix: Use exact match or proper subdomain check to prevent SSRF bypass
+    // e.g. "instagram.com.evil.com" no longer passes the check
+    const isAllowed = allowedDomains.some(domain => 
+      url.hostname === domain || url.hostname.endsWith('.' + domain)
+    );
 
     if (!isAllowed) {
       return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 });
