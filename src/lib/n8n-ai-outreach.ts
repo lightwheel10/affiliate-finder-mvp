@@ -61,7 +61,8 @@ export interface AffiliateData {
   source: string;                 // 'Web' | 'YouTube' | 'Instagram' | 'TikTok'
   title: string;                  // Article/video title
   snippet: string;                // Content snippet/description
-  
+  link: string | null;            // Full page URL (for Web results)
+
   // Discovery context
   keyword: string | null;         // How they were discovered
   discoveryMethodType: string | null;  // 'keyword' | 'competitor' | 'topic'
@@ -103,6 +104,9 @@ export interface N8NAIOutreachRequest {
     length?: 'short' | 'medium' | 'long';
     includeSubject?: boolean;
   };
+
+  // Firecrawl markdown of affiliate's page (Web only). Omitted if not scraped.
+  scrapedPageContent?: string | null;
 }
 
 /**

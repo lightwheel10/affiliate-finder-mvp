@@ -59,6 +59,77 @@ function isCreditEnforcementEnabled(): boolean {
   return flag.toLowerCase() === 'true' || flag === '1';
 }
 
+// Vercel function timeout (Pro plan). n8n call ~15-25s; Firecrawl adds ~3-8s.
+export const maxDuration = 60;
+
+// =============================================================================
+// FIRECRAWL SCRAPING (Web results only - for n8n AI context)
+// Same API pattern as suggestions/generate. Self-contained in this file.
+// =============================================================================
+
+const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1/scrape';
+const FIRECRAWL_TIMEOUT_MS = 15000;
+const SCRAPED_CONTENT_MAX_LENGTH = 6000;
+
+/**
+ * Scrape a URL with Firecrawl and return markdown content (truncated).
+ * Returns null on any failure; does not throw. Used only for Web affiliates.
+ */
+async function scrapeAffiliatePage(url: string): Promise<string | null> {
+  const apiKey = process.env.FIRECRAWL_API_KEY;
+  if (!apiKey) {
+    console.warn('[AI Outreach] FIRECRAWL_API_KEY not configured, skipping page scrape');
+    return null;
+  }
+
+  const normalizedUrl = url.startsWith('http') ? url : `https://${url}`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FIRECRAWL_TIMEOUT_MS);
+
+    const response = await fetch(FIRECRAWL_API_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: normalizedUrl,
+        formats: ['markdown'],
+      }),
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn(`[AI Outreach] Firecrawl HTTP ${response.status} for ${normalizedUrl}:`, errorText.substring(0, 200));
+      return null;
+    }
+
+    const result = await response.json();
+    if (!result.success || !result.data?.markdown) {
+      console.warn('[AI Outreach] Firecrawl returned no content for', normalizedUrl);
+      return null;
+    }
+
+    const content = result.data.markdown as string;
+    const truncated = content.length > SCRAPED_CONTENT_MAX_LENGTH
+      ? content.slice(0, SCRAPED_CONTENT_MAX_LENGTH) + '\n\n[... content truncated for length ...]'
+      : content;
+    return truncated;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.warn('[AI Outreach] Firecrawl timeout for', normalizedUrl);
+    } else {
+      console.warn('[AI Outreach] Firecrawl error for', normalizedUrl, error);
+    }
+    return null;
+  }
+}
+
 // =============================================================================
 // POST - Generate outreach email
 // =============================================================================
@@ -321,6 +392,7 @@ export async function POST(request: NextRequest) {
         source: affiliateData.source,
         title: affiliateData.title,
         snippet: affiliateData.snippet || '',
+        link: affiliateData.link || null,
         keyword: affiliateData.keyword || null,
         discoveryMethodType: affiliateData.discoveryMethod?.type || null,
         discoveryMethodValue: affiliateData.discoveryMethod?.value || null,
@@ -337,7 +409,7 @@ export async function POST(request: NextRequest) {
       // Fetch affiliate from database
       const affiliates = await sql`
         SELECT 
-          id, person_name, email, domain, source, title, snippet,
+          id, person_name, email, domain, source, title, snippet, link,
           keyword, discovery_method_type, discovery_method_value,
           instagram_username, instagram_bio, instagram_followers,
           tiktok_username, tiktok_bio, tiktok_followers,
@@ -362,6 +434,7 @@ export async function POST(request: NextRequest) {
         source: a.source,
         title: a.title,
         snippet: a.snippet || '',
+        link: a.link ?? null,
         keyword: a.keyword,
         discoveryMethodType: a.discovery_method_type,
         discoveryMethodValue: a.discovery_method_value,
@@ -406,6 +479,21 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================================================
+    // STEP 5.6: SCRAPE AFFILIATE PAGE (Web results only)
+    //
+    // For Web affiliates with a link, scrape the page with Firecrawl and pass
+    // content to n8n so the AI can write more personalized emails. Failure is
+    // silent: we continue without scraped content and do not refund credits.
+    // =========================================================================
+    let scrapedPageContent: string | null = null;
+    if (affiliate.source === 'Web' && affiliate.link) {
+      scrapedPageContent = await scrapeAffiliatePage(affiliate.link);
+      if (scrapedPageContent) {
+        console.log(`[AI Outreach] Scraped ${scrapedPageContent.length} chars for ${affiliate.domain}`);
+      }
+    }
+
+    // =========================================================================
     // STEP 6: BUILD USER BUSINESS CONTEXT
     // =========================================================================
     const userContext: UserBusinessContext = {
@@ -428,6 +516,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
       user: userContext,
       affiliate,
+      scrapedPageContent,
       options: {
         tone: 'friendly',
         length: 'medium',
