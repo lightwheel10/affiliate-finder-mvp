@@ -270,6 +270,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const [discountApplied, setDiscountApplied] = useState(false);
   const [discountError, setDiscountError] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0); // Percentage or fixed amount
+  const [discountSummary, setDiscountSummary] = useState('');
+  const [promotionCodeId, setPromotionCodeId] = useState<string | null>(null);
 
   // UI States
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
@@ -838,6 +840,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           plan: selectedPlan,
           billingInterval,
           paymentMethodId: setupResult.paymentMethodId,
+          promotionCodeId: promotionCodeId || undefined,
           customerId,
         }),
       });
@@ -2165,17 +2168,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   })();
 
   // ==========================================================================
-  // DISCOUNT CODE VALIDATION (January 3rd, 2026)
-  // 
-  // TODO: Implement real discount code validation via Stripe Promotion Codes API
-  // 
-  // Implementation steps:
-  // 1. Create API endpoint: POST /api/stripe/validate-promo-code
-  // 2. Use Stripe's promotion_codes.list() or coupons.retrieve() to validate
-  // 3. Return discount percentage/amount and apply to subscription creation
-  // 4. Pass coupon ID to create-subscription endpoint
+  // DISCOUNT CODE VALIDATION
   //
-  // For now, discount codes are disabled (always returns "Invalid discount code")
+  // Validates Stripe promotion codes via /api/stripe/validate-promo-code.
+  // If valid, we store the promotionCodeId and pass it to
+  // /api/stripe/create-subscription so Stripe applies the discount.
   // ==========================================================================
   const handleApplyDiscount = useCallback(async () => {
     if (!discountCode.trim()) return;
@@ -2184,26 +2181,43 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     setDiscountError('');
     
     try {
-      // TODO: Replace with real API call to validate promo code
-      // Example: const res = await fetch('/api/stripe/validate-promo-code', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ code: discountCode })
-      // });
-      
-      // For now, all codes are invalid until real validation is implemented
-      setDiscountError('Discount codes coming soon');
-      setDiscountApplied(false);
-      setDiscountAmount(0);
+      const response = await fetch('/api/stripe/validate-promo-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          code: discountCode.trim(),
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.error || !data.valid || !data.promotionCodeId) {
+        throw new Error(data.error || 'Invalid discount code');
+      }
+
+      setPromotionCodeId(data.promotionCodeId);
+      setDiscountApplied(true);
+      setDiscountSummary(data.discountLabel || 'Discount applied');
+
+      const percent = data.discount?.percentOff;
+      setDiscountAmount(typeof percent === 'number' ? percent : 0);
     } catch {
-      setDiscountError('Failed to validate code');
+      setPromotionCodeId(null);
+      setDiscountApplied(false);
+      setDiscountSummary('');
+      setDiscountAmount(0);
+      setDiscountError('Invalid or expired discount code');
     } finally {
       setIsApplyingDiscount(false);
     }
-  }, [discountCode]);
+  }, [discountCode, userId]);
 
   const handleResetDiscount = useCallback(() => {
     setDiscountError('');
     setDiscountApplied(false);
+    setDiscountAmount(0);
+    setDiscountSummary('');
+    setPromotionCodeId(null);
   }, []);
 
   // Render Step 7 wrapped in StripeProvider
@@ -2242,6 +2256,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         discountApplied={discountApplied}
         discountError={discountError}
         discountAmount={discountAmount}
+        discountSummary={discountSummary}
         onApplyDiscount={handleApplyDiscount}
         onResetDiscount={handleResetDiscount}
         onSubmit={handleStripeSubmit}

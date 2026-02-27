@@ -48,6 +48,7 @@ interface Step7CardFormProps {
   discountApplied: boolean;
   discountError: string;
   discountAmount: number;
+  discountSummary?: string;
   onApplyDiscount: () => void;
   onResetDiscount: () => void;
   
@@ -74,6 +75,7 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
   discountApplied,
   discountError,
   discountAmount,
+  discountSummary,
   onApplyDiscount,
   onResetDiscount,
   onSubmit,
@@ -207,11 +209,15 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
           </p>
         )}
         {/* Discount Applied Message - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
-        {discountApplied && discountAmount > 0 && (
+        {discountApplied && (
           <div className="flex items-center gap-1.5 p-2 bg-green-50 dark:bg-green-900/30 border-2 border-green-500">
             <Sparkles size={12} className="text-green-600" />
             <p className="text-[10px] text-green-700 dark:text-green-400 font-bold">
-              {discountAmount}{t.onboarding.step7.discountApplied} {CURRENCY_SYMBOL}{((selectedPlanPrice || 0) * discountAmount / 100).toFixed(2)}/mo
+              {discountSummary || (
+                discountAmount > 0
+                  ? `${discountAmount}${t.onboarding.step7.discountApplied} ${CURRENCY_SYMBOL}${((selectedPlanPrice || 0) * discountAmount / 100).toFixed(2)}/mo`
+                  : 'Discount code will be applied at checkout'
+              )}
             </p>
           </div>
         )}

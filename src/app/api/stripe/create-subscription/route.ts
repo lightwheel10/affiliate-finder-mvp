@@ -3,6 +3,7 @@ import { stripe, getPriceId, isValidPlan, isValidInterval, TRIAL_DAYS } from '@/
 import { sql } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 import { initializeTrialCredits } from '@/lib/credits'; // January 19th, 2026: Initialize credits directly
+import Stripe from 'stripe';
 
 // =============================================================================
 // POST /api/stripe/create-subscription
@@ -33,6 +34,7 @@ interface CreateSubscriptionBody {
   plan: string;
   billingInterval: string;
   paymentMethodId: string;
+  promotionCodeId?: string;
   customerId?: string; // Optional - can be retrieved from DB
 }
 
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: CreateSubscriptionBody = await request.json();
-    const { userId, plan, billingInterval, paymentMethodId, customerId: providedCustomerId } = body;
+    const { userId, plan, billingInterval, paymentMethodId, promotionCodeId, customerId: providedCustomerId } = body;
 
     // ==========================================================================
     // INPUT VALIDATION
@@ -83,6 +85,13 @@ export async function POST(request: NextRequest) {
     if (!paymentMethodId || typeof paymentMethodId !== 'string' || !paymentMethodId.startsWith('pm_')) {
       return NextResponse.json(
         { error: 'Valid payment method ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (promotionCodeId && (typeof promotionCodeId !== 'string' || !promotionCodeId.startsWith('promo_'))) {
+      return NextResponse.json(
+        { error: 'Invalid promotion code' },
         { status: 400 }
       );
     }
@@ -211,7 +220,17 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     console.log(`[Stripe] Creating subscription for customer ${stripeCustomerId} with price ${priceId}`);
 
-    const subscription = await stripe.subscriptions.create({
+    if (promotionCodeId) {
+      const promoCode = await stripe.promotionCodes.retrieve(promotionCodeId);
+      if (!promoCode.active) {
+        return NextResponse.json(
+          { error: 'This discount code is no longer active' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const subscriptionParams: Stripe.SubscriptionCreateParams = {
       customer: stripeCustomerId,
       items: [{ price: priceId }],
       trial_period_days: TRIAL_DAYS,
@@ -225,10 +244,17 @@ export async function POST(request: NextRequest) {
         neon_user_id: userId.toString(),
         plan: plan,
         billing_interval: billingInterval,
+        ...(promotionCodeId ? { promotion_code_id: promotionCodeId } : {}),
       },
       // Expand latest invoice for immediate access
       expand: ['latest_invoice.payment_intent'],
-    });
+    };
+
+    if (promotionCodeId) {
+      subscriptionParams.discounts = [{ promotion_code: promotionCodeId }];
+    }
+
+    const subscription = await stripe.subscriptions.create(subscriptionParams);
 
     console.log(`[Stripe] Created subscription: ${subscription.id} with status: ${subscription.status}`);
 
