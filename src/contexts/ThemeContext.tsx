@@ -6,7 +6,7 @@
  * Created: January 22nd, 2026
  *
  * This context provides dark/light mode functionality across the
- * CrewCast Studio application. It handles theme state, persistence,
+ * Afforce One application. It handles theme state, persistence,
  * and applies the 'dark' class to the HTML element.
  *
  * ARCHITECTURE:
@@ -54,7 +54,7 @@ import React, {
 /**
  * localStorage key for persisting theme preference
  */
-const THEME_STORAGE_KEY = 'crewcast_theme';
+const THEME_STORAGE_KEY = 'afforce_theme';
 
 /**
  * Available theme options

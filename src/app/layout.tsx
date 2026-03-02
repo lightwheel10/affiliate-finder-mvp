@@ -109,7 +109,7 @@ const firaCode = Fira_Code({
 
 // January 21st, 2026: Removed "backed by selecdoo AI" per client request
 export const metadata: Metadata = {
-  title: "CrewCast Studio",
+  title: "Afforce One",
   description: "Find the best affiliates for your campaign",
 };
 

@@ -101,10 +101,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
           <div className="flex items-center gap-2 font-black text-lg tracking-tight z-50">
             <img 
               src="/logo.jpg" 
-              alt="CrewCast Studio" 
+              alt="Afforce One" 
               className="w-7 h-7 object-cover border-2 border-black dark:border-white"
             />
-            <span className="text-[#111827] dark:text-white">CrewCast<span className="text-[#ffbf23]">Studio</span></span>
+            <span className="text-[#111827] dark:text-white">Afforce<span className="text-[#ffbf23]">One</span></span>
           </div>
 
           {/* Desktop Links - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
@@ -485,7 +485,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                           <div className="flex items-center gap-3">
                             <img 
                               src="/logo.jpg" 
-                              alt="CrewCast Studio" 
+                              alt="Afforce One" 
                               className="w-8 h-8 object-cover border border-black dark:border-white"
                             />
                             <div className="flex-1">

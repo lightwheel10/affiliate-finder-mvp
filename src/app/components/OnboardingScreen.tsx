@@ -1102,7 +1102,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
         </div>
         <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.gettingStarted}</span>
       </div>
@@ -1285,7 +1285,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
         </div>
         <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '1').replace('{total}', '5')}</span>
       </div>
@@ -1499,7 +1499,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
         </div>
         <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '2').replace('{total}', '5')}</span>
       </div>
@@ -1721,7 +1721,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
         </div>
         <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '3').replace('{total}', '5')}</span>
       </div>
@@ -1874,7 +1874,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span></span>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
         </div>
         <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '4').replace('{total}', '5')}</span>
       </div>

@@ -393,7 +393,7 @@ export default function SignInPage() {
               <Sparkles size={10} fill="currentColor" className="opacity-90" />
             </div>
             <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">
-              CrewCast<span className="text-[#1A1D21] dark:text-[#ffbf23]">Studio</span>
+              Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span>
             </span>
           </div>
         </div>

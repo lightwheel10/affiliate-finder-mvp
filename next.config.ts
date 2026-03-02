@@ -1,5 +1,5 @@
 /**
- * Next.js Configuration for CrewCast Studio
+ * Next.js Configuration for Afforce One
  * 
  * Updated: January 5th, 2026
  * Added environment variable configuration for sitemap generation
@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
    * Falls back to production URL if not set
    */
   env: {
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://crewcast.studio',
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://afforceone.com',
   },
 
   /**

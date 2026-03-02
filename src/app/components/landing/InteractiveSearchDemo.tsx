@@ -177,7 +177,7 @@ export const InteractiveSearchDemo = () => {
           <div className="flex-1 flex justify-center">
             <div className="w-3/5 h-6 bg-white dark:bg-[#222] border-2 border-gray-300 dark:border-gray-600 flex items-center px-2 gap-2 text-[10px] text-slate-500 dark:text-gray-400 font-bold">
               <Search size={10} />
-              <span>crewcast.studio/scout</span>
+              <span>afforceone.com/scout</span>
             </div>
           </div>
         </div>

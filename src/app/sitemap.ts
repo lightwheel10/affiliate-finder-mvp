@@ -1,5 +1,5 @@
 /**
- * Sitemap Configuration for CrewCast Studio
+ * Sitemap Configuration for Afforce One
  * 
  * This file generates a dynamic sitemap.xml for SEO purposes.
  * Next.js App Router automatically serves this at /sitemap.xml
@@ -19,7 +19,7 @@ import type { MetadataRoute } from 'next';
  * Base URL for the site - uses environment variable or falls back to production URL
  * Set NEXT_PUBLIC_SITE_URL in your environment for different deployments
  */
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://crewcast.studio';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://afforceone.com';
 
 /**
  * Generates the sitemap for the application

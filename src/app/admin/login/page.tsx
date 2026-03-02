@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
             <Lock className="w-8 h-8 text-black" />
           </div>
           <h1 className="text-2xl font-black uppercase text-black">Admin Console</h1>
-          <p className="text-sm text-black/60 mt-1 uppercase tracking-wide">CrewCast Studio</p>
+          <p className="text-sm text-black/60 mt-1 uppercase tracking-wide">Afforce One</p>
         </div>
 
         {/* Login Form */}

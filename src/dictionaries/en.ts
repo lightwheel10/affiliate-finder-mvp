@@ -5,7 +5,7 @@
  *
  * Created: January 9th, 2026
  *
- * This file contains all English (en) translations for the CrewCast Studio app.
+ * This file contains all English (en) translations for the Afforce One app.
  * English is the default language.
  *
  * ADDING NEW TRANSLATIONS:
@@ -239,7 +239,7 @@ export const en: Dictionary = {
       termsOfService: 'Terms of Service',
       cookiePolicy: 'Cookie Policy',
       security: 'Security',
-      copyright: '© 2025 CrewCast Studio. All rights reserved.',
+      copyright: '© 2025 Afforce One. All rights reserved.',
       madeBy: 'Made by Spectrum AI Labs',
       systemStatus: 'All systems operational',
     },
@@ -270,7 +270,7 @@ export const en: Dictionary = {
     },
     // Step 1: Name, Role, Brand (combined step)
     step1: {
-      header: 'Thanks for joining CrewCast Studio',
+      header: 'Thanks for joining Afforce One',
       title: "Let's get to know each other",
       nameLabel: 'Name',
       namePlaceholder: 'Enter your full name',
@@ -969,7 +969,7 @@ export const en: Dictionary = {
   // =========================================================================
   // January 21st, 2026: Removed selecdoo branding per client request
   sidebar: {
-    brand: 'CrewCast Studio',
+    brand: 'Afforce One',
     tagline: '', // Was: 'backed by selecdoo AI'
     planCard: {
       planSuffix: 'Plan',
@@ -1224,7 +1224,7 @@ export const en: Dictionary = {
   errorBoundary: {
     title: 'Something went wrong',
     message: 'Please try again later. If the problem continues, contact us at',
-    contactPrefix: 'support@crewcast.studio',
+    contactPrefix: 'support@afforceone.com',
     tryAgain: 'Try Again',
   },
 
@@ -1259,12 +1259,12 @@ export const en: Dictionary = {
     },
     terms: {
       title: 'Terms of Service',
-      comingSoonMessage: 'These Terms of Service are currently being drafted by our legal team. The final version will detail the rules and guidelines for using CrewCast Studio.',
+      comingSoonMessage: 'These Terms of Service are currently being drafted by our legal team. The final version will detail the rules and guidelines for using Afforce One.',
       sections: {
         acceptanceOfTerms: '1. Acceptance of Terms',
         acceptanceOfTermsPlaceholder: '[Placeholder: Details about agreement to terms, eligibility requirements, and account responsibilities will be added here.]',
         descriptionOfService: '2. Description of Service',
-        descriptionOfServicePlaceholder: '[Placeholder: Information about the CrewCast Studio platform, features, and service availability will be added here.]',
+        descriptionOfServicePlaceholder: '[Placeholder: Information about the Afforce One platform, features, and service availability will be added here.]',
         userAccounts: '3. User Accounts',
         userAccountsPlaceholder: '[Placeholder: Details about account creation, security, and user responsibilities will be added here.]',
         paymentAndBilling: '4. Payment and Billing',

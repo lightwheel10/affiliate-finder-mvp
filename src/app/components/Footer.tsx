@@ -37,10 +37,10 @@ export const Footer = () => {
             <Link href="/" className="flex items-center gap-2 font-black text-lg text-gray-900 dark:text-white mb-4 uppercase">
               <img 
                 src="/logo.jpg" 
-                alt="CrewCast Studio" 
+                alt="Afforce One" 
                 className="w-7 h-7 border-2 border-black dark:border-gray-600 object-cover"
               />
-              <span>CrewCast Studio</span>
+              <span>Afforce One</span>
             </Link>
             <p className="text-gray-500 text-xs leading-relaxed max-w-xs">
               {t.landing.footer.brandDescription}

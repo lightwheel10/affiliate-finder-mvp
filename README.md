@@ -1,12 +1,12 @@
-# CrewCast Studio
+# Afforce One
 
 **Discover high-converting affiliate partners for your brand — in minutes, not months.**
 
 *Powered by Selecdoo AI*
 
-## 🎯 What is CrewCast Studio?
+## 🎯 What is Afforce One?
 
-CrewCast Studio is an AI-powered affiliate discovery platform that helps brands find, qualify, and connect with content creators and affiliate marketers who are already active in their niche.
+Afforce One is an AI-powered affiliate discovery platform that helps brands find, qualify, and connect with content creators and affiliate marketers who are already active in their niche.
 
 Stop spending 20+ hours a week manually searching for affiliates. Our intelligent discovery engine surfaces relevant partners across multiple platforms — complete with verified contact information and performance insights.
 

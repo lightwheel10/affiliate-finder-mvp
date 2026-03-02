@@ -5,7 +5,7 @@
  *
  * Created: January 9th, 2026
  *
- * This file contains all German (de) translations for the CrewCast Studio app.
+ * This file contains all German (de) translations for the Afforce One app.
  *
  * LANGUAGE STYLE:
  * ---------------
@@ -238,7 +238,7 @@ export const de: Dictionary = {
       termsOfService: 'Nutzungsbedingungen',
       cookiePolicy: 'Cookie-Richtlinie',
       security: 'Sicherheit',
-      copyright: '© 2025 CrewCast Studio. Alle Rechte vorbehalten.',
+      copyright: '© 2025 Afforce One. Alle Rechte vorbehalten.',
       madeBy: 'Entwickelt von Spectrum AI Labs',
       systemStatus: 'Alle Systeme funktionsfähig',
     },
@@ -270,7 +270,7 @@ export const de: Dictionary = {
     },
     // Step 1: Name, Role, Brand (combined step)
     step1: {
-      header: 'Willkommen bei CrewCast Studio',
+      header: 'Willkommen bei Afforce One',
       title: 'Lass uns kennenlernen',
       nameLabel: 'Name',
       namePlaceholder: 'Gib deinen vollständigen Namen ein',
@@ -969,7 +969,7 @@ export const de: Dictionary = {
   // =========================================================================
   // January 21st, 2026: Removed selecdoo branding per client request
   sidebar: {
-    brand: 'CrewCast Studio',
+    brand: 'Afforce One',
     tagline: '', // Was: 'powered by selecdoo AI'
     planCard: {
       planSuffix: 'Plan',
@@ -1220,7 +1220,7 @@ export const de: Dictionary = {
   errorBoundary: {
     title: 'Etwas ist schiefgelaufen',
     message: 'Bitte versuch es später erneut. Wenn das Problem weiterhin besteht, kontaktiere uns unter',
-    contactPrefix: 'support@crewcast.studio',
+    contactPrefix: 'support@afforceone.com',
     tryAgain: 'Erneut versuchen',
   },
 
@@ -1255,12 +1255,12 @@ export const de: Dictionary = {
     },
     terms: {
       title: 'Nutzungsbedingungen',
-      comingSoonMessage: 'Diese Nutzungsbedingungen werden derzeit von unserem Rechtsteam erstellt. Die endgültige Version wird die Regeln und Richtlinien für die Nutzung von CrewCast Studio detailliert beschreiben.',
+      comingSoonMessage: 'Diese Nutzungsbedingungen werden derzeit von unserem Rechtsteam erstellt. Die endgültige Version wird die Regeln und Richtlinien für die Nutzung von Afforce One detailliert beschreiben.',
       sections: {
         acceptanceOfTerms: '1. Annahme der Bedingungen',
         acceptanceOfTermsPlaceholder: '[Platzhalter: Details zur Zustimmung zu den Bedingungen, Berechtigungsanforderungen und Kontoverantwortlichkeiten werden hier hinzugefügt.]',
         descriptionOfService: '2. Beschreibung des Dienstes',
-        descriptionOfServicePlaceholder: '[Platzhalter: Informationen zur CrewCast Studio-Plattform, Funktionen und Dienstverfügbarkeit werden hier hinzugefügt.]',
+        descriptionOfServicePlaceholder: '[Platzhalter: Informationen zur Afforce One-Plattform, Funktionen und Dienstverfügbarkeit werden hier hinzugefügt.]',
         userAccounts: '3. Benutzerkonten',
         userAccountsPlaceholder: '[Platzhalter: Details zur Kontoerstellung, Sicherheit und Benutzerverantwortlichkeiten werden hier hinzugefügt.]',
         paymentAndBilling: '4. Zahlung und Abrechnung',

@@ -6,7 +6,7 @@
  * Created: January 9th, 2026
  *
  * This context provides internationalization (i18n) functionality across the
- * CrewCast Studio application. It handles language state, persistence, and
+ * Afforce One application. It handles language state, persistence, and
  * provides access to translated strings.
  *
  * ARCHITECTURE DECISION:
@@ -70,7 +70,7 @@ import { de } from '@/dictionaries/de';
 /**
  * localStorage key for persisting language preference
  */
-const LANGUAGE_STORAGE_KEY = 'crewcast_language';
+const LANGUAGE_STORAGE_KEY = 'afforce_language';
 
 /**
  * Map of language codes to their dictionaries

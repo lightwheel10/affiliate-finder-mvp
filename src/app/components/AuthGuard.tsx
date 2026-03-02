@@ -78,11 +78,11 @@ const PageSkeleton = () => (
         <div className="flex items-center gap-2.5 text-gray-900 dark:text-white">
           <img 
             src="/logo.jpg" 
-            alt="CrewCast Studio" 
+            alt="Afforce One" 
             className="w-8 h-8 border-2 border-black dark:border-gray-600 shrink-0 object-cover"
           />
           <div className="flex flex-col">
-            <span className="font-black text-sm tracking-tight leading-none uppercase">CrewCast <span className="text-black dark:text-white">Studio</span></span>
+            <span className="font-black text-sm tracking-tight leading-none uppercase">Afforce <span className="text-black dark:text-white">One</span></span>
             {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
           </div>
         </div>

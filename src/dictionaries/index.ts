@@ -271,7 +271,7 @@ export interface Dictionary {
     };
     // Step 1: Name, Role, Brand (combined step)
     step1: {
-      header: string;          // "Thanks for joining CrewCast Studio"
+      header: string;          // "Thanks for joining Afforce One"
       title: string;           // "Let's get to know each other"
       nameLabel: string;
       namePlaceholder: string;

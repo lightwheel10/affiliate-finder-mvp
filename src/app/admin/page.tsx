@@ -324,7 +324,7 @@ export default function AdminDashboardPage() {
             <Activity className="w-5 h-5 text-black" />
             <div>
               <p className="text-sm font-bold uppercase text-black">Main App</p>
-              <p className="text-xs text-black/60">Open CrewCast Studio</p>
+              <p className="text-xs text-black/60">Open Afforce One</p>
             </div>
           </a>
         </div>

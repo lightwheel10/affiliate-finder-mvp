@@ -1,19 +1,19 @@
-# CrewCast Studio - LLM Context File
+# Afforce One - LLM Context File
 # 
-# This file provides context about CrewCast Studio for Large Language Models.
+# This file provides context about Afforce One for Large Language Models.
 # It helps AI assistants understand what this application is and how to help users.
 #
 # Created: January 5th, 2026
 # Author: Spectrum AI Labs (Paras)
-# Last Updated: January 5th, 2026
+# Last Updated: March 2nd, 2026
 #
 # For more information: https://llmstxt.org/
 
-> CrewCast Studio is an AI-powered affiliate discovery platform that helps brands find, qualify, and connect with content creators and affiliate marketers.
+> Afforce One is an AI-powered affiliate discovery platform that helps brands find, qualify, and connect with content creators and affiliate marketers.
 
 ## Overview
 
-CrewCast Studio enables SaaS companies and e-commerce brands to discover affiliates who are already promoting their competitors. The platform uses AI and web scraping to find content creators across YouTube, Instagram, TikTok, and blogs, then enriches their data with verified contact information.
+Afforce One enables SaaS companies and e-commerce brands to discover affiliates who are already promoting their competitors. The platform uses AI and web scraping to find content creators across YouTube, Instagram, TikTok, and blogs, then enriches their data with verified contact information.
 
 ## Key Features
 
@@ -71,7 +71,7 @@ The platform provides REST API endpoints for:
 
 ## Contact
 
-- Website: https://crewcast.studio
+- Website: https://afforce.one
 - Support: Available through the platform
 
 ## Legal
@@ -80,4 +80,3 @@ The platform provides REST API endpoints for:
 - Terms of Service: /terms
 - Cookie Policy: /cookies
 - Security: /security
-

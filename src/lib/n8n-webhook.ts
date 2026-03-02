@@ -2,7 +2,7 @@
  * N8N Webhook Integration
  * 
  * Sends event data to n8n workflow for email notifications.
- * N8N workflow name: "CrewCast-Transactional-Emails"
+ * N8N workflow name: "Afforce-One-Transactional-Emails"
  * 
  * SUPPORTED EVENTS:
  * - signup: New user registered
@@ -136,7 +136,7 @@ export function sendEventToN8N(data: N8NEventData): Promise<void> {
 
   const payload = {
     ...data,
-    source: 'crewcast',
+    source: 'afforce_one',
     timestamp: new Date().toISOString(),
   };
 
@@ -150,7 +150,7 @@ export function sendEventToN8N(data: N8NEventData): Promise<void> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'User-Agent': 'CrewCast-Studio/1.0',
+      'User-Agent': 'Afforce-One/1.0',
     },
     body: JSON.stringify(payload),
   })
@@ -199,11 +199,11 @@ export function sendUserToN8N(data: N8NUserData): Promise<void> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'User-Agent': 'CrewCast-Studio/1.0',
+      'User-Agent': 'Afforce-One/1.0',
     },
     body: JSON.stringify({
       ...data,
-      source: 'crewcast_signup',
+      source: 'afforce_one_signup',
       timestamp: new Date().toISOString(),
     }),
   })

@@ -9,7 +9,7 @@
  * WHAT CHANGED:
  * -------------
  * - Replaced Neon's sql function with Supabase's sql wrapper
- * - Uses 'crewcast' schema (isolated from other services in shared Supabase)
+ * - Uses 'crewcast' schema (legacy name, kept for DB compatibility)
  * - Connection string from SUPABASE_DATABASE_URL env variable
  * 
  * WHY 'crewcast' SCHEMA:
@@ -18,9 +18,8 @@
  * schema ('crewcast') keeps our tables separate from:
  * - public schema (default, used by other services)
  * - Supabase internal schemas (auth, storage, etc.)
- * 
- * The sql wrapper automatically uses search_path=crewcast so all queries
- * target our tables without needing to prefix them.
+ * Note: The app is branded as "Afforce One" but the DB schema retains the
+ * legacy 'crewcast' name to avoid a disruptive migration.
  * 
  * USAGE:
  * ------
@@ -32,7 +31,7 @@
  */
 
 // Import the Supabase SQL wrapper (drop-in replacement for Neon)
-// This uses the 'postgres' package with search_path set to 'crewcast' schema
+// This uses the 'postgres' package with search_path set to 'crewcast' schema (legacy name)
 export { sql } from './supabase/sql';
 
 // Type definitions for database tables

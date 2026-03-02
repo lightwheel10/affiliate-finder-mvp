@@ -80,7 +80,7 @@ export function AdminSidebar() {
           </div>
           <div>
             <h1 className="text-sm font-black text-black uppercase">Admin Console</h1>
-            <p className="text-[10px] text-black/60 uppercase tracking-wide">CrewCast Studio</p>
+            <p className="text-[10px] text-black/60 uppercase tracking-wide">Afforce One</p>
           </div>
         </div>
       </div>

@@ -70,7 +70,7 @@ const SidebarSkeleton: React.FC = () => (
         <div className="bg-[#ffbf23] p-1 border-2 border-black dark:border-white">
           <Zap size={16} className="text-black" />
         </div>
-        <span className="font-black text-lg tracking-tighter leading-none">CrewCast Studio</span>
+        <span className="font-black text-lg tracking-tighter leading-none">Afforce One</span>
       </div>
       {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
     </div>
@@ -122,8 +122,8 @@ const SidebarSkeletonOld: React.FC = () => (
   <aside className="min-h-screen w-52 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 flex flex-col fixed left-0 top-0 bottom-0 z-40">
     <div className="h-14 flex items-center mt-1 mb-6 px-4">
       <div className="flex items-center gap-2.5 text-slate-900">
-        <img src="/logo.jpg" alt="CrewCast Studio" className="w-7 h-7 rounded-lg shadow-md shadow-[#1A1D21]/10 shrink-0 object-cover" />
-        <span className="font-bold text-sm tracking-tight leading-none">CrewCast <span className="text-[#1A1D21]">Studio</span></span>
+        <img src="/logo.jpg" alt="Afforce One" className="w-7 h-7 rounded-lg shadow-md shadow-[#1A1D21]/10 shrink-0 object-cover" />
+        <span className="font-bold text-sm tracking-tight leading-none">Afforce <span className="text-[#1A1D21]">One</span></span>
       </div>
     </div>
     <nav className="flex-1 space-y-6 overflow-y-auto py-1 px-3 animate-pulse">
@@ -256,7 +256,7 @@ export const Sidebar: React.FC = () => {
             <div className="bg-[#ffbf23] p-1 border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_#000000]">
               <Zap size={16} className="text-black" />
             </div>
-            <span className="font-black text-lg tracking-tighter leading-none">CrewCast Studio</span>
+            <span className="font-black text-lg tracking-tighter leading-none">Afforce One</span>
           </div>
           {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
         </div>

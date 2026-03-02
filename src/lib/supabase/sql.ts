@@ -78,7 +78,7 @@ const sqlClient = postgres(connectionString || '', {
   
   // NOTE (January 19th, 2026): search_path cannot be set via connection params
   // because Supabase's pooler (Supavisor) ignores session-level settings.
-  // Instead, all table names are explicitly prefixed with 'crewcast.' schema.
+  // Instead, all table names are explicitly prefixed with 'crewcast.' schema (legacy name, app is branded as Afforce One).
 });
 
 // =============================================================================

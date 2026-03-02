@@ -39,10 +39,10 @@ export default function CookiePolicyPage() {
           <Link href="/" className="flex items-center gap-2 font-black text-lg-tight uppercase">
             <img 
               src="/logo.jpg" 
-              alt="CrewCast Studio" 
+              alt="Afforce One" 
               className="w-8 h-8 border-2 border-black dark:border-gray-600 object-cover"
             />
-            <span className="text-gray-900 dark:text-white">CrewCast Studio</span>
+            <span className="text-gray-900 dark:text-white">Afforce One</span>
           </Link>
           <Link 
             href="/" 
@@ -113,8 +113,8 @@ export default function CookiePolicyPage() {
             <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t.legalPages.cookies.sections.contactUs}</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               {t.legalPages.cookies.sections.contactUsText}{' '}
-              <a href="mailto:privacy@crewcaststudio.com" className="text-black dark:text-white font-bold hover:text-[#ffbf23] transition-colors">
-                privacy@crewcaststudio.com
+              <a href="mailto:privacy@afforceone.com" className="text-black dark:text-white font-bold hover:text-[#ffbf23] transition-colors">
+                privacy@afforceone.com
               </a>
             </p>
           </div>

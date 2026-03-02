@@ -1,5 +1,5 @@
 /**
- * Robots.txt Configuration for CrewCast Studio
+ * Robots.txt Configuration for Afforce One
  * 
  * This file generates a dynamic robots.txt for search engine crawlers.
  * Next.js App Router automatically serves this at /robots.txt
@@ -15,7 +15,7 @@ import type { MetadataRoute } from 'next';
 /**
  * Base URL for the site - uses environment variable or falls back to production URL
  */
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://crewcast.studio';
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://afforceone.com';
 
 /**
  * Generates the robots.txt rules for the application

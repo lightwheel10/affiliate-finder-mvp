@@ -98,7 +98,7 @@ export function AnalyzingScreen({
             <Sparkles size={16} fill="currentColor" className="opacity-90" />
           </div>
           <span className="font-black text-lg tracking-tight text-gray-900 dark:text-white uppercase">
-            CrewCast<span className="text-black dark:text-white">Studio</span>
+            Afforce<span className="text-black dark:text-white">One</span>
           </span>
         </div>
         
