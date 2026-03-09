@@ -83,8 +83,8 @@ interface SuggestedTopic {
 // January 17, 2026: Plan details (name, description, features) are now translated
 // and accessed via t.onboarding.step5.plans in the render function
 const PRICING_PLANS = [
-  { id: 'pro', monthlyPrice: 99, annualPrice: 79, popular: false },
-  { id: 'business', monthlyPrice: 249, annualPrice: 199, popular: true },
+  { id: 'pro', monthlyPrice: 99, annualPrice: 79, popular: true },
+  { id: 'business', monthlyPrice: 249, annualPrice: 199, popular: false },
   { id: 'enterprise', priceLabel: 'Custom', popular: false },
 ] as const;
 
@@ -2051,7 +2051,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 <div className="absolute -top-2.5 left-0 right-0 flex justify-center">
                   <div className="bg-[#1A1D21] text-[#ffbf23] text-[9px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
                     <Star size={8} fill="currentColor" />
-                    {t.onboarding.step5.bestValue}
+                    {t.onboarding.step5.mostPopular}
                   </div>
                 </div>
               )}

@@ -20,18 +20,18 @@ export const PLAN_CREDITS = {
     ai: 30,
   },
   
-  // Pro plan (€99/month)
+  // Pro plan (€79/month)
   pro: {
     topicSearches: 5,
-    email: 150,
-    ai: 200,
+    email: 30,
+    ai: 30,
   },
   
-  // Business plan (€249/month) - 2x Pro
+  // Business Class plan (€199/month)
   business: {
     topicSearches: 10,
-    email: 300,
-    ai: 400,
+    email: 150,
+    ai: 150,
   },
   
   // Enterprise (custom pricing) - unlimited

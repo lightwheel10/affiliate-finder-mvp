@@ -1483,7 +1483,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
                 {isPopular && (
                   <div className="absolute -top-3 left-0 right-0 flex justify-center">
                     <span className="bg-black text-[#ffbf23] text-[10px] font-black uppercase tracking-wide px-2 py-0.5 border-2 border-[#ffbf23]">
-                      Best Value
+                      Most Popular
                     </span>
                   </div>
                 )}

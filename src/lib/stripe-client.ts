@@ -37,47 +37,49 @@ export function getStripe(): Promise<Stripe | null> {
 export const PLAN_PRICING = {
   pro: {
     name: 'Pro',
-    description: 'Perfect for solo founders & small teams starting their affiliate journey.',
+    description: 'For growing e-commerce & SaaS brands ready to scale their affiliate channel.',
     monthlyPrice: 99,    // €99/month
     annualPrice: 79,     // €79/month (billed €948/year)
     annualTotal: 948,    // Total annual cost
     features: [
-      'Find 500 new affiliates / month',
-      '150 Verified email credits / month',
-      '1 Brand Project',
-      'Basic Search Filters',
-      'Email Support',
+      'Find 75 new affiliates / month',
+      '30 verified email credits / month',
+      '30 hyper-personalized mail credits',
+      '1 brand project',
+      'Search filters included',
+      'Self-service (no support)',
       'Export to CSV',
     ],
-    popular: false,
+    popular: true,
   },
   business: {
-    name: 'Business',
-    description: 'For growing brands that need to scale their outreach volume.',
+    name: 'Business Class',
+    description: 'For growing brands that need more reach, more brands and e-mail support.',
     monthlyPrice: 249,   // €249/month
     annualPrice: 199,    // €199/month (billed €2,388/year)
     annualTotal: 2388,   // Total annual cost
     features: [
-      'Find Unlimited affiliates',
-      '500 Verified email credits / month',
-      '5 Brand Projects',
-      'Advanced Competitor Analysis',
-      'Priority Chat Support',
+      'Everything in Pro +',
+      'Find unlimited affiliates',
+      '150 verified email credits / month',
+      '150 hyper-personalized mail credits',
+      '5 brand projects',
+      'E-mail support',
     ],
-    popular: true,
+    popular: false,
   },
   enterprise: {
     name: 'Enterprise',
-    description: 'Custom solutions for large organizations with specific needs.',
+    description: 'For large organizations with custom discovery and scale needs.',
     monthlyPrice: null,  // Custom pricing
     annualPrice: null,
     features: [
-      'Unlimited everything',
-      'Dedicated Account Manager',
-      'Custom AI Model Training',
-      'SSO & Advanced Security',
-      'White-glove Onboarding',
-      'Custom Invoicing',
+      'Everything in Growth +',
+      'Custom scan frequency',
+      'Unlimited brand portfolio',
+      'Unlimited team access',
+      'API access & webhooks',
+      '24/7 priority support',
     ],
     popular: false,
   },

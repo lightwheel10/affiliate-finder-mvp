@@ -49,7 +49,7 @@ export const PLAN_DETAILS = {
     },
   },
   business: {
-    name: 'Business',
+    name: 'Business Class',
     monthly: {
       amount: 24900, // €249.00 in cents
       priceId: process.env.STRIPE_PRICE_BUSINESS_MONTHLY!,

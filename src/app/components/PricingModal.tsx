@@ -74,22 +74,22 @@ interface PlanConfig {
 
 const PLANS: PlanConfig[] = [
   {
-    name: 'Pro',
+    name: PLAN_PRICING.pro.name,
     id: 'pro',
-    description: 'Perfect for solo founders & small teams starting their affiliate journey.',
+    description: PLAN_PRICING.pro.description,
     monthlyPrice: PLAN_PRICING.pro.monthlyPrice,
     annualPrice: PLAN_PRICING.pro.annualPrice,
     features: PLAN_PRICING.pro.features,
-    popular: false,
+    popular: PLAN_PRICING.pro.popular,
   },
   {
-    name: 'Business',
+    name: PLAN_PRICING.business.name,
     id: 'business',
-    description: 'For growing brands that need to scale their outreach volume.',
+    description: PLAN_PRICING.business.description,
     monthlyPrice: PLAN_PRICING.business.monthlyPrice,
     annualPrice: PLAN_PRICING.business.annualPrice,
     features: PLAN_PRICING.business.features,
-    popular: true,
+    popular: PLAN_PRICING.business.popular,
   },
 ];
 
@@ -439,7 +439,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   <div className="absolute -top-4 left-0 right-0 flex justify-center">
                     <div className="bg-black text-[#ffbf23] text-xs font-black tracking-wide uppercase px-3 py-1 border-2 border-[#ffbf23] flex items-center gap-1.5">
                       <Star size={12} fill="currentColor" />
-                      {t.pricingModal.bestValue}
+                      {t.pricingModal.mostPopular}
                     </div>
                   </div>
                 )}

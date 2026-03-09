@@ -549,9 +549,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               transition={{ duration: 0.5, delay: 0 }}
               className="relative bg-white dark:bg-[#111] border-2 border-[#ffbf23] flex flex-col overflow-hidden shadow-[6px_6px_0px_0px_#ffbf23]"
             >
-              {/* Popular Badge - NEO-BRUTALIST (January 9th, 2026) */}
-              <div className="bg-[#1A1D21] text-white text-xs font-black tracking-wider uppercase text-center py-2 flex items-center justify-center gap-1.5">
-                <Zap size={12} fill="currentColor" className="text-[#ffbf23]" />
+              {/* Most Popular Badge - NEO-BRUTALIST */}
+              <div className="bg-[#ffbf23] text-black text-xs font-black tracking-wider uppercase text-center py-2 flex items-center justify-center gap-1.5">
+                <Zap size={12} fill="currentColor" />
                 {t.landing.pricing.mostPopular}
               </div>
 

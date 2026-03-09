@@ -328,7 +328,7 @@ export interface Dictionary {
       monthly: string;
       annual: string;
       discountBadge: string;   // "-20%"
-      bestValue: string;
+      mostPopular: string;
       perMonth: string;        // "/mo"
       billedAnnually: string;  // "Billed {amount}/yr"
       contactSales: string;
@@ -1464,7 +1464,7 @@ export interface Dictionary {
     billedYearly: string;
     custom: string;
     whatsIncluded: string;
-    bestValue: string;
+    mostPopular: string;
     // Button text
     contactSales: string;
     buyNow: string;
