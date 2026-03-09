@@ -199,6 +199,12 @@ export interface ResultItem {
       message: string;
       subject: string | null;
       generatedAt: string;
+      channels?: {
+        email?: { subject: string; message: string };
+        instagram_dm?: { message: string };
+        whatsapp_sms?: { message: string };
+        linkedin_dm?: { message: string };
+      };
     };
   };
 }

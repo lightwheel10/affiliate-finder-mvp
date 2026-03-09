@@ -107,6 +107,20 @@ import { PricingModal } from '../../components/PricingModal';
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
 
+// Multi-channel message data returned by the AI outreach API (March 2026)
+interface ChannelMessagesData {
+  email?: { subject: string; message: string };
+  instagram_dm?: { message: string };
+  whatsapp_sms?: { message: string };
+  linkedin_dm?: { message: string };
+}
+
+interface GeneratedMessageData {
+  message: string;
+  subject?: string;
+  channels?: ChannelMessagesData;
+}
+
 // =============================================================================
 // HELPER: FORMAT NUMBER - January 16, 2026
 // Formats large numbers for display (e.g., 1500 -> "1.5K", 1500000 -> "1.5M")
@@ -194,7 +208,7 @@ export default function OutreachPage() {
   // For backwards compatibility with single-contact affiliates,
   // we also support "affiliateId" alone.
   // =========================================================================
-  const [generatedMessages, setGeneratedMessages] = useState<Map<string, string>>(new Map());
+  const [generatedMessages, setGeneratedMessages] = useState<Map<string, GeneratedMessageData>>(new Map());
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set()); // Now tracks "affiliateId:email"
   
   // =========================================================================
@@ -281,6 +295,7 @@ export default function OutreachPage() {
   // Tracks which message is currently visible in the multi-message carousel
   // =========================================================================
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [activeChannel, setActiveChannel] = useState<'email' | 'instagram_dm' | 'whatsapp_sms' | 'linkedin_dm'>('email');
   
   // =========================================================================
   // MESSAGE EDITING STATE (January 16, 2026)
@@ -340,37 +355,14 @@ export default function OutreachPage() {
   // =========================================================================
   useEffect(() => {
     if (savedAffiliates.length > 0) {
-      const savedMessages = new Map<string, string>();
+      const savedMessages = new Map<string, GeneratedMessageData>();
       
       savedAffiliates.forEach((affiliate) => {
         if (affiliate.id) {
-          // =====================================================================
-          // LOAD PER-CONTACT AI MESSAGES FROM DATABASE (December 25, 2025)
-          // =====================================================================
-          // 
-          // The ai_generated_messages column stores a JSONB object with structure:
-          //   { "email@example.com": { message, subject, generatedAt }, ... }
-          // 
-          // This supports unlimited contacts per affiliate - each email is a key.
-          // 
-          // IMPORTANT - DATA FORMAT HANDLING:
-          // ---------------------------------
-          // The data can come in two formats depending on how it was saved:
-          // 
-          // 1. CORRECT FORMAT (saved with sql.json()):
-          //    { "email": { "message": "...", "subject": "...", "generatedAt": "..." } }
-          //    → data is an OBJECT, directly usable
-          // 
-          // 2. LEGACY FORMAT (saved with JSON.stringify()::jsonb - double-encoded):
-          //    { "email": "{\"message\":\"...\",\"subject\":\"...\",\"generatedAt\":\"...\"}" }
-          //    → data is a STRING containing JSON, needs JSON.parse()
-          // 
-          // We handle BOTH formats for backwards compatibility with existing data.
-          // New saves use sql.json() so they're stored correctly as objects.
-          // =====================================================================
           if (affiliate.aiGeneratedMessages && typeof affiliate.aiGeneratedMessages === 'object') {
             Object.entries(affiliate.aiGeneratedMessages).forEach(([email, data]) => {
-              let messageData: { message?: string; subject?: string; generatedAt?: string } | null = null;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              let messageData: any = null;
               
               // Handle double-encoded JSON strings (legacy format)
               if (typeof data === 'string') {
@@ -378,22 +370,26 @@ export default function OutreachPage() {
                 try {
                   messageData = JSON.parse(strData);
                 } catch {
-                  // If parse fails and it's a non-empty string, use it directly as the message
                   if (strData.trim()) {
                     const key = `${affiliate.id}:${email}`;
-                    savedMessages.set(key, strData);
+                    savedMessages.set(key, { message: strData });
                   }
                   return;
                 }
               } else if (data && typeof data === 'object' && 'message' in data) {
-                // Correct format - data is already an object
-                messageData = data as { message?: string };
+                messageData = data;
               }
               
-              // Extract and store the message if valid
               if (messageData && messageData.message && typeof messageData.message === 'string' && messageData.message.trim()) {
                 const key = `${affiliate.id}:${email}`;
-                savedMessages.set(key, messageData.message);
+                const entry: GeneratedMessageData = {
+                  message: messageData.message,
+                  subject: messageData.subject || undefined,
+                };
+                if (messageData.channels) {
+                  entry.channels = messageData.channels;
+                }
+                savedMessages.set(key, entry);
               }
             });
           }
@@ -420,7 +416,10 @@ export default function OutreachPage() {
               ? `${affiliate.id}:${affiliate.email}` 
               : `${affiliate.id}`;
             if (!savedMessages.has(key)) {
-              savedMessages.set(key, affiliate.aiGeneratedMessage);
+              savedMessages.set(key, {
+                message: affiliate.aiGeneratedMessage,
+                subject: affiliate.aiGeneratedSubject || undefined,
+              });
             }
           }
         }
@@ -440,8 +439,7 @@ export default function OutreachPage() {
         setGeneratedMessages(prev => {
           const merged = new Map(savedMessages);
           prev.forEach((value, key) => {
-            // Override DB value only if in-memory value is valid
-            if (value && typeof value === 'string' && value.trim()) {
+            if (value && value.message && value.message.trim()) {
               merged.set(key, value);
             }
           });
@@ -661,11 +659,9 @@ export default function OutreachPage() {
   // =========================================================================
   const hasAnyMessage = (affiliateId: number): boolean => {
     const prefix = `${affiliateId}:`;
-    // Check for keys with email or just the ID
-    for (const [key, message] of generatedMessages.entries()) {
+    for (const [key, data] of generatedMessages.entries()) {
       if (key === `${affiliateId}` || key.startsWith(prefix)) {
-        // BUG FIX: Only count if message is non-empty
-        if (message && typeof message === 'string' && message.trim()) {
+        if (data && data.message && data.message.trim()) {
           return true;
         }
       }
@@ -682,10 +678,9 @@ export default function OutreachPage() {
   const getMessageCount = (affiliateId: number): number => {
     const prefix = `${affiliateId}:`;
     let count = 0;
-    for (const [key, message] of generatedMessages.entries()) {
+    for (const [key, data] of generatedMessages.entries()) {
       if (key === `${affiliateId}` || key.startsWith(prefix)) {
-        // Only count valid non-empty messages
-        if (message && typeof message === 'string' && message.trim()) {
+        if (data && data.message && data.message.trim()) {
           count++;
         }
       }
@@ -738,19 +733,17 @@ export default function OutreachPage() {
   // Key format: "affiliateId:email@example.com" (supports any number of emails)
   // Only returns valid, non-empty messages.
   // =========================================================================
-  const getAllMessagesForAffiliate = (affiliateId: number): Array<{ email: string; message: string }> => {
+  const getAllMessagesForAffiliate = (affiliateId: number): Array<{ email: string; message: string; data: GeneratedMessageData }> => {
     const prefix = `${affiliateId}:`;
-    const messages: Array<{ email: string; message: string }> = [];
+    const messages: Array<{ email: string; message: string; data: GeneratedMessageData }> = [];
     
-    generatedMessages.forEach((message, key) => {
+    generatedMessages.forEach((msgData, key) => {
       if (key === `${affiliateId}` || key.startsWith(prefix)) {
-        // Only include valid non-empty messages
-        if (message && typeof message === 'string' && message.trim()) {
-          // Extract email from key (format: "affiliateId:email" or just "affiliateId")
+        if (msgData && msgData.message && msgData.message.trim()) {
           const email = key.includes(':') 
-            ? key.split(':').slice(1).join(':') // Handle emails with colons
-            : ''; // Legacy key format without email
-          messages.push({ email, message });
+            ? key.split(':').slice(1).join(':')
+            : '';
+          messages.push({ email, message: msgData.message, data: msgData });
         }
       }
     });
@@ -918,22 +911,25 @@ export default function OutreachPage() {
         const messageContent = data.message;
         
         if (messageContent && typeof messageContent === 'string' && messageContent.trim()) {
+          const msgData: GeneratedMessageData = {
+            message: messageContent,
+            subject: data.subject || undefined,
+          };
+          if (data.channels) {
+            msgData.channels = data.channels;
+          }
           setGeneratedMessages(prev => {
             const next = new Map(prev);
-            next.set(messageKey, messageContent);
+            next.set(messageKey, msgData);
             return next;
           });
           
-          // Show success notification (skip when called from bulk/multi-contact)
-          // i18n: January 10th, 2026
-          // February 9th, 2026: silent param suppresses toast for bulk callers
           if (!silent) showToast('success', t.toasts.success.emailGenerated);
         } else {
-          // API returned success but message is empty - treat as error
           console.error('[Outreach] ❌ API returned success but message is empty:', data);
           setFailedIds(prev => new Set(prev).add(messageKey));
           if (!silent) showToast('error', t.toasts.error.aiGenerationFailed);
-          return false; // Exit early to skip credits refresh
+          return false;
         }
 
         // =====================================================================
@@ -1137,19 +1133,23 @@ export default function OutreachPage() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // SUCCESS: Store message and update UI progressively
-          // BUG FIX (January 22, 2026): Validate message is non-empty before storing
           const messageContent = data.message;
           
           if (messageContent && typeof messageContent === 'string' && messageContent.trim()) {
+            const msgData: GeneratedMessageData = {
+              message: messageContent,
+              subject: data.subject || undefined,
+            };
+            if (data.channels) {
+              msgData.channels = data.channels;
+            }
             setGeneratedMessages(prev => {
               const next = new Map(prev);
-              next.set(messageKey, messageContent);
+              next.set(messageKey, msgData);
               return next;
             });
             successCount++;
           } else {
-            // API returned success but message is empty - treat as error
             console.error(`[Outreach] Bulk generation returned empty message for ${affiliate.domain}`);
             setFailedIds(prev => new Set(prev).add(messageKey));
             failCount++;
@@ -1240,17 +1240,20 @@ export default function OutreachPage() {
   // Now uses messageKey format "affiliateId:email"
   // Added success toast notification
   // =========================================================================
-  const handleCopyMessage = (messageKey: string) => {
-    const message = generatedMessages.get(messageKey);
-    if (message) {
-      navigator.clipboard.writeText(message);
-      setCopiedId(messageKey);
-      setTimeout(() => setCopiedId(null), 2000);
-      
-      // January 5th, 2026: Show success toast
-      // i18n: January 10th, 2026
-      showToast('success', t.toasts.success.messageCopied);
+  const handleCopyMessage = (messageKey: string, channelOverride?: string) => {
+    const msgData = generatedMessages.get(messageKey);
+    if (!msgData) return;
+    
+    let textToCopy = msgData.message;
+    if (channelOverride && msgData.channels) {
+      const ch = msgData.channels[channelOverride as keyof ChannelMessagesData];
+      if (ch) textToCopy = ch.message;
     }
+    
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedId(messageKey);
+    setTimeout(() => setCopiedId(null), 2000);
+    showToast('success', t.toasts.success.messageCopied);
   };
 
   // =========================================================================
@@ -1259,12 +1262,18 @@ export default function OutreachPage() {
   // Enters edit mode for a specific message. Copies the current message
   // text into the edit textarea.
   // =========================================================================
-  const handleStartEdit = (messageKey: string) => {
-    const message = generatedMessages.get(messageKey);
-    if (message) {
-      setEditingMessageKey(messageKey);
-      setEditedMessageText(message);
+  const handleStartEdit = (messageKey: string, channelOverride?: string) => {
+    const msgData = generatedMessages.get(messageKey);
+    if (!msgData) return;
+    
+    let text = msgData.message;
+    if (channelOverride && msgData.channels) {
+      const ch = msgData.channels[channelOverride as keyof ChannelMessagesData];
+      if (ch) text = ch.message;
     }
+    
+    setEditingMessageKey(messageKey);
+    setEditedMessageText(text);
   };
 
   // =========================================================================
@@ -1282,7 +1291,7 @@ export default function OutreachPage() {
   // Uses PATCH /api/ai/outreach to persist the changes.
   // =========================================================================
   // January 17, 2026: Updated to use i18n translations for toast messages
-  const handleSaveEdit = async (affiliateId: number, contactEmail: string | null) => {
+  const handleSaveEdit = async (affiliateId: number, contactEmail: string | null, channelOverride?: string) => {
     if (!editedMessageText.trim()) {
       showToast('error', t.toasts.error.messageEmpty);
       return;
@@ -1291,31 +1300,40 @@ export default function OutreachPage() {
     setIsSavingEdit(true);
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const patchBody: any = {
+        affiliateId,
+        contactEmail: contactEmail || 'primary',
+        message: editedMessageText,
+      };
+      if (channelOverride) {
+        patchBody.channel = channelOverride;
+      }
+
       const response = await fetch('/api/ai/outreach', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          affiliateId,
-          contactEmail: contactEmail || 'primary',
-          message: editedMessageText,
-        }),
+        body: JSON.stringify(patchBody),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Update local state with the edited message
         const messageKey = editingMessageKey!;
         setGeneratedMessages(prev => {
           const next = new Map(prev);
-          next.set(messageKey, editedMessageText);
+          const existing = prev.get(messageKey);
+          if (channelOverride && existing?.channels) {
+            const updatedChannels = { ...existing.channels, [channelOverride]: { message: editedMessageText } };
+            next.set(messageKey, { ...existing, channels: updatedChannels });
+          } else {
+            next.set(messageKey, { ...(existing || { message: '' }), message: editedMessageText });
+          }
           return next;
         });
 
-        // Exit edit mode
         setEditingMessageKey(null);
         setEditedMessageText('');
-        
         showToast('success', t.toasts.success.messageSaved);
       } else {
         showToast('error', data.error || t.toasts.error.messageSaveFailed);
@@ -1397,18 +1415,17 @@ export default function OutreachPage() {
    * Gets AI generated message for an affiliate
    * Checks both per-contact messages and legacy single message
    */
-  const getAIMessage = (item: typeof filteredResults[0]): { subject: string; message: string } => {
-    // First check per-contact messages (newer format)
+  const getAIMessage = (item: typeof filteredResults[0]): { subject: string; message: string; channels?: ChannelMessagesData } => {
     if (item.aiGeneratedMessages && item.email) {
       const contactMessage = item.aiGeneratedMessages[item.email];
       if (contactMessage?.message) {
         return {
           subject: contactMessage.subject || '',
-          message: contactMessage.message
+          message: contactMessage.message,
+          channels: contactMessage.channels || undefined,
         };
       }
     }
-    // Fall back to legacy single message
     return {
       subject: item.aiGeneratedSubject || '',
       message: item.aiGeneratedMessage || ''
@@ -1419,7 +1436,6 @@ export default function OutreachPage() {
    * Converts contact data to CSV string for outreach export
    */
   const generateOutreachCSV = (contacts: typeof filteredResults): string => {
-    // CSV Header
     const headers = [
       'Name',
       'Email',
@@ -1430,17 +1446,19 @@ export default function OutreachPage() {
       'Job Title',
       'LinkedIn',
       'AI Subject',
-      'AI Message'
+      'AI Message',
+      'Instagram DM',
+      'WhatsApp/SMS',
+      'LinkedIn DM'
     ];
     
-    // CSV Rows
     const rows = contacts.map(item => {
       const aiContent = getAIMessage(item);
       return [
         escapeCSVValue(item.personName || item.emailResults?.firstName 
           ? `${item.emailResults?.firstName || ''} ${item.emailResults?.lastName || ''}`.trim() || item.personName 
           : item.title),
-        escapeCSVValue(item.email), // Always present on outreach page
+        escapeCSVValue(item.email),
         escapeCSVValue(item.source),
         escapeCSVValue(item.domain),
         escapeCSVValue(item.link),
@@ -1448,7 +1466,10 @@ export default function OutreachPage() {
         escapeCSVValue(item.emailResults?.title || ''),
         escapeCSVValue(item.emailResults?.linkedinUrl || ''),
         escapeCSVValue(aiContent.subject),
-        escapeCSVValue(aiContent.message)
+        escapeCSVValue(aiContent.message),
+        escapeCSVValue(aiContent.channels?.instagram_dm?.message || ''),
+        escapeCSVValue(aiContent.channels?.whatsapp_sms?.message || ''),
+        escapeCSVValue(aiContent.channels?.linkedin_dm?.message || ''),
       ];
     });
     
@@ -2019,7 +2040,8 @@ export default function OutreachPage() {
                           <button
                             onClick={() => {
                               setCurrentMessageIndex(0);
-                              setViewingMessageId(`${item.id}`); // Always use multi-message view for multi-contact
+                              setActiveChannel('email');
+                              setViewingMessageId(`${item.id}`);
                             }}
                             className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-black uppercase bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
                             title={`View ${messageCount} generated message${messageCount > 1 ? 's' : ''}`}
@@ -2053,7 +2075,8 @@ export default function OutreachPage() {
                       // Only reached when: single contact with message, OR multi-contact with ALL messages
                       <button
                         onClick={() => {
-                          setCurrentMessageIndex(0); // Reset to first message
+                          setCurrentMessageIndex(0);
+                          setActiveChannel('email');
                           setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey);
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
@@ -2126,9 +2149,25 @@ export default function OutreachPage() {
             : [];
           
           // For single message view
-          const message = !isMultiMessageView ? generatedMessages.get(viewingMessageId) : null;
+          const msgData = !isMultiMessageView ? generatedMessages.get(viewingMessageId) : null;
           const isCopied = copiedId === viewingMessageId;
           const isRegenerating = generatingIds.has(viewingMessageId);
+          
+          // Determine which channels are available for tab rendering
+          const singleChannels = msgData?.channels;
+          const hasMultipleChannels = !!(singleChannels && (singleChannels.instagram_dm || singleChannels.whatsapp_sms || singleChannels.linkedin_dm));
+          
+          // Get the display text for the active channel
+          const getChannelText = (data: GeneratedMessageData | null | undefined, channel: string): string => {
+            if (!data) return '';
+            if (channel === 'email') return data.message;
+            const ch = data.channels?.[channel as keyof ChannelMessagesData];
+            return ch?.message || '';
+          };
+          const getChannelSubject = (data: GeneratedMessageData | null | undefined): string => {
+            if (!data) return '';
+            return data.channels?.email?.subject || data.subject || '';
+          };
 
           return (
             <div 
@@ -2158,6 +2197,42 @@ export default function OutreachPage() {
                   </button>
                 </div>
 
+                {/* Channel Tabs (March 2026) - only show when multi-channel data exists */}
+                {(() => {
+                  const tabData = isMultiMessageView
+                    ? (allMessages.length > 0 ? allMessages[Math.min(currentMessageIndex, allMessages.length - 1)]?.data : null)
+                    : msgData;
+                  const tabChannels = tabData?.channels;
+                  const showTabs = !!(tabChannels && (tabChannels.instagram_dm || tabChannels.whatsapp_sms || tabChannels.linkedin_dm));
+                  if (!showTabs) return null;
+                  
+                  const channelTabs: { key: 'email' | 'instagram_dm' | 'whatsapp_sms' | 'linkedin_dm'; label: string }[] = [
+                    { key: 'email', label: 'Email' },
+                    ...(tabChannels?.instagram_dm ? [{ key: 'instagram_dm' as const, label: 'Instagram' }] : []),
+                    ...(tabChannels?.whatsapp_sms ? [{ key: 'whatsapp_sms' as const, label: 'WhatsApp' }] : []),
+                    ...(tabChannels?.linkedin_dm ? [{ key: 'linkedin_dm' as const, label: 'LinkedIn' }] : []),
+                  ];
+                  
+                  return (
+                    <div className="flex border-b-2 border-black dark:border-gray-600 shrink-0 bg-gray-50 dark:bg-gray-900">
+                      {channelTabs.map(tab => (
+                        <button
+                          key={tab.key}
+                          onClick={() => { setActiveChannel(tab.key); handleCancelEdit(); }}
+                          className={cn(
+                            "px-4 py-2.5 text-xs font-black uppercase transition-all border-r-2 border-black dark:border-gray-600 last:border-r-0",
+                            activeChannel === tab.key
+                              ? "bg-[#ffbf23] text-black"
+                              : "bg-white dark:bg-[#0a0a0a] text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          )}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+
                 {/* Modal Body - NEO-BRUTALIST (Fixed January 16, 2026: Use flex-1 to ensure footer is visible) */}
                 <div className="p-6 overflow-y-auto flex-1 bg-white dark:bg-[#0a0a0a]">
                   {/* =====================================================================
@@ -2175,6 +2250,8 @@ export default function OutreachPage() {
                     const msgKey = getMessageKey(affiliateId, currentMsg.email);
                     const msgCopied = copiedId === msgKey;
                     const msgRegenerating = generatingIds.has(msgKey);
+                    const carouselChannels = currentMsg.data?.channels;
+                    const carouselHasChannels = !!(carouselChannels && (carouselChannels.instagram_dm || carouselChannels.whatsapp_sms || carouselChannels.linkedin_dm));
                     
                     return (
                       <div>
@@ -2244,7 +2321,7 @@ export default function OutreachPage() {
                                     {t.dashboard.outreach.messageViewer.cancel}
                                   </button>
                                   <button
-                                    onClick={() => handleSaveEdit(affiliateId, currentMsg.email)}
+                                    onClick={() => handleSaveEdit(affiliateId, currentMsg.email, carouselHasChannels ? activeChannel : undefined)}
                                     disabled={isSavingEdit || !editedMessageText.trim()}
                                     className={cn(
                                       "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
@@ -2268,15 +2345,16 @@ export default function OutreachPage() {
                                 </div>
                               </>
                             ) : (
-                              /* =========================================================
-                                 VIEW MODE - Shows the message with action buttons
-                                 ========================================================= */
                               <>
+                                {activeChannel === 'email' && getChannelSubject(currentMsg.data) && (
+                                  <div className="mb-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
+                                    Subject: <span className="text-gray-800 dark:text-gray-200 normal-case font-mono">{getChannelSubject(currentMsg.data)}</span>
+                                  </div>
+                                )}
                                 <div className="bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 min-h-[200px] max-h-[300px] overflow-y-auto font-mono">
-                                  {currentMsg.message}
+                                  {getChannelText(currentMsg.data, activeChannel) || currentMsg.message}
                                 </div>
                                 
-                                {/* Per-Message Actions - NEO-BRUTALIST (Updated January 16, 2026: Added Edit button) */}
                                 <div className="flex items-center justify-end gap-2 mt-4">
                                   <button
                                     onClick={() => {
@@ -2315,19 +2393,18 @@ export default function OutreachPage() {
                                         : "bg-white text-black border-black hover:bg-gray-100"
                                     )}
                                   >
-                                    {/* January 17, 2026: Using i18n translations */}
                                     <RefreshCw size={12} className={msgRegenerating ? "animate-spin" : ""} />
                                     {msgRegenerating ? t.dashboard.outreach.messageViewer.regenerating : t.dashboard.outreach.messageViewer.redo}
                                   </button>
                                   <button
-                                    onClick={() => handleStartEdit(msgKey)}
+                                    onClick={() => handleStartEdit(msgKey, carouselHasChannels ? activeChannel : undefined)}
                                     className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-black border-black hover:bg-gray-100"
                                   >
                                     <Pencil size={12} />
                                     {t.dashboard.outreach.messageViewer.edit}
                                   </button>
                                   <button
-                                    onClick={() => handleCopyMessage(msgKey)}
+                                    onClick={() => handleCopyMessage(msgKey, carouselHasChannels ? activeChannel : undefined)}
                                     className={cn(
                                       "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
                                       msgCopied
@@ -2399,7 +2476,7 @@ export default function OutreachPage() {
                                 {t.dashboard.outreach.messageViewer.cancel}
                               </button>
                               <button
-                                onClick={() => handleSaveEdit(affiliateId, contactEmail)}
+                                onClick={() => handleSaveEdit(affiliateId, contactEmail, hasMultipleChannels ? activeChannel : undefined)}
                                 disabled={isSavingEdit || !editedMessageText.trim()}
                                 className={cn(
                                   "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
@@ -2423,15 +2500,16 @@ export default function OutreachPage() {
                             </div>
                           </>
                         ) : (
-                          /* =========================================================
-                             VIEW MODE - Shows message with inline action buttons
-                             ========================================================= */
                           <>
+                            {activeChannel === 'email' && getChannelSubject(msgData) && (
+                              <div className="mb-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
+                                Subject: <span className="text-gray-800 dark:text-gray-200 normal-case font-mono">{getChannelSubject(msgData)}</span>
+                              </div>
+                            )}
                             <div className="bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 min-h-[200px] max-h-[300px] overflow-y-auto font-mono">
-                              {message}
+                              {getChannelText(msgData, activeChannel) || msgData?.message}
                             </div>
                             
-                            {/* Action Buttons - Inline like carousel view (January 17, 2026) */}
                             <div className="flex items-center justify-end gap-2 mt-4">
                               <button
                                 onClick={() => {
@@ -2469,19 +2547,18 @@ export default function OutreachPage() {
                                     : "bg-white text-black border-black hover:bg-gray-100"
                                 )}
                               >
-                                {/* January 17, 2026: Using i18n translations */}
                                 <RefreshCw size={12} className={isRegenerating ? "animate-spin" : ""} />
                                 {isRegenerating ? t.dashboard.outreach.messageViewer.regenerating : t.dashboard.outreach.messageViewer.redo}
                               </button>
                               <button
-                                onClick={() => handleStartEdit(viewingMessageId)}
+                                onClick={() => handleStartEdit(viewingMessageId, hasMultipleChannels ? activeChannel : undefined)}
                                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-black border-black hover:bg-gray-100"
                               >
                                 <Pencil size={12} />
                                 {t.dashboard.outreach.messageViewer.edit}
                               </button>
                               <button
-                                onClick={() => handleCopyMessage(viewingMessageId)}
+                                onClick={() => handleCopyMessage(viewingMessageId, hasMultipleChannels ? activeChannel : undefined)}
                                 className={cn(
                                   "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
                                   isCopied
@@ -2489,7 +2566,6 @@ export default function OutreachPage() {
                                     : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
                                 )}
                               >
-                                {/* January 17, 2026: Using i18n translations */}
                                 {isCopied ? (
                                   <>
                                     <Check size={14} />

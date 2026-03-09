@@ -113,17 +113,37 @@ export interface N8NAIOutreachRequest {
  * Response expected from n8n
  */
 export interface N8NAIOutreachResponse {
-  // Generated email content
+  // Generated email content (primary email body - kept for backwards compatibility)
   message: string;
   
-  // Optional subject line
+  // Optional subject line (primary email subject - kept for backwards compatibility)
   subject?: string;
+  
+  // Optional multi-channel messages (new format - March 2026)
+  channels?: ChannelMessages;
   
   // Success indicator
   success: boolean;
   
   // Error message if failed
   error?: string;
+}
+
+// Multi-channel messages returned by n8n (March 2026)
+export interface ChannelMessages {
+  email?: {
+    subject: string;
+    message: string;
+  };
+  instagram_dm?: {
+    message: string;
+  };
+  whatsapp_sms?: {
+    message: string;
+  };
+  linkedin_dm?: {
+    message: string;
+  };
 }
 
 // =============================================================================
@@ -189,7 +209,7 @@ export async function generateOutreachEmail(
     console.log('[N8N AI Outreach] 📥 Raw response:', JSON.stringify(rawData).substring(0, 500));
 
     // =========================================================================
-    // RESPONSE PARSING (Updated December 17, 2025)
+    // RESPONSE PARSING (Updated December 17, 2025, March 2026)
     // 
     // n8n can return different formats:
     // 1. Array with output object: [{ output: { subject, greeting, ... } }]
@@ -201,6 +221,7 @@ export async function generateOutreachEmail(
     // =========================================================================
     let message = '';
     let subject = '';
+    let channels: ChannelMessages | undefined;
     
     // Normalize the data - n8n often returns an array with one item
     // Also handle nested output field
@@ -220,7 +241,97 @@ export async function generateOutreachEmail(
     
     console.log('[N8N AI Outreach] 📧 Normalized data keys:', Object.keys(data));
 
-    if (typeof data === 'string') {
+    // =======================================================================
+    // NEW FORMAT (March 2026): Multi-channel object under data.email + DMs
+    // Structure (after unwrapping output):
+    // {
+    //   email: { subject, greeting, opening, body, cta, closing, signature_* },
+    //   instagram_dm: { message },
+    //   whatsapp_sms: { message },
+    //   linkedin_dm: { message }
+    // }
+    // =======================================================================
+    if (data && typeof data === 'object' && (data as any).email && typeof (data as any).email === 'object') {
+      console.log('[N8N AI Outreach] 📧 Detected multi-channel format with nested email object');
+      const emailData = (data as any).email as Record<string, unknown>;
+
+      // Rebuild email from structured parts (mirrors structured format branch below)
+      const parts: string[] = [];
+      const emailSubject = typeof emailData.subject === 'string' ? emailData.subject : '';
+
+      const greeting = typeof emailData.greeting === 'string' ? emailData.greeting : '';
+      const opening = typeof emailData.opening === 'string' ? emailData.opening : '';
+      const body = typeof emailData.body === 'string' ? emailData.body : '';
+      const cta = typeof emailData.cta === 'string' ? emailData.cta : '';
+      const closing = typeof emailData.closing === 'string' ? emailData.closing : '';
+      const signature_name = typeof emailData.signature_name === 'string' ? emailData.signature_name : '';
+      const signature_email = typeof emailData.signature_email === 'string' ? emailData.signature_email : '';
+      const signature_website = typeof emailData.signature_website === 'string' ? emailData.signature_website : '';
+      const signature_location = typeof emailData.signature_location === 'string' ? emailData.signature_location : '';
+      const ps = typeof emailData.ps === 'string' ? emailData.ps : '';
+
+      if (greeting) {
+        parts.push(greeting);
+      }
+      if (opening) {
+        parts.push('');
+        parts.push(opening);
+      }
+      if (body) {
+        parts.push('');
+        parts.push(body);
+      }
+      if (cta) {
+        parts.push('');
+        parts.push(cta);
+      }
+      if (closing) {
+        parts.push('');
+        parts.push(closing);
+      }
+
+      const signatureParts: string[] = [];
+      if (signature_name) signatureParts.push(signature_name);
+      if (signature_email) signatureParts.push(signature_email);
+      if (signature_website) signatureParts.push(signature_website);
+      if (signature_location) signatureParts.push(signature_location);
+
+      if (signatureParts.length > 0) {
+        parts.push(signatureParts.join('\n'));
+      }
+
+      if (ps) {
+        parts.push('');
+        parts.push('---');
+        parts.push('');
+        parts.push(ps);
+      }
+
+      message = parts.join('\n');
+      subject = emailSubject;
+
+      const channelMessages: ChannelMessages = {
+        email: {
+          subject,
+          message,
+        },
+      };
+
+      // Optional DM-style channels
+      const anyData = data as any;
+      if (anyData.instagram_dm && typeof anyData.instagram_dm === 'object' && typeof anyData.instagram_dm.message === 'string') {
+        channelMessages.instagram_dm = { message: anyData.instagram_dm.message };
+      }
+      if (anyData.whatsapp_sms && typeof anyData.whatsapp_sms === 'object' && typeof anyData.whatsapp_sms.message === 'string') {
+        channelMessages.whatsapp_sms = { message: anyData.whatsapp_sms.message };
+      }
+      if (anyData.linkedin_dm && typeof anyData.linkedin_dm === 'object' && typeof anyData.linkedin_dm.message === 'string') {
+        channelMessages.linkedin_dm = { message: anyData.linkedin_dm.message };
+      }
+
+      channels = channelMessages;
+
+    } else if (typeof data === 'string') {
       // Format 1: Plain string
       message = data;
     } else if (typeof data.message === 'string') {
@@ -302,9 +413,9 @@ export async function generateOutreachEmail(
       // Legacy format: { output: "..." }
       message = data.output;
       subject = data.subject || '';
-    } else if (data.email) {
+    } else if (typeof data.email === 'string') {
       // Legacy format: { email: "..." }
-      message = data.email;
+      message = data.email as string;
       subject = data.subject || '';
     } else if (data.text) {
       // Legacy format: { text: "..." }
@@ -321,11 +432,15 @@ export async function generateOutreachEmail(
       };
     }
 
-    return {
+    const responsePayload: N8NAIOutreachResponse = {
       success: true,
       message,
       subject,
     };
+    if (channels) {
+      responsePayload.channels = channels;
+    }
+    return responsePayload;
 
   } catch (error) {
     const elapsed = Date.now() - startTime;

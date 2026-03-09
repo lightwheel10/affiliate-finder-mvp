@@ -628,11 +628,14 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     try {
       // Build the message entry for this contact
-      const messageEntry = {
+      const messageEntry: Record<string, unknown> = {
         message: result.message,
         subject: result.subject || null,
         generatedAt: new Date().toISOString(),
       };
+      if (result.channels) {
+        messageEntry.channels = result.channels;
+      }
       
       // The email key to store under (use contactEmail or fallback to 'primary')
       const emailKey = contactEmail || 'primary';
@@ -696,8 +699,9 @@ export async function POST(request: NextRequest) {
       success: true,
       message: result.message,
       subject: result.subject || null,
+      channels: result.channels || null,
       affiliateId: affiliate.id,
-      contactEmail: contactEmail || null, // December 25, 2025: For multi-contact support
+      contactEmail: contactEmail || null,
     });
 
   } catch (error: unknown) {
@@ -779,7 +783,7 @@ export async function PATCH(request: NextRequest) {
     // STEP 2: PARSE REQUEST BODY
     // =========================================================================
     const body = await request.json();
-    const { affiliateId, contactEmail, message, subject } = body;
+    const { affiliateId, contactEmail, message, subject, channel, channels } = body;
 
     if (!affiliateId || !message) {
       return NextResponse.json(
@@ -828,11 +832,32 @@ export async function PATCH(request: NextRequest) {
     // IMPORTANT: Use sql.json() for proper encoding - see POST endpoint comments.
     // =========================================================================
     const emailKey = contactEmail || 'primary';
-    const messageEntry = {
+
+    // First, read the existing JSONB entry so we can merge channel edits
+    const existing = await sql`
+      SELECT ai_generated_messages FROM crewcast.saved_affiliates
+      WHERE id = ${affiliateId} AND user_id = ${userId}
+    `;
+    const existingMessages = existing[0]?.ai_generated_messages || {};
+    const existingEntry = existingMessages[emailKey] || {};
+    const existingChannels = existingEntry.channels || {};
+
+    // If a specific channel is being edited, update only that channel
+    let updatedChannels = existingChannels;
+    if (channel && typeof channel === 'string') {
+      updatedChannels = { ...existingChannels, [channel]: { message, ...(subject ? { subject } : {}) } };
+    } else if (channels) {
+      updatedChannels = channels;
+    }
+
+    const messageEntry: Record<string, unknown> = {
       message,
       subject: subject || null,
       generatedAt: new Date().toISOString(),
     };
+    if (updatedChannels && Object.keys(updatedChannels).length > 0) {
+      messageEntry.channels = updatedChannels;
+    }
 
     await sql`
       UPDATE crewcast.saved_affiliates
@@ -849,12 +874,13 @@ export async function PATCH(request: NextRequest) {
       WHERE id = ${affiliateId} AND user_id = ${userId}
     `;
 
-    console.log(`[AI Outreach] ✏️ Saved edited message for affiliate ${affiliateId}, contact: ${emailKey}`);
+    console.log(`[AI Outreach] ✏️ Saved edited message for affiliate ${affiliateId}, contact: ${emailKey}${channel ? `, channel: ${channel}` : ''}`);
 
     return NextResponse.json({
       success: true,
       message,
       subject: subject || null,
+      channels: updatedChannels && Object.keys(updatedChannels).length > 0 ? updatedChannels : null,
       affiliateId,
       contactEmail: emailKey,
     });
