@@ -699,10 +699,11 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     }
   }
   
-  // Get amount safely
+  // Get amount and billing reason safely
   const amountPaid = typeof invoiceObj.amount_paid === 'number' ? invoiceObj.amount_paid : 0;
+  const billingReason: string | null = typeof invoiceObj.billing_reason === 'string' ? invoiceObj.billing_reason : null;
   
-  console.log(`[Webhook] Invoice paid: ${invoice.id}, amount: ${amountPaid}, customer: ${customerId}`);
+  console.log(`[Webhook] Invoice paid: ${invoice.id}, amount: ${amountPaid}, billing_reason: ${billingReason}, customer: ${customerId}`);
 
   // ==========================================================================
   // VALIDATE CUSTOMER ID
@@ -745,14 +746,18 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   // ==========================================================================
-  // IMPORTANT: Skip $0 trial invoices ENTIRELY
-  // Trial invoices have amountPaid = 0 and should NOT:
-  // 1. Update subscription status to 'active' (it should stay 'trialing')
-  // 2. Reset credits (trial credits are initialized by handleSubscriptionUpdate)
+  // Skip ONLY $0 trial-start invoices (billing_reason: subscription_create).
+  // Do NOT skip $0 invoices from coupons/discounts — those have
+  // billing_reason: subscription_cycle and must be processed so that
+  // credits are reset and period_end is updated for the new billing period.
   // ==========================================================================
-  if (amountPaid === 0) {
-    console.log(`[Webhook] Skipping $0 trial invoice - no status change`);
+  if (amountPaid === 0 && billingReason === 'subscription_create') {
+    console.log(`[Webhook] Skipping $0 trial-start invoice (billing_reason=${billingReason})`);
     return;
+  }
+
+  if (amountPaid === 0) {
+    console.log(`[Webhook] Processing $0 invoice with billing_reason=${billingReason} (coupon/discount)`);
   }
 
   // ==========================================================================
