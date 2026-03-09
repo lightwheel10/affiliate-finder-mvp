@@ -173,6 +173,8 @@ export default function FindNewPage() {
   const [isEditingBrand, setIsEditingBrand] = useState(false);
   const [isSavingBrand, setIsSavingBrand] = useState(false);
   const isSelecdooUser = !!supabaseUser?.email?.toLowerCase().endsWith('@selecdoo.com');
+  const normalizedUserBrand = (user?.brand || '').trim();
+  const hasBrandChange = !!editBrand.trim() && editBrand.trim() !== normalizedUserBrand;
   
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1652,7 +1654,7 @@ export default function FindNewPage() {
                       placeholder={user?.brand || 'example.com'}
                       className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-black dark:focus:border-white"
                       onKeyDown={async (e) => {
-                        if (e.key === 'Enter' && !isSavingBrand && userId && editBrand.trim()) {
+                        if (e.key === 'Enter' && hasBrandChange && !isSavingBrand && userId) {
                           e.preventDefault();
                           try {
                             setIsSavingBrand(true);
@@ -1674,33 +1676,39 @@ export default function FindNewPage() {
                         }
                       }}
                     />
-                    <button
-                      type="button"
-                      disabled={isSavingBrand || !editBrand.trim() || !userId}
-                      onClick={async () => {
-                        if (!editBrand.trim() || !userId) return;
-                        try {
-                          setIsSavingBrand(true);
-                          await fetch('/api/users', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              id: userId,
-                              brand: editBrand.trim(),
-                            }),
-                          });
-                          await refetch?.();
-                          setIsEditingBrand(false);
-                        } catch (err) {
-                          console.error('[FindNewPage] Failed to save brand from checkmark:', err);
-                        } finally {
-                          setIsSavingBrand(false);
-                        }
-                      }}
-                      className="text-xs font-bold text-emerald-600 hover:text-emerald-800 px-2 disabled:opacity-50"
-                    >
-                      ✓
-                    </button>
+                    {hasBrandChange && (
+                      <button
+                        type="button"
+                        disabled={isSavingBrand || !userId}
+                        onClick={async () => {
+                          if (!hasBrandChange || !userId) return;
+                          try {
+                            setIsSavingBrand(true);
+                            await fetch('/api/users', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                id: userId,
+                                brand: editBrand.trim(),
+                              }),
+                            });
+                            await refetch?.();
+                            setIsEditingBrand(false);
+                          } catch (err) {
+                            console.error('[FindNewPage] Failed to save brand from checkmark:', err);
+                          } finally {
+                            setIsSavingBrand(false);
+                          }
+                        }}
+                        className="text-xs font-bold text-emerald-600 hover:text-emerald-800 px-2 disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {isSavingBrand ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          '✓'
+                        )}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setIsEditingBrand(false)}
