@@ -123,8 +123,9 @@ export default function FindNewPage() {
   // - user.brand: The user's website URL entered during onboarding
   // - user.competitors: Array of competitor URLs entered during onboarding
   // These are displayed in the "Find Affiliates" modal instead of placeholders.
+  // Supabase auth user (supabaseUser) is used for secure feature gating.
   // ==========================================================================
-  const { userId, user } = useNeonUser();
+  const { userId, user, supabaseUser } = useNeonUser();
   
   // Hooks for data management
   const { 
@@ -168,6 +169,8 @@ export default function FindNewPage() {
   // Editable competitors (pre-filled from onboarding, add/remove per run)
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState('');
+  const [editBrand, setEditBrand] = useState(user?.brand || '');
+  const isSelecdooUser = !!supabaseUser?.email?.toLowerCase().endsWith('@selecdoo.com');
   
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -415,6 +418,11 @@ export default function FindNewPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, discoveredLoading, discoveredAffiliates]);
 
+  // Keep editable brand in sync with latest user brand from database
+  useEffect(() => {
+    setEditBrand(user?.brand || '');
+  }, [user?.brand]);
+
   // ==========================================================================
   // HANDLE FIND AFFILIATES - Updated January 29, 2026
   // February 4, 2026: Batched search - all keywords in 1 API call, 1 credit per session
@@ -436,6 +444,22 @@ export default function FindNewPage() {
   const handleFindAffiliates = async () => {
     if (keywords.length === 0) return;
     
+    // For selecdoo users, persist any brand change before starting the search
+    if (isSelecdooUser && userId && editBrand.trim() && editBrand.trim() !== (user?.brand || '')) {
+      try {
+        await fetch('/api/users', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: userId,
+            brand: editBrand.trim(),
+          }),
+        });
+      } catch (err) {
+        console.error('[FindNewPage] Failed to update brand before search:', err);
+      }
+    }
+
     const hadPreviousResults = results.length > 0;
     
     setLoading(true);
@@ -1598,13 +1622,31 @@ export default function FindNewPage() {
             </p>
           </div>
 
-          {/* Website context - no border so it reads as read-only, not editable */}
+          {/* Website context */}
           <div className="flex items-center gap-2 px-0 py-1 text-gray-600 dark:text-gray-400">
             <Globe size={14} className="text-gray-500 shrink-0" />
             <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               {t.dashboard.find.modal.websiteLabel}:
             </span>
-            {user?.brand ? (
+            {isSelecdooUser ? (
+              <div className="flex-1 flex items-center gap-2">
+                {editBrand && (
+                  <img
+                    src={`https://www.google.com/s2/favicons?domain=${editBrand}&sz=16`}
+                    alt=""
+                    className="w-4 h-4 shrink-0"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                )}
+                <input
+                  type="text"
+                  value={editBrand}
+                  onChange={(e) => setEditBrand(e.target.value)}
+                  placeholder={user?.brand || 'example.com'}
+                  className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-black dark:focus:border-white"
+                />
+              </div>
+            ) : user?.brand ? (
               <>
                 <img
                   src={`https://www.google.com/s2/favicons?domain=${user.brand}&sz=16`}
