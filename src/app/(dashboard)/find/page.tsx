@@ -170,6 +170,7 @@ export default function FindNewPage() {
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState('');
   const [editBrand, setEditBrand] = useState(user?.brand || '');
+  const [isEditingBrand, setIsEditingBrand] = useState(false);
   const isSelecdooUser = !!supabaseUser?.email?.toLowerCase().endsWith('@selecdoo.com');
   
   const [results, setResults] = useState<ResultItem[]>([]);
@@ -421,6 +422,7 @@ export default function FindNewPage() {
   // Keep editable brand in sync with latest user brand from database
   useEffect(() => {
     setEditBrand(user?.brand || '');
+    setIsEditingBrand(false);
   }, [user?.brand]);
 
   // ==========================================================================
@@ -1630,21 +1632,56 @@ export default function FindNewPage() {
             </span>
             {isSelecdooUser ? (
               <div className="flex-1 flex items-center gap-2">
-                {editBrand && (
-                  <img
-                    src={`https://www.google.com/s2/favicons?domain=${editBrand}&sz=16`}
-                    alt=""
-                    className="w-4 h-4 shrink-0"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
+                {isEditingBrand ? (
+                  <>
+                    {editBrand && (
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${editBrand}&sz=16`}
+                        alt=""
+                        className="w-4 h-4 shrink-0"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                    <input
+                      type="text"
+                      value={editBrand}
+                      onChange={(e) => setEditBrand(e.target.value)}
+                      placeholder={user?.brand || 'example.com'}
+                      className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-black dark:focus:border-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingBrand(false)}
+                      className="text-xs font-bold text-gray-500 hover:text-black dark:hover:text-white px-2"
+                    >
+                      ✕
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {user?.brand && (
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${user.brand}&sz=16`}
+                        alt=""
+                        className="w-4 h-4 shrink-0"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                      {user?.brand || editBrand || t.dashboard.find.modal.notSetDuringOnboarding}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditBrand(user?.brand || editBrand || '');
+                        setIsEditingBrand(true);
+                      }}
+                      className="ml-2 text-xs font-bold text-gray-500 hover:text-black dark:hover:text-white border border-gray-300 dark:border-gray-600 px-2 py-0.5 bg-white dark:bg-gray-900"
+                    >
+                      ✎
+                    </button>
+                  </>
                 )}
-                <input
-                  type="text"
-                  value={editBrand}
-                  onChange={(e) => setEditBrand(e.target.value)}
-                  placeholder={user?.brand || 'example.com'}
-                  className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-black dark:focus:border-white"
-                />
               </div>
             ) : user?.brand ? (
               <>
