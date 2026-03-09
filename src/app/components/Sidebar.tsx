@@ -230,10 +230,8 @@ export const Sidebar: React.FC = () => {
     setIsLogoutModalOpen(false);
   };
 
-  // January 19th, 2026: Updated to use Supabase user properties
-  // Supabase user has: email, user_metadata.name, user_metadata.avatar_url
-  // Database user (from useSupabaseUser) has: name, email, profile_image_url
-  const userName = hookUserName || user?.name || supabaseUser?.email?.split('@')[0] || 'User';
+  // Database name takes priority so sidebar stays in sync with profile settings
+  const userName = user?.name || hookUserName || supabaseUser?.email?.split('@')[0] || 'User';
   const userEmail = supabaseUser?.email || user?.email || '';
   const userImageUrl = user?.profile_image_url || supabaseUser?.user_metadata?.avatar_url;
 
