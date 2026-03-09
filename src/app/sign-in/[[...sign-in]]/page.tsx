@@ -103,7 +103,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, Mail, Loader2, CheckCircle, AlertCircle, KeyRound } from 'lucide-react';
+import { ArrowLeft, Mail, Loader2, CheckCircle, AlertCircle, KeyRound } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -389,9 +389,7 @@ export default function SignInPage() {
           
           {/* Logo - NEO-BRUTALIST */}
           <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
-              <Sparkles size={10} fill="currentColor" className="opacity-90" />
-            </div>
+            <img src="/logo.svg" alt="Afforce One" className="w-5 h-5 border border-black dark:border-gray-600" />
             <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">
               Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span>
             </span>

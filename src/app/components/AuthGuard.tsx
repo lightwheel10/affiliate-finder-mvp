@@ -77,9 +77,9 @@ const PageSkeleton = () => (
       <div className="h-16 flex items-center px-6 border-b-4 border-black dark:border-gray-700">
         <div className="flex items-center gap-2.5 text-gray-900 dark:text-white">
           <img 
-            src="/logo.jpg" 
+            src="/logo.svg" 
             alt="Afforce One" 
-            className="w-8 h-8 border-2 border-black dark:border-gray-600 shrink-0 object-cover"
+            className="w-8 h-8 border-2 border-black dark:border-gray-600 shrink-0"
           />
           <div className="flex flex-col">
             <span className="font-black text-sm tracking-tight leading-none uppercase">Afforce <span className="text-black dark:text-white">One</span></span>

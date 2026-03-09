@@ -46,13 +46,13 @@ export const AuthLoadingScreen = () => {
             LOGO AREA - NEO-BRUTALIST (January 8th, 2026)
             
             Matches the branding used in Sidebar.tsx with neo-brutalist styling.
-            Uses the official logo.jpg and "Afforce One" brand name.
+            Uses the official logo.svg and "Afforce One" brand name.
             ================================================================= */}
         <div className="flex items-center gap-3">
           <img 
-            src="/logo.jpg" 
+            src="/logo.svg" 
             alt="Afforce One" 
-            className="w-10 h-10 border-2 border-black dark:border-gray-600 object-cover"
+            className="w-10 h-10 border-2 border-black dark:border-gray-600"
           />
           <div className="flex flex-col">
             <span className="font-black text-lg tracking-tight leading-none text-gray-900 dark:text-white uppercase">

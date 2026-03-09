@@ -94,9 +94,7 @@ export function AnalyzingScreen({
       <div className="text-center mb-6">
         {/* Logo */}
         <div className="flex items-center justify-center gap-1.5 mb-4">
-          <div className="w-8 h-8 bg-black border-2 border-black flex items-center justify-center text-[#ffbf23] shadow-[2px_2px_0px_0px_#ffbf23]">
-            <Sparkles size={16} fill="currentColor" className="opacity-90" />
-          </div>
+          <img src="/logo.svg" alt="Afforce One" className="w-8 h-8 border-2 border-black shadow-[2px_2px_0px_0px_#ffbf23]" />
           <span className="font-black text-lg tracking-tight text-gray-900 dark:text-white uppercase">
             Afforce<span className="text-black dark:text-white">One</span>
           </span>

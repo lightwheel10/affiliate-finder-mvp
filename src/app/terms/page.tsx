@@ -38,9 +38,9 @@ export default function TermsOfServicePage() {
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-black text-lg tracking-tight uppercase">
             <img 
-              src="/logo.jpg" 
+              src="/logo.svg" 
               alt="Afforce One" 
-              className="w-8 h-8 border-2 border-black dark:border-gray-600 object-cover"
+              className="w-8 h-8 border-2 border-black dark:border-gray-600"
             />
             <span className="text-gray-900 dark:text-white">Afforce One</span>
           </Link>

@@ -36,9 +36,9 @@ export const Footer = () => {
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-2 font-black text-lg text-gray-900 dark:text-white mb-4 uppercase">
               <img 
-                src="/logo.jpg" 
+                src="/logo.svg" 
                 alt="Afforce One" 
-                className="w-7 h-7 border-2 border-black dark:border-gray-600 object-cover"
+                className="w-7 h-7 border-2 border-black dark:border-gray-600"
               />
               <span>Afforce One</span>
             </Link>

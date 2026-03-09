@@ -97,12 +97,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          {/* Logo - NEO-BRUTALIST with original image (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+          {/* Logo - NEO-BRUTALIST (March 9, 2026: Updated to SVG logo) */}
           <div className="flex items-center gap-2 font-black text-lg tracking-tight z-50">
             <img 
-              src="/logo.jpg" 
+              src="/logo.svg" 
               alt="Afforce One" 
-              className="w-7 h-7 object-cover border-2 border-black dark:border-white"
+              className="w-7 h-7 border-2 border-black dark:border-white"
             />
             <span className="text-[#111827] dark:text-white">Afforce<span className="text-[#ffbf23]">One</span></span>
           </div>
@@ -484,9 +484,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
                         <div className="absolute bottom-4 left-4 right-4 p-4 bg-white dark:bg-[#111] border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#ffbf23] transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
                           <div className="flex items-center gap-3">
                             <img 
-                              src="/logo.jpg" 
+                              src="/logo.svg" 
                               alt="Afforce One" 
-                              className="w-8 h-8 object-cover border border-black dark:border-white"
+                              className="w-8 h-8 border border-black dark:border-white"
                             />
                             <div className="flex-1">
                               <div className="text-sm font-black text-[#111827] dark:text-white">{item.overlayTitle}</div>
