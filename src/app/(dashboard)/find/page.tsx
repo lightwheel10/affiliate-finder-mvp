@@ -125,7 +125,7 @@ export default function FindNewPage() {
   // These are displayed in the "Find Affiliates" modal instead of placeholders.
   // Supabase auth user (supabaseUser) is used for secure feature gating.
   // ==========================================================================
-  const { userId, user, supabaseUser } = useNeonUser();
+  const { userId, user, supabaseUser, refetch } = useNeonUser();
   
   // Hooks for data management
   const { 
@@ -171,6 +171,7 @@ export default function FindNewPage() {
   const [competitorInput, setCompetitorInput] = useState('');
   const [editBrand, setEditBrand] = useState(user?.brand || '');
   const [isEditingBrand, setIsEditingBrand] = useState(false);
+  const [isSavingBrand, setIsSavingBrand] = useState(false);
   const isSelecdooUser = !!supabaseUser?.email?.toLowerCase().endsWith('@selecdoo.com');
   
   const [results, setResults] = useState<ResultItem[]>([]);
@@ -423,6 +424,7 @@ export default function FindNewPage() {
   useEffect(() => {
     setEditBrand(user?.brand || '');
     setIsEditingBrand(false);
+    setIsSavingBrand(false);
   }, [user?.brand]);
 
   // ==========================================================================
@@ -457,6 +459,7 @@ export default function FindNewPage() {
             brand: editBrand.trim(),
           }),
         });
+        await refetch?.();
       } catch (err) {
         console.error('[FindNewPage] Failed to update brand before search:', err);
       }
@@ -1648,7 +1651,56 @@ export default function FindNewPage() {
                       onChange={(e) => setEditBrand(e.target.value)}
                       placeholder={user?.brand || 'example.com'}
                       className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-black dark:focus:border-white"
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter' && !isSavingBrand && userId && editBrand.trim()) {
+                          e.preventDefault();
+                          try {
+                            setIsSavingBrand(true);
+                            await fetch('/api/users', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                id: userId,
+                                brand: editBrand.trim(),
+                              }),
+                            });
+                            await refetch?.();
+                            setIsEditingBrand(false);
+                          } catch (err) {
+                            console.error('[FindNewPage] Failed to save brand from input:', err);
+                          } finally {
+                            setIsSavingBrand(false);
+                          }
+                        }
+                      }}
                     />
+                    <button
+                      type="button"
+                      disabled={isSavingBrand || !editBrand.trim() || !userId}
+                      onClick={async () => {
+                        if (!editBrand.trim() || !userId) return;
+                        try {
+                          setIsSavingBrand(true);
+                          await fetch('/api/users', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              id: userId,
+                              brand: editBrand.trim(),
+                            }),
+                          });
+                          await refetch?.();
+                          setIsEditingBrand(false);
+                        } catch (err) {
+                          console.error('[FindNewPage] Failed to save brand from checkmark:', err);
+                        } finally {
+                          setIsSavingBrand(false);
+                        }
+                      }}
+                      className="text-xs font-bold text-emerald-600 hover:text-emerald-800 px-2 disabled:opacity-50"
+                    >
+                      ✓
+                    </button>
                     <button
                       type="button"
                       onClick={() => setIsEditingBrand(false)}
