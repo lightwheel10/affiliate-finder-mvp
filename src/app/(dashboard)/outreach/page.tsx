@@ -528,14 +528,15 @@ export default function OutreachPage() {
   // =========================================================================
 
   // ==========================================================================
-  // AFFILIATES WITH EMAIL ONLY - January 16, 2026
-  // 
-  // Client requirement: Outreach page should only show affiliates for whom
-  // we have found an email. This filters out affiliates without emails since
-  // outreach is only possible when we have contact information.
+  // ALL SAVED AFFILIATES (Updated March 2026)
+  //
+  // Previously filtered to email-only (January 16, 2026). Removed that filter
+  // because with multi-channel outreach (Instagram DM, WhatsApp, LinkedIn),
+  // affiliates without an email can still receive AI-generated messages via
+  // other channels. The variable name is kept to avoid touching every reference.
   // ==========================================================================
   const affiliatesWithEmail = useMemo(() => {
-    return savedAffiliates.filter(item => item.email && item.email.trim() !== '');
+    return savedAffiliates;
   }, [savedAffiliates]);
 
   // Filter and Search Logic (now operates on affiliatesWithEmail)
