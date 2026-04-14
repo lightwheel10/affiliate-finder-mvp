@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "revenueflow-ai"]
+  "exclude": ["node_modules", "revenueflow-ai", "scripts"]
 }
