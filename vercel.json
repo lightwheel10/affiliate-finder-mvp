@@ -7,7 +7,6 @@
       "schedule": "0 * * * *"
     },
     {
-      "//": "April 14th, 2026 — monthly credit entitlement rollover for annual subscribers. Runs daily at 00:10 UTC (offset from auto-scan hourly tick to reduce contention).",
       "path": "/api/cron/credit-rollover",
       "schedule": "10 0 * * *"
     }
