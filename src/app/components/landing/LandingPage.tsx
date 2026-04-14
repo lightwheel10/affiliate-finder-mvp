@@ -539,8 +539,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
             </motion.div>
           </div>
 
-          {/* Pricing Cards - NEO-BRUTALIST (January 9th, 2026) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Pricing Cards - NEO-BRUTALIST (January 9th, 2026)
+              April 14th, 2026: Removed Enterprise plan card per client request.
+              Enterprise tier is not yet implemented end-to-end (no Stripe price,
+              no team/brand-projects/API features) and was misleading on the
+              public landing page. Grid reduced from 3 cols to 2 cols with a
+              centered max-width so the remaining Pro + Business cards stay
+              visually balanced. See also: OnboardingScreen.tsx PRICING_PLANS
+              and dictionaries/{en,de,index}.ts landing.pricing.enterprise. */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Pro Plan - Featured Card - Dark mode: January 22nd, 2026 */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -627,44 +634,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onSignup
               </div>
             </motion.div>
 
-            {/* Enterprise Plan - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="relative bg-white dark:bg-[#111] border-2 border-black dark:border-white flex flex-col shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] hover:shadow-[6px_6px_0px_0px_#000000] dark:hover:shadow-[6px_6px_0px_0px_#ffffff] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-200"
-            >
-              {/* Spacer to align with Pro card's badge */}
-              <div className="h-[34px]" />
-              <div className="p-6 flex-1 flex flex-col">
-                <div className="text-center mb-6">
-                  <h3 className="text-lg font-black text-[#111827] dark:text-white mb-1">{t.landing.pricing.enterprise.name}</h3>
-                  <p className="text-xs text-slate-500 dark:text-gray-400 mb-4 h-8 flex items-center justify-center px-4 leading-tight font-medium">{t.landing.pricing.enterprise.description}</p>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-3xl font-black tracking-tight text-[#111827] dark:text-white">{t.landing.pricing.enterprise.price}</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={onLoginClick}
-                  className="w-full py-3 text-sm font-black uppercase mb-6 transition-all duration-200 bg-white dark:bg-[#222] text-[#111827] dark:text-white border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] hover:shadow-[2px_2px_0px_0px_#000000] dark:hover:shadow-[2px_2px_0px_0px_#ffffff] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
-                >
-                  {t.landing.pricing.enterprise.cta}
-                </button>
-
-                <div className="space-y-3 flex-1">
-                  {t.landing.pricing.enterprise.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-2.5">
-                      <div className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 ${idx === 0 ? 'bg-transparent' : 'bg-[#1A1D21] text-[#ffbf23] border border-black'}`}>
-                        {idx !== 0 && <CheckCircle2 size={10} strokeWidth={3} />}
-                      </div>
-                      <span className={`text-xs leading-relaxed ${idx === 0 ? 'font-black text-[#111827] dark:text-white' : 'text-slate-600 dark:text-gray-300 font-medium'}`}>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
+            {/* Enterprise Plan removed on April 14th, 2026 per client request.
+                Reason: tier not yet implemented (no Stripe price, no team /
+                brand projects / API access / webhooks). The translation keys
+                `t.landing.pricing.enterprise.*` have also been removed from
+                dictionaries/{en,de,index}.ts on the same date. If the tier
+                is reintroduced, restore the <motion.div> block from git
+                history (commit prior to 2026-04-14) and the dictionary keys. */}
           </div>
 
           {/* Trust Note - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}

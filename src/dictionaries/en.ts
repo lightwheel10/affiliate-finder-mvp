@@ -209,20 +209,10 @@ export const en: Dictionary = {
           'E-mail support',
         ],
       },
-      enterprise: {
-        name: 'Enterprise',
-        description: 'For large organizations with custom discovery and scale needs',
-        price: 'Custom',
-        cta: "Let's Talk",
-        features: [
-          'Everything in Growth +',
-          'Custom scan frequency',
-          'Unlimited brand portfolio',
-          'Unlimited team access',
-          'API access & webhooks',
-          '24/7 priority support',
-        ],
-      },
+      // April 14th, 2026: Removed `enterprise` block (landing pricing).
+      // Tier is not implemented end-to-end. Matching change in de.ts and in
+      // the Dictionary type in dictionaries/index.ts. Restore from git
+      // history prior to 2026-04-14 if the tier is reintroduced.
       trustNote: '✨ 3-day free trial • Cancel anytime • 30-day money-back guarantee',
     },
     cta: {
@@ -364,19 +354,10 @@ export const en: Dictionary = {
             'E-mail support',
           ],
         },
-        enterprise: {
-          name: 'Enterprise',
-          description: 'For large organizations with custom discovery and scale needs.',
-          priceLabel: 'Custom',
-          features: [
-            'Everything in Growth +',
-            'Custom scan frequency',
-            'Unlimited brand portfolio',
-            'Unlimited team access',
-            'API access & webhooks',
-            '24/7 priority support',
-          ],
-        },
+        // April 14th, 2026: Removed `enterprise` plan block (onboarding step 5).
+        // Tier is not implemented end-to-end. Matching change in de.ts and in
+        // the Dictionary type in dictionaries/index.ts. Restore from git
+        // history prior to 2026-04-14 if the tier is reintroduced.
       },
     },
     // Step 6: Affiliate Types

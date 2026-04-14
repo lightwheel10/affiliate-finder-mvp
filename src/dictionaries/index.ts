@@ -216,13 +216,8 @@ export interface Dictionary {
         cta: string;
         features: string[];
       };
-      enterprise: {
-        name: string;
-        description: string;
-        price: string;
-        cta: string;
-        features: string[];
-      };
+      // April 14th, 2026: Removed `enterprise` pricing block type.
+      // See en.ts / de.ts / LandingPage.tsx for the full removal context.
       trustNote: string;
     };
     cta: {
@@ -347,12 +342,9 @@ export interface Dictionary {
           description: string;
           features: string[];
         };
-        enterprise: {
-          name: string;
-          description: string;
-          priceLabel: string;
-          features: string[];
-        };
+        // April 14th, 2026: Removed `enterprise` onboarding plan type.
+        // See en.ts / de.ts / OnboardingScreen.tsx for the full removal
+        // context.
       };
     };
     // Step 6: Affiliate Types (displayed as Step 5 in UI)

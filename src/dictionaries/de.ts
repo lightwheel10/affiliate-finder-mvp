@@ -208,20 +208,8 @@ export const de: Dictionary = {
           'E-Mail-Support',
         ],
       },
-      enterprise: {
-        name: 'Enterprise',
-        description: 'Für große Organisationen mit individuellen Entdeckungs- und Skalierungsanforderungen',
-        price: 'Individuell',
-        cta: 'Kontakt aufnehmen',
-        features: [
-          'Alles in Growth +',
-          'Individuelle Scan-Frequenz',
-          'Unbegrenztes Marken-Portfolio',
-          'Unbegrenzter Team-Zugang',
-          'API-Zugang & Webhooks',
-          '24/7 Priority-Support',
-        ],
-      },
+      // April 14th, 2026: Removed `enterprise` block (landing pricing).
+      // Mirrors en.ts. See en.ts and dictionaries/index.ts for context.
       trustNote: '✨ 3 Tage kostenlos testen • Jederzeit kündbar • 30 Tage Geld-zurück-Garantie',
     },
     cta: {
@@ -364,19 +352,8 @@ export const de: Dictionary = {
             'E-Mail-Support',
           ],
         },
-        enterprise: {
-          name: 'Enterprise',
-          description: 'Für große Organisationen mit individuellen Entdeckungs- und Skalierungsanforderungen.',
-          priceLabel: 'Individuell',
-          features: [
-            'Alles in Growth +',
-            'Individuelle Scan-Frequenz',
-            'Unbegrenztes Marken-Portfolio',
-            'Unbegrenzter Team-Zugang',
-            'API-Zugang & Webhooks',
-            '24/7 Priority-Support',
-          ],
-        },
+        // April 14th, 2026: Removed `enterprise` plan block (onboarding step 5).
+        // Mirrors en.ts. See en.ts and dictionaries/index.ts for context.
       },
     },
     // Step 6: Affiliate Types

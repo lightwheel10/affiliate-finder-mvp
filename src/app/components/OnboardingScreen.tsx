@@ -82,10 +82,18 @@ interface SuggestedTopic {
 // Pricing plans data - matching PricingModal exactly
 // January 17, 2026: Plan details (name, description, features) are now translated
 // and accessed via t.onboarding.step5.plans in the render function
+// April 14th, 2026: Removed 'enterprise' entry per client request.
+//   Reason: Enterprise tier is not implemented end-to-end (no Stripe price,
+//   no contact-sales flow, no team / brand-projects / API features). It was
+//   rendered as a disabled card that did nothing useful.
+//   The dead `isEnterprise` branches below (step 6 handler, render loop,
+//   selectedPlanPrice) are intentionally left in place for now — they are
+//   unreachable while PRICING_PLANS omits 'enterprise', and leaving them
+//   minimises the diff / risk on this paid-project edit. Remove or restore
+//   in a follow-up if the tier is never coming back / is coming back.
 const PRICING_PLANS = [
   { id: 'pro', monthlyPrice: 99, annualPrice: 79, popular: true },
   { id: 'business', monthlyPrice: 249, annualPrice: 199, popular: false },
-  { id: 'enterprise', priceLabel: 'Custom', popular: false },
 ] as const;
 
 // =============================================================================
@@ -727,35 +735,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       await saveProgress(6, { affiliateTypes });
       setStep(6);
     } else if (step === 6) {
-      // User selected plan, move to step 7 (Card Details)
-      // Enterprise users skip card entry
-      if (selectedPlan === 'enterprise') {
-        // For enterprise, just complete onboarding without card
-        setIsLoading(true);
-        try {
-          await fetch('/api/users/onboarding', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: userId,
-              name,
-              role,
-              brand,
-              targetCountry,
-              targetLanguage,
-              competitors,
-              topics,
-              affiliateTypes,
-            }),
-          });
-          onComplete();
-        } catch (error) {
-          console.error('Onboarding failed', error);
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
+      // User selected plan, move to step 7 (Card Details).
+      //
+      // April 14th, 2026: Removed the `if (selectedPlan === 'enterprise')`
+      // branch that previously skipped card entry and completed onboarding
+      // directly (POST /api/users/onboarding, then onComplete()). Enterprise
+      // was removed from PRICING_PLANS and the landing page on the same date
+      // because the tier is not yet implemented (no Stripe price, no team /
+      // brand-projects / API features). If the tier is reintroduced, restore
+      // the branch from git history prior to 2026-04-14.
       await saveProgress(7, { plan: selectedPlan });
       setStep(7);
     }
@@ -1983,68 +1971,51 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         </div>
       </div>
 
-      {/* Pricing Grid - 3 columns
+      {/* Pricing Grid - 2 columns
           January 17, 2026: Updated to use translated plan details
-          January 22nd, 2026: Added dark mode support for all plan cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          January 22nd, 2026: Added dark mode support for all plan cards
+          April 14th, 2026: Reduced from 3 cols -> 2 cols after Enterprise
+          plan was removed from PRICING_PLANS. Added max-w-2xl + mx-auto to
+          keep the two remaining cards centered and readable instead of
+          stretching to full container width. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
         {PRICING_PLANS.map((plan) => {
-          const isEnterprise = plan.id === 'enterprise';
-          
           // =================================================================
-          // January 17th, 2026 FIX: TypeScript error TS2339
-          // 
-          // PROBLEM:
-          // - PRICING_PLANS has different structures for different plans:
-          //   - 'pro' and 'business' have monthlyPrice and annualPrice
-          //   - 'enterprise' has priceLabel instead (no price fields)
-          // - TypeScript union type means plan.monthlyPrice might not exist
-          // 
-          // FIX:
-          // - Check if plan is enterprise first
-          // - Use 'in' operator to safely check if properties exist
-          // - Enterprise shows 'Custom' label, others show actual price
+          // April 14th, 2026: Enterprise plan was removed from PRICING_PLANS.
+          // The previous `isEnterprise` branches (price=0, priceLabel override,
+          // disabled card, opacity-70 styling, contactSales label) have been
+          // removed because `plan.id` is now narrowed to 'pro' | 'business'
+          // and a `=== 'enterprise'` comparison would not compile. If the
+          // tier is reintroduced, restore the branches from git history
+          // prior to 2026-04-14.
+          //
+          // Previous context (kept for reference):
+          //   Jan 17 2026: Plan details translated via t.onboarding.step5.plans
+          //   Jan 17 2026: Added 'in' operator checks for TS2339 fix
+          //   Jan 22 2026: Added dark: variants for dark mode support
           // =================================================================
-          const price = isEnterprise 
-            ? 0  // Enterprise has no numeric price
-            : ('monthlyPrice' in plan 
-                ? (billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice)
-                : 0);
-          
+          const price = billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
+
           const isSelected = selectedPlan === plan.id;
           const isPopular = plan.popular;
-          
+
           // Get translated plan details - January 17, 2026
           const planTranslations = t.onboarding.step5.plans[plan.id as keyof typeof t.onboarding.step5.plans];
           const planName = planTranslations.name;
           const planDescription = planTranslations.description;
           const planFeatures = planTranslations.features;
-          const planPriceLabel = isEnterprise ? (planTranslations as { priceLabel?: string }).priceLabel : undefined;
 
-          // =================================================================
-          // January 22nd, 2026: DARK MODE SUPPORT
-          // 
-          // Added dark: variants for all text and background colors.
-          // NO LOGIC CHANGES - only CSS classes for dark mode visibility.
-          // 
-          // Dark mode colors follow existing neo-brutalist design:
-          // - Card background: dark:bg-[#0f0f0f] (matches AffiliateRow)
-          // - Text: dark:text-white for headings, dark:text-gray-400 for muted
-          // - Borders: dark:border-gray-700
-          // - Ring offset: dark:ring-offset-black for selected state
-          // =================================================================
           return (
             <button
               key={plan.id}
               type="button"
-              onClick={() => !isEnterprise && setSelectedPlan(plan.id)}
-              disabled={isEnterprise}
+              onClick={() => setSelectedPlan(plan.id)}
               className={cn(
                 "relative rounded-lg bg-white dark:bg-[#0f0f0f] flex flex-col text-left transition-all",
-                isPopular 
-                  ? "border-2 border-[#ffbf23] shadow-md shadow-[#ffbf23]/10" 
+                isPopular
+                  ? "border-2 border-[#ffbf23] shadow-md shadow-[#ffbf23]/10"
                   : "border border-slate-200 dark:border-gray-700 shadow-sm",
-                isSelected && !isEnterprise && "ring-2 ring-[#1A1D21] dark:ring-[#ffbf23] ring-offset-1 dark:ring-offset-black",
-                isEnterprise && "opacity-70 cursor-not-allowed"
+                isSelected && "ring-2 ring-[#1A1D21] dark:ring-[#ffbf23] ring-offset-1 dark:ring-offset-black"
               )}
             >
               {isPopular && (
@@ -2060,9 +2031,9 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 {/* Plan Name - January 22nd, 2026: Added dark mode */}
                 <div className="mb-2">
                   <h3 className={cn(
-                    "text-sm font-bold", 
-                    isPopular 
-                      ? "text-[#1A1D21] dark:text-[#ffbf23]" 
+                    "text-sm font-bold",
+                    isPopular
+                      ? "text-[#1A1D21] dark:text-[#ffbf23]"
                       : "text-slate-900 dark:text-white"
                   )}>
                     {planName}
@@ -2070,35 +2041,32 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                   <p className="text-[10px] text-slate-500 dark:text-gray-400 leading-snug line-clamp-2">{planDescription}</p>
                 </div>
 
-                {/* Price - January 22nd, 2026: Added dark mode */}
+                {/* Price - January 22nd, 2026: Added dark mode
+                    April 14th, 2026: Removed `planPriceLabel` ternary (only used
+                    by the Enterprise "Custom" label). All remaining plans have
+                    numeric prices. */}
                 <div className="mb-2">
                   <div className="flex items-baseline gap-0.5">
-                    {planPriceLabel ? (
-                      <span className="text-xl font-bold text-slate-900 dark:text-white">{planPriceLabel}</span>
-                    ) : (
-                      <>
-                        <span className="text-xl font-bold text-slate-900 dark:text-white">{CURRENCY_SYMBOL}{price}</span>
-                        <span className="text-slate-400 dark:text-gray-500 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
-                      </>
-                    )}
+                    <span className="text-xl font-bold text-slate-900 dark:text-white">{CURRENCY_SYMBOL}{price}</span>
+                    <span className="text-slate-400 dark:text-gray-500 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
                   </div>
-                  {!planPriceLabel && billingInterval === 'annual' && (
-                    <p className="text-[9px] text-[#1A1D21] dark:text-[#ffbf23] font-medium">{t.onboarding.step5.billedAnnually.replace('{amount}', `${CURRENCY_SYMBOL}${price! * 12}`)}</p>
+                  {billingInterval === 'annual' && (
+                    <p className="text-[9px] text-[#1A1D21] dark:text-[#ffbf23] font-medium">{t.onboarding.step5.billedAnnually.replace('{amount}', `${CURRENCY_SYMBOL}${price * 12}`)}</p>
                   )}
                 </div>
 
-                {/* Select indicator - January 22nd, 2026: Added dark mode */}
+                {/* Select indicator - January 22nd, 2026: Added dark mode
+                    April 14th, 2026: Removed the `isEnterprise ? contactSales`
+                    branch — only Selected / Select Plan states remain. */}
                 <div className={cn(
                   "w-full py-1.5 rounded-md text-[10px] font-bold mb-2 transition-all flex items-center justify-center gap-1",
-                  isSelected && !isEnterprise
+                  isSelected
                     ? "bg-[#ffbf23] text-[#1A1D21]"
-                    : isPopular 
+                    : isPopular
                       ? "bg-[#1A1D21]/10 dark:bg-[#ffbf23]/10 text-[#1A1D21] dark:text-[#ffbf23]"
                       : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300"
                 )}>
-                  {isEnterprise ? (
-                    t.onboarding.step5.contactSales
-                  ) : isSelected ? (
+                  {isSelected ? (
                     <>
                       <Check size={10} strokeWidth={3} />
                       {t.onboarding.step5.selected}
@@ -2147,23 +2115,21 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const selectedPlanInfo = PRICING_PLANS.find(p => p.id === selectedPlan);
   
   // ==========================================================================
-  // January 17th, 2026 FIX: TypeScript error TS2339
-  // 
-  // PROBLEM:
-  // - selectedPlanInfo could be any of the PRICING_PLANS items
-  // - 'enterprise' plan doesn't have monthlyPrice/annualPrice properties
-  // - TypeScript complains about accessing these on a union type
-  // 
-  // FIX:
-  // - Check if the property exists using 'in' operator before accessing
-  // - Enterprise users skip card entry anyway (see step === 6 handler)
-  //   so this value is never used for enterprise, but we need it for TS
+  // April 14th, 2026: Simplified after Enterprise plan removal.
+  //
+  // Previously (Jan 17, 2026 fix for TS2339) this function had to guard
+  // against the Enterprise plan member of the PRICING_PLANS union, which
+  // did not carry `monthlyPrice` / `annualPrice` fields. With Enterprise
+  // removed, both remaining plans (Pro, Business) have these fields, so
+  // the `'monthlyPrice' in selectedPlanInfo` guard is no longer required.
+  // The only remaining guard is the undefined check in case the find()
+  // lookup on line above returns nothing (shouldn't happen in practice,
+  // but kept for defensive typing).
   // ==========================================================================
   const selectedPlanPrice = (() => {
     if (!selectedPlanInfo) return 0;
-    if (!('monthlyPrice' in selectedPlanInfo)) return 0; // Enterprise plan
-    return billingInterval === 'monthly' 
-      ? selectedPlanInfo.monthlyPrice 
+    return billingInterval === 'monthly'
+      ? selectedPlanInfo.monthlyPrice
       : selectedPlanInfo.annualPrice;
   })();
 
@@ -2369,11 +2335,12 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                           {isBrandValidating && <span>{t.onboarding.navigation.validatingDomain}</span>}
                         </>
                       ) : step === 6 ? (
-                        selectedPlan === 'enterprise' ? (
-                          t.onboarding.navigation.contactSales
-                        ) : (
-                          t.onboarding.navigation.continueToPayment
-                        )
+                        // April 14th, 2026: Removed the
+                        // `selectedPlan === 'enterprise' ? contactSales` branch
+                        // (see PRICING_PLANS comment). Only the Continue to
+                        // Payment label remains for the paid Pro / Business
+                        // plans.
+                        t.onboarding.navigation.continueToPayment
                       ) : step === 5 ? (
                         t.onboarding.navigation.choosePlan
                       ) : step === 1 ? (
