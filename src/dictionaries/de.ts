@@ -550,7 +550,8 @@ export const de: Dictionary = {
         noKeywordsYet: 'Noch keine Keywords hinzugefügt',
         ctaButton: 'Affiliates finden',
         searching: 'Suche läuft...',
-        tip: '💡 Tipp: Gib Keywords in deiner Zielsprache ein für beste Ergebnisse (z.B. "nail serum" für Englisch)',
+        keywordsHelper: 'Sei spezifisch — „Olivenöl Test" funktioniert besser als nur „Öl". Einzelne, generische Begriffe liefern ungenaue Ergebnisse.',
+        tip: '💡 Tipp: Verwende spezifische Keywords in deiner Zielsprache für beste Ergebnisse',
       },
       bulkActions: {
         selected: 'ausgewählt',

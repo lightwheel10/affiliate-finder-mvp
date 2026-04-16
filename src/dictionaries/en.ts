@@ -554,7 +554,8 @@ export const en: Dictionary = {
         noKeywordsYet: 'No keywords added yet',
         ctaButton: 'Find Affiliates',
         searching: 'Searching...',
-        tip: '💡 Tip: Enter keywords in your target language for best results (e.g. "Nagelserum" for German)',
+        keywordsHelper: 'Be specific — "Olivenöl Test" works much better than just "Öl". Single generic words return unrelated results.',
+        tip: '💡 Tip: Use specific, descriptive keywords in your target language for best results',
       },
       bulkActions: {
         selected: 'selected',

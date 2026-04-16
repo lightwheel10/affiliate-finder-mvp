@@ -1794,6 +1794,10 @@ export default function FindNewPage() {
                 </button>
               </div>
 
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 leading-tight">
+                {t.dashboard.find.modal.keywordsHelper}
+              </p>
+
               <div className="flex-1 min-h-[140px] max-h-[140px] overflow-y-auto no-scrollbar space-y-1.5 p-2 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 mt-2">
                 {keywords.length > 0 ? (
                   keywords.map((kw, idx) => (
