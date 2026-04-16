@@ -535,6 +535,7 @@ export interface Dictionary {
         noKeywordsYet: string;
         ctaButton: string;
         searching: string;
+        keywordsHelper: string;
         tip: string;
       };
       bulkActions: {
