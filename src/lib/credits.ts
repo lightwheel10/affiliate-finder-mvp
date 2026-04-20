@@ -647,17 +647,49 @@ export async function initializeTrialCredits(
 // =============================================================================
 
 /**
- * Reset credits for a new billing period
- * 
+ * Reset credits for a new MONTHLY entitlement period.
+ *
+ * IMPORTANT POLICY (April 20th, 2026):
+ * ------------------------------------
+ * CrewCast's marketing promise is "N credits / month" on every plan, including
+ * annual plans. We therefore enforce a MONTHLY entitlement cycle regardless of
+ * how Stripe bills the customer.
+ *
+ * The `periodEnd` argument is INTENTIONALLY IGNORED by this function: callers
+ * (the Stripe invoice.paid webhook and the change-subscription route) were
+ * previously forwarding Stripe's `subscription.current_period_end`, which for
+ * annual subscribers is ~365 days in the future. Using that as the credit
+ * window made `checkCredits()` treat the entire year as one window — so once
+ * the user exhausted the monthly allowance (e.g. 150 AI credits) they'd be
+ * blocked for the rest of the year with a misleading "Insufficient credits"
+ * error, while Stripe sat happily not charging them again until the annual
+ * renewal. Two paying @selecdoo.com users hit this before the bug was found
+ * (see scripts/temp-fix-david.ts, scripts/temp-fix-thomas.ts).
+ *
+ * The fix here is to derive `period_end = period_start + 1 month` locally,
+ * matching the cadence expected by the rolling job at
+ * `src/app/api/cron/credit-rollover/route.ts` (which uses the same
+ * setUTCMonth(+1) arithmetic for subsequent monthly rolls). This aligns with
+ * Stripe's own architectural guidance — keep billing in Stripe, manage
+ * recurring entitlement resets in the app — see
+ * https://docs.stripe.com/billing/subscriptions/usage-based/advanced/about
+ * (service interval vs billing interval).
+ *
+ * The `periodEnd` parameter is preserved in the signature for backward
+ * compatibility with existing callers that still compute it for logging /
+ * other purposes. If a future refactor cleans up those callers, the argument
+ * can be removed.
+ *
  * @param userId - The user's database ID
  * @param plan - The user's plan ('pro', 'business', 'enterprise')
- * @param periodStart - New period start date
- * @param periodEnd - New period end date
+ * @param periodStart - New period start date (authoritative — used as-is)
+ * @param periodEnd - IGNORED as of April 20th, 2026. See policy block above.
  */
 export async function resetCreditsForNewPeriod(
   userId: number,
   plan: 'pro' | 'business' | 'enterprise',
   periodStart: Date,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   periodEnd: Date
 ): Promise<boolean> {
   try {
@@ -677,6 +709,14 @@ export async function resetCreditsForNewPeriod(
 
     const planCredits = PLAN_CREDITS[verifiedPlan];
 
+    // April 20th, 2026: Always use a 1-month entitlement window regardless of
+    // what the caller passed for periodEnd. Using setUTCMonth(+1) preserves
+    // the day-of-month anchor (e.g. the 6th -> 6th next month) and clamps
+    // correctly for short months (Jan 31 -> Feb 28/29). This matches the
+    // monthly rollover arithmetic used by the credit-rollover cron.
+    const effectivePeriodEnd = new Date(periodStart.getTime());
+    effectivePeriodEnd.setUTCMonth(effectivePeriodEnd.getUTCMonth() + 1);
+
     // Update or insert credit record
     const existing = await sql`
       SELECT id FROM crewcast.user_credits WHERE user_id = ${userId}
@@ -694,7 +734,7 @@ export async function resetCreditsForNewPeriod(
           email_credits_used = 0,
           ai_credits_used = 0,
           period_start = ${periodStart.toISOString()},
-          period_end = ${periodEnd.toISOString()},
+          period_end = ${effectivePeriodEnd.toISOString()},
           is_trial_period = false,
           updated_at = NOW()
         WHERE user_id = ${userId}
@@ -722,7 +762,7 @@ export async function resetCreditsForNewPeriod(
           0,
           0,
           ${periodStart.toISOString()},
-          ${periodEnd.toISOString()},
+          ${effectivePeriodEnd.toISOString()},
           false
         )
       `;
@@ -731,14 +771,18 @@ export async function resetCreditsForNewPeriod(
     // Log the transactions
     await sql`
       INSERT INTO crewcast.credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
-      VALUES 
+      VALUES
         (${userId}, 'topic_search', ${planCredits.topicSearches}, ${planCredits.topicSearches}, 'reset', 'invoice'),
         (${userId}, 'email', ${planCredits.email}, ${planCredits.email}, 'reset', 'invoice'),
         (${userId}, 'ai', ${planCredits.ai}, ${planCredits.ai}, 'reset', 'invoice')
     `;
 
-    console.log(`[Credits] Reset credits for user ${userId} to ${plan} plan: ${planCredits.topicSearches} searches, ${planCredits.email} email, ${planCredits.ai} AI`);
-    
+    console.log(
+      `[Credits] Reset credits for user ${userId} to ${plan} plan: ` +
+      `${planCredits.topicSearches} searches, ${planCredits.email} email, ${planCredits.ai} AI. ` +
+      `Monthly entitlement window ${periodStart.toISOString()} -> ${effectivePeriodEnd.toISOString()}`
+    );
+
     return true;
   } catch (error) {
     console.error('[Credits] Error resetting credits:', error);
