@@ -711,9 +711,18 @@ export async function resetCreditsForNewPeriod(
 
     // April 20th, 2026: Always use a 1-month entitlement window regardless of
     // what the caller passed for periodEnd. Using setUTCMonth(+1) preserves
-    // the day-of-month anchor (e.g. the 6th -> 6th next month) and clamps
-    // correctly for short months (Jan 31 -> Feb 28/29). This matches the
-    // monthly rollover arithmetic used by the credit-rollover cron.
+    // the day-of-month anchor for ordinary dates (e.g. the 6th -> 6th next
+    // month).
+    //
+    // Edge case: end-of-month dates OVERFLOW rather than clamp. Jan 31 +1
+    // month is not "Feb 28" — setUTCMonth sets the date to Feb 31, which JS
+    // then normalises to Mar 3 (non-leap) or Mar 2 (leap). The resulting
+    // window is still ~30-31 days and the anniversary day subsequently
+    // stabilises on the new value (Mar 3 -> Apr 3 -> May 3 -> ...), so it's
+    // functionally correct — just don't expect a Jan-31 anchor to land on
+    // the 31st of every later month. This is the IDENTICAL arithmetic used
+    // by the credit-rollover cron's addMonths() helper, so the two paths
+    // stay in lockstep regardless of which one sets the initial anchor.
     const effectivePeriodEnd = new Date(periodStart.getTime());
     effectivePeriodEnd.setUTCMonth(effectivePeriodEnd.getUTCMonth() + 1);
 
