@@ -1,10 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  
+
   "crons": [
     {
       "path": "/api/cron/auto-scan",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/credit-rollover",
+      "schedule": "10 0 * * *"
     }
   ]
 }
