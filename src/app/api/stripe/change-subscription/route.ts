@@ -442,7 +442,14 @@ export async function POST(request: NextRequest) {
           : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // Default 1 year for annual
         
         const normalizedPlan = normalizePlan(newPlan);
-        
+
+        // April 20th, 2026: resetCreditsForNewPeriod ignores the passed
+        // periodEnd and always creates a 1-month entitlement window from
+        // periodStart — see the policy comment on that function in
+        // src/lib/credits.ts. The periodEnd computed above (from Stripe's
+        // current_period_end, potentially 1 year out for annual) is kept
+        // here so future refactors can decide whether to drop the retrieval
+        // entirely, but it does not affect the credit window.
         await resetCreditsForNewPeriod(userId, normalizedPlan, periodStart, periodEnd);
         console.log(`[Stripe Change] ✅ Credits reset for user ${userId} to ${normalizedPlan} plan`);
       } catch (creditError) {

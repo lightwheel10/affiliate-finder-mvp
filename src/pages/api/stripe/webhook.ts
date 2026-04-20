@@ -815,7 +815,13 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     }
     
     const normalizedPlan = normalizePlan(plan);
-    
+
+    // April 20th, 2026: resetCreditsForNewPeriod ignores the passed periodEnd
+    // and always creates a 1-month entitlement window from periodStart — see
+    // the policy comment on that function in src/lib/credits.ts. The
+    // periodEnd computed above (from Stripe's current_period_end) is still
+    // used for logging and for the subscriptions table (updated elsewhere in
+    // the webhook), but not for the credit window.
     await resetCreditsForNewPeriod(dbUserId, normalizedPlan, periodStart, periodEnd);
     console.log(`[Webhook] ✅ Reset credits for user ${dbUserId} to ${normalizedPlan} plan`);
   } catch (creditError) {
