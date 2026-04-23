@@ -1,12 +1,22 @@
 /**
  * =============================================================================
- * AffiliateRow Component - i18n Migration
+ * AffiliateRow Component
  * =============================================================================
- * Updated: January 10th, 2026 - Priority 5: Shared Components
- * 
- * This component displays individual affiliate results in a table row format.
- * All UI strings have been migrated to use the translation dictionary.
- * 
+ * Displays a single affiliate result as a table row on find / discovered /
+ * saved pages. Supports bulk selection, saving, deletion, email lookup,
+ * and three modals (Relevant Content, Email Results, View details).
+ *
+ * HISTORY:
+ *   January 10th, 2026 — i18n migration: all strings go through useLanguage().
+ *   April   23rd, 2026 — "Smoover" refresh for the INLINE row only
+ *                        (Phase 2e). Soft borders, rounded pills, yellow
+ *                        glow CTA matching the landing hero, hairline table
+ *                        divider. The THREE MODALS (Relevant Content, Email
+ *                        Results, View details) and their per-platform content
+ *                        renderers (YouTube / Instagram / TikTok / Web) are
+ *                        still neo-brutalist and will be migrated in follow-up
+ *                        PRs so changes stay reviewable.
+ *
  * Translation hook usage: const { t } = useLanguage();
  * =============================================================================
  */
@@ -297,7 +307,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     }
   };
 
-  // Get platform-specific colors - Updated January 6th, 2026 for neo-brutalist design
+  // Platform-specific colors for the tiny circular pin that floats over the
+  // avatar bottom-left corner.
+  //   January 6, 2026  — introduced for the original neo-brutalist row.
+  //   April 23, 2026   — only `bg` is consumed by the JSX now (see row render);
+  //                      the Phase 2e render overrides border + shadow inline,
+  //                      so `border`/`text` here are legacy no-ops kept for
+  //                      backwards-compat in case anything else reaches in.
   const getPlatformColors = () => {
     switch(source.toLowerCase()) {
       case 'youtube': return { bg: 'bg-red-500', border: 'border-black', text: 'text-white' };
@@ -395,13 +411,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     );
   };
 
-  // Updated January 6th, 2026 - Neo-brutalist design for discovery method
-  // Updated January 10th, 2026 - i18n migration
-  // Updated January 16, 2026 - Removed label, added 5-word limit for compact single-line display
+  // Discovery-method badge shown inline in the row (see main render below).
+  //   January 16, 2026 — removed "Discovered via" label; added 5-word truncation.
+  //   April 23, 2026  — Phase 2e smoover refresh: rounded hairline pill, softer
+  //                     typography. Truncation + title tooltip preserved.
   const renderDiscoveryMethod = () => {
     if (!discoveryMethod) return null;
     
-    // Limit to first 5 words for consistent badge size (matches Outreach page)
     const fullText = discoveryMethod.value;
     const words = fullText.split(' ');
     const truncatedText = words.length > 5 
@@ -410,7 +426,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
     return (
       <span 
-        className="inline-block px-2 py-1 text-[11px] font-bold bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-2 border-black dark:border-gray-600 max-w-[160px] truncate"
+        className="inline-block px-2.5 py-1 text-[11px] font-semibold rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 border border-[#e6ebf1] dark:border-gray-700 max-w-[160px] truncate"
         title={fullText}
       >
         {truncatedText}
@@ -1140,13 +1156,30 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   };
 
   // =============================================================================
-  // GRID LAYOUT - Updated January 6th, 2026
-  // 
-  // NEW DESIGN: Uses 12-column grid for neo-brutalist layout
-  // Matches DashboardDemo.tsx styling exactly:
-  // - grid grid-cols-12 gap-4
-  // - hover:bg-gray-50 dark:hover:bg-gray-900
-  // - Inter font family (inherited from globals.css)
+  // GRID LAYOUT
+  //   January 6, 2026  — introduced 12-column grid (replaced fixed-column grid).
+  //   April 23, 2026   — Phase 2e smoover refresh: visual tokens only,
+  //                      grid structure unchanged.
+  //   April 23, 2026   — Pipeline view overflow fix: Actions was col-span-1
+  //                      but its 3 circular buttons + gaps ≈ 112px overflowed
+  //                      the ~69px cell into the Email column. Iterated:
+  //                      first donated a col from Discovery Method (1+3+3+1+2+2),
+  //                      then shrank Email to col-span-1 instead so the Email
+  //                      column stops being wider than its content and header
+  //                      + content both naturally left-anchor together.
+  //
+  // Column spans (per cell in the render below) — UNIFIED LAYOUT:
+  //   Both pipeline and non-pipeline views now share the same 1+3+3+2+1+2 = 12
+  //   structure. Only the 5th column swaps between two variants:
+  //     col-span-1  checkbox
+  //     col-span-3  affiliate info (avatar + name + metrics)
+  //     col-span-3  relevant content (+ optional thumbnail)
+  //     col-span-2  discovery method
+  //     col-span-1  { date/status  (non-pipeline) | email pipeline (pipeline) }
+  //     col-span-2  actions
+  //
+  //   This lets callers (find / discovered / saved page headers) share a
+  //   single header-row template with the 5th cell swapped per view.
   // =============================================================================
   
   /* OLD_DESIGN_START - Grid Classes (pre-January 6th, 2026)
@@ -1155,16 +1188,19 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     : "grid grid-cols-[40px_220px_1fr_140px_100px_120px] gap-0";
   OLD_DESIGN_END */
   
-  // NEW DESIGN - 12-column grid matching DashboardDemo
-  // Pipeline view uses different column distribution for Status/Email columns
   const gridClass = "grid grid-cols-12 gap-4";
 
   const platformColors = getPlatformColors();
 
   return (
-    // DashboardDemo row styling - clean white/dark with subtle hover
-    // Updated January 16, 2026: Added min-h-[72px] to prevent row height shift when email/status states change
-    <div className={`group ${gridClass} items-center p-4 min-h-[72px] bg-white dark:bg-[#0f0f0f] hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors`}>
+    // Row container.
+    //   Jan 16, 2026: min-h-[72px] prevents row height shift as email/save
+    //                 states toggle (spinner → badge → button, etc).
+    //   Apr 23, 2026 (Phase 2e): added hairline bottom divider so consecutive
+    //                 rows read as a cohesive table without heavy borders.
+    //                 `last:border-b-0` so the final row doesn't clash with
+    //                 whatever container wraps the list.
+    <div className={`group ${gridClass} items-center p-4 min-h-[72px] bg-white dark:bg-[#0f0f0f] hover:bg-[#f6f9fc] dark:hover:bg-gray-900/50 border-b border-[#e6ebf1] dark:border-gray-800 last:border-b-0 transition-colors`}>
       {/* Checkbox - col-span-1, accent-brandYellow */}
       <div className="col-span-1 flex justify-center">
         <input 
@@ -1178,10 +1214,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       {/* Affiliate Info - col-span-3 for all views */}
       <div className="col-span-3">
         <div className="flex items-center gap-3">
-          {/* Platform Icon + Avatar - Neo-brutalist style */}
+          {/* Platform Icon + Avatar
+              April 23rd, 2026 (Phase 2e): soft round avatar with hairline border
+              and a subtle drop shadow, matching the landing/auth aesthetic. */}
           <div className="relative shrink-0">
-            {/* Avatar/Thumbnail with bold border */}
-            <div className={`w-10 h-10 rounded bg-gray-50 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center overflow-hidden`}>
+            <div className="w-10 h-10 rounded-full bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm flex items-center justify-center overflow-hidden">
               <img 
                 src={getProxiedImageUrl(channel?.thumbnail || thumbnail) || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`} 
                 alt="" 
@@ -1191,9 +1228,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 }}
               />
             </div>
-            {/* Platform badge - Neo-brutalist */}
+            {/* Platform badge pin - floats over avatar bottom-left
+                Ring color = page bg so the pin reads as "punched out" of the row. */}
             {isSocialMedia && (
-              <div className={`absolute -bottom-1 -left-1 w-5 h-5 rounded-full ${platformColors.bg} border-2 border-black dark:border-white flex items-center justify-center`}>
+              <div className={`absolute -bottom-1 -left-1 w-5 h-5 rounded-full ${platformColors.bg} border-2 border-white dark:border-[#0f0f0f] shadow-soft-sm flex items-center justify-center`}>
                 {getSourceIcon(10)}
               </div>
             )}
@@ -1210,22 +1248,23 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               {channel?.verified && (
                 <CheckCircle2 size={12} className="text-blue-500 fill-blue-500 shrink-0" />
               )}
-              {/* Neo-brutalist badges - i18n January 10th, 2026 */}
+              {/* Inline status badges — Phase 2e (April 23rd, 2026)
+                  Rounded-full pills with hairline tinted borders. No uppercase,
+                  no hard black border — reads as status, not shouting. */}
               {isNew && !isAlreadyAffiliate && (
-                <span className="px-1.5 py-[1px] bg-emerald-500 text-white text-[9px] font-black uppercase border border-black shrink-0">{t.affiliateRow.badges.new}</span>
+                <span className="px-2 py-[2px] rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold border border-emerald-200/70 dark:border-emerald-800 shrink-0">{t.affiliateRow.badges.new}</span>
               )}
               {isAlreadyAffiliate && (
-                <span className="px-1.5 py-[1px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] font-black uppercase border border-black dark:border-gray-500 shrink-0">{t.affiliateRow.badges.saved}</span>
+                <span className="px-2 py-[2px] rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 text-[10px] font-semibold border border-[#e6ebf1] dark:border-gray-700 shrink-0">{t.affiliateRow.badges.saved}</span>
               )}
             </div>
             
-            {/* Row 2: Stats - Updated January 6th, 2026 for neo-brutalist design */}
-            {/* Updated January 10th, 2026 - i18n migration */}
+            {/* Row 2: Stats — Phase 2e smoover refresh (April 23rd, 2026)
+                Brand-yellow accent pill keeps the punch; supporting pills go hairline. */}
             {isSocialMedia && (
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {/* Followers/Subscribers - Neo-brutalist badge */}
                 {channel?.subscribers && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#ffbf23] text-black border-2 border-black">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm">
                     <Users size={10} />
                     {channel.subscribers} {t.affiliateRow.metrics.followers}
                   </span>
@@ -1233,28 +1272,26 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </div>
             )}
             
-            {/* Row 2: SimilarWeb Stats for Web sources - Updated January 6th, 2026 */}
-            {/* Updated January 10th, 2026 - i18n migration */}
+            {/* Row 2: SimilarWeb stats for web sources — Phase 2e smoover refresh. */}
             {!isSocialMedia && (affiliateData?.similarWeb ? (
-              // Show actual SimilarWeb stats when data is available - Neo-brutalist style
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {/* Monthly Traffic */}
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#ffbf23] text-black border-2 border-black">
+                {/* Monthly traffic — brand-yellow punch pill */}
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm">
                   <BarChart2 size={10} />
                   {affiliateData.similarWeb.monthlyVisitsFormatted} {t.affiliateRow.metrics.visitsPerMonth}
                 </span>
-                {/* Global Rank */}
+                {/* Global rank — secondary hairline pill */}
                 {affiliateData.similarWeb.globalRank && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-black dark:border-gray-600">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-white dark:bg-gray-800 text-[#425466] dark:text-gray-300 border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm">
                     <TrendingUp size={10} />
                     #{affiliateData.similarWeb.globalRank.toLocaleString()}
                   </span>
                 )}
               </div>
             ) : affiliateData?.isEnriching ? (
-              // Show loading skeleton while SimilarWeb data is being fetched
+              // Enrichment loading pill — muted, no punch
               <div className="flex items-center gap-2 mt-1">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-300 dark:border-gray-600">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-700">
                   <Loader2 size={10} className="animate-spin" />
                   {t.affiliateRow.metrics.loading}
                 </span>
@@ -1269,7 +1306,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       {/* February 2, 2026: Back to col-span-3 for all views, reduced Action column instead */}
       <div className="col-span-3 min-w-0 overflow-hidden">
         <div className="flex items-start gap-3">
-          {/* Video/Post Thumbnail for social media - Neo-brutalist with bold borders */}
+          {/* Video/Post thumbnail for social media — Phase 2e smoover refresh
+              (April 23rd, 2026). Rounded frame, hairline border, soft shadow;
+              duration badge becomes a dark translucent chip instead of yellow. */}
           {isSocialMedia && thumbnail && (
             <a 
               href={link} 
@@ -1277,7 +1316,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               rel="noreferrer"
               className="shrink-0 relative group/thumb"
             >
-              <div className="w-16 h-12 overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600">
+              <div className="w-16 h-12 overflow-hidden rounded-lg bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm">
                 <img 
                   src={getProxiedImageUrl(thumbnail)} 
                   alt="" 
@@ -1285,16 +1324,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   onError={(e) => (e.currentTarget.style.display = 'none')}
                 />
               </div>
-              {/* Duration badge - Neo-brutalist */}
+              {/* Duration chip — dark translucent pill, matches video overlays on landing */}
               {duration && (
-                <span className="absolute bottom-0 right-0 px-1 py-0.5 bg-[#ffbf23] text-black text-[8px] font-black border-t border-l border-black">
+                <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-[#0f172a]/85 text-white text-[9px] font-semibold font-mono">
                   {duration}
                 </span>
               )}
-              {/* Play icon overlay */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-black/20">
-                <div className="w-6 h-6 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
-                  <Play size={12} className="text-black ml-0.5" fill="currentColor" />
+              {/* Play icon overlay on hover */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity rounded-lg bg-black/25">
+                <div className="w-7 h-7 rounded-full bg-[#ffbf23] shadow-yellow-glow-sm flex items-center justify-center">
+                  <Play size={12} className="text-[#0f172a] ml-0.5" fill="currentColor" />
                 </div>
               </div>
             </a>
@@ -1314,43 +1353,39 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               {title}
             </a>
             
-            {/* Stats row for social media - Neo-brutalist with bold styling */}
-            {/* Updated January 10th, 2026 - i18n migration */}
-            {/* Updated January 27th, 2026 - TikTok shows video plays instead of date */}
-            {/* Updated January 30th, 2026 - Instagram shows post likes/views */}
+            {/* Stats row for social media — Phase 2e smoover refresh (April 23rd, 2026)
+                Rounded hairline pills; no uppercase or heavy black borders.
+                Previous behavioural fixes preserved:
+                  - Jan 27, 2026: TikTok shows video plays instead of date.
+                  - Jan 30, 2026: Instagram shows post likes/views.
+                  - Jan 30, 2026: `!= null` to tolerate NULL-from-DB correctly. */}
             {isSocialMedia && (
               <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
-                {/* TikTok: Show video plays from tiktokVideoPlays */}
                 {source.toLowerCase() === 'tiktok' && affiliateData?.tiktokVideoPlays && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium border border-[#e6ebf1] dark:border-gray-700 whitespace-nowrap">
                     <Eye size={10} />
                     {formatNumber(affiliateData.tiktokVideoPlays)} {t.affiliateRow.metrics.views}
                   </span>
                 )}
-                {/* Instagram: Show post likes and views */}
-                {/* FIX January 30, 2026: Changed !== undefined to != null to properly handle NULL from DB */}
-                {/* NULL !== undefined is TRUE in JS, so we were showing "0 likes" for profile URLs */}
                 {source.toLowerCase() === 'instagram' && affiliateData?.instagramPostLikes != null && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium border border-[#e6ebf1] dark:border-gray-700 whitespace-nowrap">
                     ❤️ {formatNumber(affiliateData.instagramPostLikes)} {t.affiliateRow.metrics.likes}
                   </span>
                 )}
                 {source.toLowerCase() === 'instagram' && affiliateData?.instagramPostViews != null && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium border border-[#e6ebf1] dark:border-gray-700 whitespace-nowrap">
                     <Eye size={10} />
                     {formatNumber(affiliateData.instagramPostViews)} {t.affiliateRow.metrics.views}
                   </span>
                 )}
-                {/* YouTube: Show views prop */}
                 {source.toLowerCase() === 'youtube' && views && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium border border-[#e6ebf1] dark:border-gray-700 whitespace-nowrap">
                     <Eye size={10} />
                     {views} {t.affiliateRow.metrics.views}
                   </span>
                 )}
-                {/* Only show date for non-TikTok (TikTok date shows in modal) */}
                 {source.toLowerCase() !== 'tiktok' && date && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium border border-[#e6ebf1] dark:border-gray-700 whitespace-nowrap">
                     {formatDate(date)}
                   </span>
                 )}
@@ -1370,7 +1405,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {subItems && subItems.length > 0 && (
                <p 
                  onClick={() => setIsModalOpen(true)}
-                 className="text-[9px] text-[#ffbf23] font-black cursor-pointer hover:underline inline-block select-none uppercase whitespace-nowrap"
+                 className="text-[10px] text-[#ffbf23] font-semibold cursor-pointer hover:underline inline-block select-none whitespace-nowrap"
                >
                  +{subItems.length} {t.affiliateRow.discovery.more}
                </p>
@@ -1379,26 +1414,31 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Discovery Method - col-span-2 for all views */}
-      {/* Updated January 16, 2026: Added h-8 flex items-center for consistent height */}
-      {/* Updated January 22, 2026: DiscoveryReasonsPopover removed (feature rollback) */}
-      {/* February 2, 2026: Pipeline back to col-span-2 for better spacing from Email column */}
+      {/* Discovery Method — col-span-2 for all views
+          HISTORY:
+            Jan 16, 2026 — added h-8 flex items-center for consistent row height.
+            Jan 22, 2026 — DiscoveryReasonsPopover removed (feature rollback).
+            Feb  2, 2026 — pipeline bumped back to col-span-2 for spacing from Email.
+            Apr 23, 2026 — brief experiment: pipeline dropped to col-span-1
+              to donate space to Actions. Reverted same day because the
+              smarter fix (below) shrank the Email column instead, which
+              keeps pipeline and non-pipeline view structurally identical. */}
       <div className="col-span-2 h-8 flex items-center">
          {renderDiscoveryMethod()}
       </div>
 
-      {/* Date/Status column - col-span-1 - Only show in non-pipeline view */}
-      {/* Updated January 10th, 2026 - i18n migration */}
+      {/* Date/Status column - col-span-1 - Only show in non-pipeline view
+          Phase 2e smoover refresh (April 23rd, 2026):
+          - Status "SAVED" pill = rounded-full brand yellow with soft glow
+          - Date pill = rounded-full hairline pill */}
       {!isPipelineView && (
         <div className="col-span-1">
           {showStatusInsteadOfDate ? (
-            /* Status badge for Saved page */
-            <span className="inline-flex items-center px-2 py-1 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold shadow-yellow-glow-sm">
               {t.affiliateRow.badges.saved}
             </span>
           ) : (
-            /* Date for Find/Discovered pages */
-            <span className="inline-block px-2 py-1 text-[11px] font-bold text-gray-800 dark:text-gray-200 font-mono bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600">
+            <span className="inline-block px-2.5 py-1 text-[11px] font-medium font-mono rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 border border-[#e6ebf1] dark:border-gray-700">
               {formatDate(date)}
             </span>
           )}
@@ -1416,22 +1456,40 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
          New column layout:      1+3+2+2+2+2 = 12
          ========================================================================== */}
 
-      {/* Emails (Pipeline Only) - col-span-2 Neo-brutalist */}
-      {/* Updated January 10th, 2026 - i18n migration */}
-      {/* Updated January 16, 2026: Fixed height container (h-8/32px) to prevent layout shift on state change */}
-      {/* Updated January 25, 2026: Increased button sizes (h-7→h-8, px-2→px-3) and added whitespace-nowrap */}
-      {/*                           to prevent "FIND EMAIL" text from wrapping to two lines */}
-      {/* Updated January 25, 2026: Changed from col-span-1 to col-span-2 (Status column removed) */}
+      {/* Emails (Pipeline/Saved view only) - col-span-1 after Apr 23, 2026 fix
+          HISTORY:
+            Jan 16, 2026 — fixed h-8 to avoid layout shift on state change.
+            Jan 24, 2026 — CRITICAL: only show email if emailStatus === 'found'
+              (not `email` truthy), otherwise bio-scraped emails leak for free.
+            Jan 25, 2026 — bumped heights to h-8 and px-3 so "FIND EMAIL" fits
+              on one line at all locales; added whitespace-nowrap.
+            Jan 25, 2026 — col-span-1 → col-span-2 after Status column removal.
+            Apr 23, 2026 — Phase 2e smoover refresh: rounded-full pills,
+              hairline borders, soft shadows, "Find Email" CTA mirrors landing
+              hero (bg-[#ffbf23] + shadow-yellow-glow-sm + hover:-translate-y-0.5).
+            Apr 23, 2026 — brief experiment with justify-end for gap control.
+              Reverted — caused header/content vertical misalignment complaint.
+            Apr 23, 2026 — SHRUNK to col-span-1. Rationale: the col-span-2
+              cell was 2-3x wider than the widest Email state (~130px), so
+              content either floated in a sea of blank space (left-anchored)
+              or sat orphaned from its left-anchored header (right-anchored).
+              col-span-1 (~70-110px depending on screen) fits:
+                "Find Email" CTA (~92px English, ~117px German — minor
+                    ~10-25px overflow into the 16px grid gap, acceptable,
+                    same pattern as the Discovered page's Date pill),
+                "0 Found" pill + circular retry (~88px),
+                Searching / Error / Found states (32-100px).
+              This ALSO unifies the pipeline layout with non-pipeline —
+              both are now 1+3+3+2+1+2 = 12 with the 5th column swapping
+              between "email" (pipeline) and "date/status" (non-pipeline).
+              Simpler grid, no more isPipelineView col-span branching.
+              saved/page.tsx header spans updated in lockstep. */}
       {isPipelineView && (
-         <div className="col-span-2 h-8 flex items-center">
-            {/* Email Found - Show email count badge that opens modal */}
-            {/* Updated January 24, 2026: CRITICAL FIX - Only show email if emailStatus is 'found' */}
-            {/* Previously checked (emailStatus === 'found' || email) which showed bio emails for free */}
-            {/* Updated January 25, 2026: Increased size (h-7→h-8, px-2→px-3) to accommodate counts like "100 Found" */}
+         <div className="col-span-1 h-8 flex items-center">
             {emailStatus === 'found' && email ? (
                <button 
                  onClick={() => setIsEmailModalOpen(true)}
-                 className="h-8 flex items-center gap-1.5 px-3 bg-emerald-500 text-white text-[10px] font-black uppercase border-2 border-black hover:bg-emerald-600 transition-colors group whitespace-nowrap"
+                 className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-emerald-500 text-white text-[10px] font-semibold shadow-soft-sm hover:bg-emerald-600 transition-colors group whitespace-nowrap"
                  title={t.affiliateRow.actions.view}
                >
                  <Mail size={12} />
@@ -1439,51 +1497,44 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                  <Eye size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                </button>
             ) : emailStatus === 'searching' ? (
-               /* Searching State - Animated spinner */
-               /* Updated January 25, 2026: Increased size (w-7 h-7→w-8 h-8) for consistency */
-               <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
-                 <Loader2 size={14} className="text-black animate-spin" />
+               /* Searching — circular yellow spinner */
+               <div className="w-8 h-8 rounded-full bg-[#ffbf23] shadow-yellow-glow-sm flex items-center justify-center">
+                 <Loader2 size={14} className="text-[#0f172a] animate-spin" />
                </div>
             ) : emailStatus === 'not_found' ? (
-               /* Not Found State - January 16, 2026: Same style as status pills */
-               /* Updated January 25, 2026: Increased size (h-7→h-8, w-7→w-8) for consistency */
-               <div className="flex items-center gap-1 flex-nowrap">
-                 <span className="h-8 inline-flex items-center px-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase border-2 border-black dark:border-gray-600 whitespace-nowrap">
+               <div className="flex items-center gap-1.5 flex-nowrap">
+                 <span className="h-8 inline-flex items-center px-2.5 rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 text-[10px] font-semibold border border-[#e6ebf1] dark:border-gray-700 whitespace-nowrap">
                    0 {t.affiliateRow.actions.found}
                  </span>
                  <button 
                    onClick={onFindEmail}
-                   className="w-8 h-8 inline-flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors group"
+                   className="w-8 h-8 rounded-full inline-flex items-center justify-center bg-white dark:bg-gray-900 text-[#8898aa] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors group"
                    title={t.affiliateRow.actions.retry}
                  >
                    <RotateCw size={12} className="group-hover:rotate-180 transition-transform duration-300" />
                  </button>
                </div>
             ) : emailStatus === 'error' ? (
-               /* Error State - Warning icon + retry */
-               /* Updated January 25, 2026: Increased size (w-7 h-7→w-8 h-8) for consistency */
-               <div className="flex items-center gap-1">
+               <div className="flex items-center gap-1.5">
                  <div 
-                   className="w-8 h-8 bg-red-400 border-2 border-black flex items-center justify-center"
+                   className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 border border-red-200 dark:border-red-800 flex items-center justify-center shadow-soft-sm"
                    title={t.common.error}
                  >
-                   <AlertCircle size={12} className="text-white" />
+                   <AlertCircle size={14} className="text-red-600 dark:text-red-400" />
                  </div>
                  <button 
                    onClick={onFindEmail}
-                   className="w-8 h-8 bg-red-300 border-2 border-black flex items-center justify-center hover:bg-red-400 transition-colors group"
+                   className="w-8 h-8 rounded-full bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm flex items-center justify-center hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors group"
                    title={t.affiliateRow.actions.retry}
                  >
-                   <RotateCw size={12} className="text-black group-hover:rotate-180 transition-transform duration-300" />
+                   <RotateCw size={12} className="text-[#425466] dark:text-gray-300 group-hover:rotate-180 transition-transform duration-300" />
                  </button>
                </div>
             ) : (
-               /* Default: Find Email Button - Neo-brutalist */
-               /* Updated January 25, 2026: Increased size (h-7→h-8, px-2→px-3) and added whitespace-nowrap */
-               /*                           to prevent text wrapping ("FIND" / "EMAIL" on separate lines) */
+               /* Default "Find Email" CTA — matches landing yellow CTA pattern. */
                <button 
                  onClick={onFindEmail}
-                 className="h-8 flex items-center gap-1.5 px-3 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black hover:shadow-[2px_2px_0px_0px_#000000] transition-all whitespace-nowrap"
+                 className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 transition-all duration-200 whitespace-nowrap"
                  title={t.affiliateRow.actions.findEmail}
                >
                  <Search size={12} />
@@ -1493,50 +1544,63 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
          </div>
       )}
 
-      {/* Actions - col-span-1 for pipeline, col-span-2 for find/discovered */}
-      {/* Updated January 10th, 2026 - i18n migration */}
-      {/* Updated January 16, 2026: Added h-8 for consistent height */}
-      {/* February 2, 2026: Pipeline uses col-span-1 (buttons are compact, gave space to Relevant Content) */}
-      <div className={`${isPipelineView ? "col-span-1" : "col-span-2"} h-8 flex items-center justify-end gap-2`}>
-        {/* Delete Button - Neo-brutalist style */}
+      {/* Actions - col-span-2 for all views
+          HISTORY:
+            - Jan 10, 2026: i18n migration.
+            - Jan 16, 2026: added h-8 so the row doesn't jump when state changes.
+            - Feb  2, 2026: pipeline view dropped to col-span-1 "because buttons
+              are compact" — this under-measured: 3×32px circles + 2×8px gaps =
+              112px, while col-span-1 is only ~69px at typical dashboard widths.
+              Cluster overflowed leftwards (justify-end) into the Email column
+              by ~43px, visually colliding with the "Find Email" button.
+            - Apr 23, 2026: overflow fix — always col-span-2 now. The donated
+              column was taken from Discovery Method on pipeline view (see
+              Discovery Method cell above). Non-pipeline view is unchanged.
+            Apr 23, 2026 (Phase 2e · smoover refresh):
+            - Circular rounded-full action buttons with hairline borders and
+              soft shadows. Delete keeps its two-step inline-confirm pattern —
+              compact trash circle → wider confirm pill — just with rounded
+              edges and red accent softened. */}
+      <div className="col-span-2 h-8 flex items-center justify-end gap-2">
+        {/* Delete button — two-step confirm (first click shows pill, second click deletes) */}
         <button 
           onClick={handleDeleteClick}
-          className={`flex items-center justify-center border-2 border-black dark:border-white transition-all ${
+          className={`rounded-full flex items-center justify-center transition-all shadow-soft-sm ${
             isDeleteConfirming
-              ? 'w-[70px] h-7 bg-red-500 text-white hover:bg-red-600 animate-pulse'
-              : 'w-7 h-7 bg-red-400 text-white hover:bg-red-500'
+              ? 'w-[80px] h-8 bg-red-500 text-white hover:bg-red-600 animate-pulse'
+              : 'w-8 h-8 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50'
           }`}
           title={isDeleteConfirming ? t.affiliateRow.actions.confirm : t.affiliateRow.actions.delete}
         >
           {isDeleteConfirming ? (
-            <span className="text-[10px] font-bold">{t.affiliateRow.actions.confirm}</span>
+            <span className="text-[10px] font-semibold">{t.affiliateRow.actions.confirm}</span>
           ) : (
             <Trash2 size={14} />
           )}
         </button>
-        {/* View Button - Neo-brutalist style */}
+        {/* View button */}
         <button 
           onClick={() => setIsViewModalOpen(true)}
-          className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 border-2 border-black dark:border-white text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" 
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 text-[#425466] dark:text-gray-300 shadow-soft-sm hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
           title={t.affiliateRow.actions.view}
         >
           <Eye size={14} />
         </button>
-        {/* Save Button - Neo-brutalist style */}
+        {/* Save button — three states: saving (yellow spinner), saved (filled green), default (soft green) */}
         <button 
           onClick={onSave}
           disabled={isSaving}
-          className={`w-7 h-7 flex items-center justify-center border-2 border-black dark:border-white transition-all ${
+          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
             isSaving
-              ? 'bg-[#ffbf23] cursor-wait'
+              ? 'bg-[#ffbf23] shadow-yellow-glow-sm cursor-wait'
               : isSaved 
-                ? 'bg-emerald-500 text-white' 
-                : 'bg-emerald-50 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800'
+                ? 'bg-emerald-500 text-white shadow-soft-md' 
+                : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shadow-soft-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
           }`}
           title={isSaving ? t.affiliateRow.actions.saving : isSaved ? t.affiliateRow.actions.saved : t.affiliateRow.actions.saveToPipeline}
         >
           {isSaving ? (
-            <Loader2 size={14} className="animate-spin text-black" />
+            <Loader2 size={14} className="animate-spin text-[#0f172a]" />
           ) : (
             <Save size={14} />
           )}

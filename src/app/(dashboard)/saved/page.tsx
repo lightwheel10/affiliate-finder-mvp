@@ -948,10 +948,24 @@ export default function SavedPage() {
             TABLE AREA - DashboardDemo.tsx EXACT STYLING (Pipeline View)
             ============================================================================= */}
         <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
-          {/* Table Header - Translated (January 9th, 2026) */}
-          {/* Updated January 25, 2026: Removed Status column, gave Email col-span-2 for more space */}
-          {/* February 2, 2026: Rebalanced - reduced Action to col-span-1, gave space back to Relevant Content */}
-          {/* Column spans match AffiliateRow: 1+3+3+2+2+1 = 12 */}
+          {/* Table Header - Translated (January 9th, 2026)
+              HISTORY:
+                Jan 25, 2026 — removed Status column, gave Email col-span-2.
+                Feb  2, 2026 — reduced Action to col-span-1 (under-measured:
+                               3 circular buttons + gaps = 112px > ~69px cell).
+                Apr 23, 2026 — iterated on action-overflow fix; final layout
+                               shrinks Email col-span-2 → col-span-1 so header
+                               and content both naturally left-anchor together
+                               (no more header/content vertical misalignment).
+                               Column allocation now MATCHES the non-pipeline
+                               (Discovered / Find) pages exactly.
+
+              Column spans (pipeline view): 1+3+3+2+1+2 = 12
+                (identical structure to Discovered / Find; 5th column is Email
+                 here, Date there — see AffiliateRow.tsx GRID LAYOUT comment.)
+
+              MUST stay in sync with AffiliateRow.tsx pipeline render. If you
+              change column spans in one, change them in the other. */}
           <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
             <div className="col-span-1 flex justify-center">
               <input 
@@ -962,13 +976,15 @@ export default function SavedPage() {
               />
             </div>
             <div className="col-span-3">{t.dashboard.table.affiliate}</div>
-            {/* February 2, 2026: Back to col-span-3, reduced Action column instead */}
             <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
-            {/* February 2, 2026: col-span-2 for better spacing from Email */}
             <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
-            {/* Email column with clickable filter - January 16, 2026 */}
-            {/* Updated January 25, 2026: Changed from col-span-1 to col-span-2 (Status column removed) */}
-            <div className="col-span-2">
+            {/* Email column with clickable filter
+                Jan 16, 2026 — introduced as clickable filter.
+                Jan 25, 2026 — col-span-1 → col-span-2 (Status column removed).
+                Apr 23, 2026 — col-span-2 → col-span-1 so header and content
+                               both sit at the left of a tight cell with no
+                               visible blank space between them. */}
+            <div className="col-span-1">
               <button
                 onClick={() => setShowOnlyWithEmail(!showOnlyWithEmail)}
                 className={cn(
@@ -989,8 +1005,9 @@ export default function SavedPage() {
                 )}
               </button>
             </div>
-            {/* February 2, 2026: Reduced from col-span-2 to col-span-1 (buttons are small) */}
-            <div className="col-span-1 text-right">{t.dashboard.table.action}</div>
+            {/* Apr 23, 2026: col-span-1 → col-span-2 to fit the 3-button action
+                cluster (~112px) without overflowing into Email column. */}
+            <div className="col-span-2 text-right">{t.dashboard.table.action}</div>
           </div>
 
           {/* Results Content */}
