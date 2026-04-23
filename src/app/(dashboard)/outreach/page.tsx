@@ -1673,42 +1673,59 @@ export default function OutreachPage() {
             </button>
             {selectedAffiliates.size > 0 && (
               <>
-                {/* January 17, 2026: Using i18n translations for selection actions */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
-                  <Check size={12} />
+                {/* =============================================================
+                    SELECTED CHIP
+                    Smoover refresh (April 23rd, 2026) — Phase 2e
+                    Before: neo-brutalist square with black border, font-black
+                    uppercase.
+                    After:  rounded-full yellow pill with shadow-yellow-glow-sm
+                    to match the primary CTA voice. Note: `.toUpperCase()` on
+                    the i18n string is preserved to avoid churn in translations;
+                    the uppercase *class* has been dropped.
+                    ============================================================= */}
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm text-xs font-semibold">
+                  <Check size={12} strokeWidth={2.5} />
                   {selectedAffiliates.size} {t.dashboard.outreach.selected.toUpperCase()}
                 </div>
+                {/* Deselect All — soft outline, rounded-full */}
                 <button
                   onClick={handleSelectAll}
-                  className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
+                  className="text-xs font-semibold text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white transition-all px-3 py-1.5 border border-[#e6ebf1] dark:border-gray-800 rounded-full hover:bg-[#f6f9fc] dark:hover:bg-gray-900"
                 >
                   {t.dashboard.outreach.deselectAll}
                 </button>
               </>
             )}
-            {/* January 17, 2026: Using i18n translation */}
+            {/* Select All (empty selection state) — soft outline */}
             {selectedAffiliates.size === 0 && filteredResults.length > 0 && (
               <button
                 onClick={handleSelectAll}
-                className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
+                className="text-xs font-semibold text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white transition-all px-3 py-1.5 border border-[#e6ebf1] dark:border-gray-800 rounded-full hover:bg-[#f6f9fc] dark:hover:bg-gray-900"
               >
                 {t.dashboard.outreach.selectAll}
               </button>
             )}
             {/* ================================================================
-                BULK GENERATE BUTTON - NEO-BRUTALIST (Updated January 6th, 2026)
+                BULK GENERATE BUTTON
+                Smoover refresh (April 23rd, 2026) — Phase 2e
+                Before: neo-brutalist (Jan 6, 2026) — yellow + black border +
+                offset black drop shadow, font-black uppercase.
+                After: primary yellow CTA in the same voice as the landing
+                hero / Find Affiliates button: rounded-full,
+                shadow-yellow-glow-sm, subtle hover lift, hover:bg-#e5ac20.
+                Three progressive states preserved (bulkProgress /
+                generatingIds / idle).
                 ================================================================ */}
             <button
               onClick={handleGenerateMessages}
               disabled={selectedAffiliates.size === 0 || generatingIds.size > 0}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 font-black text-xs uppercase transition-all",
+                "flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full transition-all",
                 selectedAffiliates.size > 0 && generatingIds.size === 0
-                  ? "bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                  ? "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5"
+                  : "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed"
               )}
             >
-              {/* January 17, 2026: Using i18n translations */}
               {bulkProgress ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
@@ -1721,7 +1738,7 @@ export default function OutreachPage() {
                 </>
               ) : (
                 <>
-                  <Wand2 size={14} />
+                  <Wand2 size={14} strokeWidth={2} />
                   {t.dashboard.outreach.generate} ({selectedAffiliates.size})
                 </>
               )}
