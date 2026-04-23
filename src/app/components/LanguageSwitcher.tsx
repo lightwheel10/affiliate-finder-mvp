@@ -127,21 +127,25 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   }
 
   // =========================================================================
-  // NAVBAR VARIANT - For landing page navbar
+  // NAVBAR VARIANT — "SMOOVER" refresh (April 23rd, 2026)
+  // Was: border-2 gray box with sharp corners, font-bold.
+  // Now: rounded-full pill container with hairline #e6ebf1 border; active
+  // segment is a rounded-full yellow pill with a soft yellow glow — matches
+  // the rest of the refreshed landing navbar.
   // =========================================================================
   if (variant === 'navbar') {
     return (
       <div className={cn(
-        "flex items-center gap-1 bg-white/80 backdrop-blur-md px-1 py-0.5 border-2 border-gray-200",
+        "flex items-center gap-0.5 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md px-1 py-1 rounded-full border border-[#e6ebf1] dark:border-gray-800 shadow-[0_1px_2px_0_rgba(16,24,40,0.04)]",
         className
       )}>
         <button
           onClick={() => handleSetLanguage('en')}
           className={cn(
-            "px-2 py-1 text-xs font-bold transition-all",
+            "px-2.5 py-1 text-xs font-semibold rounded-full transition-all",
             language === 'en'
-              ? "bg-[#ffbf23] text-black"
-              : "text-slate-600 hover:text-slate-900 hover:bg-[#ffbf23]/20"
+              ? "bg-[#ffbf23] text-[#0f172a] shadow-[0_2px_6px_-1px_rgba(255,191,35,0.4)]"
+              : "text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white hover:bg-[#ffbf23]/15"
           )}
           aria-label="Switch to English"
         >
@@ -150,10 +154,10 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         <button
           onClick={() => handleSetLanguage('de')}
           className={cn(
-            "px-2 py-1 text-xs font-bold transition-all",
+            "px-2.5 py-1 text-xs font-semibold rounded-full transition-all",
             language === 'de'
-              ? "bg-[#ffbf23] text-black"
-              : "text-slate-600 hover:text-slate-900 hover:bg-[#ffbf23]/20"
+              ? "bg-[#ffbf23] text-[#0f172a] shadow-[0_2px_6px_-1px_rgba(255,191,35,0.4)]"
+              : "text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white hover:bg-[#ffbf23]/15"
           )}
           aria-label="Switch to German"
         >

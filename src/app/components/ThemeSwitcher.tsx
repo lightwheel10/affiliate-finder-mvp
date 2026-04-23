@@ -187,18 +187,24 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({
   }
 
   // =========================================================================
-  // NAVBAR VARIANT - Smooth spinning toggle
+  // NAVBAR VARIANT — "SMOOVER" refresh (April 23rd, 2026)
+  // Was: square 2px gray border button with sharp corners.
+  // Now: fully rounded circle with hairline #e6ebf1 border and a soft
+  // drop shadow — matches the language-switcher pill and landing CTAs.
+  // Animation logic (orbital spin) is untouched.
   // =========================================================================
   if (variant === 'navbar') {
     return (
       <motion.button
         onClick={toggleTheme}
         className={cn(
-          "relative p-2 border-2 border-gray-200 dark:border-gray-700",
-          "bg-white/80 dark:bg-gray-900/80 backdrop-blur-md",
-          "text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white",
-          "hover:bg-[#ffbf23]/20 hover:border-[#ffbf23]",
-          "transition-colors overflow-hidden",
+          "relative flex items-center justify-center w-9 h-9 rounded-full",
+          "border border-[#e6ebf1] dark:border-gray-800",
+          "bg-white/70 dark:bg-gray-900/70 backdrop-blur-md",
+          "text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white",
+          "hover:bg-[#ffbf23]/15 hover:border-[#ffbf23]/40",
+          "shadow-[0_1px_2px_0_rgba(16,24,40,0.04)] hover:shadow-[0_4px_14px_-2px_rgba(255,191,35,0.35)]",
+          "transition-all overflow-hidden",
           className
         )}
         whileTap={{ scale: 0.9 }}

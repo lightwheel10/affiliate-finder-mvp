@@ -2,24 +2,28 @@
 
 /**
  * =============================================================================
- * INTERACTIVE SEARCH DEMO - NEO-BRUTALIST
+ * INTERACTIVE SEARCH DEMO — "SMOOVER" REFRESH
  * =============================================================================
- * 
- * Last Updated: January 9th, 2026
- * 
- * This component displays an animated demo of the search interface in the
- * landing page hero section. It types a query, shows loading states, and
- * reveals results one by one.
- * 
+ *
+ * Last Updated: April 23rd, 2026
+ *
+ * Animated hero visual. Types a query, shows loading states, and reveals
+ * affiliate results one by one, then cycles through tab filters.
+ *
  * CHANGELOG:
- * - January 9th, 2026: Updated to neo-brutalist design
- *   - Sharp edges on all containers (removed rounded-*)
- *   - Updated color from #D4E815 to #ffbf23 (brand yellow)
- *   - Bold borders (border-2)
- *   - Sharp avatars and badges
- * - January 9th, 2026: Added i18n support via useLanguage hook
- * 
- * IMPORTANT: Do not modify the animation logic (useEffect, motion components)
+ * - April 23rd, 2026: Softened visual language per landing refresh brief.
+ *   Browser frame is rounded-2xl with a soft drop shadow (yellow tint on
+ *   hover) — replaces the sharp border-2 black frame + offset shadow. All
+ *   inner cards (input, result rows, skeletons, empty state, email badges)
+ *   use rounded corners + hairline #e6ebf1 borders. Active-tab underline
+ *   uses the yellow→amber gradient. Avatars are rounded-full circles.
+ *
+ *   ANIMATION LOGIC UNCHANGED — useEffect state machine, AnimatePresence
+ *   reveals, and tab cycling are all preserved byte-for-byte. Only class
+ *   names / shadow tokens were edited.
+ *
+ * - January 9th, 2026: Neo-brutalist pass + i18n support (superseded).
+ *
  * =============================================================================
  */
 
@@ -162,20 +166,22 @@ export const InteractiveSearchDemo = () => {
     activeTab === 'All' || r.platform === activeTab
   ).filter(r => analyzedIds.includes(r.id));
 
-  // January 22nd, 2026: Added dark mode support
+  // April 23rd, 2026: Browser mock is now rounded-2xl with a soft drop
+  // shadow. Yellow glow intensifies on hover (replaces offset brutalist
+  // shadow). Animation logic below is identical to pre-refresh.
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {/* Main Container - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-      <div className="bg-white dark:bg-[#111] border-2 border-black dark:border-white shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#ffbf23] overflow-hidden backdrop-blur-sm transform transition-all duration-500 hover:shadow-[4px_4px_0px_0px_#000000] dark:hover:shadow-[4px_4px_0px_0px_#ffbf23] hover:translate-x-[4px] hover:translate-y-[4px]">
-        {/* Browser Header - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-        <div className="h-10 bg-gray-100 dark:bg-[#1a1a1a] border-b-2 border-black dark:border-gray-700 flex items-center px-4 gap-3">
+      {/* Main Container — rounded-2xl + soft shadow (April 23rd, 2026) */}
+      <div className="bg-white dark:bg-[#111] rounded-2xl ring-1 ring-[#e6ebf1] dark:ring-gray-800 shadow-[0_25px_60px_-15px_rgba(16,24,40,0.15),0_10px_25px_-10px_rgba(16,24,40,0.08)] hover:shadow-[0_30px_70px_-15px_rgba(255,191,35,0.3),0_12px_28px_-10px_rgba(16,24,40,0.1)] overflow-hidden backdrop-blur-sm transform transition-all duration-500 hover:-translate-y-1">
+        {/* Browser Header — soft divider + rounded URL bar (April 23rd, 2026) */}
+        <div className="h-10 bg-[#f6f9fc] dark:bg-[#1a1a1a] border-b border-[#e6ebf1] dark:border-gray-800 flex items-center px-4 gap-3">
           <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 bg-red-500"></div>
-            <div className="w-2.5 h-2.5 bg-amber-500"></div>
-            <div className="w-2.5 h-2.5 bg-green-500"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
           </div>
           <div className="flex-1 flex justify-center">
-            <div className="w-3/5 h-6 bg-white dark:bg-[#222] border-2 border-gray-300 dark:border-gray-600 flex items-center px-2 gap-2 text-[10px] text-slate-500 dark:text-gray-400 font-bold">
+            <div className="w-3/5 h-6 bg-white dark:bg-[#222] rounded-md border border-[#e6ebf1] dark:border-gray-700 flex items-center px-2 gap-2 text-[10px] text-[#8898aa] dark:text-gray-400 font-medium">
               <Search size={10} />
               <span>afforceone.com/scout</span>
             </div>
@@ -184,8 +190,8 @@ export const InteractiveSearchDemo = () => {
 
         {/* Main Content */}
         <div className="p-6 h-[440px] flex flex-col relative">
-          
-          {/* Search Input Area - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+
+          {/* Search Input Area — rounded-xl (April 23rd, 2026) */}
           <div className="relative mb-6 z-10">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <AnimatePresence mode="wait">
@@ -205,18 +211,17 @@ export const InteractiveSearchDemo = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
                   >
-                    <Search className={`h-5 w-5 ${step === 'COMPLETE' ? 'text-slate-400 dark:text-gray-500' : 'text-slate-400 dark:text-gray-500'}`} />
+                    <Search className="h-5 w-5 text-[#8898aa] dark:text-gray-500" />
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-            {/* Input container - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-            <div className="relative w-full pl-11 pr-4 py-3.5 bg-gray-50 dark:bg-[#1a1a1a] border-2 border-gray-300 dark:border-gray-600 min-h-[48px] flex items-center">
-              {/* Text with inline cursor */}
-              <span className="font-bold text-sm text-[#111827] dark:text-white whitespace-pre">
+            {/* Input container — rounded-xl with soft fill (April 23rd, 2026) */}
+            <div className="relative w-full pl-11 pr-4 py-3.5 bg-[#f3f5f8] dark:bg-[#1a1a1a] rounded-xl ring-1 ring-[#e6ebf1] dark:ring-gray-700 min-h-[48px] flex items-center">
+              <span className="font-semibold text-sm text-[#0f172a] dark:text-white whitespace-pre">
                 {text}
                 {step === 'TYPING' && (
-                  <motion.span 
+                  <motion.span
                     className="inline-block w-[2px] h-5 bg-[#ffbf23] ml-[1px] align-middle"
                     initial={{ opacity: 1 }}
                     animate={{ opacity: [1, 0] }}
@@ -224,58 +229,61 @@ export const InteractiveSearchDemo = () => {
                   />
                 )}
               </span>
-              {/* Placeholder when empty */}
               {!text && step !== 'TYPING' && (
-                <span className="text-slate-400 dark:text-gray-500 font-bold text-sm">{t.landing.demo.searchPlaceholder}</span>
+                <span className="text-[#8898aa] dark:text-gray-500 font-medium text-sm">{t.landing.demo.searchPlaceholder}</span>
               )}
             </div>
-            {/* Scout Button - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+            {/* Scout Button — rounded-full with soft yellow glow (April 23rd, 2026) */}
             <div className="absolute right-2 top-1/2 -translate-y-1/2">
-               <button className={`px-3 py-1.5 text-xs font-black uppercase transition-all duration-300 ${text.length > 5 ? 'bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000000]' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600'}`}>
+               <button className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-full transition-all duration-300 ${
+                 text.length > 5
+                   ? 'bg-[#ffbf23] text-[#0f172a] shadow-[0_4px_12px_-2px_rgba(255,191,35,0.5)]'
+                   : 'bg-[#f6f9fc] dark:bg-gray-700 text-[#8898aa] dark:text-gray-500 ring-1 ring-[#e6ebf1] dark:ring-gray-600'
+               }`}>
                  {t.landing.demo.scoutButton}
                </button>
             </div>
           </div>
 
-          {/* Status Bar / Tabs - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-          <div className="flex items-center gap-4 mb-6 border-b-2 border-gray-200 dark:border-gray-700 pb-2 overflow-hidden">
+          {/* Status Bar / Tabs — soft divider + gradient underline (April 23rd, 2026) */}
+          <div className="flex items-center gap-4 mb-6 border-b border-[#e6ebf1] dark:border-gray-800 pb-2 overflow-hidden">
              {(['All', 'Web', 'YouTube', 'Instagram', 'TikTok'] as Tab[]).map((tab) => (
-               <div 
-                 key={tab} 
-                 className={`relative text-xs font-bold pb-2 cursor-default transition-colors uppercase tracking-wide ${activeTab === tab ? 'text-[#1A1D21] dark:text-white' : 'text-slate-400 dark:text-gray-500'}`}
+               <div
+                 key={tab}
+                 className={`relative text-xs font-semibold pb-2 cursor-default transition-colors uppercase tracking-wide ${activeTab === tab ? 'text-[#0f172a] dark:text-white' : 'text-[#8898aa] dark:text-gray-500'}`}
                >
                  {tab}
                  {activeTab === tab && (
-                   <motion.div 
+                   <motion.div
                      layoutId="activeTab"
-                     className="absolute bottom-0 left-0 right-0 h-1 bg-[#ffbf23]"
+                     className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-gradient-to-r from-[#ffbf23] to-[#e5ac20]"
                    />
                  )}
                </div>
              ))}
-             
+
              {/* Status Indicators */}
              <div className="ml-auto flex items-center gap-2">
                <AnimatePresence mode="wait">
                  {step === 'SEARCHING' && (
-                    <motion.div 
+                    <motion.div
                       key="scanning"
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="text-xs text-[#1A1D21] dark:text-white font-bold flex items-center gap-1.5"
+                      className="text-xs text-[#0f172a] dark:text-white font-semibold flex items-center gap-1.5"
                     >
-                      <div className="w-3 h-3 bg-[#ffbf23] border border-black"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#ffbf23] shadow-[0_0_0_3px_rgba(255,191,35,0.2)]"></div>
                       {t.landing.demo.scanning}
                     </motion.div>
                  )}
                  {step === 'ANALYZING' && (
-                    <motion.div 
+                    <motion.div
                       key="analyzing"
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="text-xs text-[#333333] dark:text-gray-300 font-bold flex items-center gap-1.5"
+                      className="text-xs text-[#425466] dark:text-gray-300 font-semibold flex items-center gap-1.5"
                     >
                       <Loader2 size={12} className="animate-spin text-[#ffbf23]" />
                       {t.landing.demo.analyzing}
@@ -288,7 +296,7 @@ export const InteractiveSearchDemo = () => {
           {/* Results List */}
           <div className="flex-1 space-y-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             <AnimatePresence mode="popLayout">
-              {/* Empty State - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+              {/* Empty State — rounded + soft (April 23rd, 2026) */}
               {(step === 'IDLE' || step === 'TYPING') && (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -296,14 +304,14 @@ export const InteractiveSearchDemo = () => {
                   exit={{ opacity: 0 }}
                   className="absolute inset-0 flex flex-col items-center justify-center text-center pt-12"
                 >
-                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mb-3">
-                    <Search className="text-slate-300 dark:text-gray-600" size={20} />
+                  <div className="w-12 h-12 rounded-full bg-[#f6f9fc] dark:bg-gray-800 ring-1 ring-[#e6ebf1] dark:ring-gray-700 flex items-center justify-center mb-3">
+                    <Search className="text-[#8898aa] dark:text-gray-600" size={20} />
                   </div>
-                  <p className="text-slate-400 dark:text-gray-500 text-sm font-bold">{t.landing.demo.emptyState}</p>
+                  <p className="text-[#8898aa] dark:text-gray-500 text-sm font-medium">{t.landing.demo.emptyState}</p>
                 </motion.div>
               )}
 
-              {/* Loading Skeletons - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+              {/* Loading Skeletons — rounded (April 23rd, 2026) */}
               {step === 'SEARCHING' && (
                  <motion.div
                    initial={{ opacity: 0 }}
@@ -312,18 +320,18 @@ export const InteractiveSearchDemo = () => {
                    className="space-y-3"
                  >
                    {[1, 2, 3].map((i) => (
-                     <div key={i} className="flex items-center gap-4 p-3 border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a]">
-                       <div className="w-10 h-10 bg-slate-100 dark:bg-gray-800 animate-pulse" />
+                     <div key={i} className="flex items-center gap-4 p-3 rounded-xl ring-1 ring-[#e6ebf1] dark:ring-gray-700 bg-white dark:bg-[#1a1a1a]">
+                       <div className="w-10 h-10 rounded-full bg-[#f6f9fc] dark:bg-gray-800 animate-pulse" />
                        <div className="flex-1 space-y-2">
-                         <div className="h-4 w-1/3 bg-slate-100 dark:bg-gray-800 animate-pulse" />
-                         <div className="h-3 w-1/4 bg-slate-50 dark:bg-gray-700 animate-pulse" />
+                         <div className="h-4 w-1/3 rounded bg-[#f6f9fc] dark:bg-gray-800 animate-pulse" />
+                         <div className="h-3 w-1/4 rounded bg-[#f6f9fc]/60 dark:bg-gray-700 animate-pulse" />
                        </div>
                      </div>
                    ))}
                  </motion.div>
               )}
 
-              {/* Real Results - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+              {/* Real Results — rounded cards + soft shadow on hover (April 23rd, 2026) */}
               {visibleResults.map((result) => (
                   <motion.div
                     layout
@@ -332,14 +340,14 @@ export const InteractiveSearchDemo = () => {
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                     transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                    className="group relative bg-white dark:bg-[#1a1a1a] hover:bg-[#ffbf23]/5 dark:hover:bg-[#ffbf23]/10 border-2 border-gray-200 dark:border-gray-700 p-3 flex items-center gap-4 transition-all hover:border-[#ffbf23]"
+                    className="group relative bg-white dark:bg-[#1a1a1a] hover:bg-[#ffbf23]/5 dark:hover:bg-[#ffbf23]/10 rounded-xl ring-1 ring-[#e6ebf1] dark:ring-gray-700 hover:ring-[#ffbf23]/50 p-3 flex items-center gap-4 transition-all hover:shadow-[0_8px_20px_-6px_rgba(255,191,35,0.25)]"
                   >
-                    {/* Avatar - NEO-BRUTALIST (January 9th, 2026) */}
+                    {/* Avatar — rounded-full (April 23rd, 2026) */}
                     <div className="relative shrink-0">
-                      <div className={`w-10 h-10 bg-gradient-to-br ${result.avatarGradient} flex items-center justify-center text-white text-xs font-black border border-black`}>
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${result.avatarGradient} flex items-center justify-center text-white text-xs font-bold ring-2 ring-white dark:ring-gray-800`}>
                         {result.initials}
                       </div>
-                      <div className="absolute -bottom-1 -right-1 bg-white border border-gray-300 p-0.5 z-10">
+                      <div className="absolute -bottom-1 -right-1 bg-white dark:bg-[#222] rounded-full ring-1 ring-[#e6ebf1] dark:ring-gray-700 p-0.5 z-10">
                         {result.platform === 'Instagram' && <Instagram size={10} className="text-pink-600" />}
                         {result.platform === 'YouTube' && <Youtube size={10} className="text-red-600" />}
                         {result.platform === 'Web' && <Globe size={10} className="text-blue-600" />}
@@ -347,41 +355,40 @@ export const InteractiveSearchDemo = () => {
                       </div>
                     </div>
 
-                    {/* Info - Dark mode: January 22nd, 2026 */}
+                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="font-bold text-[#111827] dark:text-white text-sm truncate">{result.title}</h4>
+                        <h4 className="font-semibold text-[#0f172a] dark:text-white text-sm truncate">{result.title}</h4>
                         {result.eng && (
-                          <span className="shrink-0 text-[10px] font-bold text-[#1A1D21] dark:text-white bg-[#ffbf23]/20 px-1.5 py-0.5 border border-[#ffbf23]">
+                          <span className="shrink-0 text-[10px] font-semibold text-[#0f172a] dark:text-white bg-[#ffbf23]/15 px-1.5 py-0.5 rounded-full ring-1 ring-[#ffbf23]/40">
                             {result.eng} Eng.
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-gray-400 truncate">{result.subtitle}</p>
+                      <p className="text-xs text-[#8898aa] dark:text-gray-400 truncate">{result.subtitle}</p>
                     </div>
 
-                    {/* Actions - NEO-BRUTALIST (January 9th, 2026) */}
+                    {/* Actions — rounded pills (April 23rd, 2026) */}
                     <div className="flex items-center gap-2 shrink-0">
-                       {/* Email Status */}
-                       <motion.div 
+                       <motion.div
                          initial={{ width: 0, opacity: 0 }}
                          animate={{ width: "auto", opacity: 1 }}
                          className="overflow-hidden"
                        >
                          {result.email ? (
-                           <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffbf23]/20 text-[#1A1D21] border-2 border-[#ffbf23] whitespace-nowrap">
+                           <div className="flex items-center gap-1.5 px-2 py-1 bg-[#ffbf23]/15 text-[#0f172a] rounded-full ring-1 ring-[#ffbf23]/50 whitespace-nowrap">
                              <Mail size={12} />
-                             <span className="text-[10px] font-bold">{t.landing.demo.emailFound}</span>
+                             <span className="text-[10px] font-semibold">{t.landing.demo.emailFound}</span>
                            </div>
                          ) : (
-                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-800 text-slate-400 dark:text-gray-500 border-2 border-gray-200 dark:border-gray-700 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] dark:text-gray-500 rounded-full ring-1 ring-[#e6ebf1] dark:ring-gray-700 whitespace-nowrap">
                               <Search size={12} />
-                              <span className="text-[10px] font-bold">{t.landing.demo.noEmail}</span>
+                              <span className="text-[10px] font-semibold">{t.landing.demo.noEmail}</span>
                             </div>
                          )}
                        </motion.div>
-                       
-                       <button className="p-2 text-slate-300 dark:text-gray-600 hover:text-[#1A1D21] dark:hover:text-white hover:bg-[#ffbf23]/20 transition-colors">
+
+                       <button className="p-2 rounded-full text-[#8898aa] dark:text-gray-600 hover:text-[#0f172a] dark:hover:text-white hover:bg-[#ffbf23]/15 transition-colors">
                          <ArrowRight size={14} />
                        </button>
                     </div>
@@ -390,22 +397,22 @@ export const InteractiveSearchDemo = () => {
             </AnimatePresence>
           </div>
 
-          {/* Footer Stats - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+          {/* Footer Stats — soft (April 23rd, 2026) */}
           <AnimatePresence>
             {step === 'COMPLETE' && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="mt-auto pt-3 border-t-2 border-gray-200 dark:border-gray-700 flex items-center justify-between text-[10px] text-slate-400 dark:text-gray-500"
+                className="mt-auto pt-3 border-t border-[#e6ebf1] dark:border-gray-800 flex items-center justify-between text-[10px] text-[#8898aa] dark:text-gray-500"
               >
-                 <div className="flex gap-3 font-bold">
+                 <div className="flex gap-3 font-medium">
                    <span>
-                     <strong className="text-[#111827] dark:text-white">{visibleResults.length}</strong> {t.landing.demo.resultsVisible}
+                     <strong className="text-[#0f172a] dark:text-white font-semibold">{visibleResults.length}</strong> {t.landing.demo.resultsVisible}
                    </span>
                    <span>{t.landing.demo.searchTime}</span>
                  </div>
-                 <div className="flex items-center gap-1 text-[#1A1D21] dark:text-white font-black uppercase tracking-wide">
+                 <div className="flex items-center gap-1 text-[#0f172a] dark:text-white font-semibold uppercase tracking-wide">
                    <Check size={10} className="text-[#ffbf23]" />
                    {t.landing.demo.analysisComplete}
                  </div>

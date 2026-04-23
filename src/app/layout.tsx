@@ -27,7 +27,9 @@
  */
 
 import type { Metadata } from "next";
-import { Inter, Fira_Code } from "next/font/google";
+// April 23rd, 2026: Added Archivo (display) + Caveat (handwritten accent)
+// for the "smoover" landing page refresh. See globals.css design-system log.
+import { Inter, Fira_Code, Archivo, Caveat } from "next/font/google";
 import "./globals.css";
 
 // =============================================================================
@@ -107,6 +109,32 @@ const firaCode = Fira_Code({
   weight: ["400", "700"],
 });
 
+// =============================================================================
+// LANDING-PAGE FONTS (April 23rd, 2026)
+//
+// Added as part of the "smoover" landing refresh (see globals.css log).
+// - Archivo: refined display font used for landing headlines. Mirrors
+//   the Archivo usage on revenueworks.ai.
+// - Caveat: handwritten accent font for small flourishes (optional accent).
+//
+// These are scoped to the landing page via the --font-display / --font-hand
+// CSS vars and Tailwind's font-display / font-hand classes declared in
+// globals.css. They do NOT replace Inter as the global sans-serif.
+// =============================================================================
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  display: "swap",
+});
+
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+});
+
 // January 21st, 2026: Removed "backed by selecdoo AI" per client request
 export const metadata: Metadata = {
   title: "Afforce One",
@@ -137,8 +165,10 @@ export default function RootLayout({
     // Note: html lang attribute is dynamically updated by LanguageProvider
     // based on user preference (detected from browser or saved in localStorage)
     <html lang="en">
-      {/* Updated January 6th, 2026: Inter + Fira Code for neo-brutalist design */}
-      <body className={`${inter.variable} ${firaCode.variable} font-sans antialiased`}>
+      {/* Updated January 6th, 2026: Inter + Fira Code for neo-brutalist design
+          Updated April 23rd, 2026: Added Archivo + Caveat for landing refresh
+          (font-display + font-hand utilities — see globals.css). */}
+      <body className={`${inter.variable} ${firaCode.variable} ${archivo.variable} ${caveat.variable} font-sans antialiased`}>
         {/* =================================================================
             LANGUAGE PROVIDER (January 9th, 2026)
             
