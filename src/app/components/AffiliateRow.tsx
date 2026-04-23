@@ -1161,30 +1161,25 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   //   April 23, 2026   — Phase 2e smoover refresh: visual tokens only,
   //                      grid structure unchanged.
   //   April 23, 2026   — Pipeline view overflow fix: Actions was col-span-1
-  //                      but its three 32px circular buttons + gaps = 112px,
-  //                      which overflowed the ~69px cell and crashed into the
-  //                      Email column to its left. Fixed by donating a column
-  //                      from Discovery Method (which is a single truncating
-  //                      pill with a tooltip — the least-painful place to take
-  //                      the column from). Callers on the Saved page must
-  //                      mirror this new split in their table header row.
+  //                      but its 3 circular buttons + gaps ≈ 112px overflowed
+  //                      the ~69px cell into the Email column. Iterated:
+  //                      first donated a col from Discovery Method (1+3+3+1+2+2),
+  //                      then shrank Email to col-span-1 instead so the Email
+  //                      column stops being wider than its content and header
+  //                      + content both naturally left-anchor together.
   //
-  // Column spans (per cell in the render below):
-  //   NON-PIPELINE (find / discovered):   1 + 3 + 3 + 2 + 1 + 2 = 12
+  // Column spans (per cell in the render below) — UNIFIED LAYOUT:
+  //   Both pipeline and non-pipeline views now share the same 1+3+3+2+1+2 = 12
+  //   structure. Only the 5th column swaps between two variants:
   //     col-span-1  checkbox
   //     col-span-3  affiliate info (avatar + name + metrics)
   //     col-span-3  relevant content (+ optional thumbnail)
   //     col-span-2  discovery method
-  //     col-span-1  date/status
+  //     col-span-1  { date/status  (non-pipeline) | email pipeline (pipeline) }
   //     col-span-2  actions
   //
-  //   PIPELINE (saved):                   1 + 3 + 3 + 1 + 2 + 2 = 12
-  //     col-span-1  checkbox
-  //     col-span-3  affiliate info
-  //     col-span-3  relevant content
-  //     col-span-1  discovery method   ← donated from 2 → 1
-  //     col-span-2  email pipeline
-  //     col-span-2  actions            ← grew from 1 → 2
+  //   This lets callers (find / discovered / saved page headers) share a
+  //   single header-row template with the 5th cell swapped per view.
   // =============================================================================
   
   /* OLD_DESIGN_START - Grid Classes (pre-January 6th, 2026)
@@ -1419,19 +1414,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Discovery Method
+      {/* Discovery Method — col-span-2 for all views
           HISTORY:
             Jan 16, 2026 — added h-8 flex items-center for consistent row height.
             Jan 22, 2026 — DiscoveryReasonsPopover removed (feature rollback).
             Feb  2, 2026 — pipeline bumped back to col-span-2 for spacing from Email.
-            Apr 23, 2026 — Phase 2e overflow fix: pipeline view drops to col-span-1
-              so the Actions cell can grow to col-span-2 (needs ~112px for three
-              circular buttons + gaps; old col-span-1 was ~69px and overflowed
-              leftwards into the Email pipeline column). Non-pipeline view is
-              unchanged. Discovery pill was chosen to donate the column because
-              it is a single truncating element with a `title=` tooltip for the
-              full text, and the renderer already JS-truncates to 5 words. */}
-      <div className={`${isPipelineView ? "col-span-1" : "col-span-2"} h-8 flex items-center`}>
+            Apr 23, 2026 — brief experiment: pipeline dropped to col-span-1
+              to donate space to Actions. Reverted same day because the
+              smarter fix (below) shrank the Email column instead, which
+              keeps pipeline and non-pipeline view structurally identical. */}
+      <div className="col-span-2 h-8 flex items-center">
          {renderDiscoveryMethod()}
       </div>
 
@@ -1464,34 +1456,36 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
          New column layout:      1+3+2+2+2+2 = 12
          ========================================================================== */}
 
-      {/* Emails (Pipeline/Saved view only) - col-span-2, h-8 fixed height
-          Previous behavioural history preserved (do not regress):
-            - Jan 16, 2026: fixed h-8 to avoid layout shift on state change.
-            - Jan 24, 2026: CRITICAL — only show email if emailStatus === 'found'
+      {/* Emails (Pipeline/Saved view only) - col-span-1 after Apr 23, 2026 fix
+          HISTORY:
+            Jan 16, 2026 — fixed h-8 to avoid layout shift on state change.
+            Jan 24, 2026 — CRITICAL: only show email if emailStatus === 'found'
               (not `email` truthy), otherwise bio-scraped emails leak for free.
-            - Jan 25, 2026: bumped heights to h-8 and px-3 so "FIND EMAIL" fits
+            Jan 25, 2026 — bumped heights to h-8 and px-3 so "FIND EMAIL" fits
               on one line at all locales; added whitespace-nowrap.
-            - Jan 25, 2026: col-span-1 → col-span-2 after Status column was
-              removed from the Saved page.
-          Apr 23, 2026 (Phase 2e · smoover refresh):
-            - Rounded-full pills, hairline borders, soft shadows.
-            - Default "Find Email" CTA matches the landing hero CTA exactly
-              (bg-[#ffbf23] + shadow-yellow-glow-sm + hover:-translate-y-0.5).
-          Apr 23, 2026 (gap fix):
-            - Added `justify-end` so Email content right-anchors inside its
-              col-span-2 cell. Without this the content (88–130px) floated to
-              the LEFT of a 236px cell, leaving a huge visible gap (up to
-              288px on wide screens) between Email content and the Action
-              cluster to its right. Right-anchoring shrinks that gap to a
-              consistent ~140px — less than the Discovered page's Date→Action
-              gap (~180px), so it reads as an intentional "right-side action
-              zone". The header in saved/page.tsx is intentionally left
-              LEFT-anchored (no mirror) to match the other column headers
-              (AFFILIATE / RELEVANT CONTENT / DISCOVERY METHOD) — this is
-              the standard data-table convention: descriptive headers on the
-              left, interactive/action-style content on the right. */}
+            Jan 25, 2026 — col-span-1 → col-span-2 after Status column removal.
+            Apr 23, 2026 — Phase 2e smoover refresh: rounded-full pills,
+              hairline borders, soft shadows, "Find Email" CTA mirrors landing
+              hero (bg-[#ffbf23] + shadow-yellow-glow-sm + hover:-translate-y-0.5).
+            Apr 23, 2026 — brief experiment with justify-end for gap control.
+              Reverted — caused header/content vertical misalignment complaint.
+            Apr 23, 2026 — SHRUNK to col-span-1. Rationale: the col-span-2
+              cell was 2-3x wider than the widest Email state (~130px), so
+              content either floated in a sea of blank space (left-anchored)
+              or sat orphaned from its left-anchored header (right-anchored).
+              col-span-1 (~70-110px depending on screen) fits:
+                "Find Email" CTA (~92px English, ~117px German — minor
+                    ~10-25px overflow into the 16px grid gap, acceptable,
+                    same pattern as the Discovered page's Date pill),
+                "0 Found" pill + circular retry (~88px),
+                Searching / Error / Found states (32-100px).
+              This ALSO unifies the pipeline layout with non-pipeline —
+              both are now 1+3+3+2+1+2 = 12 with the 5th column swapping
+              between "email" (pipeline) and "date/status" (non-pipeline).
+              Simpler grid, no more isPipelineView col-span branching.
+              saved/page.tsx header spans updated in lockstep. */}
       {isPipelineView && (
-         <div className="col-span-2 h-8 flex items-center justify-end">
+         <div className="col-span-1 h-8 flex items-center">
             {emailStatus === 'found' && email ? (
                <button 
                  onClick={() => setIsEmailModalOpen(true)}
