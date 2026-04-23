@@ -56,8 +56,30 @@ export default function DashboardLayout({
             Added overflow-x-hidden to prevent horizontal scrolling when table
             content (like long URLs or titles) causes the grid to expand.
             Without this, the filter bar gets pushed off-screen when results load.
+
+            STICKY-HEADER FIX - April 23, 2026
+            Changed `min-h-screen` → `h-screen`. DO NOT revert to min-h-screen.
+
+            Why: Phase 2d made every dashboard page <header> `sticky top-0`.
+            position:sticky pins to the nearest ancestor *scroll container*.
+            Setting `overflow-x: hidden` forces `overflow-y` to compute to
+            `auto` (per CSS spec), so <main> is already a scroll container.
+            With `min-h-screen`, <main> grew with its content and never
+            actually needed to scroll — the <body> scrolled instead, so
+            <main> (and its sticky header) scrolled out of view with it.
+
+            Locking <main> to exactly 100vh (`h-screen`) means:
+              - <main> is the true scroll container for dashboard content
+              - <body> never scrolls
+              - Sticky header pins to the viewport top where it belongs
+              - Each page's inner `flex-1 overflow-y-auto` div scrolls
+                internally (which was always the original intent)
+
+            Verified safe for: find, discovered, saved, outreach (inner
+            overflow-y-auto divs), settings (h-[calc(100vh-8rem)] fits
+            inside the 100vh-64px-padding envelope), and loading.tsx.
           */}
-          <main className="flex-1 flex flex-col min-h-screen ml-64 bg-white dark:bg-[#050505] overflow-x-hidden">
+          <main className="flex-1 flex flex-col h-screen ml-64 bg-white dark:bg-[#050505] overflow-x-hidden">
             {children}
           </main>
         </div>
