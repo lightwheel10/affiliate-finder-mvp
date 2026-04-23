@@ -1007,19 +1007,7 @@ export default function SavedPage() {
             </div>
             {/* Apr 23, 2026: col-span-1 → col-span-2 to fit the 3-button action
                 cluster (~112px) without overflowing into Email column. */}
-            {/* Action — col-span-2
-                Apr 23, 2026: col-span-1 → col-span-2 to fit the 3-button action
-                cluster (~112px) without overflowing into Email column.
-                Apr 23, 2026: dropped `text-right`. The header now LEFT-aligns
-                like every other column header for a visually consistent
-                header row. The 3 circular action buttons below stay
-                right-anchored inside the cell (standard table UX — action
-                clusters sit at the far right of a row), so header and
-                content won't line up vertically in this one cell.
-                That's intentional; the horizontal header row stays uniform
-                at the cost of one vertical mismatch in a column where
-                users already expect action buttons on the right. */}
-            <div className="col-span-2">{t.dashboard.table.action}</div>
+            <div className="col-span-2 text-right">{t.dashboard.table.action}</div>
           </div>
 
           {/* Results Content */}
