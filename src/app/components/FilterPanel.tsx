@@ -259,12 +259,27 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   const visibleOptions = showAll ? options : options.slice(0, maxVisible);
 
   if (options.length === 0) {
-    return <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono uppercase">{emptyMessage || t.noOptionsAvailable}</p>;
+    // Empty-state line — smoover (Apr 24, 2026): was font-mono uppercase; now
+    // plain italic muted to match other "no results" / placeholder copy.
+    return <p className="text-[11px] italic text-[#8898aa] dark:text-gray-500">{emptyMessage || t.noOptionsAvailable}</p>;
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      {/* ===================================================================
+          PRESET PILLS — smoover refresh (Apr 24, 2026)
+          -----------------------------------------------------------------
+          Shared pill pattern used by MultiSelect, RangePresets, DatePresets.
+          Before: border-2 square pills, font-black uppercase, offset black
+                  shadow for the selected state.
+          After:  rounded-full hairline pills, font-semibold mixed-case.
+                  Selected → yellow fill + shadow-yellow-glow-sm (matches
+                  the count badges and landing hero CTA). Hover on idle
+                  pills: subtle #f6f9fc wash + border deepens to #cdd5df.
+          Sizing kept identical (px-2 py-1 text-[10px]) so the 8-chip
+          cap + "Show more" logic still fits in the same two rows.
+          =================================================================== */}
+      <div className="flex flex-wrap gap-1.5">
         {visibleOptions.map(option => (
           <button
             key={option}
@@ -276,20 +291,21 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               }
             }}
             className={cn(
-              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
+              "px-2.5 py-1 text-[10px] font-semibold rounded-full transition-all border",
               selected.includes(option)
-                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
+                ? "bg-[#ffbf23] text-[#0f172a] border-transparent shadow-yellow-glow-sm"
+                : "bg-white dark:bg-gray-900 text-[#425466] dark:text-gray-400 border-[#e6ebf1] dark:border-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-700"
             )}
           >
             {option}
           </button>
         ))}
       </div>
+      {/* Inline "+N more" / "Show less" — muted link treatment */}
       {options.length > maxVisible && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="text-[10px] text-black dark:text-[#ffbf23] hover:underline font-black uppercase"
+          className="text-[10px] font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:underline underline-offset-2 transition-colors"
         >
           {showAll ? t.showLess : `+ ${options.length - maxVisible} ${t.more}`}
         </button>
@@ -297,7 +313,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       {selected.length > 0 && (
         <button
           onClick={() => onChange([])}
-          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
+          className="text-[10px] font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors ml-2"
         >
           {t.clearAll}
         </button>
@@ -325,7 +341,8 @@ const RangePresets: React.FC<RangePresetsProps> = ({
 }) => {
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      {/* Preset pills — same smoover treatment as MultiSelect (Apr 24, 2026) */}
+      <div className="flex flex-wrap gap-1.5">
         {presets.map(preset => (
           <button
             key={preset.label}
@@ -337,10 +354,10 @@ const RangePresets: React.FC<RangePresetsProps> = ({
               }
             }}
             className={cn(
-              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
+              "px-2.5 py-1 text-[10px] font-semibold rounded-full transition-all border",
               value?.min === preset.min && value?.max === preset.max
-                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
+                ? "bg-[#ffbf23] text-[#0f172a] border-transparent shadow-yellow-glow-sm"
+                : "bg-white dark:bg-gray-900 text-[#425466] dark:text-gray-400 border-[#e6ebf1] dark:border-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-700"
             )}
           >
             {preset.label}
@@ -350,7 +367,7 @@ const RangePresets: React.FC<RangePresetsProps> = ({
       {value !== null && (
         <button
           onClick={() => onChange(null)}
-          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
+          className="text-[10px] font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
         >
           {clearLabel}
         </button>
@@ -408,16 +425,17 @@ const DatePresets: React.FC<DatePresetsProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      {/* Preset pills — same smoover treatment as MultiSelect (Apr 24, 2026) */}
+      <div className="flex flex-wrap gap-1.5">
         {presets.map(preset => (
           <button
             key={preset.label}
             onClick={() => handlePreset(preset.days)}
             className={cn(
-              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
+              "px-2.5 py-1 text-[10px] font-semibold rounded-full transition-all border",
               isPresetActive(preset.days)
-                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
+                ? "bg-[#ffbf23] text-[#0f172a] border-transparent shadow-yellow-glow-sm"
+                : "bg-white dark:bg-gray-900 text-[#425466] dark:text-gray-400 border-[#e6ebf1] dark:border-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-700"
             )}
           >
             {preset.label}
@@ -427,7 +445,7 @@ const DatePresets: React.FC<DatePresetsProps> = ({
       {value !== null && (
         <button
           onClick={() => onChange(null)}
-          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
+          className="text-[10px] font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
         >
           {t.clear}
         </button>
