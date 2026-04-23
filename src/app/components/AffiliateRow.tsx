@@ -1705,40 +1705,92 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       )}
 
-      {/* Email Results Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
-      {/* Updated January 10th, 2026 - i18n migration */}
+      {/* =============================================================================
+          EMAIL RESULTS MODAL
+          -----------------------------------------------------------------------------
+          History:
+            Dec 2025        — Introduced as part of AffiliateRow (hand-rolled, not
+                              routed through the shared Modal wrapper).
+            Jan 6, 2026     — Neo-brutalist pass (border-4 black, 8px offset yellow
+                              drop shadow, yellow header block, font-black uppercase).
+            Jan 10, 2026    — i18n migration (every visible string keyed to
+                              t.affiliateRow.emailModal.*).
+            Apr 27, 2026    — Phase 2h smoover refresh (this change-set).
+
+          Smoover refresh — Phase 2h (April 27, 2026):
+            Flips this hand-rolled modal to the same design voice now used by the
+            shared Modal shell (Phase 2b) and the Find Affiliates modal body
+            (Phase 2g):
+              - Container: border-4 black + 8px offset brutalist drop shadow
+                          → hairline border #e6ebf1 + shadow-soft-xl + rounded-2xl
+                          + overflow-hidden so corners stay clean.
+              - Header:   solid yellow block + border-b-4 black + black-square
+                          icon tile + font-black uppercase title + black "N FOUND"
+                          pill + black-square × close button
+                          → clean white (dark-mode respecting) + hairline divider
+                          + rounded-full yellow icon badge with shadow-yellow-glow-sm
+                          + font-display font-semibold title + soft yellow "N Found"
+                          pill + rounded-full ghost close button with lucide X.
+              - Backdrop: bg-black/60 → bg-#0f172a/40 + backdrop-blur-sm to match
+                          the shared Modal shell.
+
+          Split into 4 atomic commits so each piece can be reviewed / reverted in
+          isolation:
+            1. Shell (overlay + container + header) — THIS commit.
+            2. Simple email list branch (the common case — 1-4 raw emails).
+            3. Contact card branch (Apollo contacts with name / title / LinkedIn /
+               multiple emails per contact + phone numbers).
+            4. No-emails-found empty state + retry button.
+
+          Zero behaviour changes: copyEmail, setIsEmailModalOpen, setCopiedEmail
+          timeout, onFindEmail retry callback, conditional branch selection
+          (contacts > emails > no-results), and every i18n key are preserved.
+          ============================================================================= */}
       {isEmailModalOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-[#0f172a]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setIsEmailModalOpen(false)}
         >
           <div 
-            className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header - NEO-BRUTALIST Yellow */}
-            <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23] flex items-center justify-between">
+            {/* =====================================================================
+                HEADER BAR — smoover refresh (Apr 27, 2026). Chunk 1/4.
+                ---------------------------------------------------------------------
+                Was a solid yellow block with a black icon tile + black "N FOUND"
+                pill + black × close button. Now a clean white header with:
+                  • rounded-full yellow icon badge (shadow-yellow-glow-sm)
+                  • font-display font-semibold "Email Results" title in dark slate
+                  • muted secondary text for the person/domain line
+                  • soft yellow pill for the count
+                  • rounded-full ghost close button (same as shared Modal shell)
+                ===================================================================== */}
+            <div className="px-6 py-4 border-b border-[#e6ebf1] dark:border-gray-800 bg-white dark:bg-[#0f0f0f] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-black border-2 border-black flex items-center justify-center">
-                  <Mail size={18} className="text-[#ffbf23]" />
+                <div className="w-10 h-10 bg-[#ffbf23] rounded-full flex items-center justify-center shadow-yellow-glow-sm shrink-0">
+                  <Mail size={18} className="text-[#0f172a]" strokeWidth={2} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-black text-black uppercase">{t.affiliateRow.emailModal.title}</h3>
-                  <p className="text-xs text-black/70 font-medium">
+                <div className="min-w-0">
+                  <h3 className="font-display text-lg font-semibold text-[#0f172a] dark:text-white tracking-tight">
+                    {t.affiliateRow.emailModal.title}
+                  </h3>
+                  <p className="text-xs text-[#8898aa] truncate">
                     {personName || channel?.name || domain.replace(/^www\./, '').split('.')[0]}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-white text-xs font-black uppercase border-2 border-black">
-                  <Mail size={12} />
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-xs font-semibold rounded-full">
+                  <Mail size={12} strokeWidth={2} />
                   {emailResults?.emails?.length || (email ? 1 : 0)} {t.affiliateRow.emailModal.found}
                 </span>
                 <button
                   onClick={() => setIsEmailModalOpen(false)}
-                  className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
+                  aria-label="Close email results"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
                 >
-                  ×
+                  <X size={16} strokeWidth={2} />
                 </button>
               </div>
             </div>
