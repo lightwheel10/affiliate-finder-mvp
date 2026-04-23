@@ -1476,9 +1476,19 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           Apr 23, 2026 (Phase 2e · smoover refresh):
             - Rounded-full pills, hairline borders, soft shadows.
             - Default "Find Email" CTA matches the landing hero CTA exactly
-              (bg-[#ffbf23] + shadow-yellow-glow-sm + hover:-translate-y-0.5). */}
+              (bg-[#ffbf23] + shadow-yellow-glow-sm + hover:-translate-y-0.5).
+          Apr 23, 2026 (gap fix):
+            - Added `justify-end` so Email content right-anchors inside its
+              col-span-2 cell. Without this the content (88–130px) floated to
+              the LEFT of a 236px cell, leaving a huge visible gap (up to
+              288px on wide screens) between Email content and the Action
+              cluster to its right. Right-anchoring shrinks that gap to a
+              consistent ~140px — less than the Discovered page's Date→Action
+              gap (~180px), so it reads as an intentional "right-side action
+              zone". Matching `flex justify-end` added to the Email header
+              in saved/page.tsx to keep header text aligned with content. */}
       {isPipelineView && (
-         <div className="col-span-2 h-8 flex items-center">
+         <div className="col-span-2 h-8 flex items-center justify-end">
             {emailStatus === 'found' && email ? (
                <button 
                  onClick={() => setIsEmailModalOpen(true)}

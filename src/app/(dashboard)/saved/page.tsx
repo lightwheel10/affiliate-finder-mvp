@@ -972,9 +972,15 @@ export default function SavedPage() {
             {/* Apr 23, 2026: col-span-2 → col-span-1 so Action can reclaim a column.
                 Pill inside AffiliateRow truncates + tooltip provides full text. */}
             <div className="col-span-1">{t.dashboard.table.discoveryMethod}</div>
-            {/* Email column with clickable filter - January 16, 2026 */}
-            {/* Updated January 25, 2026: Changed from col-span-1 to col-span-2 (Status column removed) */}
-            <div className="col-span-2">
+            {/* Email column with clickable filter
+                Jan 16, 2026 — introduced as clickable filter.
+                Jan 25, 2026 — col-span-1 → col-span-2 (Status column removed).
+                Apr 23, 2026 — added `flex justify-end` so the header button
+                right-anchors inside its cell, mirroring the right-anchored
+                Email content in AffiliateRow.tsx (gap fix — otherwise there
+                was a ~288px blank stretch between Email content and Action
+                icons on wide screens). Header + content stay visually aligned. */}
+            <div className="col-span-2 flex justify-end">
               <button
                 onClick={() => setShowOnlyWithEmail(!showOnlyWithEmail)}
                 className={cn(
