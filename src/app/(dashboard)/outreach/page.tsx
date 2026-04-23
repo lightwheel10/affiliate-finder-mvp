@@ -2859,21 +2859,21 @@ export default function OutreachPage() {
         width="max-w-sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-[#425466] dark:text-gray-400">
             Choose what to export to CSV:
           </p>
           
           {/* Export All Option */}
           <button
             onClick={handleExportAll}
-            className="w-full flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
+            className="w-full flex items-center gap-3 p-4 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-xl hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-600 transition-all group"
           >
-            <div className="w-10 h-10 bg-[#ffbf23] border-2 border-black flex items-center justify-center shrink-0">
-              <Users size={20} className="text-black" />
+            <div className="w-10 h-10 bg-[#ffbf23] rounded-full shadow-yellow-glow-sm flex items-center justify-center shrink-0">
+              <Users size={18} className="text-[#0f172a]" strokeWidth={2} />
             </div>
             <div className="flex-1 text-left">
-              <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">Export All</h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">Export All</h4>
+              <p className="text-xs text-[#8898aa] dark:text-gray-400">
                 {filteredResults.length} contacts in current view
               </p>
             </div>
@@ -2884,26 +2884,28 @@ export default function OutreachPage() {
             onClick={handleExportSelected}
             disabled={selectedAffiliates.size === 0}
             className={cn(
-              "w-full flex items-center gap-3 p-4 border-2 transition-all group",
+              "w-full flex items-center gap-3 p-4 border rounded-xl transition-all group",
               selectedAffiliates.size > 0
-                ? "bg-white dark:bg-gray-900 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-                : "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-60"
+                ? "bg-white dark:bg-gray-900 border-[#e6ebf1] dark:border-gray-700 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-600"
+                : "bg-[#f6f9fc] dark:bg-gray-800 border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed opacity-70"
             )}
           >
             <div className={cn(
-              "w-10 h-10 border-2 border-black flex items-center justify-center shrink-0",
-              selectedAffiliates.size > 0 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
+              "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+              selectedAffiliates.size > 0
+                ? "bg-[#ffbf23] shadow-yellow-glow-sm"
+                : "bg-gray-200 dark:bg-gray-700"
             )}>
-              <Check size={20} className={selectedAffiliates.size > 0 ? "text-black" : "text-gray-400"} />
+              <Check size={18} strokeWidth={2.5} className={selectedAffiliates.size > 0 ? "text-[#0f172a]" : "text-gray-400"} />
             </div>
             <div className="flex-1 text-left">
               <h4 className={cn(
-                "text-sm font-black uppercase",
-                selectedAffiliates.size > 0 ? "text-gray-900 dark:text-white" : "text-gray-400"
+                "text-sm font-semibold",
+                selectedAffiliates.size > 0 ? "text-[#0f172a] dark:text-white" : "text-gray-400"
               )}>
                 Export Selected
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[#8898aa] dark:text-gray-400">
                 {selectedAffiliates.size > 0 
                   ? `${selectedAffiliates.size} contacts selected`
                   : "No contacts selected"
@@ -2915,7 +2917,7 @@ export default function OutreachPage() {
           {/* Cancel Button */}
           <button
             onClick={() => setIsExportModalOpen(false)}
-            className="w-full py-2 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+            className="w-full py-2 text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
           >
             Cancel
           </button>
