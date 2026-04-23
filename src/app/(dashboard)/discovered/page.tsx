@@ -765,7 +765,16 @@ export default function DiscoveredPage() {
             <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
             <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
             <div className="col-span-1">{t.dashboard.table.date}</div>
-            <div className="col-span-2 text-right">{t.dashboard.table.action}</div>
+            {/* Action header is LEFT-aligned like every other column header
+                for a visually consistent header row. The 3 circular action
+                buttons below are right-anchored inside the cell (standard
+                table UX — action clusters always sit at the far right of a
+                row), so header/content won't line up vertically in this one
+                cell. That's intentional; the horizontal header row stays
+                uniform at the cost of one vertical mismatch in a column
+                where users already expect action buttons on the right.
+                Apr 23, 2026. */}
+            <div className="col-span-2">{t.dashboard.table.action}</div>
           </div>
 
           {/* Results Content */}
