@@ -156,22 +156,28 @@ export default function SettingsPage() {
   ];
 
   // ==========================================================================
-  // RENDER - January 8th, 2026
-  // 
-  // NEO-BRUTALIST DESIGN:
-  // - Header: h-16 with border-b-4 and uppercase font-black title
-  // - Left navigation: Sharp-edged tabs with yellow active state
-  // - Right panel: Sharp edges with border-2 and offset shadow
-  // 
-  // Note: The outer container with Sidebar is now handled by the layout.
+  // RENDER
+  //
+  // HEADER — Smoover refresh (April 23rd, 2026 · Phase 2d)
+  //   Hairline bottom border, Archivo display title, unified with the other
+  //   four dashboard pages (find / discovered / saved / outreach).
+  //
+  // LEFT NAVIGATION — Neo-brutalist (January 8th, 2026)
+  //   Sharp-edged tabs with yellow active state, offset shadow on active.
+  //   NOT yet migrated to smoover — deferred to a later phase.
+  //
+  // RIGHT PANEL — Neo-brutalist (January 8th, 2026)
+  //   Sharp edges, border-2 black, offset shadow. NOT yet migrated.
+  //
+  // Note: The outer container with Sidebar is handled by the dashboard layout.
   // This component only renders the header and main content area.
   // ==========================================================================
   return (
     <>
-      {/* Header - Translated (January 9th, 2026) */}
-      <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b-4 border-black dark:border-gray-700">
+      {/* Header — SMOOVER REFRESH (April 23rd, 2026 · Phase 2d): unified with other dashboard pages */}
+      <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b border-[#e6ebf1] dark:border-gray-800">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.settings.pageTitle}</h1>
+          <h1 className="font-display text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">{t.dashboard.settings.pageTitle}</h1>
         </div>
       </header>
 
