@@ -1997,21 +1997,46 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   </div>
                 </div>
               ) : (
-                /* No emails found */
-                <div className="text-center py-8 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
-                  <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center mx-auto mb-3">
-                    <X size={20} className="text-gray-400" />
+                /* =====================================================================
+                   NO-EMAILS-FOUND EMPTY STATE — smoover refresh (Apr 27, 2026).
+                   Chunk 4/4 (final).
+                   ---------------------------------------------------------------------
+                   Shown when the enrichment call returned zero emails AND no
+                   contact metadata. Gives the user a quick path to retry the
+                   search (closes this modal and fires onFindEmail again).
+
+                   Before: gray-50 box with a border-2 square + a gray-200 square
+                           X icon tile + font-black uppercase heading + a
+                           brutalist yellow CTA with offset shadow.
+                   After:  soft #f6f9fc panel with hairline border + rounded-xl +
+                           rounded-full muted icon badge (shadow-soft-sm) +
+                           font-semibold mixed-case heading + rounded-full yellow
+                           retry CTA with shadow-yellow-glow-sm + hover lift.
+                           Heading copy softened tone-wise (uppercase removed) —
+                           still driven by the same i18n key.
+
+                   No behaviour change: onFindEmail?.() optional-chaining retry
+                   callback + setIsEmailModalOpen(false) close-first sequence
+                   preserved verbatim.
+                   ===================================================================== */
+                <div className="text-center py-10 px-6 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-xl">
+                  <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-full border border-[#e6ebf1] dark:border-gray-700 flex items-center justify-center mx-auto mb-3 shadow-soft-sm">
+                    <X size={20} className="text-[#8898aa]" strokeWidth={2} />
                   </div>
-                  <p className="text-sm font-black text-gray-600 dark:text-gray-300 uppercase">{t.affiliateRow.emailModal.noEmailsFound}</p>
-                  <p className="text-xs text-gray-400 mt-1">{t.affiliateRow.emailModal.trySearchingAgain}</p>
+                  <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
+                    {t.affiliateRow.emailModal.noEmailsFound}
+                  </p>
+                  <p className="text-xs text-[#8898aa] mt-1">
+                    {t.affiliateRow.emailModal.trySearchingAgain}
+                  </p>
                   <button
                     onClick={() => {
                       setIsEmailModalOpen(false);
                       onFindEmail?.();
                     }}
-                    className="mt-4 px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all inline-flex items-center gap-2"
+                    className="mt-4 px-4 py-2 text-xs font-semibold bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 transition-all inline-flex items-center gap-2"
                   >
-                    <RotateCw size={12} />
+                    <RotateCw size={12} strokeWidth={2} />
                     {t.affiliateRow.actions.retry}
                   </button>
                 </div>
