@@ -2,22 +2,31 @@
 
 /**
  * =============================================================================
- * SIDEBAR COMPONENT - January 6th, 2026
+ * SIDEBAR COMPONENT
  * =============================================================================
- * 
- * DESIGN UPDATE: Implementing neo-brutalist design from DashboardDemo.tsx
- * 
+ *
+ * January 6th, 2026 — Neo-brutalist rewrite:
+ *   Bold borders (border-4, border-2), hard offset shadows (shadow-neo-sm),
+ *   brand yellow (#ffbf23), dark/light mode support.
+ *
+ * April 23rd, 2026 — "Smoover" refresh (Phase 2c):
+ *   Carries the softer design language from the landing / auth / modal
+ *   refreshes into the dashboard chrome:
+ *     - Hairline borders (#e6ebf1) replace the 4px black dividers
+ *     - Soft drop shadows (shadow-soft-lg / shadow-yellow-glow) replace
+ *       the hard offset shadows
+ *     - Active nav becomes a soft yellow pill (no more left-rail border-l-4)
+ *     - Rounded-full pills for the EN/DE + theme row (matching navbar)
+ *     - Archivo display font for the brand mark and dropdown titles
+ *     - Logout modal buttons match the new ConfirmDeleteModal pattern
+ *
+ *   Logic, i18n keys, Supabase auth, subscription branches, SWR counts,
+ *   and all hydration-safe patterns are UNCHANGED.
+ *
  * The old design code is preserved in comments marked with:
  *   // OLD_DESIGN_START and // OLD_DESIGN_END
- * 
- * New design uses:
- *   - Bold borders (border-4, border-2)
- *   - Neo-brutalist shadows (shadow-neo-sm)
- *   - Brand yellow (#ffbf23) instead of Electric Lime
- *   - Dark/Light mode support
- *   - More industrial/terminal aesthetic
- * 
- * To revert: Uncomment OLD_DESIGN sections and comment NEW_DESIGN sections
+ *
+ * To revert: uncomment OLD_DESIGN sections and comment NEW_DESIGN sections.
  * =============================================================================
  */
 
@@ -59,16 +68,17 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
 // =============================================================================
-// SKELETON COMPONENT - NEW DESIGN (January 6th, 2026)
-// Neo-brutalist style with bold borders and industrial aesthetic
+// SKELETON COMPONENT
+// Originally neo-brutalist (January 6th, 2026); refreshed to SMOOVER on
+// April 23rd, 2026 so the loading state matches the post-hydration sidebar.
 // =============================================================================
 const SidebarSkeleton: React.FC = () => (
-  <aside className="min-h-screen w-64 bg-white dark:bg-[#0a0a0a] border-r-4 border-black dark:border-white flex flex-col fixed left-0 top-0 bottom-0 z-40">
-    {/* Brand / Logo Area - h-16 to match main header */}
-    <div className="h-16 px-6 border-b-4 border-black dark:border-white flex flex-col justify-center">
+  <aside className="min-h-screen w-64 bg-white dark:bg-[#0a0a0a] border-r border-[#e6ebf1] dark:border-gray-800 flex flex-col fixed left-0 top-0 bottom-0 z-40">
+    {/* Brand / Logo Area — SMOOVER skeleton mirror (April 23rd, 2026) */}
+    <div className="h-16 px-6 border-b border-[#e6ebf1] dark:border-gray-800 flex flex-col justify-center">
       <div className="flex items-center gap-2">
-        <img src="/logo.svg" alt="Afforce One" className="w-7 h-7 border-2 border-black dark:border-white" />
-        <span className="font-black text-lg tracking-tighter leading-none">Afforce One</span>
+        <img src="/logo.svg" alt="Afforce One" className="w-7 h-7 rounded-md" />
+        <span className="font-display text-lg font-bold tracking-tight leading-none text-[#0f172a] dark:text-white">Afforce One</span>
       </div>
       {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
     </div>
@@ -76,39 +86,39 @@ const SidebarSkeleton: React.FC = () => (
     {/* Navigation Skeleton */}
     <nav className="flex-1 p-4 space-y-6 overflow-y-auto animate-pulse">
       <div>
-        <div className="h-3 w-20 bg-gray-200 dark:bg-gray-800 rounded mb-3 ml-2"></div>
+        <div className="h-3 w-20 bg-[#e6ebf1] dark:bg-gray-800 rounded mb-3 ml-2"></div>
         <div className="space-y-1">
-          <div className="h-10 bg-gray-100 dark:bg-gray-900 rounded-md"></div>
-          <div className="h-10 bg-gray-100 dark:bg-gray-900 rounded-md"></div>
+          <div className="h-10 bg-[#f6f9fc] dark:bg-gray-900 rounded-lg"></div>
+          <div className="h-10 bg-[#f6f9fc] dark:bg-gray-900 rounded-lg"></div>
         </div>
       </div>
 
       <div>
-        <div className="h-3 w-24 bg-gray-200 dark:bg-gray-800 rounded mb-3 ml-2"></div>
+        <div className="h-3 w-24 bg-[#e6ebf1] dark:bg-gray-800 rounded mb-3 ml-2"></div>
         <div className="space-y-1">
-          <div className="h-10 bg-gray-100 dark:bg-gray-900 rounded-md"></div>
-          <div className="h-10 bg-gray-100 dark:bg-gray-900 rounded-md"></div>
+          <div className="h-10 bg-[#f6f9fc] dark:bg-gray-900 rounded-lg"></div>
+          <div className="h-10 bg-[#f6f9fc] dark:bg-gray-900 rounded-lg"></div>
         </div>
       </div>
     </nav>
 
-    {/* Bottom Section Skeleton */}
-    <div className="p-4 border-t-4 border-black dark:border-white bg-gray-50 dark:bg-[#111] animate-pulse">
-      {/* Plan Card Skeleton */}
-      <div className="bg-[#1a1a1a] p-4 rounded-lg mb-4 border-2 border-black dark:border-gray-700">
+    {/* Bottom Section Skeleton — SMOOVER: hairline divider + off-white bg */}
+    <div className="p-4 border-t border-[#e6ebf1] dark:border-gray-800 bg-[#f6f9fc] dark:bg-[#0a0a0a] animate-pulse">
+      {/* Plan Card Skeleton — SMOOVER: rounded-2xl with soft shadow */}
+      <div className="bg-gradient-to-br from-[#0f172a] to-[#1a1a1a] p-4 rounded-2xl mb-4 border border-gray-800 shadow-soft-lg">
         <div className="space-y-2">
           <div className="h-3 w-20 bg-gray-700 rounded"></div>
           <div className="h-2 w-24 bg-gray-700 rounded"></div>
-          <div className="h-7 w-full bg-gray-700 rounded mt-3"></div>
+          <div className="h-7 w-full bg-gray-700 rounded-full mt-3"></div>
         </div>
       </div>
 
       {/* Profile Skeleton */}
       <div className="flex items-center gap-3 px-1">
-        <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+        <div className="w-8 h-8 rounded-full bg-[#e6ebf1] dark:bg-gray-700"></div>
         <div className="flex-1 space-y-1.5">
-          <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="h-2.5 w-28 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-3 w-16 bg-[#e6ebf1] dark:bg-gray-700 rounded"></div>
+          <div className="h-2.5 w-28 bg-[#e6ebf1] dark:bg-gray-700 rounded"></div>
         </div>
       </div>
     </div>
@@ -243,23 +253,25 @@ export const Sidebar: React.FC = () => {
   return (
     <>
       {/* =============================================================================
-          NEW DESIGN - Neo-brutalist Sidebar (January 6th, 2026)
+          SMOOVER SIDEBAR — April 23rd, 2026 (Phase 2c)
+          Replaces the Jan 6 2026 neo-brutalist treatment with hairline borders,
+          soft shadows, and display typography. See file-level comment for context.
           ============================================================================= */}
-      <aside className="min-h-screen w-64 bg-white dark:bg-[#0a0a0a] border-r-4 border-black dark:border-white flex flex-col fixed left-0 top-0 bottom-0 z-40">
-        {/* Brand / Logo Area - Neo-brutalist style - h-16 to match main header */}
-        <div className="h-16 px-6 border-b-4 border-black dark:border-white flex flex-col justify-center">
+      <aside className="min-h-screen w-64 bg-white dark:bg-[#0a0a0a] border-r border-[#e6ebf1] dark:border-gray-800 flex flex-col fixed left-0 top-0 bottom-0 z-40">
+        {/* Brand / Logo Area — SMOOVER: hairline bottom divider, plain rounded logo, display-font title */}
+        <div className="h-16 px-6 border-b border-[#e6ebf1] dark:border-gray-800 flex flex-col justify-center">
           <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="Afforce One" className="w-7 h-7 border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_#000000]" />
-            <span className="font-black text-lg tracking-tighter leading-none">Afforce One</span>
+            <img src="/logo.svg" alt="Afforce One" className="w-7 h-7 rounded-md" />
+            <span className="font-display text-lg font-bold tracking-tight leading-none text-[#0f172a] dark:text-white">Afforce One</span>
           </div>
           {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
         </div>
 
-        {/* Main Navigation - Neo-brutalist style */}
+        {/* Main Navigation — SMOOVER (April 23rd, 2026) */}
         <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
           {/* Discovery Section - Translated (January 9th, 2026) */}
           <div>
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-2">{t.nav.discovery}</h4>
+            <h4 className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-widest mb-3 px-2">{t.nav.discovery}</h4>
             <ul className="space-y-1">
               <li>
                 <NavItemNeo 
@@ -283,7 +295,7 @@ export const Sidebar: React.FC = () => {
 
           {/* Management Section - Translated (January 9th, 2026) */}
           <div>
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-2">{t.nav.management}</h4>
+            <h4 className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-widest mb-3 px-2">{t.nav.management}</h4>
             <ul className="space-y-1">
               <li>
                 <NavItemNeo 
@@ -316,17 +328,17 @@ export const Sidebar: React.FC = () => {
             - Combined into single row with matching styles
             ================================================================= */}
         <div className="px-4 pb-4">
-          {/* Language & Theme Switchers - Full width row */}
-          <div className="mb-4 flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
-            {/* Language toggle */}
-            <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 p-0.5 border border-gray-200 dark:border-gray-700">
+          {/* Language & Theme Switchers — SMOOVER (April 23rd, 2026): rounded-full hairline container, visual parity with the navbar */}
+          <div className="mb-4 flex items-center justify-between px-2 py-1.5 rounded-full bg-[#f6f9fc] dark:bg-[#111] border border-[#e6ebf1] dark:border-gray-800">
+            {/* Language toggle — rounded-full pills matching LanguageSwitcher.tsx navbar variant */}
+            <div className="flex items-center gap-0.5">
               <button
                 onClick={() => setLanguage('en')}
                 className={cn(
-                  "px-2.5 py-1 text-[10px] font-black uppercase transition-all",
+                  "px-2.5 py-1 text-[10px] font-semibold uppercase rounded-full transition-all",
                   language === 'en'
-                    ? "bg-[#ffbf23] text-black border border-black"
-                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    ? "bg-[#ffbf23] text-black shadow-soft-sm"
+                    : "text-[#8898aa] hover:text-[#425466] dark:text-gray-500 dark:hover:text-gray-300"
                 )}
                 aria-label="Switch to English"
                 title="English"
@@ -336,10 +348,10 @@ export const Sidebar: React.FC = () => {
               <button
                 onClick={() => setLanguage('de')}
                 className={cn(
-                  "px-2.5 py-1 text-[10px] font-black uppercase transition-all",
+                  "px-2.5 py-1 text-[10px] font-semibold uppercase rounded-full transition-all",
                   language === 'de'
-                    ? "bg-[#ffbf23] text-black border border-black"
-                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    ? "bg-[#ffbf23] text-black shadow-soft-sm"
+                    : "text-[#8898aa] hover:text-[#425466] dark:text-gray-500 dark:hover:text-gray-300"
                 )}
                 aria-label="Switch to German"
                 title="Deutsch"
@@ -352,17 +364,17 @@ export const Sidebar: React.FC = () => {
             <ThemeSwitcher variant="navbar" />
           </div>
 
-          {/* Plan Card - Neo-brutalist style - Translated (January 9th, 2026) */}
+          {/* Plan Card — SMOOVER (April 23rd, 2026): rounded-2xl gradient card, soft drop shadow, yellow-glow on hover. Logic UNCHANGED. */}
           <div 
-            className="bg-[#1a1a1a] p-4 rounded-lg text-white border-2 border-black dark:border-gray-700 shadow-[2px_2px_0px_0px_#000000] cursor-pointer hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+            className="bg-gradient-to-br from-[#0f172a] to-[#1a1a1a] p-4 rounded-2xl text-white border border-gray-800 shadow-soft-lg cursor-pointer hover:shadow-yellow-glow hover:-translate-y-0.5 transition-all duration-300"
             onClick={() => setIsPricingModalOpen(true)}
           >
             <div className="flex items-start gap-3 mb-3">
-              <div className="p-1.5 bg-[#ffbf23] rounded text-black">
+              <div className="p-1.5 bg-[#ffbf23] rounded-md text-black shadow-soft-sm">
                 <Zap size={14} fill="currentColor" />
               </div>
               <div>
-                <h5 className="font-black text-xs uppercase text-[#ffbf23]">
+                <h5 className="font-display font-bold text-xs uppercase tracking-wide text-[#ffbf23]">
                   {isTrialing 
                     ? `${subscription?.plan || 'Trial'} ${t.sidebar.planCard.planSuffix}`
                     : subscription?.status === 'active'
@@ -390,7 +402,7 @@ export const Sidebar: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button className="w-full py-1.5 bg-[#ffbf23] text-black text-xs font-bold uppercase rounded hover:bg-white transition-colors flex items-center justify-center gap-1">
+            <button className="w-full py-2 bg-[#ffbf23] hover:bg-[#e5ac20] text-black text-xs font-semibold uppercase tracking-wide rounded-full transition-colors flex items-center justify-center gap-1">
               {subscription?.status === 'active' 
                 ? t.sidebar.planCard.managePlan 
                 : isPastDue 
@@ -402,15 +414,15 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* User Profile Section - Below black divider line (January 10th, 2026) */}
-        <div className="p-4 border-t-4 border-black dark:border-white bg-gray-50 dark:bg-[#111]">
-          {/* User Profile - Neo-brutalist style */}
+        {/* User Profile Section — SMOOVER (April 23rd, 2026): hairline divider, brand off-white background */}
+        <div className="p-4 border-t border-[#e6ebf1] dark:border-gray-800 bg-[#f6f9fc] dark:bg-[#0a0a0a]">
+          {/* User Profile — SMOOVER (April 23rd, 2026) */}
           <div className="relative">
             <button 
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className="flex items-center gap-3 px-1 w-full hover:bg-gray-100 dark:hover:bg-gray-900 rounded-md py-2 transition-colors"
+              className="flex items-center gap-3 px-2 w-full hover:bg-white dark:hover:bg-gray-900 rounded-xl py-2 transition-colors border border-transparent hover:border-[#e6ebf1] dark:hover:border-gray-800"
             >
-              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center font-bold text-xs border border-gray-400 overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-semibold text-xs text-[#425466] dark:text-gray-300 border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm overflow-hidden">
                 {userImageUrl ? (
                   <img src={userImageUrl} alt="User" className="w-full h-full object-cover" />
                 ) : (
@@ -418,36 +430,36 @@ export const Sidebar: React.FC = () => {
                 )}
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-bold truncate">{userName}</p>
-                <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+                <p className="text-sm font-semibold truncate text-[#0f172a] dark:text-white">{userName}</p>
+                <p className="text-xs text-[#8898aa] dark:text-gray-500 truncate">{userEmail}</p>
               </div>
-              <MoreHorizontal size={16} className="text-gray-400" />
+              <MoreHorizontal size={16} className="text-[#8898aa] dark:text-gray-500" />
             </button>
 
-            {/* Dropdown Menu - Neo-brutalist style */}
+            {/* Dropdown Menu — SMOOVER (April 23rd, 2026) */}
             {isProfileMenuOpen && (
               <>
                 <div 
                   className="fixed inset-0 z-40" 
                   onClick={() => setIsProfileMenuOpen(false)} 
                 />
-                {/* Profile Dropdown - Translated (January 9th, 2026) */}
-                <div className="absolute bottom-full mb-2 left-0 w-full bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white rounded-md shadow-[2px_2px_0px_0px_#000000] py-1 z-50 overflow-hidden">
+                {/* Profile Dropdown — SMOOVER (April 23rd, 2026): rounded-xl hairline border with soft shadow */}
+                <div className="absolute bottom-full mb-2 left-0 w-full bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl shadow-soft-lg py-1 z-50 overflow-hidden">
                   <Link 
                     href="/settings"
                     onClick={() => setIsProfileMenuOpen(false)}
-                    className="w-full px-4 py-2 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm font-medium text-[#425466] dark:text-gray-200 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 flex items-center gap-2"
                   >
                     <Settings size={14} />
                     {t.sidebar.profile.settings}
                   </Link>
-                  <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
+                  <div className="h-px bg-[#e6ebf1] dark:bg-gray-800 my-1" />
                   <button 
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       setIsLogoutModalOpen(true);
                     }}
-                    className="w-full px-4 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                   >
                     <LogOut size={14} />
                     {t.sidebar.profile.logout}
@@ -485,7 +497,7 @@ export const Sidebar: React.FC = () => {
         }}
       />
 
-      {/* Logout Confirmation Modal - Translated (January 9th, 2026) */}
+      {/* Logout Confirmation Modal — SMOOVER (April 23rd, 2026): rounded-full buttons matching ConfirmDeleteModal */}
       <Modal 
         isOpen={isLogoutModalOpen} 
         onClose={() => setIsLogoutModalOpen(false)}
@@ -493,19 +505,19 @@ export const Sidebar: React.FC = () => {
         width="max-w-sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-500 leading-relaxed">
+          <p className="text-sm text-[#425466] dark:text-gray-400 leading-relaxed">
             {t.sidebar.logoutModal.message}
           </p>
           <div className="flex items-center justify-end gap-3 pt-2">
             <button 
               onClick={() => setIsLogoutModalOpen(false)}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-all duration-200"
+              className="px-5 py-2.5 text-sm font-medium rounded-full text-[#425466] dark:text-gray-300 bg-white dark:bg-[#1a1a1a] hover:bg-[#f6f9fc] dark:hover:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm transition-all duration-200"
             >
               {t.sidebar.logoutModal.cancel}
             </button>
             <button 
               onClick={handleLogout}
-              className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 border border-transparent rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              className="px-5 py-2.5 text-sm font-semibold rounded-full text-white bg-red-500 hover:bg-red-600 shadow-[0_4px_14px_-2px_rgba(239,68,68,0.35)] hover:shadow-[0_6px_18px_-2px_rgba(239,68,68,0.45)] transition-all duration-200 flex items-center gap-2"
             >
               <LogOut size={14} />
               {t.sidebar.logoutModal.confirm}
@@ -530,14 +542,14 @@ interface NavItemProps {
   href?: string;
 }
 
-// NEW DESIGN - Neo-brutalist NavItem (January 6th, 2026)
+// SMOOVER NavItem (April 23rd, 2026): soft yellow pill active state (no left rail), rounded-full pill badge
 const NavItemNeo = ({ icon, label, active, badge, onClick, href }: NavItemProps) => {
   const content = (
     <>
       {icon}
       <span className="flex-1">{label}</span>
       {badge && (
-        <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gray-200 dark:bg-gray-800 rounded">
+        <span className="px-2 py-0.5 text-[10px] font-medium bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 text-[#425466] dark:text-gray-300 rounded-full">
           {badge}
         </span>
       )}
@@ -545,10 +557,10 @@ const NavItemNeo = ({ icon, label, active, badge, onClick, href }: NavItemProps)
   );
 
   const className = cn(
-    "w-full flex items-center gap-3 px-3 py-2 font-medium rounded-md transition-colors",
+    "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200",
     active 
-      ? "bg-[#ffbf23]/20 text-black dark:text-[#ffbf23] font-bold border-l-4 border-[#ffbf23]" 
-      : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 hover:text-black dark:hover:text-white"
+      ? "bg-[#fff4d1] dark:bg-[#ffbf23]/10 text-[#0f172a] dark:text-[#ffbf23] font-semibold shadow-soft-sm" 
+      : "text-[#425466] dark:text-gray-400 hover:bg-[#f6f9fc] dark:hover:bg-gray-900 hover:text-[#0f172a] dark:hover:text-white"
   );
 
   if (href) {
