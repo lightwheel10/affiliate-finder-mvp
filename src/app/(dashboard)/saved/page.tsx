@@ -948,10 +948,16 @@ export default function SavedPage() {
             TABLE AREA - DashboardDemo.tsx EXACT STYLING (Pipeline View)
             ============================================================================= */}
         <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
-          {/* Table Header - Translated (January 9th, 2026) */}
-          {/* Updated January 25, 2026: Removed Status column, gave Email col-span-2 for more space */}
-          {/* February 2, 2026: Rebalanced - reduced Action to col-span-1, gave space back to Relevant Content */}
-          {/* Column spans match AffiliateRow: 1+3+3+2+2+1 = 12 */}
+          {/* Table Header - Translated (January 9th, 2026)
+              HISTORY:
+                Jan 25, 2026 — removed Status column, gave Email col-span-2.
+                Feb  2, 2026 — reduced Action to col-span-1 (under-measured:
+                               3 circular buttons + gaps = 112px > ~69px cell).
+                Apr 23, 2026 — overflow fix: Action back to col-span-2,
+                               Discovery Method donates col-span-2 → col-span-1.
+                               MUST stay in sync with AffiliateRow.tsx pipeline
+                               view. If you change one, change both.
+                Column spans (pipeline view): 1+3+3+1+2+2 = 12 */}
           <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
             <div className="col-span-1 flex justify-center">
               <input 
@@ -962,10 +968,10 @@ export default function SavedPage() {
               />
             </div>
             <div className="col-span-3">{t.dashboard.table.affiliate}</div>
-            {/* February 2, 2026: Back to col-span-3, reduced Action column instead */}
             <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
-            {/* February 2, 2026: col-span-2 for better spacing from Email */}
-            <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
+            {/* Apr 23, 2026: col-span-2 → col-span-1 so Action can reclaim a column.
+                Pill inside AffiliateRow truncates + tooltip provides full text. */}
+            <div className="col-span-1">{t.dashboard.table.discoveryMethod}</div>
             {/* Email column with clickable filter - January 16, 2026 */}
             {/* Updated January 25, 2026: Changed from col-span-1 to col-span-2 (Status column removed) */}
             <div className="col-span-2">
@@ -989,8 +995,9 @@ export default function SavedPage() {
                 )}
               </button>
             </div>
-            {/* February 2, 2026: Reduced from col-span-2 to col-span-1 (buttons are small) */}
-            <div className="col-span-1 text-right">{t.dashboard.table.action}</div>
+            {/* Apr 23, 2026: col-span-1 → col-span-2 to fit the 3-button action
+                cluster (~112px) without overflowing into Email column. */}
+            <div className="col-span-2 text-right">{t.dashboard.table.action}</div>
           </div>
 
           {/* Results Content */}

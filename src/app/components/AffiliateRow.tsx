@@ -1158,20 +1158,33 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   // =============================================================================
   // GRID LAYOUT
   //   January 6, 2026  — introduced 12-column grid (replaced fixed-column grid).
-  //   April 23, 2026   — Phase 2e smoover refresh: grid structure is UNCHANGED.
-  //                      Only visual tokens (borders/shadows/radii/typography)
-  //                      inside each cell were updated. This means existing
-  //                      column span expectations hold for every caller.
+  //   April 23, 2026   — Phase 2e smoover refresh: visual tokens only,
+  //                      grid structure unchanged.
+  //   April 23, 2026   — Pipeline view overflow fix: Actions was col-span-1
+  //                      but its three 32px circular buttons + gaps = 112px,
+  //                      which overflowed the ~69px cell and crashed into the
+  //                      Email column to its left. Fixed by donating a column
+  //                      from Discovery Method (which is a single truncating
+  //                      pill with a tooltip — the least-painful place to take
+  //                      the column from). Callers on the Saved page must
+  //                      mirror this new split in their table header row.
   //
   // Column spans (per cell in the render below):
-  //   col-span-1  checkbox
-  //   col-span-3  affiliate info (avatar + name + metrics)
-  //   col-span-3  relevant content (+ optional thumbnail)
-  //   col-span-2  discovery method
-  //   col-span-1  date/status        (non-pipeline only)
-  //   col-span-2  actions            (non-pipeline)
-  //   col-span-2  email pipeline     (pipeline only)
-  //   col-span-1  actions            (pipeline only)
+  //   NON-PIPELINE (find / discovered):   1 + 3 + 3 + 2 + 1 + 2 = 12
+  //     col-span-1  checkbox
+  //     col-span-3  affiliate info (avatar + name + metrics)
+  //     col-span-3  relevant content (+ optional thumbnail)
+  //     col-span-2  discovery method
+  //     col-span-1  date/status
+  //     col-span-2  actions
+  //
+  //   PIPELINE (saved):                   1 + 3 + 3 + 1 + 2 + 2 = 12
+  //     col-span-1  checkbox
+  //     col-span-3  affiliate info
+  //     col-span-3  relevant content
+  //     col-span-1  discovery method   ← donated from 2 → 1
+  //     col-span-2  email pipeline
+  //     col-span-2  actions            ← grew from 1 → 2
   // =============================================================================
   
   /* OLD_DESIGN_START - Grid Classes (pre-January 6th, 2026)
@@ -1406,11 +1419,19 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </div>
       </div>
 
-      {/* Discovery Method - col-span-2 for all views */}
-      {/* Updated January 16, 2026: Added h-8 flex items-center for consistent height */}
-      {/* Updated January 22, 2026: DiscoveryReasonsPopover removed (feature rollback) */}
-      {/* February 2, 2026: Pipeline back to col-span-2 for better spacing from Email column */}
-      <div className="col-span-2 h-8 flex items-center">
+      {/* Discovery Method
+          HISTORY:
+            Jan 16, 2026 — added h-8 flex items-center for consistent row height.
+            Jan 22, 2026 — DiscoveryReasonsPopover removed (feature rollback).
+            Feb  2, 2026 — pipeline bumped back to col-span-2 for spacing from Email.
+            Apr 23, 2026 — Phase 2e overflow fix: pipeline view drops to col-span-1
+              so the Actions cell can grow to col-span-2 (needs ~112px for three
+              circular buttons + gaps; old col-span-1 was ~69px and overflowed
+              leftwards into the Email pipeline column). Non-pipeline view is
+              unchanged. Discovery pill was chosen to donate the column because
+              it is a single truncating element with a `title=` tooltip for the
+              full text, and the renderer already JS-truncates to 5 words. */}
+      <div className={`${isPipelineView ? "col-span-1" : "col-span-2"} h-8 flex items-center`}>
          {renderDiscoveryMethod()}
       </div>
 
@@ -1516,17 +1537,24 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
          </div>
       )}
 
-      {/* Actions - col-span-1 for pipeline, col-span-2 for find/discovered
-          Previous behavioural history preserved (do not regress):
+      {/* Actions - col-span-2 for all views
+          HISTORY:
             - Jan 10, 2026: i18n migration.
             - Jan 16, 2026: added h-8 so the row doesn't jump when state changes.
-            - Feb  2, 2026: pipeline uses col-span-1; non-pipeline col-span-2.
-          Apr 23, 2026 (Phase 2e · smoover refresh):
+            - Feb  2, 2026: pipeline view dropped to col-span-1 "because buttons
+              are compact" — this under-measured: 3×32px circles + 2×8px gaps =
+              112px, while col-span-1 is only ~69px at typical dashboard widths.
+              Cluster overflowed leftwards (justify-end) into the Email column
+              by ~43px, visually colliding with the "Find Email" button.
+            - Apr 23, 2026: overflow fix — always col-span-2 now. The donated
+              column was taken from Discovery Method on pipeline view (see
+              Discovery Method cell above). Non-pipeline view is unchanged.
+            Apr 23, 2026 (Phase 2e · smoover refresh):
             - Circular rounded-full action buttons with hairline borders and
               soft shadows. Delete keeps its two-step inline-confirm pattern —
               compact trash circle → wider confirm pill — just with rounded
               edges and red accent softened. */}
-      <div className={`${isPipelineView ? "col-span-1" : "col-span-2"} h-8 flex items-center justify-end gap-2`}>
+      <div className="col-span-2 h-8 flex items-center justify-end gap-2">
         {/* Delete button — two-step confirm (first click shows pill, second click deletes) */}
         <button 
           onClick={handleDeleteClick}
