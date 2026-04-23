@@ -65,6 +65,7 @@ import {
   Loader2,
   X,
   Clock,  // Added January 6th, 2026 for neo-brutalist header
+  Pencil, // Added April 25, 2026 — replaces the ASCII ✎ glyph used in the Find Affiliates modal brand-edit button (smoover Phase 2g, chunk 2)
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
@@ -1656,7 +1657,33 @@ export default function FindNewPage() {
 
       </div>
 
-      {/* Find Affiliates Modal - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* =============================================================================
+          FIND AFFILIATES MODAL
+          -----------------------------------------------------------------------------
+          The most-used surface in the app. Historically the flagship "neo-brutalist"
+          screen (Jan 8, 2026): black-square hero tile, font-black uppercase title,
+          border-2 form controls, border-4 black CTA with offset shadow.
+
+          Smoover refresh — Phase 2g (April 25, 2026):
+            Flips the modal BODY to the soft design voice that now covers the
+            landing page, auth pages, sidebar, dashboard toolbars, bulk-action
+            bars, filter slide-out, and shared Modal shell. The outer Modal
+            wrapper itself was already migrated in Phase 2b (rounded-2xl + soft
+            shadow + hairline border + font-display title + ghost close button)
+            so only the children of <Modal> are changed here.
+
+          Important: ZERO changes to handlers, state, i18n keys, Modal props
+          (isOpen / onClose / width="max-w-2xl"), MAX_KEYWORDS / MAX_COMPETITORS,
+          Enter-to-add behaviour, disabled-state logic, or edit-brand flow.
+
+          Split into 4 atomic commits for easy review / revert:
+            1. Hero header (this commit)
+            2. Website context row + brand-edit controls
+            3. Keywords + Competitors two-column grid (labels, inputs, Add
+               buttons, list chrome, item rows, number chips, ×, empty copy,
+               Clear-all links)
+            4. Primary Find CTA + tip line
+          ============================================================================= */}
       <Modal 
         isOpen={isFindModalOpen} 
         onClose={() => setIsFindModalOpen(false)}
@@ -1664,21 +1691,50 @@ export default function FindNewPage() {
         width="max-w-2xl"
       >
         <div className="space-y-5">
-          {/* Header - NEO-BRUTALIST - Translated (January 9th, 2026) */}
+          {/* =====================================================================
+              HERO HEADER — smoover (Apr 25, 2026). Chunk 1/4.
+              ---------------------------------------------------------------------
+              Before: w-14 h-14 bg-black border-4 border-black square tile with
+                      a hard 4px yellow offset shadow; font-black uppercase h2.
+              After:  rounded-full yellow badge with shadow-yellow-glow-sm
+                      (same pattern as the count badges on every other page);
+                      font-display font-semibold mixed-case h2 in dark slate;
+                      subtitle muted to #8898aa to match app-wide body copy.
+              Icon sized up slightly (24 → 26) since the badge no longer has a
+              heavy border eating visual weight, and stroke dropped to 2 for the
+              lighter smoover tone.
+              ===================================================================== */}
           <div className="text-center pb-2">
-            <div className="w-14 h-14 bg-black border-4 border-black flex items-center justify-center mx-auto mb-3 shadow-[4px_4px_0px_0px_#ffbf23]">
-              <Search size={24} className="text-[#ffbf23]" />
+            <div className="w-14 h-14 bg-[#ffbf23] rounded-full flex items-center justify-center mx-auto mb-3 shadow-yellow-glow-sm">
+              <Search size={26} className="text-[#0f172a]" strokeWidth={2} />
             </div>
-            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.find.modal.title}</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="font-display text-xl font-semibold text-[#0f172a] dark:text-white tracking-tight">
+              {t.dashboard.find.modal.title}
+            </h2>
+            <p className="text-sm text-[#8898aa] mt-1">
               {t.dashboard.find.modal.subtitle}
             </p>
           </div>
 
-          {/* Website context */}
-          <div className="flex items-center gap-2 px-0 py-1 text-gray-600 dark:text-gray-400">
-            <Globe size={14} className="text-gray-500 shrink-0" />
-            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {/* =====================================================================
+              WEBSITE CONTEXT ROW — smoover (Apr 25, 2026). Chunk 2/4.
+              ---------------------------------------------------------------------
+              Displays the user's brand (e.g. "yoursite.com") that the search
+              runs against. Selecdoo users can edit inline; everyone else just
+              sees the read-only brand.
+              Before: uppercase gray-500 "WEBSITE:" label + border-2 square
+                      inputs with hard black focus + ASCII glyph buttons (✎ ✓ ✕)
+                      using border-2 squares.
+              After:  mixed-case muted label; rounded-md hairline input with a
+                      subtle yellow focus ring; the three glyph buttons are now
+                      proper lucide icon buttons (Pencil / Check / X) rendered
+                      as rounded-full 28x28 ghost icon buttons matching the
+                      Modal wrapper's own close-button pattern.
+              Logic, API calls, optimistic state, error handling untouched.
+              ===================================================================== */}
+          <div className="flex items-center gap-2 px-0 py-1">
+            <Globe size={14} className="text-[#8898aa] shrink-0" strokeWidth={2} />
+            <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-400">
               {t.dashboard.find.modal.websiteLabel}:
             </span>
             {isSelecdooUser ? (
@@ -1698,7 +1754,7 @@ export default function FindNewPage() {
                       value={editBrand}
                       onChange={(e) => setEditBrand(e.target.value)}
                       placeholder={user?.brand || 'example.com'}
-                      className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-black dark:focus:border-white"
+                      className="flex-1 px-2.5 py-1.5 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-md text-sm text-[#0f172a] dark:text-gray-100 placeholder:text-[#8898aa] focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/40 focus:border-[#ffbf23]/60 transition-all"
                       onKeyDown={async (e) => {
                         if (e.key === 'Enter' && hasBrandChange && !isSavingBrand && userId) {
                           e.preventDefault();
@@ -1746,21 +1802,23 @@ export default function FindNewPage() {
                             setIsSavingBrand(false);
                           }
                         }}
-                        className="text-xs font-bold text-emerald-600 hover:text-emerald-800 px-2 disabled:opacity-50 flex items-center gap-1"
+                        aria-label={isSavingBrand ? 'Saving brand' : 'Save brand'}
+                        className="w-7 h-7 flex items-center justify-center rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50 transition-colors shrink-0"
                       >
                         {isSavingBrand ? (
-                          <Loader2 size={12} className="animate-spin" />
+                          <Loader2 size={14} className="animate-spin" />
                         ) : (
-                          '✓'
+                          <Check size={14} strokeWidth={2.5} />
                         )}
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => setIsEditingBrand(false)}
-                      className="text-xs font-bold text-gray-500 hover:text-black dark:hover:text-white px-2"
+                      aria-label="Cancel editing brand"
+                      className="w-7 h-7 flex items-center justify-center rounded-full text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
                     >
-                      ✕
+                      <X size={14} strokeWidth={2} />
                     </button>
                   </>
                 ) : (
@@ -1773,7 +1831,7 @@ export default function FindNewPage() {
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
                     )}
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                    <span className="text-sm font-medium text-[#0f172a] dark:text-gray-300 truncate">
                       {user?.brand || editBrand || t.dashboard.find.modal.notSetDuringOnboarding}
                     </span>
                     <button
@@ -1782,9 +1840,10 @@ export default function FindNewPage() {
                         setEditBrand(user?.brand || editBrand || '');
                         setIsEditingBrand(true);
                       }}
-                      className="ml-2 text-xs font-bold text-gray-500 hover:text-black dark:hover:text-white border border-gray-300 dark:border-gray-600 px-2 py-0.5 bg-white dark:bg-gray-900"
+                      aria-label="Edit brand"
+                      className="ml-1 w-7 h-7 flex items-center justify-center rounded-full text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white border border-[#e6ebf1] dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
                     >
-                      ✎
+                      <Pencil size={12} strokeWidth={2} />
                     </button>
                   </>
                 )}
@@ -1797,21 +1856,59 @@ export default function FindNewPage() {
                   className="w-4 h-4 shrink-0"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{user.brand}</span>
+                <span className="text-sm font-medium text-[#0f172a] dark:text-gray-300 truncate">{user.brand}</span>
               </>
             ) : (
-              <span className="text-sm italic text-gray-400">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
+              <span className="text-sm italic text-[#8898aa]">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
             )}
           </div>
 
-          {/* Two Column Layout - Keywords | Competitors (equal structure, aligned) */}
+          {/* =====================================================================
+              TWO-COLUMN GRID — KEYWORDS | COMPETITORS. Chunk 3/4.
+              Smoover refresh (April 25, 2026).
+              ---------------------------------------------------------------------
+              Both columns are structurally identical (label → input + Add
+              button → optional helper → list container → Clear-all link) so
+              the same visual rules apply to both:
+
+              Labels:  font-black uppercase gray-700  →  font-semibold mixed
+                       case text-#0f172a; icon stroke 2.5 → 2.
+              Counts:  font-bold gray-400 plain text  →  font-semibold #8898aa,
+                       inside a subtle rounded-full pill shape (tabular-nums).
+              Inputs:  border-2 gray-300 square + hard black focus →
+                       border hairline #e6ebf1 rounded-md + 2px yellow focus
+                       ring (focus:ring-[#ffbf23]/40). Same pattern as the
+                       Phase 1 login/signup forms.
+              Add btn: border-2 black square yellow + font-black uppercase →
+                       rounded-full yellow CTA with shadow-yellow-glow-sm,
+                       font-semibold mixed case, subtle hover lift. Matches
+                       the landing hero button and the filter-panel Apply.
+              List:    bg-gray-50 border-2 gray-200 square → bg-#f6f9fc
+                       rounded-xl border hairline #e6ebf1.
+              Items:   border-2 gray-200 hover:border-red-400 → border
+                       hairline #e6ebf1, rounded-lg, hover:bg-#f6f9fc +
+                       border deepens. Remove button turns red on hover only.
+              Number:  bg-#ffbf23 border-black square → rounded-full pill
+                       with shadow-yellow-glow-sm (matches the count badges
+                       used in the filter panel section labels).
+              Remove:  ASCII "×" glyph → lucide X icon inside a rounded-full
+                       hover-red ghost button.
+              Empty:   colour softened to #8898aa italic.
+              Clear:   font-bold uppercase gray-400 → font-semibold #8898aa
+                       mixed case, hover darkens to red-500.
+
+              Zero logic changes: addKeyword / removeKeyword / addCompetitor /
+              removeCompetitor handlers, MAX_KEYWORDS / MAX_COMPETITORS limits,
+              Enter-to-add, disabled states, placeholder / helper i18n keys
+              are all untouched.
+              ===================================================================== */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Left Column - Keywords - NEO-BRUTALIST - Translated (January 9th, 2026) */}
+            {/* Left Column — Keywords */}
             <div className="flex flex-col">
-              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 uppercase tracking-wide">
-                <Search size={14} className="text-black dark:text-white" />
+              <label className="text-sm font-semibold text-[#0f172a] dark:text-gray-200 flex items-center gap-2 h-7">
+                <Search size={14} className="text-[#425466] dark:text-gray-400" strokeWidth={2} />
                 {t.dashboard.find.modal.keywordsLabel}
-                <span className="ml-auto text-xs font-bold text-gray-400">
+                <span className="ml-auto text-xs font-semibold text-[#8898aa] tabular-nums">
                   {keywords.length}/{MAX_KEYWORDS}
                 </span>
               </label>
@@ -1829,42 +1926,43 @@ export default function FindNewPage() {
                   }}
                   placeholder={t.dashboard.find.modal.keywordsPlaceholder}
                   disabled={keywords.length >= MAX_KEYWORDS}
-                  className="w-full px-3 py-2.5 pr-16 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-black dark:focus:border-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2.5 pr-[72px] bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-md text-sm text-[#0f172a] dark:text-white placeholder:text-[#8898aa] focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/40 focus:border-[#ffbf23]/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   onClick={addKeyword}
                   disabled={!keywordInput.trim() || keywords.length >= MAX_KEYWORDS}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black hover:bg-yellow-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300 disabled:cursor-not-allowed transition-all"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs font-semibold rounded-full transition-all bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none disabled:cursor-not-allowed disabled:hover:translate-y-0 dark:disabled:bg-gray-800"
                 >
                   {t.dashboard.find.modal.addButton}
                 </button>
               </div>
 
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 leading-tight">
+              <p className="text-[11px] text-[#8898aa] dark:text-gray-500 mt-1.5 leading-tight">
                 {t.dashboard.find.modal.keywordsHelper}
               </p>
 
-              <div className="flex-1 min-h-[140px] max-h-[140px] overflow-y-auto no-scrollbar space-y-1.5 p-2 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 mt-2">
+              <div className="flex-1 min-h-[140px] max-h-[140px] overflow-y-auto no-scrollbar space-y-1.5 p-2 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-xl mt-2">
                 {keywords.length > 0 ? (
                   keywords.map((kw, idx) => (
                     <div
                       key={kw}
-                      className="flex items-center gap-2 px-2.5 py-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-sm group hover:border-red-400 transition-all"
+                      className="flex items-center gap-2 px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-lg text-sm group hover:border-[#cdd5df] dark:hover:border-gray-600 transition-all"
                     >
-                      <span className="w-5 h-5 flex items-center justify-center bg-[#ffbf23] text-black text-[10px] font-black border border-black shrink-0">
+                      <span className="inline-flex items-center justify-center w-5 h-5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm shrink-0">
                         {idx + 1}
                       </span>
-                      <span className="text-gray-700 dark:text-gray-300 truncate flex-1 font-medium">{kw}</span>
+                      <span className="text-[#0f172a] dark:text-gray-200 truncate flex-1 font-medium">{kw}</span>
                       <button
                         onClick={() => removeKeyword(kw)}
-                        className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shrink-0 font-bold"
+                        aria-label={`Remove keyword ${kw}`}
+                        className="w-5 h-5 flex items-center justify-center rounded-full text-[#8898aa] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shrink-0"
                       >
-                        ×
+                        <X size={12} strokeWidth={2.5} />
                       </button>
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400 text-xs font-medium">
+                  <div className="flex items-center justify-center h-full text-[#8898aa] text-xs italic">
                     {t.dashboard.find.modal.noKeywordsYet}
                   </div>
                 )}
@@ -1874,7 +1972,7 @@ export default function FindNewPage() {
                 {keywords.length > 0 && (
                   <button
                     onClick={() => setKeywords([])}
-                    className="text-xs text-gray-400 hover:text-red-500 transition-colors font-bold"
+                    className="text-xs font-semibold text-[#8898aa] hover:text-red-500 transition-colors"
                   >
                     {t.dashboard.find.modal.clearAllKeywords}
                   </button>
@@ -1882,14 +1980,15 @@ export default function FindNewPage() {
               </div>
             </div>
 
-            {/* Right Column - Competitors - same structure as Keywords for alignment */}
+            {/* Right Column — Competitors (mirrors Keywords exactly) */}
             <div className="flex flex-col">
-              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 h-7 uppercase tracking-wide">
-                <svg className="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <label className="text-sm font-semibold text-[#0f172a] dark:text-gray-200 flex items-center gap-2 h-7">
+                {/* Inline arrow SVG kept (not a lucide icon); only colour + stroke tuned */}
+                <svg className="w-3.5 h-3.5 text-[#425466] dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
                 {t.dashboard.find.modal.competitorsInputLabel}
-                <span className="ml-auto text-xs font-bold text-gray-400">
+                <span className="ml-auto text-xs font-semibold text-[#8898aa] tabular-nums">
                   {competitors.length}/{MAX_COMPETITORS}
                 </span>
               </label>
@@ -1906,22 +2005,22 @@ export default function FindNewPage() {
                   }}
                   placeholder={t.dashboard.find.modal.competitorsPlaceholder}
                   disabled={competitors.length >= MAX_COMPETITORS}
-                  className="w-full px-3 py-2.5 pr-16 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-black dark:focus:border-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2.5 pr-[72px] bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-md text-sm text-[#0f172a] dark:text-white placeholder:text-[#8898aa] focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/40 focus:border-[#ffbf23]/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                   onClick={addCompetitor}
                   disabled={!competitorInput.trim() || competitors.length >= MAX_COMPETITORS}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black hover:bg-yellow-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300 disabled:cursor-not-allowed transition-all"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs font-semibold rounded-full transition-all bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none disabled:cursor-not-allowed disabled:hover:translate-y-0 dark:disabled:bg-gray-800"
                 >
                   {t.dashboard.find.modal.addCompetitorButton}
                 </button>
               </div>
-              <div className="flex-1 min-h-[140px] max-h-[140px] overflow-y-auto no-scrollbar space-y-1.5 p-2 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 mt-2">
+              <div className="flex-1 min-h-[140px] max-h-[140px] overflow-y-auto no-scrollbar space-y-1.5 p-2 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-xl mt-2">
                 {competitors.length > 0 ? (
-                  competitors.map((comp, idx) => (
+                  competitors.map((comp) => (
                     <div
                       key={comp}
-                      className="flex items-center gap-2 px-2.5 py-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 text-sm group hover:border-red-400 transition-all"
+                      className="flex items-center gap-2 px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-lg text-sm group hover:border-[#cdd5df] dark:hover:border-gray-600 transition-all"
                     >
                       <img
                         src={`https://www.google.com/s2/favicons?domain=${comp}&sz=16`}
@@ -1929,17 +2028,18 @@ export default function FindNewPage() {
                         className="w-3.5 h-3.5 shrink-0"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
-                      <span className="text-gray-700 dark:text-gray-300 truncate flex-1 font-medium text-xs">{comp}</span>
+                      <span className="text-[#0f172a] dark:text-gray-200 truncate flex-1 font-medium text-xs">{comp}</span>
                       <button
                         onClick={() => removeCompetitor(comp)}
-                        className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shrink-0 font-bold"
+                        aria-label={`Remove competitor ${comp}`}
+                        className="w-5 h-5 flex items-center justify-center rounded-full text-[#8898aa] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shrink-0"
                       >
-                        ×
+                        <X size={12} strokeWidth={2.5} />
                       </button>
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400 text-xs font-medium">
+                  <div className="flex items-center justify-center h-full text-[#8898aa] text-xs italic">
                     {t.dashboard.find.modal.noCompetitorsYet}
                   </div>
                 )}
@@ -1948,7 +2048,7 @@ export default function FindNewPage() {
                 {competitors.length > 0 && (
                   <button
                     onClick={() => setCompetitors([])}
-                    className="text-xs text-gray-400 hover:text-red-500 transition-colors font-bold"
+                    className="text-xs font-semibold text-[#8898aa] hover:text-red-500 transition-colors"
                   >
                     {t.dashboard.find.modal.clearAllCompetitors}
                   </button>
@@ -1957,26 +2057,47 @@ export default function FindNewPage() {
             </div>
           </div>
 
-          {/* Action Button - NEO-BRUTALIST - Translated (January 9th, 2026) */}
+          {/* =====================================================================
+              PRIMARY FIND CTA + TIP. Chunk 4/4.
+              Smoover refresh (April 25, 2026).
+              ---------------------------------------------------------------------
+              Before: full-width yellow button with border-4 black +
+                      shadow-[4px_4px_0px_0px_#000] offset + font-black uppercase
+                      tracking-wide + translate-shadow press effect. Spinner
+                      used border-3 black on black text for a brutalist feel.
+              After:  full-width yellow CTA, rounded-full, shadow-yellow-glow
+                      (larger glow than the sm variant — this is the modal's
+                      main action so it gets a stronger accent). font-semibold
+                      mixed case, subtle hover lift (-translate-y-0.5), hover
+                      darkens to #e5ac20. Disabled state is soft #f6f9fc with
+                      muted text.
+                      Spinner modernised to a 2.5px ring using the dark-slate
+                      text colour so it reads well on yellow.
+                      Tip line colour softened to #8898aa to match every other
+                      helper/placeholder copy in the redesign.
+              No logic change: handleFindAffiliates handler + the
+              "keywords.length === 0 || loading" disable condition are both
+              preserved verbatim.
+              ===================================================================== */}
           <button
             onClick={handleFindAffiliates}
             disabled={keywords.length === 0 || loading}
-            className="w-full py-3.5 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-4 border-black hover:bg-yellow-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300 disabled:cursor-not-allowed shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[#ffbf23] text-[#0f172a] font-semibold rounded-full shadow-yellow-glow hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none disabled:cursor-not-allowed disabled:hover:translate-y-0 dark:disabled:bg-gray-800 transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <div className="w-5 h-5 border-3 border-black border-t-transparent animate-spin"></div>
+                <div className="w-5 h-5 border-[2.5px] border-[#0f172a] border-t-transparent rounded-full animate-spin"></div>
                 {t.dashboard.find.modal.searching}
               </>
             ) : (
               <>
-                <Search size={18} />
+                <Search size={18} strokeWidth={2} />
                 {t.dashboard.find.modal.ctaButton}
               </>
             )}
           </button>
 
-          <p className="text-center text-[11px] text-gray-400 font-medium">
+          <p className="text-center text-[11px] text-[#8898aa] font-medium">
             {t.dashboard.find.modal.tip}
           </p>
         </div>
