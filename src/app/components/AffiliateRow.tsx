@@ -511,32 +511,30 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     
     return (
       <div className="space-y-4">
-        {/* Header - NEO-BRUTALIST */}
-        <div className="flex items-center gap-2 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
-          <div className="w-8 h-8 bg-red-600 border-2 border-black flex items-center justify-center">
-            <Youtube size={16} className="text-white" />
+        {/* Header — smoover */}
+        <div className="flex items-center gap-2 pb-3 border-b border-[#e6ebf1] dark:border-gray-800">
+          <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shadow-soft-sm">
+            <Youtube size={16} className="text-white" strokeWidth={2} />
           </div>
-          <h3 className="text-sm font-black text-gray-900 dark:text-white">{channel?.name || personName || domain}</h3>
+          <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white">{channel?.name || personName || domain}</h3>
           {channel?.verified && (
             <CheckCircle2 size={12} className="text-blue-500 fill-blue-500" />
           )}
         </div>
 
-        {/* Subscribers - NEO-BRUTALIST badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600">
-          <Users size={14} className="text-gray-500" />
-          <span className="text-xs font-black text-black dark:text-white">{channel?.subscribers || '0'}</span>
-          <span className="text-xs text-gray-500 font-medium">{t.affiliateRow.viewModal.youtube.subscribers}</span>
+        {/* Subscribers badge — softened */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-full">
+          <Users size={14} className="text-[#8898aa]" strokeWidth={2} />
+          <span className="text-xs font-semibold text-[#0f172a] dark:text-white">{channel?.subscribers || '0'}</span>
+          <span className="text-xs text-[#8898aa] font-medium">{t.affiliateRow.viewModal.youtube.subscribers}</span>
         </div>
 
-        {/* Relevant Videos Section - NEO-BRUTALIST */}
-        <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
-          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
+        <div className="pt-3 border-t border-[#e6ebf1] dark:border-gray-800">
+          <h4 className="text-xs font-semibold text-[#8898aa] mb-3">
             {t.affiliateRow.viewModal.youtube.relevantVideos} ({1 + (subItems?.length || 0)})
           </h4>
 
-          {/* Main Video Card - NEO-BRUTALIST */}
-          <div className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <div className="flex gap-3 p-3 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-700 hover:bg-[#f6f9fc]/60 dark:hover:bg-gray-800/40 transition-all">
             {/* Video Thumbnail */}
             {videoThumbnail && (
               <a 
@@ -545,7 +543,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 rel="noreferrer"
                 className="shrink-0 relative group"
               >
-                <div className="w-28 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-black dark:border-gray-600">
+                <div className="w-28 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 rounded-md border border-[#e6ebf1] dark:border-gray-700">
                   <img 
                     src={getProxiedImageUrl(videoThumbnail)} 
                     alt="" 
@@ -554,12 +552,12 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   />
                 </div>
                 {videoDuration && (
-                  <span className="absolute bottom-0 right-0 px-1.5 py-0.5 bg-[#ffbf23] text-black text-[8px] font-black border-t border-l border-black">
+                  <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-[#0f172a]/85 text-white text-[8px] font-semibold rounded">
                     {videoDuration}
                   </span>
                 )}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+                  <div className="w-8 h-8 bg-[#ffbf23] rounded-full shadow-yellow-glow-sm flex items-center justify-center">
                     <Play size={14} className="text-black ml-0.5" fill="currentColor" />
                   </div>
                 </div>
@@ -572,7 +570,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 href={link}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs font-black text-gray-900 dark:text-white hover:text-red-600 transition-colors line-clamp-2 block mb-1"
+                className="text-xs font-semibold text-[#0f172a] dark:text-white hover:text-red-600 transition-colors line-clamp-2 block mb-1"
               >
                 {videoTitle}
               </a>
@@ -584,8 +582,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               )}
 
               <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                {videoViews && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{videoViews} {t.affiliateRow.metrics.views}</span>}
-                {videoLikes !== undefined && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoLikes)} {t.affiliateRow.metrics.likes}</span>}
+                {videoViews && <span className="px-2 py-0.5 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium rounded-full border border-[#e6ebf1] dark:border-gray-700">{videoViews} {t.affiliateRow.metrics.views}</span>}
+                {videoLikes !== undefined && <span className="px-2 py-0.5 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium rounded-full border border-[#e6ebf1] dark:border-gray-700">{formatNumber(videoLikes)} {t.affiliateRow.metrics.likes}</span>}
                 {videoDate && <span className="text-gray-400">{formatDate(videoDate)}</span>}
               </div>
             </div>
@@ -595,21 +593,21 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           {subItems && subItems.length > 0 && (
             <div className="mt-2 space-y-2">
               {subItems.map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors">
+                <div key={idx} className="flex gap-3 p-3 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-700 hover:bg-[#f6f9fc]/60 dark:hover:bg-gray-800/40 transition-all">
                   {item.thumbnail && (
                     <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0 relative">
-                      <div className="w-28 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600">
+                      <div className="w-28 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 rounded-md border border-[#e6ebf1] dark:border-gray-700">
                         <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
                       </div>
                       {item.duration && (
-                        <span className="absolute bottom-0 right-0 px-1 py-0.5 bg-black text-white text-[8px] font-bold">
+                        <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-[#0f172a]/85 text-white text-[8px] font-semibold rounded">
                           {item.duration}
                         </span>
                       )}
                     </a>
                   )}
                   <div className="flex-1 min-w-0">
-                    <a href={item.link} target="_blank" rel="noreferrer" className="text-xs font-black text-gray-900 dark:text-white hover:text-red-600 line-clamp-2 block mb-1">
+                    <a href={item.link} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#0f172a] dark:text-white hover:text-red-600 line-clamp-2 block mb-1">
                       {item.title}
                     </a>
                     <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
@@ -639,12 +637,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     
     return (
       <div className="space-y-4">
-        {/* Header - NEO-BRUTALIST */}
-        <div className="flex items-center gap-2 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
-          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 border-2 border-black flex items-center justify-center">
-            <Instagram size={16} className="text-white" />
+        <div className="flex items-center gap-2 pb-3 border-b border-[#e6ebf1] dark:border-gray-800">
+          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 rounded-full flex items-center justify-center shadow-soft-sm">
+            <Instagram size={16} className="text-white" strokeWidth={2} />
           </div>
-          <h3 className="text-sm font-black text-gray-900 dark:text-white">
+          <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white">
             {username.startsWith('@') ? username : `@${username}`}
           </h3>
           {isVerified && (
@@ -655,12 +652,12 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         {/* Profile Info - NEO-BRUTALIST badges */}
         <div className="flex flex-wrap items-center gap-2">
           {fullName && (
-            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-800 dark:text-gray-200">
+            <span className="px-2 py-1 bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-full text-xs font-medium text-[#425466] dark:text-gray-200">
               {fullName}
             </span>
           )}
           {followers && (
-            <span className="px-2 py-1 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
+            <span className="px-2 py-1 bg-[#ffbf23]/15 text-xs font-semibold text-[#0f172a] dark:text-[#ffbf23] rounded-full">
               {formatNumber(followers)} {t.affiliateRow.viewModal.instagram.followers}
             </span>
           )}
@@ -668,7 +665,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
         {/* Bio - NEO-BRUTALIST */}
         {bio && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+          <div className="p-3 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg">
             <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap line-clamp-4">
               {bio}
             </p>
@@ -676,16 +673,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         )}
 
         {/* Relevant Posts Section - NEO-BRUTALIST */}
-        <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
-          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
+        <div className="pt-3 border-t border-[#e6ebf1] dark:border-gray-800">
+          <h4 className="text-xs font-semibold text-[#8898aa] mb-3">
             {t.affiliateRow.viewModal.instagram.relevantPosts} ({1 + (subItems?.length || 0)})
           </h4>
 
           {/* Main Post Card - NEO-BRUTALIST */}
-          <div className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-black dark:border-gray-600">
+          <div className="flex gap-3 p-3 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg">
             {thumbnail && (
               <a href={link} target="_blank" rel="noreferrer" className="shrink-0">
-                <div className="w-16 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-black dark:border-gray-600">
+                <div className="w-16 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 rounded-md border border-[#e6ebf1] dark:border-gray-700">
                   <img 
                     src={getProxiedImageUrl(thumbnail)} 
                     alt="" 
@@ -702,8 +699,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </p>
               <div className="flex flex-wrap items-center gap-2 text-[10px]">
                 {/* FIX January 30, 2026: Changed !== undefined to != null */}
-                {postLikes != null && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postLikes)} {t.affiliateRow.metrics.likes}</span>}
-                {postComments != null && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(postComments)} {t.affiliateRow.metrics.comments}</span>}
+                {postLikes != null && <span className="px-2 py-0.5 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium rounded-full border border-[#e6ebf1] dark:border-gray-700">{formatNumber(postLikes)} {t.affiliateRow.metrics.likes}</span>}
+                {postComments != null && <span className="px-2 py-0.5 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium rounded-full border border-[#e6ebf1] dark:border-gray-700">{formatNumber(postComments)} {t.affiliateRow.metrics.comments}</span>}
                 {date && <span className="text-gray-400">{formatDate(date)}</span>}
               </div>
             </div>
@@ -713,10 +710,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           {subItems && subItems.length > 0 && (
             <div className="mt-2 space-y-2">
               {subItems.map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors">
+                <div key={idx} className="flex gap-3 p-3 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-700 transition-all">
                   {item.thumbnail && (
                     <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0">
-                      <div className="w-16 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600">
+                      <div className="w-16 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 rounded-md border border-[#e6ebf1] dark:border-gray-700">
                         <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
                       </div>
                     </a>
@@ -752,19 +749,18 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     
     return (
       <div className="space-y-4">
-        {/* Header - NEO-BRUTALIST */}
-        <div className="flex items-center gap-2 pb-3 border-b-2 border-gray-200 dark:border-gray-700">
-          <div className="w-8 h-8 bg-black border-2 border-black flex items-center justify-center">
+        <div className="flex items-center gap-2 pb-3 border-b border-[#e6ebf1] dark:border-gray-800">
+          <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center shadow-soft-sm">
             <TikTokIcon size={16} className="text-white" />
           </div>
-          <h3 className="text-sm font-black text-gray-900 dark:text-white">
+          <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white">
             {username.startsWith('@') ? username : `@${username}`}
           </h3>
           {isVerified && (
             <CheckCircle2 size={12} className="text-blue-500 fill-blue-500" />
           )}
           {affiliateData?.similarWeb?.countryCode && (
-            <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-black uppercase border-2 border-gray-200 dark:border-gray-700">
+            <span className="px-2 py-0.5 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 text-[10px] font-semibold rounded-full border border-[#e6ebf1] dark:border-gray-700">
               {affiliateData.similarWeb.countryCode}
             </span>
           )}
@@ -773,7 +769,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         {/* Profile Section - NEO-BRUTALIST */}
         <div className="flex items-start gap-3">
           {avatarUrl && (
-            <div className="w-12 h-12 overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 shrink-0">
+            <div className="w-12 h-12 overflow-hidden bg-gray-100 dark:bg-gray-800 rounded-full border border-[#e6ebf1] dark:border-gray-700 shrink-0">
               <img 
                 src={getProxiedImageUrl(avatarUrl)} 
                 alt="" 
@@ -785,10 +781,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           
           <div className="flex-1">
             {displayName && (
-              <p className="text-xs font-black text-gray-900 dark:text-white">{displayName}</p>
+              <p className="text-xs font-semibold text-[#0f172a] dark:text-white">{displayName}</p>
             )}
             {followers && (
-              <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#ffbf23] text-black text-[10px] font-black uppercase border-2 border-black">
+              <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-[10px] font-semibold rounded-full">
                 {formatNumber(followers)} {t.affiliateRow.viewModal.tiktok.followers}
               </span>
             )}
@@ -797,7 +793,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
         {/* Bio - NEO-BRUTALIST */}
         {bio && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+          <div className="p-3 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg">
             <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap line-clamp-4">
               {bio}
             </p>
@@ -805,16 +801,16 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         )}
 
         {/* Relevant Posts Section - NEO-BRUTALIST */}
-        <div className="pt-3 border-t-2 border-gray-200 dark:border-gray-700">
-          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
+        <div className="pt-3 border-t border-[#e6ebf1] dark:border-gray-800">
+          <h4 className="text-xs font-semibold text-[#8898aa] mb-3">
             {t.affiliateRow.viewModal.tiktok.relevantPosts} ({1 + (subItems?.length || 0)})
           </h4>
 
           {/* Main Video Card - NEO-BRUTALIST */}
-          <div className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-black dark:border-gray-600">
+          <div className="flex gap-3 p-3 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg">
             {thumbnail && (
               <a href={link} target="_blank" rel="noreferrer" className="shrink-0 relative group">
-                <div className="w-16 h-20 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-black dark:border-gray-600">
+                <div className="w-16 h-20 overflow-hidden bg-gray-200 dark:bg-gray-700 rounded-md border border-[#e6ebf1] dark:border-gray-700">
                   <img 
                     src={getProxiedImageUrl(thumbnail)} 
                     alt="" 
@@ -823,7 +819,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
+                  <div className="w-8 h-8 bg-[#ffbf23] rounded-full shadow-yellow-glow-sm flex items-center justify-center">
                     <Play size={14} className="text-black ml-0.5" fill="currentColor" />
                   </div>
                 </div>
@@ -835,8 +831,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 {title || snippet}
               </p>
               <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                {videoPlays && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoPlays)} {t.affiliateRow.metrics.views}</span>}
-                {videoLikes && <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold border border-gray-300 dark:border-gray-600">{formatNumber(videoLikes)} {t.affiliateRow.metrics.likes}</span>}
+                {videoPlays && <span className="px-2 py-0.5 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium rounded-full border border-[#e6ebf1] dark:border-gray-700">{formatNumber(videoPlays)} {t.affiliateRow.metrics.views}</span>}
+                {videoLikes && <span className="px-2 py-0.5 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium rounded-full border border-[#e6ebf1] dark:border-gray-700">{formatNumber(videoLikes)} {t.affiliateRow.metrics.likes}</span>}
                 {date && <span className="text-gray-400">{formatDate(date)}</span>}
               </div>
             </div>
@@ -846,10 +842,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           {subItems && subItems.length > 0 && (
             <div className="mt-2 space-y-2">
               {subItems.map((item, idx) => (
-                <div key={idx} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors">
+                <div key={idx} className="flex gap-3 p-3 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-700 transition-all">
                   {item.thumbnail && (
                     <a href={item.link} target="_blank" rel="noreferrer" className="shrink-0">
-                      <div className="w-16 h-20 overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600">
+                      <div className="w-16 h-20 overflow-hidden bg-gray-200 dark:bg-gray-700 rounded-md border border-[#e6ebf1] dark:border-gray-700">
                         <img src={getProxiedImageUrl(item.thumbnail)} alt="" className="w-full h-full object-cover" />
                       </div>
                     </a>
@@ -929,27 +925,27 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     
     return (
       <div className="space-y-5">
-        {/* Header - NEO-BRUTALIST Domain with traffic badge */}
-        <div className="flex items-start justify-between pb-4 border-b-2 border-gray-200 dark:border-gray-700">
+        {/* Header — smoover domain + traffic badge */}
+        <div className="flex items-start justify-between pb-4 border-b border-[#e6ebf1] dark:border-gray-800">
           <div className="flex items-center gap-3">
             {/* Screenshot or Globe icon */}
             {swData?.screenshot ? (
               <img 
                 src={swData.screenshot} 
                 alt={domain}
-                className="w-12 h-12 object-cover border-2 border-black dark:border-gray-600"
+                className="w-12 h-12 object-cover rounded-md border border-[#e6ebf1] dark:border-gray-700"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
             ) : (
-              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center">
+              <div className="w-12 h-12 bg-[#f6f9fc] dark:bg-gray-800 rounded-md border border-[#e6ebf1] dark:border-gray-700 flex items-center justify-center">
                 <Globe size={24} className="text-gray-500" />
               </div>
             )}
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-gray-900 dark:text-white">{domain}</h3>
+                <h3 className="text-base font-semibold text-[#0f172a] dark:text-white">{domain}</h3>
                 <a 
                   href={`https://${domain}`} 
                   target="_blank" 
@@ -960,8 +956,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 </a>
               </div>
               {swData && (
-                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black">
-                  <ArrowUpRight size={12} />
+                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-xs font-semibold rounded-full">
+                  <ArrowUpRight size={12} strokeWidth={2} />
                   {swData.monthlyVisitsFormatted} {t.affiliateRow.viewModal.web.trafficPerMonth}
                 </span>
               )}
@@ -969,32 +965,30 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           </div>
         </div>
 
-        {/* About this website - NEO-BRUTALIST */}
+        {/* About this website */}
         {swData?.siteDescription && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
-            <h5 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">{t.affiliateRow.viewModal.web.about}</h5>
+          <div className="p-4 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-xl">
+            <h5 className="text-xs font-semibold text-[#8898aa] mb-2">{t.affiliateRow.viewModal.web.about}</h5>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{swData.siteDescription}</p>
           </div>
         )}
 
-        {/* Traffic Overview - NEO-BRUTALIST */}
+        {/* Traffic Overview */}
         {swData ? (
           <>
-            {/* Section Title */}
-            <h4 className="text-sm font-black text-gray-800 dark:text-white uppercase tracking-wide">{t.affiliateRow.viewModal.web.trafficMetrics}</h4>
+            <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">{t.affiliateRow.viewModal.web.trafficMetrics}</h4>
 
             {/* Two-column layout for Ranking and Engagement */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Ranking Card - NEO-BRUTALIST */}
-              <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 overflow-hidden">
-                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">{t.affiliateRow.viewModal.web.ranking}</h5>
+              <div className="p-4 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl overflow-hidden">
+                <h5 className="text-xs font-semibold text-[#8898aa] dark:text-gray-400 mb-3">{t.affiliateRow.viewModal.web.ranking}</h5>
                 <div className="space-y-3">
                   {/* Global Rank */}
                   <div className="flex items-center gap-2">
                     <Globe size={14} className="text-gray-400 flex-shrink-0" />
                     <span className="text-xs text-gray-500 font-medium">{t.affiliateRow.viewModal.web.global}</span>
                   </div>
-                  <p className="text-xl font-black text-black dark:text-white -mt-1 ml-6">
+                  <p className="text-xl font-semibold text-[#0f172a] dark:text-white -mt-1 ml-6">
                     {swData.globalRank ? `#${Number(swData.globalRank).toLocaleString()}` : 'N/A'}
                   </p>
                   
@@ -1002,10 +996,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   {swData.countryCode && (
                     <>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">{swData.countryCode}</span>
+                        <span className="text-xs font-semibold text-[#425466] dark:text-gray-300">{swData.countryCode}</span>
                         <span className="text-xs text-gray-500 truncate">{countryNames[swData.countryCode] || swData.countryCode}</span>
                       </div>
-                      <p className="text-xl font-black text-black dark:text-white -mt-1 ml-6">
+                      <p className="text-xl font-semibold text-[#0f172a] dark:text-white -mt-1 ml-6">
                         {swData.countryRank ? `#${Number(swData.countryRank).toLocaleString()}` : 'N/A'}
                       </p>
                     </>
@@ -1017,51 +1011,48 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                     <span className="text-xs text-gray-500 font-medium">{t.affiliateRow.viewModal.web.category}</span>
                   </div>
                   <div className="-mt-1 ml-6 overflow-hidden">
-                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 break-words leading-relaxed">
+                    <p className="text-xs font-medium text-[#425466] dark:text-gray-300 break-words leading-relaxed">
                       {swData.category?.replace(/_/g, ' ') || 'N/A'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* User Engagement Metrics Card - NEO-BRUTALIST */}
-              <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 overflow-hidden">
-                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">{t.affiliateRow.viewModal.web.userEngagement}</h5>
+              <div className="p-4 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl overflow-hidden">
+                <h5 className="text-xs font-semibold text-[#8898aa] dark:text-gray-400 mb-3">{t.affiliateRow.viewModal.web.userEngagement}</h5>
                 <div className="grid grid-cols-3 gap-2">
-                  {/* Pages/Visit */}
-                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                  <div className="text-center p-2 bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-lg">
                     <FileText size={16} className="mx-auto text-gray-400 mb-1" />
-                    <p className="text-lg font-black text-black dark:text-white">
+                    <p className="text-lg font-semibold text-[#0f172a] dark:text-white">
                       {Number(swData.pagesPerVisit).toFixed(1)}
                     </p>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase">{t.affiliateRow.viewModal.web.pagesPerVisit}</p>
+                    <p className="text-[9px] text-[#8898aa] font-semibold">{t.affiliateRow.viewModal.web.pagesPerVisit}</p>
                   </div>
                   
                   {/* Time on Site */}
-                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                  <div className="text-center p-2 bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-lg">
                     <Clock size={16} className="mx-auto text-gray-400 mb-1" />
-                    <p className="text-lg font-black text-black dark:text-white">
+                    <p className="text-lg font-semibold text-[#0f172a] dark:text-white">
                       {formatTime(Number(swData.timeOnSite))}
                     </p>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase">{t.affiliateRow.viewModal.web.timeOnSite}</p>
+                    <p className="text-[9px] text-[#8898aa] font-semibold">{t.affiliateRow.viewModal.web.timeOnSite}</p>
                   </div>
                   
                   {/* Bounce Rate */}
-                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                  <div className="text-center p-2 bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-lg">
                     <MousePointer size={16} className="mx-auto text-gray-400 mb-1" />
-                    <p className="text-lg font-black text-black dark:text-white">
+                    <p className="text-lg font-semibold text-[#0f172a] dark:text-white">
                       {(Number(swData.bounceRate) * 100).toFixed(1)}%
                     </p>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase">{t.affiliateRow.viewModal.web.bounceRate}</p>
+                    <p className="text-[9px] text-[#8898aa] font-semibold">{t.affiliateRow.viewModal.web.bounceRate}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Traffic Sources Section - NEO-BRUTALIST */}
             {swData.trafficSources && (
-              <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600">
-                <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4">{t.affiliateRow.viewModal.web.trafficSources}</h5>
+              <div className="p-4 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl">
+                <h5 className="text-xs font-semibold text-[#8898aa] dark:text-gray-400 mb-4">{t.affiliateRow.viewModal.web.trafficSources}</h5>
                 
                 {/* Traffic Sources with color dots and percentages */}
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
@@ -1075,18 +1066,17 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   ].sort((a, b) => b.value - a.value).map(source => (
                     <div key={source.label} className="flex items-center justify-between py-1.5">
                       <div className="flex items-center gap-2">
-                        <span className={`w-3 h-3 ${source.color} border border-black`}></span>
+                        <span className={`w-3 h-3 ${source.color} rounded-full`}></span>
                         <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{source.label}</span>
                       </div>
-                      <span className="text-xs font-black text-black dark:text-white">
+                      <span className="text-xs font-semibold text-[#0f172a] dark:text-white">
                         {(source.value * 100).toFixed(1)}%
                       </span>
                     </div>
                   ))}
                 </div>
                 
-                {/* Visual bar representation - NEO-BRUTALIST (no rounded corners) */}
-                <div className="mt-4 h-4 overflow-hidden flex bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600">
+                <div className="mt-4 h-4 overflow-hidden flex bg-gray-100 dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-full">
                   {[
                     { value: Number(swData.trafficSources.search) || 0, color: 'bg-[#ffbf23]' },
                     { value: Number(swData.trafficSources.direct) || 0, color: 'bg-black dark:bg-white' },
@@ -1106,26 +1096,24 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             )}
           </>
         ) : (
-          /* No SimilarWeb data available - NEO-BRUTALIST */
-          <div className="text-center py-8 text-gray-400 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700">
+          <div className="text-center py-8 text-[#8898aa] bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-xl">
             <BarChart2 size={32} className="mx-auto mb-3 text-gray-300" />
-            <p className="text-sm font-black text-gray-500 uppercase">{t.affiliateRow.viewModal.web.noTrafficData}</p>
-            <p className="text-xs mt-1 text-gray-400">{t.affiliateRow.viewModal.web.noTrafficDataDesc}</p>
+            <p className="text-sm font-semibold text-[#425466] dark:text-gray-200">{t.affiliateRow.viewModal.web.noTrafficData}</p>
+            <p className="text-xs mt-1 text-[#8898aa]">{t.affiliateRow.viewModal.web.noTrafficDataDesc}</p>
           </div>
         )}
 
-        {/* Relevant Content Section - NEO-BRUTALIST */}
         {(snippet || title) && (
-          <div className="p-4 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600">
-            <h5 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-3">{t.affiliateRow.viewModal.web.relevantContent}</h5>
+          <div className="p-4 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl">
+            <h5 className="text-xs font-semibold text-[#8898aa] dark:text-gray-400 mb-3">{t.affiliateRow.viewModal.web.relevantContent}</h5>
             <a 
               href={link} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="block p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-all group"
+              className="block p-3 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-600 transition-all group"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-black text-black dark:text-white line-clamp-2">{title}</p>
+                <p className="text-xs font-semibold text-[#0f172a] dark:text-white line-clamp-2">{title}</p>
                 <ExternalLink size={12} className="text-gray-400 group-hover:text-black dark:group-hover:text-white flex-shrink-0 mt-0.5" />
               </div>
               {snippet && (
@@ -2053,27 +2041,48 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           - Instagram: Profile info, followers, bio, relevant posts
           - TikTok: Profile with avatar, followers, bio, relevant posts
           ============================================================================ */}
-      {/* View Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
-      {/* Updated January 10th, 2026 - i18n migration */}
-      {/* Fixed January 16, 2026 - Using createPortal to render at document.body level */}
-      {/* This fixes the modal being cut off by parent scrollable containers */}
+      {/* =============================================================================
+          VIEW MODAL
+          -----------------------------------------------------------------------------
+          History:
+            Dec 2025       — Introduced as a custom modal inside AffiliateRow.
+            Jan 6, 2026    — Neo-brutalist pass (thick black borders + offset shadows).
+            Jan 10, 2026   — i18n migration for visible copy.
+            Jan 16, 2026   — createPortal fix (escapes parent overflow stacking context).
+            Apr 27, 2026   — Phase 2i smoover refresh (shell + internals + content).
+
+          Phase 2i migration order (small, reviewable chunks):
+            1) Modal shell/header (this block)
+            2) Match-reasons panel + footer actions
+            3) Social view content (YouTube/Instagram/TikTok)
+            4) Web view content (SimilarWeb cards + fallback states)
+
+          Behavior contract preserved:
+            - Outside click closes modal.
+            - Card click stopPropagation still prevents accidental close.
+            - Footer actions keep existing handlers and execution order.
+            - Source-specific render dispatch stays identical.
+          ============================================================================= */}
       {isViewModalOpen && portalTarget && createPortal(
         <div 
-          className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-[#0f172a]/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
           onClick={() => setIsViewModalOpen(false)}
         >
           <div 
-            className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23] flex items-center justify-between">
-              <h3 className="text-lg font-black text-black uppercase">{t.affiliateRow.viewModal.title}</h3>
+            {/* Header — aligned with the shared modal shell and email-results modal. */}
+            <div className="px-6 py-4 border-b border-[#e6ebf1] dark:border-gray-800 bg-white dark:bg-[#0f0f0f] flex items-center justify-between">
+              <h3 className="font-display text-lg font-semibold text-[#0f172a] dark:text-white tracking-tight">
+                {t.affiliateRow.viewModal.title}
+              </h3>
               <button
                 onClick={() => setIsViewModalOpen(false)}
-                className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
+                aria-label="Close view details"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
               >
-                ×
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
 
@@ -2084,9 +2093,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   Shows why the result matched (keyword/competitor/terms).
                   =============================================================== */}
               {showMatchReasons && (
-                <div className="mb-4 border-2 border-black dark:border-gray-600">
-                  <div className="px-3 py-2 bg-[#ffbf23] border-b-2 border-black dark:border-gray-600">
-                    <h4 className="text-xs font-black text-black uppercase tracking-wide">
+                <div className="mb-4 border border-[#e6ebf1] dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-[#0f0f0f]">
+                  <div className="px-3 py-2 bg-[#f6f9fc] dark:bg-gray-900 border-b border-[#e6ebf1] dark:border-gray-800">
+                    <h4 className="text-xs font-semibold text-[#425466] dark:text-gray-300">
                       {t.dashboard.discoveryReasons?.title || 'Why This Result Was Shown'}
                     </h4>
                   </div>
@@ -2095,18 +2104,18 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                       matchReasons.map((reason, index) => (
                         <div
                           key={`${reason.key}-${index}`}
-                          className="flex items-start justify-between gap-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-2 py-1.5"
+                          className="flex items-start justify-between gap-3 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg px-2 py-1.5"
                         >
-                          <span className="text-[10px] font-black text-gray-900 dark:text-gray-100 uppercase">
+                          <span className="text-[10px] font-semibold text-[#425466] dark:text-gray-100">
                             {t.dashboard.discoveryReasons?.categories?.[reason.key] || reason.key}
                           </span>
-                          <span className="text-[10px] text-gray-700 dark:text-gray-300 text-right">
+                          <span className="text-[10px] text-[#425466] dark:text-gray-300 text-right">
                             {reason.value}
                           </span>
                         </div>
                       ))
                     ) : (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
+                      <p className="text-xs text-[#8898aa] dark:text-gray-400 text-center py-2">
                         {t.dashboard.discoveryReasons?.emptyState || 'No additional match details'}
                       </p>
                     )}
@@ -2117,25 +2126,25 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               {renderViewModalContent()}
             </div>
 
-            {/* Footer Actions - NEO-BRUTALIST */}
-            <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex items-center justify-between">
+            {/* Footer actions — smoothed visual treatment, same action handlers. */}
+            <div className="px-6 py-4 border-t border-[#e6ebf1] dark:border-gray-800 bg-white dark:bg-[#0f0f0f] flex items-center justify-between">
               {/* Visit Button - Platform-specific */}
               <div className="flex items-center gap-2">
                 <a
                   href={getVisitButtonConfig().link}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-black text-white text-xs font-black uppercase border-2 border-black hover:bg-white hover:text-black transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0f172a] text-white text-xs font-semibold rounded-full hover:bg-[#1e293b] transition-colors"
                 >
                   {getVisitButtonConfig().icon}
                   {getVisitButtonConfig().text}
                 </a>
                 <button
                   onClick={() => setShowMatchReasons((prev) => !prev)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-black text-xs font-black uppercase border-2 border-black hover:bg-[#ffbf23] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-gray-900 text-[#425466] dark:text-gray-200 text-xs font-semibold rounded-full border border-[#e6ebf1] dark:border-gray-700 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
                   title={t.dashboard.discoveryReasons?.title || 'Why This Result Was Shown'}
                 >
-                  <Info size={12} />
+                  <Info size={12} strokeWidth={2} />
                   {t.dashboard.discoveryReasons?.title || 'Why This Result Was Shown'}
                 </button>
               </div>
@@ -2147,13 +2156,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                     onSave();
                     setIsViewModalOpen(false);
                   }}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black ${
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all ${
                     isSaved
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]'
+                      ? 'bg-emerald-500 text-white shadow-soft-sm'
+                      : 'bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5'
                   }`}
                 >
-                  <Save size={12} />
+                  <Save size={12} strokeWidth={2} />
                   {isSaved ? t.affiliateRow.actions.saved : t.affiliateRow.actions.save}
                 </button>
                 <button
@@ -2161,9 +2170,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                     setIsViewModalOpen(false);
                     setTimeout(() => handleDeleteClick(), 100);
                   }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white text-xs font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-full shadow-soft-sm transition-colors"
                 >
-                  <Trash2 size={12} />
+                  <Trash2 size={12} strokeWidth={2} />
                   {t.affiliateRow.actions.delete}
                 </button>
               </div>
