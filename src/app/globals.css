@@ -12,31 +12,76 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* =============================================================================
- * NEUBRUTALIST DESIGN - January 6th, 2026
- * Added for DashboardDemo-style UI (client request)
- * 
- * FONTS:
- * - Inter (weights: 400, 700, 900) - Primary sans-serif
- * - Fira Code (weights: 400, 700) - Monospace for code/timers
- * 
- * These extend the existing design system with bold, industrial aesthetics
+ * DESIGN SYSTEM - Evolution log
+ * =============================================================================
+ *
+ * January 6th, 2026 - NEUBRUTALIST DESIGN (original client request)
+ *   Added Inter + Fira Code fonts, hard offset shadows, black/yellow palette.
+ *
+ * April 23rd, 2026 - "SMOOVER" REFRESH (landing page only)
+ *   Client (David / RevenueWorks LTD) asked us to align the AffForce One
+ *   landing page with the newer, softer design language shipped on
+ *   revenueworks.ai: "a little nicer and smoover and not so hard".
+ *
+ *   This means: keep the brand yellow (#ffbf23) punch + some crisp accents,
+ *   but soften corners, replace offset brutalist shadows with soft drop
+ *   shadows, add a refined display font (Archivo) and a handwritten accent
+ *   (Caveat), and introduce the signature yellow -> amber text gradient for
+ *   emphasis words. Dark-mode + i18n wiring is untouched.
+ *
+ *   The neubrutalist tokens below are NOT removed — they are still used by
+ *   the dashboard, admin, and auth screens. The new "soft" tokens added
+ *   below them are only consumed by the landing page (Phase 1).
+ *
+ * FONTS IN USE:
+ *   - Inter    (400, 700, 900) - Primary sans-serif (body + UI)
+ *   - Fira Code (400, 700)     - Monospace (timers, code, step numbers)
+ *   - Archivo   (400, 600, 700) - Display font for landing headlines (Apr 23, 2026)
+ *   - Caveat    (400, 700)      - Handwritten accent font          (Apr 23, 2026)
  * ============================================================================= */
 
 @theme {
-  /* Neubrutalist Brand Colors */
+  /* -------------------------------------------------------------------------
+   * NEUBRUTALIST TOKENS (January 6th, 2026) — still used app-wide
+   * ------------------------------------------------------------------------- */
   --color-brand-yellow: #ffbf23;
   --color-brand-black: #000000;
   --color-brand-white: #ffffff;
-  
-  /* Neubrutalist Box Shadows */
+
   --shadow-neo: 5px 5px 0px 0px #000000;
   --shadow-neo-dark: 5px 5px 0px 0px #ffbf23;
   --shadow-neo-white: 5px 5px 0px 0px #ffffff;
   --shadow-neo-sm: 2px 2px 0px 0px #000000;
-  
-  /* Font Families - Uses CSS vars from next/font with fallbacks */
+
+  /* -------------------------------------------------------------------------
+   * SOFT / "SMOOVER" TOKENS (April 23rd, 2026) — landing page only
+   *
+   * These mirror the tokens used on revenueworks.ai. Source of truth:
+   * revenueworks.ai inline Tailwind config + compiled CSS.
+   * ------------------------------------------------------------------------- */
+  --color-brand-yellow-hover: #e5ac20; /* Darker yellow for hover states */
+  --color-brand-off-white: #f6f9fc;    /* Alternating section background */
+  --color-brand-body: #425466;         /* Body text (replaces pure black) */
+  --color-brand-muted: #8898aa;        /* Secondary / muted text */
+  --color-brand-border: #e6ebf1;       /* Light divider / card border */
+  --color-brand-canvas: #fdfdfd;       /* Page background (warm near-white) */
+
+  /* Soft drop shadows (replaces offset brutalist shadows on landing) */
+  --shadow-soft-sm: 0 1px 2px 0 rgba(16, 24, 40, 0.05);
+  --shadow-soft-md: 0 4px 12px -2px rgba(16, 24, 40, 0.08), 0 2px 4px -2px rgba(16, 24, 40, 0.04);
+  --shadow-soft-lg: 0 10px 30px -4px rgba(16, 24, 40, 0.10), 0 4px 8px -2px rgba(16, 24, 40, 0.05);
+  --shadow-soft-xl: 0 20px 50px -10px rgba(16, 24, 40, 0.15), 0 8px 20px -4px rgba(16, 24, 40, 0.08);
+  --shadow-yellow-glow: 0 10px 30px -6px rgba(255, 191, 35, 0.45), 0 4px 12px -2px rgba(255, 191, 35, 0.25);
+  --shadow-yellow-glow-sm: 0 4px 14px -2px rgba(255, 191, 35, 0.35);
+
+  /* -------------------------------------------------------------------------
+   * FONT FAMILIES — CSS vars from next/font (see src/app/layout.tsx)
+   * ------------------------------------------------------------------------- */
   --font-sans: var(--font-inter), 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-fira-code), 'Fira Code', ui-monospace, monospace;
+  /* April 23rd, 2026: Added display + hand fonts for landing page refresh */
+  --font-display: var(--font-archivo), 'Archivo', var(--font-inter), 'Inter', ui-sans-serif, sans-serif;
+  --font-hand: var(--font-caveat), 'Caveat', ui-serif, cursive;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
 
@@ -134,6 +179,36 @@
 @utility bg-grid-pattern {
   background-size: 40px 40px;
   background-image: radial-gradient(circle, #CBD5E1 1px, transparent 1px);
+}
+
+/* =============================================================================
+ * SOFT LANDING UTILITIES (April 23rd, 2026)
+ * Added for the "smoover" landing page refresh. Mirrors revenueworks.ai.
+ * ============================================================================= */
+
+/* Signature yellow -> amber text gradient, used on landing headline emphasis.
+   Replaces the flat `text-[#ffbf23]` on highlight words. */
+@utility text-gradient-brand {
+  background: linear-gradient(90deg, #ffbf23 0%, #e5ac20 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Soft crosshatch grid background. 40x40 black-at-4% lines on light, and a
+   tinted-white variant for dark mode. Used for hero + CTA section backdrops. */
+@utility bg-grid-soft {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+}
+@utility bg-grid-soft-dark {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }
 
 @layer base {

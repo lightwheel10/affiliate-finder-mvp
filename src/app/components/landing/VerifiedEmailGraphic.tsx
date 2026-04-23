@@ -2,28 +2,23 @@
 
 /**
  * =============================================================================
- * VERIFIED EMAIL GRAPHIC - NEO-BRUTALIST
+ * VERIFIED EMAIL GRAPHIC — "SMOOVER" REFRESH
  * =============================================================================
- * 
- * Displays an animated email verification visualization for the BentoGrid
- * feature section. Shows a sample affiliate contact being verified.
- * 
+ *
+ * Animated email verification visualization used in a BentoCard. Shows a
+ * sample affiliate contact running through 2 verification steps on hover.
+ *
  * CHANGELOG:
- * - January 10th, 2026: i18n Migration - Remaining Components
- *   - Added useLanguage hook for translations
- *   - Translated verification step labels and "Verified Deliverable" text
- * 
- * - January 9th, 2026: Updated to neo-brutalist design
- *   - Sharp edges on card and avatar (removed rounded-xl, rounded-full)
- *   - Bold borders (border-2)
- *   - Updated color from #D4E815 to #ffbf23 (brand yellow)
- *   - Sharp success banner
- * 
- * - January 5th, 2026: Replaced skeleton placeholders with actual affiliate data
- * 
- * All UI strings have been migrated to use the translation dictionary.
- * Translation hook usage: const { t } = useLanguage();
- * 
+ * - April 23rd, 2026: Softened visual language per landing refresh brief.
+ *   Card is rounded-xl with a soft drop shadow (yellow tint on hover) —
+ *   previously a sharp border-2 black box with an offset shadow. Avatar
+ *   becomes rounded-full. Verification grid separators use a soft hairline.
+ *   Animation state + step timing UNCHANGED.
+ *
+ * - January 10th, 2026: i18n migration (useLanguage hook).
+ * - January 9th, 2026: Neo-brutalist pass (superseded).
+ * - January 5th, 2026: Real affiliate data (replaces skeleton placeholders).
+ *
  * =============================================================================
  */
 
@@ -84,51 +79,55 @@ export const VerifiedEmailGraphic = ({ isHovered = false }: VerifiedEmailGraphic
         }} 
       />
 
-      {/* Main Card - NEO-BRUTALIST (January 9th, 2026) */}
-      {/* Reduced bottom margin to show full card with 10% top offset (January 13th, 2026) */}
+      {/* Main Card — rounded-xl with soft shadow (April 23rd, 2026).
+          Was: sharp border-2 black with offset 4px black shadow (yellow on
+          hover). Now: soft drop shadow baseline, yellow-tinted shadow lift
+          on hover. Reduced bottom margin kept from Jan 13, 2026. */}
       <div className="absolute inset-x-6 top-0 bottom-16 flex flex-col items-center justify-center">
         <motion.div
-          className="relative w-full max-w-[240px] bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white overflow-hidden"
-          animate={isHovered ? { y: -4, x: -4, boxShadow: "4px 4px 0px 0px #ffbf23" } : { y: 0, x: 0, boxShadow: "4px 4px 0px 0px #000000" }}
+          className="relative w-full max-w-[240px] bg-white dark:bg-[#1a1a1a] rounded-xl ring-1 ring-[#e6ebf1] dark:ring-gray-700 overflow-hidden"
+          animate={isHovered
+            ? { y: -4, boxShadow: "0 16px 40px -12px rgba(255,191,35,0.4)" }
+            : { y: 0, boxShadow: "0 6px 16px -6px rgba(16,24,40,0.10)" }
+          }
         >
-            {/* Affiliate Contact Header - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-            <div className="flex items-center p-3 gap-3 border-b-2 border-gray-200 dark:border-gray-700">
+            {/* Affiliate Contact Header — soft divider (April 23rd, 2026) */}
+            <div className="flex items-center p-3 gap-3 border-b border-[#e6ebf1] dark:border-gray-700">
                 <div className={cn(
-                  "w-8 h-8 flex items-center justify-center shrink-0 text-[10px] font-black transition-colors duration-300 border",
-                  isHovered ? "bg-[#ffbf23]/20 text-[#1A1D21] dark:text-white border-[#ffbf23]" : "bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 border-gray-200 dark:border-gray-700"
+                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors duration-300",
+                  isHovered
+                    ? "bg-[#ffbf23]/20 text-[#0f172a] dark:text-white ring-2 ring-[#ffbf23]/40"
+                    : "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 ring-1 ring-[#e6ebf1] dark:ring-gray-700"
                 )}>
-                    {/* Avatar with initials */}
                     {sampleAffiliate.name.split(' ').map(n => n[0]).join('')}
                 </div>
                 <div className="flex-1 min-w-0 space-y-0.5">
-                    {/* Affiliate Name - Dark mode: January 22nd, 2026 */}
                     <div className={cn(
-                      "text-[11px] font-bold truncate transition-colors duration-300",
-                      isHovered ? "text-[#111827] dark:text-white" : "text-slate-600 dark:text-gray-300"
+                      "text-[11px] font-semibold truncate transition-colors duration-300",
+                      isHovered ? "text-[#0f172a] dark:text-white" : "text-[#425466] dark:text-gray-300"
                     )}>
                       {sampleAffiliate.name}
                     </div>
-                    {/* Email Address - Dark mode: January 22nd, 2026 */}
-                    <div className="text-[9px] text-slate-400 dark:text-gray-500 truncate flex items-center gap-1 font-medium">
+                    <div className="text-[9px] text-[#8898aa] dark:text-gray-500 truncate flex items-center gap-1 font-medium">
                       <Mail size={8} />
                       {sampleAffiliate.email}
                     </div>
                 </div>
             </div>
-            
-            {/* Verification Grid - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-            {/* Simplified to domain and smtp only (January 13th, 2026) */}
-            <div className="grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-700">
+
+            {/* Verification Grid — soft hairline separators (April 23rd, 2026).
+                Simplified to domain + smtp (January 13th, 2026). */}
+            <div className="grid grid-cols-2 gap-px bg-[#e6ebf1] dark:bg-gray-700">
                 {verificationSteps.map((item, i) => (
                     <div key={item.id} className="bg-white dark:bg-[#1a1a1a] p-2 flex items-center justify-between">
-                        <span className="text-[9px] font-bold text-slate-500 dark:text-gray-400 uppercase">{item.label}</span>
+                        <span className="text-[9px] font-semibold text-[#8898aa] dark:text-gray-400 uppercase tracking-wider">{item.label}</span>
                         <div className="w-3 h-3 flex items-center justify-center">
                             {isHovered && step > i ? (
                                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                    <Check size={10} className="text-green-500" strokeWidth={3} />
+                                    <Check size={10} className="text-emerald-500" strokeWidth={3} />
                                 </motion.div>
                             ) : (
-                                <div className="w-1.5 h-1.5 bg-slate-200 dark:bg-gray-600" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#e6ebf1] dark:bg-gray-600" />
                             )}
                         </div>
                     </div>

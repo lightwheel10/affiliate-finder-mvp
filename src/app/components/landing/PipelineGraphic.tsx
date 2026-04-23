@@ -2,28 +2,22 @@
 
 /**
  * =============================================================================
- * PIPELINE GRAPHIC - NEO-BRUTALIST
+ * PIPELINE GRAPHIC — "SMOOVER" REFRESH
  * =============================================================================
- * 
- * Displays an animated CRM pipeline/kanban visualization for the BentoGrid
- * feature section. Shows affiliates moving through recruitment stages.
- * 
+ *
+ * Animated CRM pipeline/kanban visualization used inside a BentoCard. Shows
+ * affiliates moving through "New → Outreach → Done" recruitment stages.
+ *
  * CHANGELOG:
- * - January 10th, 2026: i18n Migration - Remaining Components
- *   - Added useLanguage hook for translations
- *   - Translated column labels: "New", "Outreach", "Done"
- * 
- * - January 9th, 2026: Updated to neo-brutalist design
- *   - Sharp edges on cards (removed rounded-lg, rounded-full)
- *   - Bold borders (border-2)
- *   - Updated color from #D4E815 to #ffbf23 (brand yellow)
- *   - Sharp column labels
- * 
- * - January 5th, 2026: Simplified animation with fixed card positions
- * 
- * All UI strings have been migrated to use the translation dictionary.
- * Translation hook usage: const { t } = useLanguage();
- * 
+ * - April 23rd, 2026: Softened visual language per landing refresh brief.
+ *   Kanban cards now use rounded-md with a hairline border + soft shadow
+ *   instead of border-2 black. Avatars are rounded-full. Column labels use
+ *   softer tracking. Stage transition animation timing UNCHANGED.
+ *
+ * - January 10th, 2026: i18n migration (useLanguage hook).
+ * - January 9th, 2026: Neo-brutalist pass (superseded).
+ * - January 5th, 2026: Simplified animation with fixed card positions.
+ *
  * =============================================================================
  */
 
@@ -94,16 +88,16 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
       {/* Kanban Board Container - NEO-BRUTALIST (January 9th, 2026) */}
       <div className="absolute inset-x-0 top-0 bottom-0 px-3 pb-2 flex">
          
-         {/* Column 1: New - 2 cards initially - Dark mode: January 22nd, 2026 */}
+         {/* Column 1: New (April 23rd, 2026: softer label + soft hairline divider) */}
          <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 pr-1">
-            <span className="text-[7px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-wider">{t.landingGraphics.pipeline.new}</span>
-            
+            <span className="text-[7px] font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-[0.14em]">{t.landingGraphics.pipeline.new}</span>
+
             {/* Card 1 - always visible */}
             <KanbanCard affiliate={affiliates.newCard1} />
-            
+
             {/* Card 2 - visible at stage 0 and 1, moves to Outreach at stage 2 */}
             <motion.div
-              animate={{ 
+              animate={{
                 opacity: stage === 2 ? 0 : 1,
                 scale: stage === 2 ? 0.95 : 1
               }}
@@ -113,21 +107,19 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
             </motion.div>
          </div>
 
-         {/* Column 2: Outreach - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 dark:border-gray-600 pl-2 pr-1">
-            <span className="text-[7px] font-black text-[#ffbf23] uppercase tracking-wider">{t.landingGraphics.pipeline.outreach}</span>
-            
+         {/* Column 2: Outreach */}
+         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l border-dashed border-[#e6ebf1] dark:border-gray-700 pl-2 pr-1">
+            <span className="text-[7px] font-semibold text-[#ffbf23] uppercase tracking-[0.14em]">{t.landingGraphics.pipeline.outreach}</span>
+
             {/* Slot 1: Fixed container - swaps between Ryan C. and Maria S. */}
             <div className="relative">
-              {/* Ryan C. - visible at stage 0, maintains slot height */}
               <motion.div
                 animate={{ opacity: stage >= 1 ? 0 : 1 }}
                 transition={{ duration: 0.25 }}
               >
                 <KanbanCard highlight affiliate={affiliates.outreachCard1} />
               </motion.div>
-              
-              {/* Maria S. - absolutely positioned on top, fades in at stage 2 */}
+
               <motion.div
                 className="absolute inset-0"
                 initial={{ opacity: 0 }}
@@ -137,14 +129,14 @@ export const PipelineGraphic = ({ isHovered = false }: PipelineGraphicProps) => 
                 <KanbanCard highlight affiliate={affiliates.newCard2} />
               </motion.div>
             </div>
-            
+
             {/* Slot 2: Sophie W. - always visible, never moves */}
             <KanbanCard highlight affiliate={affiliates.outreachCard2} />
          </div>
 
-         {/* Column 3: Done - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
-         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l-2 border-dashed border-gray-300 dark:border-gray-600 pl-2">
-            <span className="text-[7px] font-black text-[#1A1D21] dark:text-white uppercase tracking-wider">{t.landingGraphics.pipeline.done}</span>
+         {/* Column 3: Done */}
+         <div className="w-1/3 shrink-0 grow-0 flex flex-col gap-1.5 pt-2 border-l border-dashed border-[#e6ebf1] dark:border-gray-700 pl-2">
+            <span className="text-[7px] font-semibold text-[#0f172a] dark:text-white uppercase tracking-[0.14em]">{t.landingGraphics.pipeline.done}</span>
             
             {/* Card from Outreach - appears at stage 1+ */}
             <motion.div
@@ -182,39 +174,36 @@ interface KanbanCardProps {
   affiliate?: { name: string; niche: string };
 }
 
-// January 22nd, 2026: Added dark mode support
+// April 23rd, 2026: Softened to rounded-md + hairline border + soft shadow.
 const KanbanCard = ({ active, highlight, complete, affiliate }: KanbanCardProps) => {
-  // Default affiliate if none provided (for static placeholder cards)
   const displayAffiliate = affiliate || { name: "New Lead", niche: "Pending" };
-  // Extract initials from name
   const initials = displayAffiliate.name.split(' ').map(n => n[0]).join('');
-  
+
   return (
-    // NEO-BRUTALIST: Sharp edges, bold borders (January 9th, 2026) - Dark mode: January 22nd, 2026
     <div className={cn(
-      "bg-white dark:bg-[#1a1a1a] p-2 border-2 w-full transition-all duration-300",
-      active ? "border-black dark:border-white" : "border-gray-200 dark:border-gray-700",
-      highlight ? "border-[#ffbf23]" : "",
-      complete ? "border-[#ffbf23] bg-[#ffbf23]/10" : ""
+      "bg-white dark:bg-[#1a1a1a] p-2 rounded-md border w-full transition-all duration-300 shadow-[0_1px_2px_0_rgba(16,24,40,0.04)]",
+      active ? "border-[#0f172a] dark:border-white" : "border-[#e6ebf1] dark:border-gray-700",
+      highlight ? "border-[#ffbf23]/60 shadow-[0_2px_8px_-2px_rgba(255,191,35,0.25)]" : "",
+      complete ? "border-[#ffbf23]/60 bg-[#ffbf23]/10" : ""
     )}>
       <div className="flex items-center gap-1.5">
-        {/* Avatar - NEO-BRUTALIST (January 9th, 2026) - Dark mode: January 22nd, 2026 */}
+        {/* Avatar — rounded-full (April 23rd, 2026) */}
         <div className={cn(
-          "w-5 h-5 flex items-center justify-center text-[7px] font-black shrink-0 border", 
-          highlight ? "bg-[#ffbf23]/30 text-[#1A1D21] dark:text-white border-[#ffbf23]" : 
-          complete ? "bg-[#ffbf23] text-[#1A1D21] border-[#ffbf23]" : "bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400 border-gray-200 dark:border-gray-700"
+          "w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold shrink-0",
+          complete ? "bg-[#ffbf23] text-[#0f172a] ring-2 ring-[#ffbf23]/30" :
+          highlight ? "bg-[#ffbf23]/25 text-[#0f172a] dark:text-white ring-1 ring-[#ffbf23]/50" :
+          "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 ring-1 ring-[#e6ebf1] dark:ring-gray-700"
         )}>
           {complete ? "✓" : initials}
         </div>
-        {/* Affiliate Name & Niche - Dark mode: January 22nd, 2026 */}
         <div className="flex-1 min-w-0">
           <span className={cn(
-            "text-[8px] font-bold truncate block",
-            complete ? "text-[#1A1D21] dark:text-white" : highlight ? "text-[#111827] dark:text-white" : "text-slate-600 dark:text-gray-300"
+            "text-[8px] font-semibold truncate block",
+            complete ? "text-[#0f172a] dark:text-white" : highlight ? "text-[#0f172a] dark:text-white" : "text-[#425466] dark:text-gray-300"
           )}>
             {displayAffiliate.name}
           </span>
-          <span className="text-[6px] text-slate-400 dark:text-gray-500 truncate block font-medium">
+          <span className="text-[6px] text-[#8898aa] dark:text-gray-500 truncate block font-medium">
             {displayAffiliate.niche}
           </span>
         </div>
