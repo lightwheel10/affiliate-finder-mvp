@@ -1070,15 +1070,18 @@ export default function SavedPage() {
               />
             ))
           ) : (
-            /* Empty State - Translated (January 9th, 2026) */
+            /* =========================================================================
+               EMPTY STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
+               Soft icon badge + font-semibold heading + muted body.
+               ========================================================================= */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                <Users size={24} className="text-gray-300" />
+              <div className="w-16 h-16 bg-[#f6f9fc] dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
+                <Users size={24} className="text-[#8898aa]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#0f172a] dark:text-white mb-1">
                 {t.dashboard.saved.emptyState.title}
               </h3>
-              <p className="text-gray-500 text-sm max-w-xs">
+              <p className="text-[#8898aa] text-sm max-w-xs">
                 {t.dashboard.saved.emptyState.subtitle}
               </p>
             </div>

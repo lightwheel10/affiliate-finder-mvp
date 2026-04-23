@@ -1771,43 +1771,54 @@ export default function OutreachPage() {
           {/* Results Content */}
           <div className="flex-1">
           
-          {/* Loading State - Neo-brutalist */}
+          {/* =========================================================================
+              LOADING STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
+              Ring weights dropped 4 → 3, gray track uses hairline #e6ebf1,
+              label uses muted #8898aa.
+              ========================================================================= */}
           {loading && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="relative w-12 h-12 mx-auto">
-                <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
+                <div className="absolute inset-0 border-[3px] border-[#e6ebf1] dark:border-gray-800 rounded-full"></div>
+                <div className="absolute inset-0 border-[3px] border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
               </div>
-              {/* January 17, 2026: Using i18n translation */}
-              <p className="text-gray-500 text-sm mt-4 font-medium">{t.dashboard.outreach.loading}</p>
+              <p className="text-[#8898aa] text-sm mt-4 font-medium">{t.dashboard.outreach.loading}</p>
             </div>
           )}
           
-          {/* Empty State - Updated January 16, 2026: Only shows when no affiliates have emails */}
+          {/* =========================================================================
+              EMPTY STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
+              Shown only when no affiliates on the pipeline have emails. Soft
+              icon badge + font-semibold heading + muted body.
+              ========================================================================= */}
           {!loading && affiliatesWithEmail.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                <MessageSquare size={24} className="text-gray-300" />
+              <div className="w-16 h-16 bg-[#f6f9fc] dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
+                <MessageSquare size={24} className="text-[#8898aa]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#0f172a] dark:text-white mb-1">
                 {t.dashboard.outreach.emptyState.title}
               </h3>
-              <p className="text-gray-500 text-sm max-w-xs">
+              <p className="text-[#8898aa] text-sm max-w-xs">
                 {t.dashboard.outreach.emptyState.subtitle}
               </p>
             </div>
           )}
           
-          {/* No Results State - Neo-brutalist (Updated January 17, 2026: i18n) */}
+          {/* =========================================================================
+              NO-RESULTS STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
+              Shown when the pipeline has emails but current filters match zero
+              rows. Same visual treatment as the empty state.
+              ========================================================================= */}
           {!loading && affiliatesWithEmail.length > 0 && filteredResults.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                <Search size={24} className="text-gray-300" />
+              <div className="w-16 h-16 bg-[#f6f9fc] dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
+                <Search size={24} className="text-[#8898aa]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#0f172a] dark:text-white mb-1">
                 {t.dashboard.outreach.noResults.title}
               </h3>
-              <p className="text-gray-500 text-sm max-w-xs">
+              <p className="text-[#8898aa] text-sm max-w-xs">
                 {t.dashboard.outreach.noResults.subtitle}
               </p>
             </div>

@@ -1392,23 +1392,27 @@ export default function FindNewPage() {
               {loading ? (
                 <>
                   {/* =============================================================================
-                      LOADING PROGRESS INDICATOR - NEO-BRUTALIST DESIGN
-                      Updated: January 16, 2026
-                      
-                      Changed from #D4E815 (lime) to #ffbf23 (brand yellow)
-                      Matches neo-brutalist design system across dashboard
+                      LOADING PROGRESS INDICATOR
+                      Smoover refresh (April 23rd, 2026) — Phase 2e
+                      ---------------------------------------------------------------------------
+                      Banner shown inline above streaming rows while a search is in flight.
+                      Before: neo-brutalist (Jan 16, 2026) — border-b-2 + font-black uppercase
+                      title + yellow badge wrapped in border-2 black square.
+                      After: hairline border-b, font-semibold normal case, rounded-full yellow
+                      badge with shadow-yellow-glow-sm. Spinner ring weight dropped 4 → 2 to
+                      match the lighter smoover voice.
                       ============================================================================= */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/10 border-b-2 border-[#ffbf23]/30">
-                    <div className="w-5 h-5 border-2 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/10 border-b border-[#ffbf23]/30">
+                    <div className="w-5 h-5 border-[2px] border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
                     <div className="flex-1">
-                      <p className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                      <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
                         {loadingMessage.title}
                       </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-xs text-[#8898aa] dark:text-gray-400">
                         {loadingMessage.subtitle}
                       </p>
                     </div>
-                    <div className="text-xs font-black text-black bg-[#ffbf23] px-2.5 py-1 border-2 border-black">
+                    <div className="text-xs font-semibold text-[#0f172a] bg-[#ffbf23] px-2.5 py-1 rounded-full shadow-yellow-glow-sm">
                       {loadingMessage.badge}
                     </div>
                   </div>
@@ -1506,17 +1510,20 @@ export default function FindNewPage() {
             </div>
           ) : hasSearched && !loading && creditError ? (
             // =================================================================
-            // CREDIT ERROR BANNER - January 4th, 2026
+            // CREDIT ERROR BANNER — January 4th, 2026
             // Translated (January 9th, 2026)
+            // Smoover polish (April 23rd, 2026) — added shadow-soft-sm, bumped
+            // heading from font-bold → font-semibold. Already used rounded-xl
+            // and hairline amber border so structural styling stayed intact.
             // =================================================================
             <div className="py-12 text-center">
-              <div className="max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl p-6">
+              <div className="max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl shadow-soft-sm p-6">
                 <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
-                <h3 className="text-base font-bold text-amber-800 mb-2">
+                <h3 className="text-base font-semibold text-amber-800 mb-2">
                   {t.dashboard.find.creditError.title}
                 </h3>
                 <p className="text-amber-700 text-sm mb-4">
@@ -1528,19 +1535,25 @@ export default function FindNewPage() {
               </div>
             </div>
           ) : hasSearched && !loading && groupedResults.length === 0 ? (
-            <div className="py-20 text-center text-gray-400 text-sm">
+            /* No-results text — soft mute colour, minimal (Apr 23, 2026) */
+            <div className="py-20 text-center text-[#8898aa] text-sm">
               {t.dashboard.find.noResults}
             </div>
           ) : (
-            /* Empty State - Neo-brutalist style - Translated (January 9th, 2026) */
+            /* =============================================================================
+               EMPTY STATE
+               Smoover refresh (April 23rd, 2026) — Phase 2e
+               Icon badge: soft #f6f9fc fill + hairline border + shadow-soft-sm.
+               Typography: font-semibold (was font-black) + muted body.
+               ============================================================================= */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                <Search size={24} className="text-gray-300" />
+              <div className="w-16 h-16 bg-[#f6f9fc] dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
+                <Search size={24} className="text-[#8898aa]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#0f172a] dark:text-white mb-1">
                 {t.dashboard.find.emptyState.title}
               </h3>
-              <p className="text-gray-500 text-sm max-w-xs">
+              <p className="text-[#8898aa] text-sm max-w-xs">
                 {t.dashboard.find.emptyState.subtitle}
               </p>
             </div>
