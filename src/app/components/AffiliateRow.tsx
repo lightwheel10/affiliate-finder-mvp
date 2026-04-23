@@ -1797,7 +1797,37 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)] bg-white dark:bg-[#0a0a0a]">
-              {/* Show all contacts if available */}
+              {/* =====================================================================
+                  CONTACT CARDS — smoover refresh (Apr 27, 2026). Chunk 3/4.
+                  ---------------------------------------------------------------------
+                  Fires when Apollo returns full contact metadata (name, optional
+                  title + LinkedIn + multiple emails + phone numbers). Renders one
+                  card per contact, each with its own email + phone list.
+
+                  Card chrome:   border-2 black square  →  border hairline +
+                                 rounded-xl + overflow-hidden (so the slight header
+                                 tint respects the corners).
+                  Card header:   bg-gray-100 strip + border-b-2 black + black-square
+                                 user tile + font-black name + yellow-square
+                                 "N emails" chip → soft gradient wash (#f6f9fc →
+                                 white) + hairline divider + rounded-full user
+                                 badge (bg-#0f172a → white icon for contrast vs
+                                 the yellow Mail hero) + font-semibold name +
+                                 soft yellow "N emails" pill.
+                  Title line:    Briefcase + muted title. Stroke 2, colour #8898aa.
+                  LinkedIn link: text-xs font-bold uppercase blue  →  text-xs
+                                 font-semibold mixed-case blue-600 with external
+                                 link icon; underline on hover only.
+                  Email row:     same hairline rounded-lg treatment as the simple
+                                 list branch (chunk 2) — round yellow icon badge,
+                                 font-medium slate address, rounded-full yellow
+                                 COPY with shadow-yellow-glow-sm.
+                  Phone row:     mirrors email row but with a muted slate icon
+                                 badge + a SECONDARY (outlined) COPY button so
+                                 email stays the primary affordance visually.
+                                 Top divider between emails + phones softened to
+                                 a hairline instead of border-t-2.
+                  ===================================================================== */}
               {emailResults?.contacts && emailResults.contacts.length > 0 ? (
                 <div className="space-y-4">
                   {emailResults.contacts.map((contact, contactIdx) => {
@@ -1806,18 +1836,18 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                       : contact.fullName || `Contact ${contactIdx + 1}`;
                     
                     return (
-                      <div key={contactIdx} className="border-2 border-black dark:border-gray-600 overflow-hidden">
+                      <div key={contactIdx} className="border border-[#e6ebf1] dark:border-gray-800 rounded-xl overflow-hidden">
                         {/* Contact Header */}
-                        <div className="p-4 bg-gray-100 dark:bg-gray-800 border-b-2 border-black dark:border-gray-600">
+                        <div className="p-4 bg-gradient-to-br from-[#f6f9fc] to-white dark:from-gray-800 dark:to-[#0f0f0f] border-b border-[#e6ebf1] dark:border-gray-800">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-black flex items-center justify-center flex-shrink-0 border-2 border-black">
-                              <User size={18} className="text-[#ffbf23]" />
+                            <div className="w-10 h-10 bg-[#0f172a] rounded-full flex items-center justify-center flex-shrink-0 shadow-soft-sm">
+                              <User size={18} className="text-white" strokeWidth={2} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-black text-gray-900 dark:text-white truncate">{contactName}</h4>
+                              <h4 className="font-semibold text-[#0f172a] dark:text-white truncate">{contactName}</h4>
                               {contact.title && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-0.5 truncate font-medium">
-                                  <Briefcase size={12} className="text-gray-400 flex-shrink-0" />
+                                <p className="text-sm text-[#8898aa] flex items-center gap-1.5 mt-0.5 truncate">
+                                  <Briefcase size={12} className="text-[#8898aa] flex-shrink-0" strokeWidth={2} />
                                   {contact.title}
                                 </p>
                               )}
@@ -1826,15 +1856,15 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                                   href={contact.linkedinUrl} 
                                   target="_blank" 
                                   rel="noreferrer"
-                                  className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mt-1 font-bold uppercase"
+                                  className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline underline-offset-2 flex items-center gap-1 mt-1 font-semibold"
                                 >
-                                  <Linkedin size={10} />
+                                  <Linkedin size={10} strokeWidth={2} />
                                   LinkedIn
-                                  <ExternalLink size={8} />
+                                  <ExternalLink size={8} strokeWidth={2} />
                                 </a>
                               )}
                             </div>
-                            <span className="text-[10px] font-black text-black bg-[#ffbf23] px-2 py-1 border-2 border-black uppercase">
+                            <span className="text-[10px] font-semibold text-[#0f172a] dark:text-[#ffbf23] bg-[#ffbf23]/15 px-2.5 py-1 rounded-full shrink-0">
                               {contact.emails.length} {contact.emails.length !== 1 ? t.affiliateRow.emailModal.emails : t.affiliateRow.emailModal.email}
                             </span>
                           </div>
@@ -1845,23 +1875,24 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                           {contact.emails.map((emailAddr, emailIdx) => (
                             <div 
                               key={emailIdx}
-                              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors"
+                              className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-700 hover:bg-[#f6f9fc]/60 dark:hover:bg-gray-800/40 transition-all"
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="w-8 h-8 bg-[#ffbf23] border-2 border-black flex items-center justify-center flex-shrink-0">
-                                  <Mail size={14} className="text-black" />
+                                <div className="w-8 h-8 bg-[#ffbf23] rounded-full flex items-center justify-center flex-shrink-0 shadow-yellow-glow-sm">
+                                  <Mail size={13} className="text-[#0f172a]" strokeWidth={2} />
                                 </div>
-                                <span className="font-bold text-gray-900 dark:text-white text-sm truncate font-mono">{emailAddr}</span>
+                                <span className="font-medium text-[#0f172a] dark:text-white text-sm truncate">{emailAddr}</span>
                               </div>
                               <button
                                 onClick={() => copyEmail(emailAddr)}
-                                className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-black uppercase transition-all border-2 border-black ${
+                                aria-label={copiedEmail === emailAddr ? 'Copied' : `Copy ${emailAddr}`}
+                                className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-semibold rounded-full transition-all shrink-0 ${
                                   copiedEmail === emailAddr
-                                    ? 'bg-emerald-500 text-white'
-                                    : 'bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]'
+                                    ? 'bg-emerald-500 text-white shadow-soft-sm'
+                                    : 'bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5'
                                 }`}
                               >
-                                {copiedEmail === emailAddr ? <Check size={10} /> : <Copy size={10} />}
+                                {copiedEmail === emailAddr ? <Check size={10} strokeWidth={2.5} /> : <Copy size={10} strokeWidth={2} />}
                                 {copiedEmail === emailAddr ? t.affiliateRow.emailModal.done : t.affiliateRow.emailModal.copy}
                               </button>
                             </div>
@@ -1869,17 +1900,17 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                           
                           {/* Phone Numbers */}
                           {contact.phoneNumbers && contact.phoneNumbers.length > 0 && (
-                            <div className="pt-2 mt-2 border-t-2 border-gray-200 dark:border-gray-700">
+                            <div className="pt-2 mt-2 border-t border-[#e6ebf1] dark:border-gray-800">
                               {contact.phoneNumbers.map((phone, phoneIdx) => (
                                 <div 
                                   key={phoneIdx}
-                                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors"
+                                  className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-700 hover:bg-[#f6f9fc]/60 dark:hover:bg-gray-800/40 transition-all"
                                 >
                                   <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 border-2 border-black dark:border-gray-600 flex items-center justify-center">
-                                      <Phone size={14} className="text-gray-600 dark:text-gray-300" />
+                                    <div className="w-8 h-8 bg-[#f6f9fc] dark:bg-gray-800 rounded-full flex items-center justify-center shadow-soft-sm">
+                                      <Phone size={13} className="text-[#425466] dark:text-gray-300" strokeWidth={2} />
                                     </div>
-                                    <span className="font-bold text-gray-900 dark:text-white text-sm font-mono">{phone}</span>
+                                    <span className="font-medium text-[#0f172a] dark:text-white text-sm">{phone}</span>
                                   </div>
                                   <button
                                     onClick={() => {
@@ -1887,13 +1918,14 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                                       setCopiedEmail(phone);
                                       setTimeout(() => setCopiedEmail(null), 2000);
                                     }}
-                                    className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-black uppercase transition-all border-2 ${
+                                    aria-label={copiedEmail === phone ? 'Copied' : `Copy ${phone}`}
+                                    className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-semibold rounded-full transition-all shrink-0 ${
                                       copiedEmail === phone
-                                        ? 'bg-emerald-500 text-white border-black'
-                                        : 'bg-white text-black border-black hover:bg-gray-100'
+                                        ? 'bg-emerald-500 text-white shadow-soft-sm'
+                                        : 'bg-white text-[#0f172a] dark:bg-gray-900 dark:text-white border border-[#e6ebf1] dark:border-gray-700 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-600'
                                     }`}
                                   >
-                                    {copiedEmail === phone ? <Check size={10} /> : <Copy size={10} />}
+                                    {copiedEmail === phone ? <Check size={10} strokeWidth={2.5} /> : <Copy size={10} strokeWidth={2} />}
                                     {copiedEmail === phone ? t.affiliateRow.emailModal.done : t.affiliateRow.emailModal.copy}
                                   </button>
                                 </div>
