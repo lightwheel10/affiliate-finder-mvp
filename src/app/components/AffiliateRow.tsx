@@ -1485,8 +1485,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               cluster to its right. Right-anchoring shrinks that gap to a
               consistent ~140px — less than the Discovered page's Date→Action
               gap (~180px), so it reads as an intentional "right-side action
-              zone". Matching `flex justify-end` added to the Email header
-              in saved/page.tsx to keep header text aligned with content. */}
+              zone". The header in saved/page.tsx is intentionally left
+              LEFT-anchored (no mirror) to match the other column headers
+              (AFFILIATE / RELEVANT CONTENT / DISCOVERY METHOD) — this is
+              the standard data-table convention: descriptive headers on the
+              left, interactive/action-style content on the right. */}
       {isPipelineView && (
          <div className="col-span-2 h-8 flex items-center justify-end">
             {emailStatus === 'found' && email ? (

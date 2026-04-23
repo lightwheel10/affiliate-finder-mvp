@@ -975,12 +975,15 @@ export default function SavedPage() {
             {/* Email column with clickable filter
                 Jan 16, 2026 — introduced as clickable filter.
                 Jan 25, 2026 — col-span-1 → col-span-2 (Status column removed).
-                Apr 23, 2026 — added `flex justify-end` so the header button
-                right-anchors inside its cell, mirroring the right-anchored
-                Email content in AffiliateRow.tsx (gap fix — otherwise there
-                was a ~288px blank stretch between Email content and Action
-                icons on wide screens). Header + content stay visually aligned. */}
-            <div className="col-span-2 flex justify-end">
+                Apr 23, 2026 — header stays LEFT-anchored here to match the
+                neighbouring column headers (AFFILIATE, RELEVANT CONTENT,
+                DISCOVERY METHOD). The content below (rendered by
+                AffiliateRow.tsx) is right-anchored via `justify-end` inside
+                its cell — this intentional header/content misalignment
+                follows the standard data-table convention (descriptive
+                headers on the left, interactive/action-style content on
+                the right, e.g. Excel, Google Sheets, most dashboards). */}
+            <div className="col-span-2">
               <button
                 onClick={() => setShowOnlyWithEmail(!showOnlyWithEmail)}
                 className={cn(
