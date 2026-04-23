@@ -846,46 +846,53 @@ export default function SavedPage() {
           </div>
         </div>
 
-        {/* Bulk Actions Bar - Translated (January 9th, 2026) */}
+        {/* =============================================================================
+            BULK ACTIONS BAR
+            Smoover refresh (April 23rd, 2026) — Phase 2e
+            Mirrors the find/discovered bulk bar styling. The saved page has an
+            extra Find-Emails button with three states (idle / searching /
+            complete); all three get the smoover treatment.
+            ============================================================================= */}
         {visibleSelectedLinks.size > 0 && (() => {
           const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
           
           return (
-          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700">
+          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
-                  <Check size={14} className="text-black" />
+                <div className="w-6 h-6 bg-[#ffbf23] rounded-full flex items-center justify-center shadow-yellow-glow-sm">
+                  <Check size={14} className="text-[#0f172a]" strokeWidth={2.5} />
                 </div>
-                <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                <span className="text-sm font-semibold text-[#0f172a] dark:text-white">
                   {visibleSelectedLinks.size} {t.common.selected}
                 </span>
-                {/* Show breakdown: how many need email lookup vs already have emails */}
+                {/* Breakdown: how many already have emails */}
                 {visibleSelectedLinks.size !== selectedNeedingEmailLookup && selectedNeedingEmailLookup > 0 && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-[#8898aa] dark:text-gray-400">
                     ({visibleSelectedLinks.size - selectedNeedingEmailLookup} {t.dashboard.saved.bulkActions.alreadyHaveEmails || 'already have emails'})
                   </span>
                 )}
               </div>
-              <div className="h-4 w-0.5 bg-black dark:bg-gray-600"></div>
+              <div className="h-4 w-px bg-[#e6ebf1] dark:bg-gray-800"></div>
               <button
                 onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
-                className="text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                className="text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
                 {allVisibleSelected ? t.common.deselectAll : t.common.selectAll}
               </button>
             </div>
             <div className="flex items-center gap-2">
+              {/* Cancel — soft outline */}
               <button
                 onClick={deselectAllVisible}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white border border-[#e6ebf1] dark:border-gray-800 rounded-full hover:bg-[#f6f9fc] dark:hover:bg-gray-900 transition-all"
               >
                 {t.common.cancel}
               </button>
               
-              {/* Find Emails Button & Progress - NEO-BRUTALIST */}
+              {/* Find Emails — 3 states: complete / searching / idle */}
               {bulkEmailProgress.status === 'complete' && bulkEmailProgress.results ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 text-xs font-bold">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-full text-xs font-semibold">
                   {bulkEmailProgress.results.foundCount > 0 && (
                     <span className="flex items-center gap-1 text-emerald-600">
                       <CheckCircle2 size={12} />
@@ -893,7 +900,7 @@ export default function SavedPage() {
                     </span>
                   )}
                   {bulkEmailProgress.results.notFoundCount > 0 && (
-                    <span className="flex items-center gap-1 text-gray-500">
+                    <span className="flex items-center gap-1 text-[#8898aa]">
                       <XCircle size={12} />
                       {bulkEmailProgress.results.notFoundCount}
                     </span>
@@ -906,7 +913,7 @@ export default function SavedPage() {
                   )}
                 </div>
               ) : bulkEmailProgress.status === 'searching' ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] border-2 border-black text-xs font-black text-black uppercase">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm text-xs font-semibold">
                   <Loader2 size={14} className="animate-spin" />
                   <span>{bulkEmailProgress.current}/{bulkEmailProgress.total}</span>
                 </div>
@@ -915,31 +922,31 @@ export default function SavedPage() {
                   onClick={handleBulkFindEmails}
                   disabled={isBulkFindingEmails || selectedNeedingEmailLookup === 0}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase transition-all border-2",
+                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all",
                     selectedNeedingEmailLookup === 0
-                      ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
-                      : "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                      ? "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed"
+                      : "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                   )}
                   title={selectedNeedingEmailLookup === 0 
                     ? t.dashboard.saved.bulkActions.emailProgress 
                     : `${t.dashboard.saved.bulkActions.findEmails} (${selectedNeedingEmailLookup})`
                   }
                 >
-                  <Mail size={14} />
+                  <Mail size={14} strokeWidth={2} />
                   {t.dashboard.saved.bulkActions.findEmails}
                   {selectedNeedingEmailLookup > 0 && (
-                    <span className="ml-0.5 px-1.5 py-0.5 bg-black text-white text-[10px]">
+                    <span className="ml-0.5 px-1.5 py-0.5 bg-[#0f172a]/10 text-[#0f172a] text-[10px] rounded-full font-semibold">
                       {selectedNeedingEmailLookup}
                     </span>
                   )}
                 </button>
               )}
 
-              {/* Block domain(s) */}
+              {/* Block domain(s) — amber warning */}
               <button
                 onClick={handleBulkBlockDomains}
                 disabled={isBlockLimitReached || isBulkBlocking}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-amber-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-500 text-white rounded-full shadow-soft-sm hover:bg-amber-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 title={isBlockLimitReached ? t.dashboard.find.bulkActions.blockLimitReached : t.dashboard.find.bulkActions.blockDomains}
               >
                 {isBulkBlocking ? <Loader2 size={14} className="animate-spin" /> : null}
@@ -949,9 +956,9 @@ export default function SavedPage() {
               <button
                 onClick={handleBulkDelete}
                 disabled={isBulkDeleting}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-full shadow-soft-sm hover:bg-red-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
-                {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} strokeWidth={2} />}
                 {t.common.delete}
               </button>
             </div>

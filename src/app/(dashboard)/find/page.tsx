@@ -1245,13 +1245,19 @@ export default function FindNewPage() {
         */}
 
         {/* =============================================================================
-            BULK ACTIONS BAR - NEO-BRUTALIST DESIGN
-            Updated: January 16, 2026
-            
-            Matches the Saved page styling for design consistency across dashboard.
-            - Yellow (#ffbf23) accent color with black borders
-            - font-black uppercase text
-            - Neo-brutalist shadow-[2px_2px_0px_0px_#000] on buttons
+            BULK ACTIONS BAR
+            Smoover refresh (April 23rd, 2026) — Phase 2e
+            ---------------------------------------------------------------------------
+            Previously neo-brutalist (Jan 16, 2026): square corners, hard-black
+            border, `font-black uppercase`, offset shadow-[2px_2px_0px_0px_#000].
+            Now aligned with the landing-page smoover voice:
+              - Container: hairline border + `rounded-2xl` + `shadow-soft-sm`
+              - Yellow check icon: rounded-full + `shadow-yellow-glow-sm`
+              - Selected count: normal case, `font-semibold`
+              - Action buttons: rounded-full with `shadow-soft-sm` (destructive /
+                warning) or `shadow-yellow-glow-sm` (primary yellow), subtle
+                `hover:-translate-y-0.5` lift.
+            Logic / handlers / i18n strings unchanged.
             ============================================================================= */}
         {visibleSelectedLinks.size > 0 && (() => {
           const alreadySavedCount = Array.from(visibleSelectedLinks).filter(link => isAffiliateSaved(link)).length;
@@ -1259,85 +1265,85 @@ export default function FindNewPage() {
           const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
           
           return (
-          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700">
-            {/* Left: Selection info - Neo-brutalist style */}
+          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
+            {/* Left: Selection info */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                {/* Checkbox icon - Neo-brutalist yellow square */}
-                <div className="w-6 h-6 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
-                  <Check size={14} className="text-black" />
+                {/* Checkbox icon — rounded yellow badge with soft glow */}
+                <div className="w-6 h-6 bg-[#ffbf23] rounded-full flex items-center justify-center shadow-yellow-glow-sm">
+                  <Check size={14} className="text-[#0f172a]" strokeWidth={2.5} />
                 </div>
-                <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                <span className="text-sm font-semibold text-[#0f172a] dark:text-white">
                   {visibleSelectedLinks.size} {t.dashboard.find.bulkActions.selected}
                 </span>
                 {alreadySavedCount > 0 && (
-                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border-2 border-emerald-200 px-2 py-0.5">
+                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                     {alreadySavedCount} {t.dashboard.find.bulkActions.alreadyInPipeline}
                   </span>
                 )}
               </div>
               
-              <div className="h-4 w-0.5 bg-black dark:bg-gray-600"></div>
+              <div className="h-4 w-px bg-[#e6ebf1] dark:bg-gray-800"></div>
               <button
                 onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
-                className="text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                className="text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
                 {allVisibleSelected ? t.dashboard.find.bulkActions.deselectAll : t.dashboard.find.bulkActions.selectAllVisible}
               </button>
             </div>
 
-            {/* Right: Action buttons - Neo-brutalist style */}
+            {/* Right: Action buttons */}
             <div className="flex items-center gap-2">
-              {/* Cancel button - Neo-brutalist outline */}
+              {/* Cancel — soft outline */}
               <button
                 onClick={deselectAllVisible}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white border border-[#e6ebf1] dark:border-gray-800 rounded-full hover:bg-[#f6f9fc] dark:hover:bg-gray-900 transition-all"
               >
-                <X size={14} />
+                <X size={14} strokeWidth={2} />
                 {t.common.cancel}
               </button>
 
-              {/* Block domain(s) - only when selection has domains not already at limit */}
+              {/* Block domain(s) — amber warning */}
               <button
                 onClick={handleBulkBlockDomains}
                 disabled={isBlockLimitReached || isBulkBlocking}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-amber-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-500 text-white rounded-full shadow-soft-sm hover:bg-amber-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 title={isBlockLimitReached ? t.dashboard.find.bulkActions.blockLimitReached : t.dashboard.find.bulkActions.blockDomains}
               >
                 {isBulkBlocking ? <Loader2 size={14} className="animate-spin" /> : null}
                 {t.dashboard.find.bulkActions.blockDomains}
               </button>
 
-              {/* Delete button - Neo-brutalist red */}
+              {/* Delete — destructive red */}
               <button
                 onClick={handleBulkDelete}
                 disabled={isBulkDeleting}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-full shadow-soft-sm hover:bg-red-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {isBulkDeleting ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <Trash2 size={14} />
+                  <Trash2 size={14} strokeWidth={2} />
                 )}
                 {t.dashboard.find.bulkActions.deleteSelected}
               </button>
 
-              {/* Save button - Neo-brutalist yellow */}
+              {/* Save — primary yellow CTA (matches landing hero button) */}
               <button
                 onClick={handleBulkSave}
                 disabled={isBulkSaving || newToSaveCount === 0}
                 className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-black uppercase transition-all border-2",
+                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-full transition-all",
                   newToSaveCount === 0
-                    ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
-                    : "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    ? "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed"
+                    : "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 )}
                 title={newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${t.dashboard.find.bulkActions.saveToPipeline} (${newToSaveCount})`}
               >
                 {isBulkSaving ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <Save size={14} />
+                  <Save size={14} strokeWidth={2} />
                 )}
                 {newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${newToSaveCount} ${t.dashboard.find.bulkActions.saveToPipeline}`}
               </button>
