@@ -259,12 +259,27 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   const visibleOptions = showAll ? options : options.slice(0, maxVisible);
 
   if (options.length === 0) {
-    return <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono uppercase">{emptyMessage || t.noOptionsAvailable}</p>;
+    // Empty-state line — smoover (Apr 24, 2026): was font-mono uppercase; now
+    // plain italic muted to match other "no results" / placeholder copy.
+    return <p className="text-[11px] italic text-[#8898aa] dark:text-gray-500">{emptyMessage || t.noOptionsAvailable}</p>;
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      {/* ===================================================================
+          PRESET PILLS — smoover refresh (Apr 24, 2026)
+          -----------------------------------------------------------------
+          Shared pill pattern used by MultiSelect, RangePresets, DatePresets.
+          Before: border-2 square pills, font-black uppercase, offset black
+                  shadow for the selected state.
+          After:  rounded-full hairline pills, font-semibold mixed-case.
+                  Selected → yellow fill + shadow-yellow-glow-sm (matches
+                  the count badges and landing hero CTA). Hover on idle
+                  pills: subtle #f6f9fc wash + border deepens to #cdd5df.
+          Sizing kept identical (px-2 py-1 text-[10px]) so the 8-chip
+          cap + "Show more" logic still fits in the same two rows.
+          =================================================================== */}
+      <div className="flex flex-wrap gap-1.5">
         {visibleOptions.map(option => (
           <button
             key={option}
@@ -276,20 +291,21 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               }
             }}
             className={cn(
-              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
+              "px-2.5 py-1 text-[10px] font-semibold rounded-full transition-all border",
               selected.includes(option)
-                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
+                ? "bg-[#ffbf23] text-[#0f172a] border-transparent shadow-yellow-glow-sm"
+                : "bg-white dark:bg-gray-900 text-[#425466] dark:text-gray-400 border-[#e6ebf1] dark:border-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-700"
             )}
           >
             {option}
           </button>
         ))}
       </div>
+      {/* Inline "+N more" / "Show less" — muted link treatment */}
       {options.length > maxVisible && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="text-[10px] text-black dark:text-[#ffbf23] hover:underline font-black uppercase"
+          className="text-[10px] font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:underline underline-offset-2 transition-colors"
         >
           {showAll ? t.showLess : `+ ${options.length - maxVisible} ${t.more}`}
         </button>
@@ -297,7 +313,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       {selected.length > 0 && (
         <button
           onClick={() => onChange([])}
-          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
+          className="text-[10px] font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors ml-2"
         >
           {t.clearAll}
         </button>
@@ -325,7 +341,8 @@ const RangePresets: React.FC<RangePresetsProps> = ({
 }) => {
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      {/* Preset pills — same smoover treatment as MultiSelect (Apr 24, 2026) */}
+      <div className="flex flex-wrap gap-1.5">
         {presets.map(preset => (
           <button
             key={preset.label}
@@ -337,10 +354,10 @@ const RangePresets: React.FC<RangePresetsProps> = ({
               }
             }}
             className={cn(
-              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
+              "px-2.5 py-1 text-[10px] font-semibold rounded-full transition-all border",
               value?.min === preset.min && value?.max === preset.max
-                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
+                ? "bg-[#ffbf23] text-[#0f172a] border-transparent shadow-yellow-glow-sm"
+                : "bg-white dark:bg-gray-900 text-[#425466] dark:text-gray-400 border-[#e6ebf1] dark:border-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-700"
             )}
           >
             {preset.label}
@@ -350,7 +367,7 @@ const RangePresets: React.FC<RangePresetsProps> = ({
       {value !== null && (
         <button
           onClick={() => onChange(null)}
-          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
+          className="text-[10px] font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
         >
           {clearLabel}
         </button>
@@ -408,16 +425,17 @@ const DatePresets: React.FC<DatePresetsProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      {/* Preset pills — same smoover treatment as MultiSelect (Apr 24, 2026) */}
+      <div className="flex flex-wrap gap-1.5">
         {presets.map(preset => (
           <button
             key={preset.label}
             onClick={() => handlePreset(preset.days)}
             className={cn(
-              "px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-all border-2",
+              "px-2.5 py-1 text-[10px] font-semibold rounded-full transition-all border",
               isPresetActive(preset.days)
-                ? "bg-[#ffbf23] text-black border-black shadow-[1px_1px_0px_0px_#000000]"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-gray-500"
+                ? "bg-[#ffbf23] text-[#0f172a] border-transparent shadow-yellow-glow-sm"
+                : "bg-white dark:bg-gray-900 text-[#425466] dark:text-gray-400 border-[#e6ebf1] dark:border-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-700"
             )}
           >
             {preset.label}
@@ -427,7 +445,7 @@ const DatePresets: React.FC<DatePresetsProps> = ({
       {value !== null && (
         <button
           onClick={() => onChange(null)}
-          className="text-[10px] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold uppercase"
+          className="text-[10px] font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
         >
           {t.clear}
         </button>
@@ -564,42 +582,73 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
         <SlidersHorizontal size={16} strokeWidth={2} />
       </button>
 
-      {/* Filter Overlay - Slide-out panel from right */}
+      {/* =========================================================================
+          FILTER SLIDE-OUT PANEL (overlay)
+          Smoover refresh (April 24th, 2026) — Phase 2f
+          ---------------------------------------------------------------------------
+          The panel body previously kept the neo-brutalist voice even after the
+          trigger button was updated (Phase 2e, Apr 23, 2026). This round flips
+          everything inside the slide-out to match the smoover design system used
+          across the landing page, sidebar, auth pages, and dashboard chrome:
+            - Hairline borders (#e6ebf1) instead of border-l-4 / border-b-2 black
+            - `shadow-soft-xl` on the slide-out edge instead of the hard
+              `shadow-[-4px_0_20px_rgba(0,0,0,0.3)]` drop
+            - Header title: Archivo display font, `font-semibold`, normal case
+            - Close (X): rounded-full 32x32 soft outline (matches the Find-affiliate
+              modal close button pattern used elsewhere)
+            - Footer bar: hairline border-t, rounded-full Apply CTA matching the
+              landing hero button (shadow-yellow-glow-sm + hover lift)
+            - Clear-all link: font-semibold, muted colour, no uppercase
+          Logic / i18n keys / portal wiring / handlers all untouched.
+          ========================================================================= */}
       {isOpen && isMounted && createPortal(
         <>
-          {/* Backdrop - Starts below header (64px) and after sidebar (256px) */}
+          {/* Backdrop — softer overlay tint to pair with the lighter panel */}
           <div 
-            className="fixed top-16 left-64 right-0 bottom-0 bg-black/50 z-[9997] animate-in fade-in duration-200"
+            className="fixed top-16 left-64 right-0 bottom-0 bg-[#0f172a]/40 z-[9997] animate-in fade-in duration-200"
             onClick={handleClose}
           />
           
-          {/* Slide-out Panel - Starts below header (h-16 = 64px) */}
+          {/* Slide-out Panel — hairline left border + shadow-soft-xl */}
           <div 
-            className="fixed top-16 right-0 h-[calc(100vh-64px)] w-80 bg-white dark:bg-[#0a0a0a] border-l-4 border-black dark:border-[#ffbf23] shadow-[-4px_0_20px_rgba(0,0,0,0.3)] z-[9998] animate-in slide-in-from-right duration-300"
+            className="fixed top-16 right-0 h-[calc(100vh-64px)] w-80 bg-white dark:bg-[#0a0a0a] border-l border-[#e6ebf1] dark:border-gray-800 shadow-soft-xl z-[9998] animate-in slide-in-from-right duration-300"
           >
-            {/* Panel Header */}
-            <div className="flex items-center justify-between p-4 border-b-2 border-black dark:border-gray-700">
-              <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
-                <SlidersHorizontal size={16} />
+            {/* Panel Header — hairline divider + Archivo title */}
+            <div className="flex items-center justify-between p-4 border-b border-[#e6ebf1] dark:border-gray-800">
+              <h3 className="font-display font-semibold text-sm tracking-tight flex items-center gap-2 text-[#0f172a] dark:text-white">
+                <SlidersHorizontal size={16} strokeWidth={2} className="text-[#425466] dark:text-gray-400" />
                 {t.filterPanel.title || 'Filters'}
               </h3>
+              {/* Close — rounded-full soft outline, same pattern as other close buttons */}
               <button
                 onClick={handleClose}
-                className="w-8 h-8 flex items-center justify-center border-2 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-[#e6ebf1] dark:border-gray-800 text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-900 transition-all"
+                aria-label="Close filters"
               >
-                <X size={16} strokeWidth={2.5} />
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
 
             {/* Filter Options */}
             <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-120px)]">
+              {/* =================================================================
+                  FILTER SECTION LABELS — smoover refresh (Apr 24, 2026)
+                  ---------------------------------------------------------------
+                  All 5 section labels share the same pattern:
+                    Before: text-xs font-black uppercase tracking-wide gray-500
+                            + square yellow count badge (px-1.5 py-0.5).
+                    After:  text-xs font-semibold (mixed case) #425466
+                            + rounded-full pill badge with shadow-yellow-glow-sm
+                            matching every other yellow accent in the app.
+                  Icon stroke 2.5 → 2 for lighter smoover weight.
+                  ================================================================= */}
               {/* Competitors Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Users size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Users size={12} strokeWidth={2} />
                   {t.filterPanel.competitors}
                   {activeFilters.competitors.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">
                       {activeFilters.competitors.length}
                     </span>
                   )}
@@ -615,11 +664,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               {/* Topics Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Tag size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Tag size={12} strokeWidth={2} />
                   {t.filterPanel.topics}
                   {activeFilters.topics.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">
                       {activeFilters.topics.length}
                     </span>
                   )}
@@ -635,11 +684,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               {/* Subscribers Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Users size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Users size={12} strokeWidth={2} />
                   {t.filterPanel.followers}
                   {activeFilters.subscribers && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">1</span>
                   )}
                 </label>
                 <RangePresets
@@ -652,11 +701,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               {/* Date Published Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Calendar size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Calendar size={12} strokeWidth={2} />
                   {t.filterPanel.date}
                   {activeFilters.datePublished && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">1</span>
                   )}
                 </label>
                 <DatePresets
@@ -668,11 +717,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               {/* Content Count Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Hash size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Hash size={12} strokeWidth={2} />
                   {t.filterPanel.posts}
                   {activeFilters.contentCount && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">1</span>
                   )}
                 </label>
                 <RangePresets
@@ -684,22 +733,26 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               </div>
             </div>
 
-            {/* Panel Footer */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-black dark:border-gray-700 bg-white dark:bg-[#0a0a0a]">
+            {/* =====================================================================
+                PANEL FOOTER — smoover refresh (Apr 24, 2026)
+                Hairline border-t, muted Clear-all link, rounded-full yellow Apply
+                CTA matching the landing-page hero button voice.
+                ===================================================================== */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#e6ebf1] dark:border-gray-800 bg-white dark:bg-[#0a0a0a]">
               <div className="flex items-center justify-between">
                 {activeFilterCount > 0 ? (
                   <button
                     onClick={handleClearAll}
-                    className="text-xs font-black uppercase tracking-wide text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                    className="text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
                   >
                     {t.filterPanel.clearAll} ({activeFilterCount})
                   </button>
                 ) : (
-                  <span className="text-xs text-gray-400">{t.filterPanel.noFiltersActive || 'No filters active'}</span>
+                  <span className="text-xs text-[#8898aa]">{t.filterPanel.noFiltersActive || 'No filters active'}</span>
                 )}
                 <button
                   onClick={handleClose}
-                  className="px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                  className="px-4 py-2 text-xs font-semibold bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 transition-all"
                 >
                   {t.filterPanel.apply || 'Apply'}
                 </button>
