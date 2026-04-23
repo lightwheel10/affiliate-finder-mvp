@@ -1906,30 +1906,58 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                   })}
                 </div>
               ) : (emailResults?.emails?.length || (email ? 1 : 0)) > 0 ? (
-                /* Fallback: Simple email list */
+                /* =====================================================================
+                   SIMPLE EMAIL LIST — smoover refresh (Apr 27, 2026). Chunk 2/4.
+                   ---------------------------------------------------------------------
+                   The most common branch. Fires when we have 1–N raw email strings
+                   but no full Apollo contact metadata (i.e. no name / title /
+                   LinkedIn).
+                   Before: "EMAIL ADDRESSES" font-black uppercase tracking-widest
+                           header; each row was p-4 bg-gray-50 border-2 gray-200
+                           square card with a black-bordered yellow Mail tile and
+                           a border-2 black yellow COPY button using the press
+                           shadow effect.
+                   After:  Section header softened to font-semibold mixed case
+                           muted #8898aa. Each row is a rounded-lg hairline card
+                           with a rounded-full yellow icon badge + shadow-yellow-
+                           glow-sm, an Inter (mono-ish) email address, and a
+                           rounded-full COPY button mirroring the primary CTA
+                           treatment used across the app.
+                   Copied state: emerald-500 solid → softer emerald CTA with the
+                                 same rounded-full shape so the state swap doesn't
+                                 cause a layout shift.
+                   No logic change: copyEmail(emailAddr) still fires; the
+                   "copiedEmail === emailAddr" check and 2-second reset timer live
+                   elsewhere and are untouched.
+                   ===================================================================== */
                 <div>
-                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">{t.affiliateRow.emailModal.emailAddresses}</h4>
+                  <h4 className="text-xs font-semibold text-[#8898aa] mb-3">
+                    {t.affiliateRow.emailModal.emailAddresses}
+                  </h4>
                   <div className="space-y-2">
                     {(emailResults?.emails || (email ? [email] : [])).map((emailAddr, idx) => (
                       <div 
                         key={idx}
-                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white transition-colors"
+                        className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-800 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-700 hover:bg-[#f6f9fc]/60 dark:hover:bg-gray-800/40 transition-all"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
-                            <Mail size={16} className="text-black" />
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 bg-[#ffbf23] rounded-full flex items-center justify-center shadow-yellow-glow-sm shrink-0">
+                            <Mail size={15} className="text-[#0f172a]" strokeWidth={2} />
                           </div>
-                          <span className="font-bold text-gray-900 dark:text-white font-mono">{emailAddr}</span>
+                          <span className="font-medium text-[#0f172a] dark:text-white text-sm truncate">
+                            {emailAddr}
+                          </span>
                         </div>
                         <button
                           onClick={() => copyEmail(emailAddr)}
-                          className={`flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black ${
+                          aria-label={copiedEmail === emailAddr ? 'Copied' : `Copy ${emailAddr}`}
+                          className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all shrink-0 ${
                             copiedEmail === emailAddr
-                              ? 'bg-emerald-500 text-white'
-                              : 'bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]'
+                              ? 'bg-emerald-500 text-white shadow-soft-sm'
+                              : 'bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5'
                           }`}
                         >
-                          {copiedEmail === emailAddr ? <Check size={12} /> : <Copy size={12} />}
+                          {copiedEmail === emailAddr ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} strokeWidth={2} />}
                           {copiedEmail === emailAddr ? t.affiliateRow.emailModal.done : t.affiliateRow.emailModal.copy}
                         </button>
                       </div>
