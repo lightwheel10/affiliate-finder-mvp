@@ -1,52 +1,45 @@
 /**
  * =============================================================================
- * DASHBOARD LOADING - NEO-BRUTALIST
+ * DASHBOARD LOADING — Content Skeleton
  * =============================================================================
- * 
- * Updated: January 8th, 2026
- * 
- * NEO-BRUTALIST DESIGN UPDATE:
- * - Sharp edges (no rounded corners)
- * - Bold borders (border-2 to border-4 with black)
- * - Offset shadows
- * - Yellow accent color (#ffbf23)
- * - Dark mode support
- * 
+ *
+ * January 8th, 2026 — Neo-brutalist content skeleton
+ *   Sharp edges, bold borders (border-2 to border-4 with black), offset
+ *   shadows, yellow accent color (#ffbf23), dark mode support.
+ *
+ * April 23rd, 2026 — "Smoover" header refresh (Phase 2d)
+ *   The top <header> skeleton now matches the new unified dashboard header
+ *   (hairline border, sticky, rounded pulse blocks). The content rows below
+ *   still use the neo-brutalist skeleton because the actual pages (Find New,
+ *   Discovered, Saved, Outreach) haven't been restyled below the header yet.
+ *
  * This loading state is shown by Next.js during page transitions within the
- * (dashboard) route group using React Suspense.
- * 
- * IMPORTANT: Since the layout contains Sidebar, and the layout stays mounted
- * during navigation, the Sidebar will remain visible while this loading state
- * is shown for the main content area.
- * 
- * This creates a smooth transition where:
- * 1. Sidebar stays intact (no skeleton)
- * 2. Only the main content area shows loading state
- * 
+ * (dashboard) route group using React Suspense. Because the layout contains
+ * the Sidebar and stays mounted during navigation, only the main content
+ * area shows this loading state — Sidebar remains visible.
  * =============================================================================
  */
 
 /**
- * ContentLoadingSkeleton - NEO-BRUTALIST (Updated January 8th, 2026)
- * 
- * A skeleton that matches the neo-brutalist page content structure.
- * Shows:
- * - Header skeleton with bold border
- * - Content area skeleton with sharp edges
- * 
- * NOTE: This does NOT include Sidebar - the layout handles that.
+ * ContentLoadingSkeleton
+ *
+ * A skeleton that matches the page content structure. Shows:
+ *   - Header skeleton (smoover: hairline border, rounded pulse blocks)
+ *   - Content area skeleton (neo-brutalist: sharp edges, offset borders)
+ *
+ * NOTE: Does NOT include Sidebar — the dashboard layout handles that.
  */
 function ContentLoadingSkeleton() {
   return (
     <>
-      {/* Header Skeleton - NEO-BRUTALIST (h-16 with border-b-4) */}
-      <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b-4 border-black dark:border-gray-700">
+      {/* Header Skeleton — SMOOVER (April 23rd, 2026 · Phase 2d): matches the unified dashboard header */}
+      <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b border-[#e6ebf1] dark:border-gray-800">
         <div className="animate-pulse">
-          <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700"></div>
+          <div className="h-5 w-40 rounded-md bg-[#f6f9fc] dark:bg-gray-800"></div>
         </div>
         <div className="animate-pulse flex items-center gap-3">
-          <div className="h-6 w-24 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700"></div>
-          <div className="h-8 w-32 bg-[#ffbf23]/30 border-2 border-gray-200 dark:border-gray-700"></div>
+          <div className="h-6 w-24 rounded-full bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700"></div>
+          <div className="h-8 w-32 rounded-full bg-[#ffbf23]/30 border border-[#ffbf23]/30"></div>
         </div>
       </header>
 

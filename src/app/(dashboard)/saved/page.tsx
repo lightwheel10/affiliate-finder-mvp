@@ -703,44 +703,42 @@ export default function SavedPage() {
   return (
     <>
       {/* =============================================================================
-          TOP BAR - NEW DESIGN (January 6th, 2026)
-          Neo-brutalist header - MATCHES DashboardDemo.tsx EXACTLY
+          TOP BAR — SMOOVER REFRESH (April 23rd, 2026 · Phase 2d)
+          Unified sticky dashboard header: hairline border, Archivo display title,
+          rounded yellow CTA matching the landing page hero button.
+          Previously neo-brutalist (Jan 6, 2026) — see git blame for prior version.
           ============================================================================= */}
       {/* Header - Translated (January 9th, 2026) */}
-      <header className="h-16 border-b-4 border-black dark:border-white flex items-center justify-between px-6 bg-white dark:bg-[#0a0a0a]">
-        {/* Page Title - font-black uppercase tracking-tight */}
-        <h1 className="font-black text-xl uppercase tracking-tight">{t.dashboard.saved.pageTitle}</h1>
+      <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b border-[#e6ebf1] dark:border-gray-800">
+        {/* Page Title — Archivo display, bold, normal case (matches sidebar brand + landing) */}
+        <h1 className="font-display text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">{t.dashboard.saved.pageTitle}</h1>
 
         <div className="flex items-center gap-4">
-          {/* Timer Pill - DashboardDemo exact styling */}
-          <div className="hidden md:flex items-center gap-2 bg-[#1a1a1a] text-[#ffbf23] px-3 py-1.5 rounded-full text-xs font-mono border border-black">
+          {/* Timer Pill — softer slate bg + hairline border + subtle lift */}
+          <div className="hidden md:flex items-center gap-2 bg-[#0f172a] dark:bg-[#1a1a1a] text-[#ffbf23] px-3 py-1.5 rounded-full text-xs font-mono border border-[#0f172a]/10 dark:border-gray-800 shadow-soft-sm">
             <Clock size={12} />
             <span>{t.dashboard.header.nextScan}</span>
             <ScanCountdown />
-            <span className="text-white font-bold">{t.dashboard.header.pro}</span>
+            <span className="text-white font-semibold">{t.dashboard.header.pro}</span>
           </div>
 
-          {/* Stats Pills - DashboardDemo exact styling */}
+          {/* Credits pills — visual refresh lives inside CreditsDisplay.tsx ("neo" variant) */}
           <div className="hidden lg:flex items-center gap-3">
             <CreditsDisplay variant="neo" />
           </div>
 
           {/* =================================================================
-              Find Button - January 17th, 2026: Now functional!
-              
-              PREVIOUS: Button was non-functional (just styled, no onClick)
-              NEW: Wrapped with Link to /find?openModal=true
-              
-              When clicked:
-              1. Navigates to /find page
-              2. Query param openModal=true triggers auto-open of search modal
-              3. User can immediately start searching without clicking again
+              Find Button — January 17th, 2026: functional, wrapped in Link.
+              Smoover refresh (April 23rd, 2026): rounded-full yellow CTA with
+              soft glow, matching the landing hero button. Behavior unchanged:
+              clicking navigates to /find?openModal=true which auto-opens the
+              search modal.
               ================================================================= */}
           <Link href="/find?openModal=true">
             <button 
-              className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-black font-black text-xs uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-[#ffbf23] text-[#0f172a] font-semibold text-sm rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 transition-all duration-200"
             >
-              <Plus size={14} strokeWidth={3} /> {t.dashboard.header.findAffiliates}
+              <Plus size={14} strokeWidth={2.5} /> {t.dashboard.header.findAffiliates}
             </button>
           </Link>
         </div>

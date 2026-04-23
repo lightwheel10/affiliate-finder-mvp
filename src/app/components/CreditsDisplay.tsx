@@ -10,7 +10,15 @@
  * Added "neo" variant for neo-brutalist design from DashboardDemo.tsx
  * - variant="default" - Original design with rounded badges
  * - variant="neo" - Neo-brutalist with bold borders and industrial styling
- * 
+ *
+ * SMOOVER REFRESH (April 23rd, 2026 · Phase 2d):
+ * The "neo" variant internals now use the softer palette that matches the
+ * redesigned dashboard header: hairline borders (#e6ebf1), rounded-full pills,
+ * subtle drop shadows (shadow-soft-sm). The variant NAME is kept for backwards
+ * compatibility — no callsites need to change (4 consumers: find / discovered /
+ * saved / outreach pages). The "default" variant is UNCHANGED because no live
+ * page currently uses it (verified via grep — April 23, 2026).
+ *
  * BEHAVIOR:
  * - When feature flag OFF: Shows hardcoded fallback values
  * - When feature flag ON + loading: Shows skeleton placeholders
@@ -73,16 +81,18 @@ interface CreditSkeletonProps {
 function CreditSkeleton({ variant = 'default', type = 'email' }: CreditSkeletonProps) {
   if (variant === 'neo') {
     // =========================================================================
-    // NEO-BRUTALIST SKELETON (Fixed January 13th, 2026)
-    // 
-    // Uses min-width to guarantee zero layout shift between skeleton and
-    // loaded states. The min-width matches the corresponding CreditBadge.
+    // "neo" SKELETON — min-width matches the loaded badge for zero layout shift
+    // (Fixed January 13th, 2026)
+    //
+    // SMOOVER REFRESH (April 23rd, 2026 · Phase 2d):
+    //   Rounded-full pill, hairline border, subtle shadow — mirrors the loaded
+    //   CreditBadge so the skeleton → loaded transition is seamless.
     // =========================================================================
     const minWidthClass = NEO_MIN_WIDTHS[type];
     
     return (
-      <div className={`${minWidthClass} px-3 py-1.5 border-2 border-black dark:border-gray-600 rounded-md bg-white dark:bg-black text-xs font-bold`}>
-        <span className="bg-gray-200 dark:bg-gray-700 text-transparent rounded animate-pulse">Label</span> <span className="text-gray-400">|</span> <span className="bg-gray-200 dark:bg-gray-700 text-transparent rounded animate-pulse">00/00</span>
+      <div className={`${minWidthClass} px-3 py-1.5 border border-[#e6ebf1] dark:border-gray-700 rounded-full bg-white dark:bg-[#0f0f0f] text-xs font-semibold shadow-soft-sm`}>
+        <span className="bg-[#f6f9fc] dark:bg-gray-800 text-transparent rounded animate-pulse">Label</span> <span className="text-[#8898aa] dark:text-gray-500">|</span> <span className="bg-[#f6f9fc] dark:bg-gray-800 text-transparent rounded animate-pulse">00/00</span>
       </div>
     );
   }
@@ -116,19 +126,21 @@ interface CreditBadgeProps {
 
 function CreditBadge({ icon, value, label, shortLabel, isPrimary = false, variant = 'default', neoSuffix, creditType = 'email' }: CreditBadgeProps) {
   // ==========================================================================
-  // NEW DESIGN - Neo-brutalist variant (January 6th, 2026)
-  // Updated for i18n (January 9th, 2026) - neoSuffix replaces hardcoded 'Topic'
-  // Fixed January 13th, 2026: Added min-width to match skeleton for zero shift
-  // Matches DashboardDemo.tsx EXACTLY:
-  // <div className="px-3 py-1.5 border-2 border-brandBlack dark:border-gray-600 rounded-md bg-white dark:bg-black">
-  //     Search <span className="text-gray-400">|</span> 10/10 Topic
-  // </div>
+  // "neo" VARIANT — January 6th, 2026 (originally neo-brutalist from DashboardDemo.tsx)
+  //   Updated for i18n (January 9th, 2026) — neoSuffix replaces hardcoded 'Topic'
+  //   Fixed January 13th, 2026 — min-width to match skeleton for zero layout shift
+  //
+  // SMOOVER REFRESH (April 23rd, 2026 · Phase 2d):
+  //   Container is now a rounded-full pill with hairline border (#e6ebf1) and a
+  //   soft shadow. The separator "|" and neoSuffix use the softer muted color
+  //   (#8898aa). Consumed by all 4 dashboard headers (find / discovered / saved /
+  //   outreach) — visual change cascades automatically.
   // ==========================================================================
   if (variant === 'neo') {
     const minWidthClass = NEO_MIN_WIDTHS[creditType];
     return (
-      <div className={`${minWidthClass} px-3 py-1.5 border-2 border-black dark:border-gray-600 rounded-md bg-white dark:bg-black text-xs font-bold`}>
-        {shortLabel || label.split(' ')[0]} <span className="text-gray-400">|</span> {value} {neoSuffix && <span className="hidden xl:inline text-gray-500 font-normal">{neoSuffix}</span>}
+      <div className={`${minWidthClass} px-3 py-1.5 border border-[#e6ebf1] dark:border-gray-700 rounded-full bg-white dark:bg-[#0f0f0f] text-xs font-semibold text-[#425466] dark:text-gray-300 shadow-soft-sm`}>
+        {shortLabel || label.split(' ')[0]} <span className="text-[#8898aa] dark:text-gray-500">|</span> {value} {neoSuffix && <span className="hidden xl:inline text-[#8898aa] dark:text-gray-500 font-normal">{neoSuffix}</span>}
       </div>
     );
   }
