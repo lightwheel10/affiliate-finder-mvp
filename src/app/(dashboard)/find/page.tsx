@@ -2057,26 +2057,47 @@ export default function FindNewPage() {
             </div>
           </div>
 
-          {/* Action Button - NEO-BRUTALIST - Translated (January 9th, 2026) */}
+          {/* =====================================================================
+              PRIMARY FIND CTA + TIP. Chunk 4/4.
+              Smoover refresh (April 25, 2026).
+              ---------------------------------------------------------------------
+              Before: full-width yellow button with border-4 black +
+                      shadow-[4px_4px_0px_0px_#000] offset + font-black uppercase
+                      tracking-wide + translate-shadow press effect. Spinner
+                      used border-3 black on black text for a brutalist feel.
+              After:  full-width yellow CTA, rounded-full, shadow-yellow-glow
+                      (larger glow than the sm variant — this is the modal's
+                      main action so it gets a stronger accent). font-semibold
+                      mixed case, subtle hover lift (-translate-y-0.5), hover
+                      darkens to #e5ac20. Disabled state is soft #f6f9fc with
+                      muted text.
+                      Spinner modernised to a 2.5px ring using the dark-slate
+                      text colour so it reads well on yellow.
+                      Tip line colour softened to #8898aa to match every other
+                      helper/placeholder copy in the redesign.
+              No logic change: handleFindAffiliates handler + the
+              "keywords.length === 0 || loading" disable condition are both
+              preserved verbatim.
+              ===================================================================== */}
           <button
             onClick={handleFindAffiliates}
             disabled={keywords.length === 0 || loading}
-            className="w-full py-3.5 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-4 border-black hover:bg-yellow-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300 disabled:cursor-not-allowed shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[#ffbf23] text-[#0f172a] font-semibold rounded-full shadow-yellow-glow hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none disabled:cursor-not-allowed disabled:hover:translate-y-0 dark:disabled:bg-gray-800 transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <div className="w-5 h-5 border-3 border-black border-t-transparent animate-spin"></div>
+                <div className="w-5 h-5 border-[2.5px] border-[#0f172a] border-t-transparent rounded-full animate-spin"></div>
                 {t.dashboard.find.modal.searching}
               </>
             ) : (
               <>
-                <Search size={18} />
+                <Search size={18} strokeWidth={2} />
                 {t.dashboard.find.modal.ctaButton}
               </>
             )}
           </button>
 
-          <p className="text-center text-[11px] text-gray-400 font-medium">
+          <p className="text-center text-[11px] text-[#8898aa] font-medium">
             {t.dashboard.find.modal.tip}
           </p>
         </div>
