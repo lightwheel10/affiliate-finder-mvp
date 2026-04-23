@@ -613,13 +613,24 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
             {/* Filter Options */}
             <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-120px)]">
+              {/* =================================================================
+                  FILTER SECTION LABELS — smoover refresh (Apr 24, 2026)
+                  ---------------------------------------------------------------
+                  All 5 section labels share the same pattern:
+                    Before: text-xs font-black uppercase tracking-wide gray-500
+                            + square yellow count badge (px-1.5 py-0.5).
+                    After:  text-xs font-semibold (mixed case) #425466
+                            + rounded-full pill badge with shadow-yellow-glow-sm
+                            matching every other yellow accent in the app.
+                  Icon stroke 2.5 → 2 for lighter smoover weight.
+                  ================================================================= */}
               {/* Competitors Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Users size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Users size={12} strokeWidth={2} />
                   {t.filterPanel.competitors}
                   {activeFilters.competitors.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">
                       {activeFilters.competitors.length}
                     </span>
                   )}
@@ -635,11 +646,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               {/* Topics Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Tag size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Tag size={12} strokeWidth={2} />
                   {t.filterPanel.topics}
                   {activeFilters.topics.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">
                       {activeFilters.topics.length}
                     </span>
                   )}
@@ -655,11 +666,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               {/* Subscribers Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Users size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Users size={12} strokeWidth={2} />
                   {t.filterPanel.followers}
                   {activeFilters.subscribers && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">1</span>
                   )}
                 </label>
                 <RangePresets
@@ -672,11 +683,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               {/* Date Published Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Calendar size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Calendar size={12} strokeWidth={2} />
                   {t.filterPanel.date}
                   {activeFilters.datePublished && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">1</span>
                   )}
                 </label>
                 <DatePresets
@@ -688,11 +699,11 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               {/* Content Count Filter */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  <Hash size={12} />
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  <Hash size={12} strokeWidth={2} />
                   {t.filterPanel.posts}
                   {activeFilters.contentCount && (
-                    <span className="px-1.5 py-0.5 bg-[#ffbf23] text-black text-[9px]">1</span>
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm">1</span>
                   )}
                 </label>
                 <RangePresets
