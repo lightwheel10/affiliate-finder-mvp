@@ -2,6 +2,10 @@
  * ConfirmDeleteModal.tsx
  * Created: December 2025
  * i18n Migration: January 10th, 2026 - Priority 5: Shared Components
+ * Smoover Redesign: April 23rd, 2026 - Phase 2b
+ *   Visual refresh to match the softer design system (rounded-full controls,
+ *   hairline borders, soft red glow for destructive CTA). No behavioral or
+ *   i18n changes — all logic, props API, and translation keys preserved.
  * 
  * A reusable confirmation modal for delete operations.
  * Used by:
@@ -75,46 +79,46 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
       width="max-w-md"
     >
       <div className="space-y-5">
-        {/* Warning Icon - NEO-BRUTALIST */}
+        {/* Warning Icon — SMOOVER (April 23rd, 2026): soft red tint with hairline border instead of brutalist offset shadow */}
         <div className="flex justify-center">
-          <div className="w-16 h-16 bg-red-500 border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_#000000]">
-            <AlertTriangle size={32} className="text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 flex items-center justify-center">
+            <AlertTriangle size={28} className="text-red-500" />
           </div>
         </div>
 
-        {/* Title & Message - NEO-BRUTALIST */}
+        {/* Title & Message — SMOOVER (April 23rd, 2026): display-font bold slate title, muted body copy */}
         <div className="text-center space-y-2">
-          <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wide">
+          <h3 className="text-xl font-display font-bold text-[#0f172a] dark:text-white">
             {displayTitle}
           </h3>
-          <p className="text-sm text-gray-500 leading-relaxed max-w-sm mx-auto">
+          <p className="text-sm text-[#425466] dark:text-gray-400 leading-relaxed max-w-sm mx-auto">
             {displayMessage}
           </p>
         </div>
 
-        {/* Item Count Badge - NEO-BRUTALIST */}
+        {/* Item Count Badge — SMOOVER (April 23rd, 2026): rounded pill with hairline red border */}
         <div className="flex justify-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20">
             <Trash2 size={14} className="text-red-600 dark:text-red-400" />
-            <span className="text-sm font-bold text-red-700 dark:text-red-300">
+            <span className="text-sm font-medium text-red-600 dark:text-red-400">
               {itemCount} {pluralizedType} {t.modals.confirmDelete.willBeDeleted}
             </span>
           </div>
         </div>
 
-        {/* Action Buttons - NEO-BRUTALIST */}
+        {/* Action Buttons — SMOOVER (April 23rd, 2026): rounded-full, ghost cancel + soft red-glow destructive CTA */}
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="px-5 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide"
+            className="px-5 py-2.5 text-sm font-medium rounded-full text-[#425466] dark:text-gray-300 bg-white dark:bg-[#1a1a1a] hover:bg-[#f6f9fc] dark:hover:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t.modals.confirmDelete.cancel}
           </button>
           <button
             onClick={onConfirm}
             disabled={isDeleting}
-            className="px-5 py-2.5 text-sm font-black text-white bg-red-500 hover:bg-red-600 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-200 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed uppercase tracking-wide"
+            className="px-5 py-2.5 text-sm font-semibold rounded-full text-white bg-red-500 hover:bg-red-600 shadow-[0_4px_14px_-2px_rgba(239,68,68,0.35)] hover:shadow-[0_6px_18px_-2px_rgba(239,68,68,0.45)] transition-all duration-200 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isDeleting ? (
               <>
