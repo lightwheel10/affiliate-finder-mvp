@@ -65,6 +65,7 @@ import {
   Loader2,
   X,
   Clock,  // Added January 6th, 2026 for neo-brutalist header
+  Pencil, // Added April 25, 2026 — replaces the ASCII ✎ glyph used in the Find Affiliates modal brand-edit button (smoover Phase 2g, chunk 2)
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
@@ -1715,10 +1716,25 @@ export default function FindNewPage() {
             </p>
           </div>
 
-          {/* Website context */}
-          <div className="flex items-center gap-2 px-0 py-1 text-gray-600 dark:text-gray-400">
-            <Globe size={14} className="text-gray-500 shrink-0" />
-            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {/* =====================================================================
+              WEBSITE CONTEXT ROW — smoover (Apr 25, 2026). Chunk 2/4.
+              ---------------------------------------------------------------------
+              Displays the user's brand (e.g. "yoursite.com") that the search
+              runs against. Selecdoo users can edit inline; everyone else just
+              sees the read-only brand.
+              Before: uppercase gray-500 "WEBSITE:" label + border-2 square
+                      inputs with hard black focus + ASCII glyph buttons (✎ ✓ ✕)
+                      using border-2 squares.
+              After:  mixed-case muted label; rounded-md hairline input with a
+                      subtle yellow focus ring; the three glyph buttons are now
+                      proper lucide icon buttons (Pencil / Check / X) rendered
+                      as rounded-full 28x28 ghost icon buttons matching the
+                      Modal wrapper's own close-button pattern.
+              Logic, API calls, optimistic state, error handling untouched.
+              ===================================================================== */}
+          <div className="flex items-center gap-2 px-0 py-1">
+            <Globe size={14} className="text-[#8898aa] shrink-0" strokeWidth={2} />
+            <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-400">
               {t.dashboard.find.modal.websiteLabel}:
             </span>
             {isSelecdooUser ? (
@@ -1738,7 +1754,7 @@ export default function FindNewPage() {
                       value={editBrand}
                       onChange={(e) => setEditBrand(e.target.value)}
                       placeholder={user?.brand || 'example.com'}
-                      className="flex-1 px-2 py-1 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-black dark:focus:border-white"
+                      className="flex-1 px-2.5 py-1.5 bg-white dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-md text-sm text-[#0f172a] dark:text-gray-100 placeholder:text-[#8898aa] focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/40 focus:border-[#ffbf23]/60 transition-all"
                       onKeyDown={async (e) => {
                         if (e.key === 'Enter' && hasBrandChange && !isSavingBrand && userId) {
                           e.preventDefault();
@@ -1786,21 +1802,23 @@ export default function FindNewPage() {
                             setIsSavingBrand(false);
                           }
                         }}
-                        className="text-xs font-bold text-emerald-600 hover:text-emerald-800 px-2 disabled:opacity-50 flex items-center gap-1"
+                        aria-label={isSavingBrand ? 'Saving brand' : 'Save brand'}
+                        className="w-7 h-7 flex items-center justify-center rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50 transition-colors shrink-0"
                       >
                         {isSavingBrand ? (
-                          <Loader2 size={12} className="animate-spin" />
+                          <Loader2 size={14} className="animate-spin" />
                         ) : (
-                          '✓'
+                          <Check size={14} strokeWidth={2.5} />
                         )}
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => setIsEditingBrand(false)}
-                      className="text-xs font-bold text-gray-500 hover:text-black dark:hover:text-white px-2"
+                      aria-label="Cancel editing brand"
+                      className="w-7 h-7 flex items-center justify-center rounded-full text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
                     >
-                      ✕
+                      <X size={14} strokeWidth={2} />
                     </button>
                   </>
                 ) : (
@@ -1813,7 +1831,7 @@ export default function FindNewPage() {
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
                     )}
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                    <span className="text-sm font-medium text-[#0f172a] dark:text-gray-300 truncate">
                       {user?.brand || editBrand || t.dashboard.find.modal.notSetDuringOnboarding}
                     </span>
                     <button
@@ -1822,9 +1840,10 @@ export default function FindNewPage() {
                         setEditBrand(user?.brand || editBrand || '');
                         setIsEditingBrand(true);
                       }}
-                      className="ml-2 text-xs font-bold text-gray-500 hover:text-black dark:hover:text-white border border-gray-300 dark:border-gray-600 px-2 py-0.5 bg-white dark:bg-gray-900"
+                      aria-label="Edit brand"
+                      className="ml-1 w-7 h-7 flex items-center justify-center rounded-full text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white border border-[#e6ebf1] dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
                     >
-                      ✎
+                      <Pencil size={12} strokeWidth={2} />
                     </button>
                   </>
                 )}
@@ -1837,10 +1856,10 @@ export default function FindNewPage() {
                   className="w-4 h-4 shrink-0"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{user.brand}</span>
+                <span className="text-sm font-medium text-[#0f172a] dark:text-gray-300 truncate">{user.brand}</span>
               </>
             ) : (
-              <span className="text-sm italic text-gray-400">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
+              <span className="text-sm italic text-[#8898aa]">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
             )}
           </div>
 
