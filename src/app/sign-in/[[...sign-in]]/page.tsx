@@ -9,7 +9,22 @@
  * Updated: January 19th, 2026 - Dynamic messaging based on mode (signin/signup)
  * Updated: January 21st, 2026 - Added i18n translations (EN/DE support)
  * Updated: January 22nd, 2026 - Added OTP (6-digit code) input option
- * 
+ * Updated: April 23rd, 2026  - "SMOOVER" visual refresh (Phase 2a)
+ *
+ * APRIL 23RD, 2026 - VISUAL REFRESH (Phase 2a):
+ * ---------------------------------------------
+ * Client expanded Phase 1 (landing page only) to include the entire app.
+ * This page was restyled to match the refreshed landing page:
+ * - Hairline borders (#e6ebf1) replace the 2px/4px black brutalist borders
+ * - Soft drop shadows replace the offset neo-brutalist shadows
+ * - Inputs and buttons are now rounded (xl / full) instead of sharp
+ * - CTA uses the yellow-glow shadow treatment from the landing navbar
+ * - Logo wordmark uses font-display + text-gradient-brand for "One"
+ *
+ * IMPORTANT: Zero logic / i18n / a11y / Supabase calls were modified in
+ * this pass. State machine, background auth check, OTP verify, redirect
+ * logic, and all translation keys are untouched.
+ *
  * OTP ADDITION (January 22nd, 2026):
  * ----------------------------------
  * Client requested OTP code input as an alternative to clicking the magic link.
@@ -359,11 +374,12 @@ export default function SignInPage() {
   // and we're actively redirecting (not during initial check)
   // January 21st, 2026: Use translated redirect message
   if (isAuthenticated && isRedirectingRef.current) {
+    // "SMOOVER" refresh (April 23rd, 2026): softer spinner ring + muted copy.
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0a0a0a]">
+      <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] dark:bg-[#0a0a0a]">
         <div className="text-center">
-          <div className="w-8 h-8 mx-auto border-2 border-[#ffbf23] border-t-transparent animate-spin mb-4"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="w-8 h-8 mx-auto rounded-full border-2 border-[#ffbf23]/30 border-t-[#ffbf23] animate-spin mb-4"></div>
+          <p className="text-sm text-[#425466] dark:text-gray-400">
             {t.auth.signIn.alreadySignedIn}
           </p>
         </div>
@@ -372,49 +388,52 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-[#0a0a0a] px-4">
+    // "SMOOVER" refresh (April 23rd, 2026):
+    // Page canvas is brand off-white with a subtle grid texture — mirrors the
+    // landing hero section so the transition from landing → auth feels seamless.
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fdfdfd] dark:bg-[#0a0a0a] bg-grid-soft dark:bg-grid-soft-dark px-4 py-10">
       {/* ================================================================= */}
-      {/* HEADER WITH LOGO - NEO-BRUTALIST */}
-      {/* January 21st, 2026: Using translated text */}
+      {/* HEADER WITH LOGO                                                   */}
+      {/* April 23rd, 2026: Rounded-full back-link pill + gradient wordmark. */}
       {/* ================================================================= */}
       <div className="w-full max-w-md mb-8">
         <div className="flex items-center justify-between">
-          <Link 
-            href="/" 
-            className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-700 px-3 py-1.5"
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white px-3 py-1.5 rounded-full hover:bg-white/70 dark:hover:bg-white/5 transition-colors"
           >
             <ArrowLeft size={16} />
             {t.auth.signIn.backToHome}
           </Link>
-          
-          {/* Logo - NEO-BRUTALIST */}
-          <div className="flex items-center gap-1.5">
-            <img src="/logo.svg" alt="Afforce One" className="w-5 h-5 border border-black dark:border-gray-600" />
-            <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">
-              Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span>
+
+          {/* Logo — matches landing navbar (rounded tile + font-display + gradient accent) */}
+          <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="Afforce One" className="w-5 h-5 rounded-md border border-[#e6ebf1] dark:border-gray-700" />
+            <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">
+              Afforce <span className="text-gradient-brand">One</span>
             </span>
           </div>
         </div>
       </div>
 
       {/* ================================================================= */}
-      {/* MAGIC LINK FORM - NEO-BRUTALIST */}
+      {/* MAGIC LINK FORM — "SMOOVER" card (April 23rd, 2026)                */}
+      {/* Was: border-4 black + 8px offset brutalist shadow.                 */}
+      {/* Now: rounded-2xl hairline border + soft drop shadow (shadow-soft-xl). */}
       {/* ================================================================= */}
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-black dark:border-gray-600 p-8 shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#333]">
-          
+        <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl p-8 shadow-soft-xl">
+
           {/* ============================================================= */}
-          {/* Form Header - Dynamic based on mode (January 19th, 2026) */}
-          {/* January 21st, 2026: Now using translated strings */}
-          {/* /sign-in → t.auth.signIn translations (returning user) */}
-          {/* /sign-in?mode=signup → t.auth.signUp translations (new user) */}
+          {/* Form Header — font-display + softer body copy.                */}
+          {/* January 21st, 2026: Uses translated strings (unchanged).      */}
           {/* ============================================================= */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+            <h1 className="font-display text-2xl font-bold text-[#0f172a] dark:text-white mb-2">
               {isSignupMode ? t.auth.signUp.title : t.auth.signIn.title}
             </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {isSignupMode 
+            <p className="text-sm text-[#425466] dark:text-gray-400">
+              {isSignupMode
                 ? t.auth.signUp.subtitle
                 : t.auth.signIn.subtitle
               }
@@ -428,55 +447,56 @@ export default function SignInPage() {
           {/* ============================================================= */}
           {formState === 'sent' || formState === 'verifying' || (formState === 'error' && showOtpInput) ? (
             <div className="text-center py-4">
-              <div className="w-16 h-16 mx-auto mb-4 bg-[#ffbf23] border-4 border-black flex items-center justify-center">
-                <CheckCircle size={32} className="text-black" />
+              {/* Success check circle — April 23rd, 2026: rounded-full + yellow glow. */}
+              <div className="w-16 h-16 mx-auto mb-4 bg-[#ffbf23] rounded-full flex items-center justify-center shadow-yellow-glow">
+                <CheckCircle size={32} className="text-[#0f172a]" />
               </div>
-              <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+              <h2 className="font-display text-xl font-bold text-[#0f172a] dark:text-white mb-2">
                 {t.auth.signIn.checkEmail}
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-sm text-[#425466] dark:text-gray-400 mb-4">
                 {t.auth.signIn.magicLinkSent}<br />
-                <span className="font-bold text-gray-900 dark:text-white">{email}</span>
+                <span className="font-semibold text-[#0f172a] dark:text-white">{email}</span>
               </p>
-              
+
               {/* ========================================================= */}
-              {/* OTP INPUT SECTION - January 22nd, 2026 */}
-              {/* Users can enter the 6-digit code instead of clicking link */}
+              {/* OTP INPUT SECTION (January 22nd, 2026 — logic unchanged). */}
+              {/* April 23rd, 2026: soft visual refresh only.               */}
               {/* ========================================================= */}
               {!showOtpInput ? (
                 <>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
-                    {isSignupMode 
+                  <p className="text-xs text-[#8898aa] dark:text-gray-500">
+                    {isSignupMode
                       ? t.auth.signUp.clickToCreate
                       : t.auth.signIn.clickToSignIn
                     }
                     <br />
                     {t.auth.signIn.checkSpam}
                   </p>
-                  
-                  {/* Divider with "or" */}
+
+                  {/* Divider — hairline dividers (April 23rd, 2026). */}
                   <div className="flex items-center gap-3 my-6">
-                    <div className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">{t.common.or}</span>
-                    <div className="flex-1 h-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                    <div className="flex-1 h-px bg-[#e6ebf1] dark:bg-gray-800"></div>
+                    <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.common.or}</span>
+                    <div className="flex-1 h-px bg-[#e6ebf1] dark:bg-gray-800"></div>
                   </div>
-                  
-                  {/* Enter code button */}
+
+                  {/* Secondary CTA — rounded-full hairline outlined pill. */}
                   <button
                     onClick={() => setShowOtpInput(true)}
-                    className="w-full py-3 px-4 bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white font-black uppercase tracking-wide border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000] dark:shadow-[4px_4px_0px_0px_#333] hover:shadow-[2px_2px_0px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3 px-4 bg-white dark:bg-[#1a1a1a] text-[#0f172a] dark:text-white font-semibold rounded-full border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm hover:border-[#ffbf23]/40 hover:shadow-soft-md hover:-translate-y-px transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <KeyRound size={18} />
                     {t.auth.signIn.enterCode || 'Enter Code Instead'}
                   </button>
                 </>
               ) : (
-                /* OTP Input Form */
+                /* OTP Input Form — rounded inputs + soft focus ring (April 23rd, 2026). */
                 <form onSubmit={handleOtpVerify} className="space-y-4 text-left">
                   <div>
-                    <label 
-                      htmlFor="otp" 
-                      className="block text-sm font-bold text-gray-900 dark:text-white mb-2"
+                    <label
+                      htmlFor="otp"
+                      className="block text-sm font-semibold text-[#0f172a] dark:text-white mb-2"
                     >
                       {t.auth.signIn.otpLabel || '6-Digit Code'}
                     </label>
@@ -488,32 +508,31 @@ export default function SignInPage() {
                       maxLength={6}
                       value={otpCode}
                       onChange={(e) => {
-                        // Only allow digits
                         const value = e.target.value.replace(/\D/g, '');
                         setOtpCode(value);
                         if (formState === 'error') setFormState('sent');
                       }}
                       placeholder="123456"
-                      className="w-full px-4 py-3 bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#ffbf23] transition-colors font-mono text-2xl text-center tracking-[0.5em]"
+                      className="w-full px-4 py-3 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all font-mono text-2xl text-center tracking-[0.5em]"
                       disabled={formState === 'verifying'}
                       autoComplete="one-time-code"
                       autoFocus
                     />
-                    
-                    {/* Error message */}
+
+                    {/* Error message — soft red, no bold shout. */}
                     {formState === 'error' && errorMessage && (
-                      <div className="mt-2 flex items-start gap-2 text-sm font-bold text-red-500">
+                      <div className="mt-2 flex items-start gap-2 text-sm font-medium text-red-500">
                         <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
                         <span>{errorMessage}</span>
                       </div>
                     )}
                   </div>
-                  
-                  {/* Verify button */}
+
+                  {/* Primary CTA — rounded-full yellow with soft yellow glow. */}
                   <button
                     type="submit"
                     disabled={formState === 'verifying' || otpCode.length !== 6}
-                    className="w-full py-3 px-4 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:shadow-[2px_2px_0px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0px_0px_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+                    className="w-full py-3 px-4 bg-[#ffbf23] text-[#0f172a] font-bold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-px hover:shadow-yellow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-yellow-glow-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {formState === 'verifying' ? (
                       <>
@@ -527,8 +546,8 @@ export default function SignInPage() {
                       </>
                     )}
                   </button>
-                  
-                  {/* Back to magic link option */}
+
+                  {/* Back-to-magic-link — subtle text link. */}
                   <button
                     type="button"
                     onClick={() => {
@@ -537,14 +556,14 @@ export default function SignInPage() {
                       setFormState('sent');
                       setErrorMessage('');
                     }}
-                    className="w-full text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    className="w-full text-sm font-semibold text-[#8898aa] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white transition-colors cursor-pointer"
                   >
                     {t.auth.signIn.backToMagicLink || '← Back to magic link'}
                   </button>
                 </form>
               )}
-              
-              {/* Send again button - only show when not in OTP mode */}
+
+              {/* "Use different email" — still visible when not in OTP mode. */}
               {!showOtpInput && (
                 <button
                   onClick={() => {
@@ -553,7 +572,7 @@ export default function SignInPage() {
                     setOtpCode('');
                     setShowOtpInput(false);
                   }}
-                  className="mt-6 text-sm font-bold text-[#ffbf23] hover:underline"
+                  className="mt-6 text-sm font-semibold text-[#ffbf23] hover:text-[#e5ac20] hover:underline transition-colors cursor-pointer"
                 >
                   {t.auth.signIn.useDifferentEmail}
                 </button>
@@ -561,22 +580,22 @@ export default function SignInPage() {
             </div>
           ) : (
             /* ============================================================= */
-            /* EMAIL INPUT FORM */
-            /* January 21st, 2026: Using translated labels and placeholders */
+            /* EMAIL INPUT FORM                                                */
+            /* April 23rd, 2026: rounded inputs, soft focus ring, pill CTA.   */
+            /* (Logic + i18n unchanged.)                                       */
             /* ============================================================= */
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Email Input - NEO-BRUTALIST */}
               <div>
-                <label 
-                  htmlFor="email" 
-                  className="block text-sm font-bold text-gray-900 dark:text-white mb-2"
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-semibold text-[#0f172a] dark:text-white mb-2"
                 >
                   {t.auth.signIn.emailLabel}
                 </label>
                 <div className="relative">
-                  <Mail 
-                    size={18} 
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" 
+                  <Mail
+                    size={18}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8898aa]"
                   />
                   <input
                     id="email"
@@ -587,31 +606,27 @@ export default function SignInPage() {
                       if (formState === 'error') setFormState('idle');
                     }}
                     placeholder={t.auth.signIn.emailPlaceholder}
-                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#ffbf23] transition-colors font-medium"
+                    className="w-full pl-10 pr-4 py-3 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all font-medium"
                     disabled={formState === 'sending'}
                     autoComplete="email"
                     autoFocus
                   />
                 </div>
-                
-                {/* ========================================================= */}
-                {/* Error Message - January 19th, 2026 */}
-                {/* Enhanced to show callback errors with icon */}
-                {/* ========================================================= */}
+
+                {/* Error message — soft red (April 23rd, 2026). */}
                 {formState === 'error' && errorMessage && (
-                  <div className="mt-2 flex items-start gap-2 text-sm font-bold text-red-500">
+                  <div className="mt-2 flex items-start gap-2 text-sm font-medium text-red-500">
                     <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
                     <span>{errorMessage}</span>
                   </div>
                 )}
               </div>
 
-              {/* Submit Button - NEO-BRUTALIST */}
-              {/* January 21st, 2026: Using translated button text */}
+              {/* Primary CTA — rounded-full yellow with soft yellow glow. */}
               <button
                 type="submit"
                 disabled={formState === 'sending' || !email}
-                className="w-full py-3 px-4 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:shadow-[2px_2px_0px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[4px_4px_0px_0px_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-[#ffbf23] text-[#0f172a] font-bold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-px hover:shadow-yellow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-yellow-glow-sm flex items-center justify-center gap-2 cursor-pointer"
               >
                 {formState === 'sending' ? (
                   <>
@@ -629,22 +644,23 @@ export default function SignInPage() {
           )}
 
           {/* ============================================================= */}
-          {/* FOOTER INFO - Dynamic based on mode (January 19th, 2026) */}
-          {/* January 21st, 2026: Using translated strings */}
+          {/* FOOTER INFO — April 23rd, 2026: hairline divider.              */}
           {/* ============================================================= */}
-          <div className="mt-8 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-center text-gray-500 dark:text-gray-500">
+          <div className="mt-8 pt-6 border-t border-[#e6ebf1] dark:border-gray-800">
+            <p className="text-xs text-center text-[#8898aa] dark:text-gray-500 leading-relaxed">
               {isSignupMode ? (
                 <>
                   {t.auth.signUp.noPasswordNeeded}
                   <br />
-                  {t.auth.signUp.alreadyHaveAccount} <a href="/sign-in" className="text-[#ffbf23] hover:underline font-bold">{t.auth.signUp.signIn}</a>
+                  {t.auth.signUp.alreadyHaveAccount}{' '}
+                  <a href="/sign-in" className="text-[#ffbf23] hover:text-[#e5ac20] font-semibold transition-colors">{t.auth.signUp.signIn}</a>
                 </>
               ) : (
                 <>
                   {t.auth.signIn.noPasswordNeeded}
                   <br />
-                  {t.auth.signIn.newHere} <a href="/sign-up" className="text-[#ffbf23] hover:underline font-bold">{t.auth.signIn.startTrial}</a>
+                  {t.auth.signIn.newHere}{' '}
+                  <a href="/sign-up" className="text-[#ffbf23] hover:text-[#e5ac20] font-semibold transition-colors">{t.auth.signIn.startTrial}</a>
                 </>
               )}
             </p>
@@ -653,14 +669,13 @@ export default function SignInPage() {
       </div>
 
       {/* ================================================================= */}
-      {/* LEGAL LINKS */}
-      {/* January 21st, 2026: Using translated strings */}
+      {/* LEGAL LINKS — softer palette (April 23rd, 2026).                   */}
       {/* ================================================================= */}
-      <div className="mt-8 flex gap-4 text-xs text-gray-500 dark:text-gray-500">
-        <Link href="/privacy" className="hover:text-gray-900 dark:hover:text-white">
+      <div className="mt-8 flex gap-6 text-xs text-[#8898aa] dark:text-gray-500">
+        <Link href="/privacy" className="hover:text-[#0f172a] dark:hover:text-white transition-colors">
           {t.auth.signIn.privacyPolicy}
         </Link>
-        <Link href="/terms" className="hover:text-gray-900 dark:hover:text-white">
+        <Link href="/terms" className="hover:text-[#0f172a] dark:hover:text-white transition-colors">
           {t.auth.signIn.termsOfService}
         </Link>
       </div>

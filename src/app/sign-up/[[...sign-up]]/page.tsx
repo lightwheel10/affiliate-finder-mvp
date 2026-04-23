@@ -24,7 +24,11 @@
  * This page exists to:
  * - Handle "Start free trial" clicks from landing page
  * - Handle any old links or bookmarks to /sign-up
- * 
+ *
+ * Updated: April 23rd, 2026 - "SMOOVER" visual refresh (Phase 2a)
+ * Spinner ring softened to a faded yellow track with a solid yellow head, on
+ * the same off-white canvas as /sign-in. Redirect logic is unchanged.
+ *
  * =============================================================================
  */
 
@@ -42,10 +46,11 @@ export default function SignUpPage() {
     router.replace('/sign-in?mode=signup');
   }, [router]);
 
-  // Show loading while redirecting
+  // Loading spinner — matches the "already signed in" treatment on /sign-in
+  // (April 23rd, 2026): soft off-white canvas, rounded ring with faded track.
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0a0a0a]">
-      <div className="w-8 h-8 border-2 border-[#ffbf23] border-t-transparent animate-spin"></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] dark:bg-[#0a0a0a]">
+      <div className="w-8 h-8 rounded-full border-2 border-[#ffbf23]/30 border-t-[#ffbf23] animate-spin"></div>
     </div>
   );
 }
