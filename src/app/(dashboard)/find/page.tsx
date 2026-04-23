@@ -1124,65 +1124,93 @@ export default function FindNewPage() {
           ============================================================================= */}
       <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
         
-        {/* Previous Results Warning - Neo-brutalist style - Translated (January 9th, 2026) */}
+        {/* =============================================================================
+            PREVIOUS-RESULTS WARNING BANNER
+            Smoover refresh (April 23rd, 2026) — Phase 2e
+            ---------------------------------------------------------------------------
+            Shown briefly after a new search to let the user know the list has been
+            cleared. Previously neo-brutalist (Jan 9, 2026): border-2 yellow, square
+            corners, font-bold black text, square icon tile.
+            Now: hairline yellow/30 border, rounded-xl, shadow-soft-sm; icon tile is
+            a rounded-full yellow badge with shadow-yellow-glow-sm matching the
+            landing hero CTA; heading font-semibold, body muted.
+            ============================================================================= */}
         {showWarning && (
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/20 border-2 border-[#ffbf23] rounded-lg mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center justify-center w-8 h-8 bg-[#ffbf23] rounded shrink-0">
-              <Search size={16} className="text-black" />
+          <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/10 border border-[#ffbf23]/30 rounded-xl shadow-soft-sm mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center justify-center w-8 h-8 bg-[#ffbf23] rounded-full shadow-yellow-glow-sm shrink-0">
+              <Search size={16} className="text-[#0f172a]" strokeWidth={2} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-black">{t.dashboard.find.newSearchWarning.title}</p>
-              <p className="text-xs text-gray-600 mt-0.5">
+              <p className="text-sm font-semibold text-[#0f172a]">{t.dashboard.find.newSearchWarning.title}</p>
+              <p className="text-xs text-[#8898aa] mt-0.5">
                 {t.dashboard.find.newSearchWarning.subtitle}
               </p>
             </div>
             <button
               onClick={() => setShowWarning(false)}
-              className="text-black hover:text-gray-600 transition-colors p-1"
+              className="text-[#8898aa] hover:text-[#0f172a] transition-colors p-1 rounded-full hover:bg-[#ffbf23]/20"
               aria-label="Dismiss"
             >
-              <X size={16} />
+              <X size={16} strokeWidth={2} />
             </button>
           </div>
         )}
 
         {/* =============================================================================
-            FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            FILTERS ROW
             
             LAYOUT FIX - January 23, 2026
             Restored justify-between layout. FilterPanel now uses a dropdown approach
             so filter pills don't take up horizontal space.
+
+            SMOOVER REFRESH - April 23, 2026
+            Scope of this pass: ONLY the search input and the platform pills group
+            (left side). Visual tokens aligned with the landing + dashboard header:
+              - Hairline borders (#e6ebf1) replace border-2 border-black
+              - Fully rounded pill shapes (rounded-full) replace rounded corners
+              - Softer text colors (#8898aa muted, #0f172a ink, #425466 body)
+              - Soft drop shadows (shadow-soft-sm) and yellow glow on focus/active
+                (shadow-yellow-glow-sm) instead of hard neo-brutalist shadows
+              - Interactive behaviour, state, filter counts, i18n strings,
+                dark-mode support, icons, and the FilterPanel trigger on the
+                right are all UNCHANGED in this pass.
+            The FilterPanel trigger button (right side) is defined inside
+            components/FilterPanel.tsx and is shared across 4 pages; it will
+            be restyled in its own PR so the four pages flip together.
             ============================================================================= */}
         <div className="flex flex-row justify-between items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
-            {/* Search Input - DashboardDemo exact:
-                border-2 border-brandBlack dark:border-gray-700 rounded bg-white dark:bg-gray-900 
-                focus:border-brandYellow */}
-            {/* Search Input - Translated (January 9th, 2026) */}
+            {/* Search Input — Translated (January 9th, 2026).
+                Smoover refresh (April 23, 2026): hairline border, rounded-full
+                pill, soft bg, muted placeholder, yellow glow on focus. */}
             <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#8898aa]" size={16} />
               <input 
                 type="text" 
                 placeholder={t.dashboard.filters.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
+                className="w-full h-10 pl-11 pr-4 border border-[#e6ebf1] dark:border-gray-800 rounded-full bg-white dark:bg-[#0f0f0f] text-sm text-[#0f172a] dark:text-white placeholder:text-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:shadow-yellow-glow-sm transition-all"
               />
             </div>
             
-            {/* Platform Filter Pills - DashboardDemo exact:
-                bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800
-                Active: bg-brandYellow text-brandBlack rounded shadow-sm */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800">
+            {/* Platform Filter Pills — segmented control.
+                Smoover refresh (April 23, 2026): container pill wrapper with
+                off-white bg (#f6f9fc) + hairline border + soft shadow. Each
+                pill is rounded-full. Active pill gets the yellow glow to echo
+                the landing hero CTA. Count badge inside active pill uses a
+                translucent dark overlay; inside inactive pills, a white pill
+                with hairline border (so it reads against the off-white tray). */}
+            <div className="flex items-center gap-1 bg-[#f6f9fc] dark:bg-[#0f0f0f] p-1 rounded-full border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
               {filterTabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilter(tab.id)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-bold",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all text-xs font-semibold",
                     activeFilter === tab.id
-                      ? "bg-[#ffbf23] text-black shadow-sm"
-                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      ? "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm"
+                      : "text-[#8898aa] hover:text-[#425466] dark:hover:text-gray-300"
                   )}
                   title={tab.id}
                 >
@@ -1190,8 +1218,10 @@ export default function FindNewPage() {
                   {tab.id === 'All' && <span>{t.dashboard.filters.all}</span>}
                   {hasSearched && tab.count > 0 && (
                     <span className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                      activeFilter === tab.id ? "bg-black/20 text-black" : "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
+                      activeFilter === tab.id
+                        ? "bg-[#0f172a]/10 text-[#0f172a]"
+                        : "bg-white dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-700"
                     )}>
                       {tab.count}
                     </span>
@@ -1225,13 +1255,19 @@ export default function FindNewPage() {
         */}
 
         {/* =============================================================================
-            BULK ACTIONS BAR - NEO-BRUTALIST DESIGN
-            Updated: January 16, 2026
-            
-            Matches the Saved page styling for design consistency across dashboard.
-            - Yellow (#ffbf23) accent color with black borders
-            - font-black uppercase text
-            - Neo-brutalist shadow-[2px_2px_0px_0px_#000] on buttons
+            BULK ACTIONS BAR
+            Smoover refresh (April 23rd, 2026) — Phase 2e
+            ---------------------------------------------------------------------------
+            Previously neo-brutalist (Jan 16, 2026): square corners, hard-black
+            border, `font-black uppercase`, offset shadow-[2px_2px_0px_0px_#000].
+            Now aligned with the landing-page smoover voice:
+              - Container: hairline border + `rounded-2xl` + `shadow-soft-sm`
+              - Yellow check icon: rounded-full + `shadow-yellow-glow-sm`
+              - Selected count: normal case, `font-semibold`
+              - Action buttons: rounded-full with `shadow-soft-sm` (destructive /
+                warning) or `shadow-yellow-glow-sm` (primary yellow), subtle
+                `hover:-translate-y-0.5` lift.
+            Logic / handlers / i18n strings unchanged.
             ============================================================================= */}
         {visibleSelectedLinks.size > 0 && (() => {
           const alreadySavedCount = Array.from(visibleSelectedLinks).filter(link => isAffiliateSaved(link)).length;
@@ -1239,85 +1275,85 @@ export default function FindNewPage() {
           const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
           
           return (
-          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700">
-            {/* Left: Selection info - Neo-brutalist style */}
+          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
+            {/* Left: Selection info */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                {/* Checkbox icon - Neo-brutalist yellow square */}
-                <div className="w-6 h-6 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
-                  <Check size={14} className="text-black" />
+                {/* Checkbox icon — rounded yellow badge with soft glow */}
+                <div className="w-6 h-6 bg-[#ffbf23] rounded-full flex items-center justify-center shadow-yellow-glow-sm">
+                  <Check size={14} className="text-[#0f172a]" strokeWidth={2.5} />
                 </div>
-                <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                <span className="text-sm font-semibold text-[#0f172a] dark:text-white">
                   {visibleSelectedLinks.size} {t.dashboard.find.bulkActions.selected}
                 </span>
                 {alreadySavedCount > 0 && (
-                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border-2 border-emerald-200 px-2 py-0.5">
+                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                     {alreadySavedCount} {t.dashboard.find.bulkActions.alreadyInPipeline}
                   </span>
                 )}
               </div>
               
-              <div className="h-4 w-0.5 bg-black dark:bg-gray-600"></div>
+              <div className="h-4 w-px bg-[#e6ebf1] dark:bg-gray-800"></div>
               <button
                 onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
-                className="text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                className="text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
                 {allVisibleSelected ? t.dashboard.find.bulkActions.deselectAll : t.dashboard.find.bulkActions.selectAllVisible}
               </button>
             </div>
 
-            {/* Right: Action buttons - Neo-brutalist style */}
+            {/* Right: Action buttons */}
             <div className="flex items-center gap-2">
-              {/* Cancel button - Neo-brutalist outline */}
+              {/* Cancel — soft outline */}
               <button
                 onClick={deselectAllVisible}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white border border-[#e6ebf1] dark:border-gray-800 rounded-full hover:bg-[#f6f9fc] dark:hover:bg-gray-900 transition-all"
               >
-                <X size={14} />
+                <X size={14} strokeWidth={2} />
                 {t.common.cancel}
               </button>
 
-              {/* Block domain(s) - only when selection has domains not already at limit */}
+              {/* Block domain(s) — amber warning */}
               <button
                 onClick={handleBulkBlockDomains}
                 disabled={isBlockLimitReached || isBulkBlocking}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-amber-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-500 text-white rounded-full shadow-soft-sm hover:bg-amber-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 title={isBlockLimitReached ? t.dashboard.find.bulkActions.blockLimitReached : t.dashboard.find.bulkActions.blockDomains}
               >
                 {isBulkBlocking ? <Loader2 size={14} className="animate-spin" /> : null}
                 {t.dashboard.find.bulkActions.blockDomains}
               </button>
 
-              {/* Delete button - Neo-brutalist red */}
+              {/* Delete — destructive red */}
               <button
                 onClick={handleBulkDelete}
                 disabled={isBulkDeleting}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-full shadow-soft-sm hover:bg-red-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {isBulkDeleting ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <Trash2 size={14} />
+                  <Trash2 size={14} strokeWidth={2} />
                 )}
                 {t.dashboard.find.bulkActions.deleteSelected}
               </button>
 
-              {/* Save button - Neo-brutalist yellow */}
+              {/* Save — primary yellow CTA (matches landing hero button) */}
               <button
                 onClick={handleBulkSave}
                 disabled={isBulkSaving || newToSaveCount === 0}
                 className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-black uppercase transition-all border-2",
+                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-full transition-all",
                   newToSaveCount === 0
-                    ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
-                    : "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    ? "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed"
+                    : "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 )}
                 title={newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${t.dashboard.find.bulkActions.saveToPipeline} (${newToSaveCount})`}
               >
                 {isBulkSaving ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <Save size={14} />
+                  <Save size={14} strokeWidth={2} />
                 )}
                 {newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${newToSaveCount} ${t.dashboard.find.bulkActions.saveToPipeline}`}
               </button>
@@ -1366,23 +1402,27 @@ export default function FindNewPage() {
               {loading ? (
                 <>
                   {/* =============================================================================
-                      LOADING PROGRESS INDICATOR - NEO-BRUTALIST DESIGN
-                      Updated: January 16, 2026
-                      
-                      Changed from #D4E815 (lime) to #ffbf23 (brand yellow)
-                      Matches neo-brutalist design system across dashboard
+                      LOADING PROGRESS INDICATOR
+                      Smoover refresh (April 23rd, 2026) — Phase 2e
+                      ---------------------------------------------------------------------------
+                      Banner shown inline above streaming rows while a search is in flight.
+                      Before: neo-brutalist (Jan 16, 2026) — border-b-2 + font-black uppercase
+                      title + yellow badge wrapped in border-2 black square.
+                      After: hairline border-b, font-semibold normal case, rounded-full yellow
+                      badge with shadow-yellow-glow-sm. Spinner ring weight dropped 4 → 2 to
+                      match the lighter smoover voice.
                       ============================================================================= */}
-                  <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/10 border-b-2 border-[#ffbf23]/30">
-                    <div className="w-5 h-5 border-2 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/10 border-b border-[#ffbf23]/30">
+                    <div className="w-5 h-5 border-[2px] border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
                     <div className="flex-1">
-                      <p className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                      <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
                         {loadingMessage.title}
                       </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-xs text-[#8898aa] dark:text-gray-400">
                         {loadingMessage.subtitle}
                       </p>
                     </div>
-                    <div className="text-xs font-black text-black bg-[#ffbf23] px-2.5 py-1 border-2 border-black">
+                    <div className="text-xs font-semibold text-[#0f172a] bg-[#ffbf23] px-2.5 py-1 rounded-full shadow-yellow-glow-sm">
                       {loadingMessage.badge}
                     </div>
                   </div>
@@ -1480,17 +1520,20 @@ export default function FindNewPage() {
             </div>
           ) : hasSearched && !loading && creditError ? (
             // =================================================================
-            // CREDIT ERROR BANNER - January 4th, 2026
+            // CREDIT ERROR BANNER — January 4th, 2026
             // Translated (January 9th, 2026)
+            // Smoover polish (April 23rd, 2026) — added shadow-soft-sm, bumped
+            // heading from font-bold → font-semibold. Already used rounded-xl
+            // and hairline amber border so structural styling stayed intact.
             // =================================================================
             <div className="py-12 text-center">
-              <div className="max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl p-6">
+              <div className="max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl shadow-soft-sm p-6">
                 <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
-                <h3 className="text-base font-bold text-amber-800 mb-2">
+                <h3 className="text-base font-semibold text-amber-800 mb-2">
                   {t.dashboard.find.creditError.title}
                 </h3>
                 <p className="text-amber-700 text-sm mb-4">
@@ -1502,19 +1545,25 @@ export default function FindNewPage() {
               </div>
             </div>
           ) : hasSearched && !loading && groupedResults.length === 0 ? (
-            <div className="py-20 text-center text-gray-400 text-sm">
+            /* No-results text — soft mute colour, minimal (Apr 23, 2026) */
+            <div className="py-20 text-center text-[#8898aa] text-sm">
               {t.dashboard.find.noResults}
             </div>
           ) : (
-            /* Empty State - Neo-brutalist style - Translated (January 9th, 2026) */
+            /* =============================================================================
+               EMPTY STATE
+               Smoover refresh (April 23rd, 2026) — Phase 2e
+               Icon badge: soft #f6f9fc fill + hairline border + shadow-soft-sm.
+               Typography: font-semibold (was font-black) + muted body.
+               ============================================================================= */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                <Search size={24} className="text-gray-300" />
+              <div className="w-16 h-16 bg-[#f6f9fc] dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
+                <Search size={24} className="text-[#8898aa]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#0f172a] dark:text-white mb-1">
                 {t.dashboard.find.emptyState.title}
               </h3>
-              <p className="text-gray-500 text-sm max-w-xs">
+              <p className="text-[#8898aa] text-sm max-w-xs">
                 {t.dashboard.find.emptyState.subtitle}
               </p>
             </div>

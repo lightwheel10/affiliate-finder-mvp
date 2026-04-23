@@ -1594,37 +1594,46 @@ export default function OutreachPage() {
       <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
 
         {/* =============================================================================
-            FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            FILTERS ROW
             
             LAYOUT FIX - January 23, 2026
             FilterPanel now uses a dropdown approach so filter pills don't take 
             up horizontal space.
+
+            SMOOVER REFRESH - April 23, 2026
+            Mirrored from find/page.tsx. Scope: search input + platform pill
+            segmented control on the LEFT side only. See find/page.tsx for the
+            full rationale. NOTE: the count badge here renders whenever
+            `tab.count > 0` (no `hasSearched &&` gate, unlike the find page) —
+            that per-page difference is preserved.
             ============================================================================= */}
         <div className="flex flex-row justify-between items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
-            {/* Search Input - Translated (January 9th, 2026) */}
+            {/* Search Input — Translated (January 9th, 2026).
+                Smoover refresh (April 23, 2026) — see find/page.tsx. */}
             <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#8898aa]" size={16} />
               <input 
                 type="text" 
                 placeholder={t.dashboard.filters.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
+                className="w-full h-10 pl-11 pr-4 border border-[#e6ebf1] dark:border-gray-800 rounded-full bg-white dark:bg-[#0f0f0f] text-sm text-[#0f172a] dark:text-white placeholder:text-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:shadow-yellow-glow-sm transition-all"
               />
             </div>
             
-            {/* Platform Filter Pills - DashboardDemo exact styling with counts */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800">
+            {/* Platform Filter Pills — segmented control.
+                Smoover refresh (April 23, 2026) — see find/page.tsx. */}
+            <div className="flex items-center gap-1 bg-[#f6f9fc] dark:bg-[#0f0f0f] p-1 rounded-full border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
               {filterTabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilter(tab.id)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-bold",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all text-xs font-semibold",
                     activeFilter === tab.id
-                      ? "bg-[#ffbf23] text-black shadow-sm"
-                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      ? "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm"
+                      : "text-[#8898aa] hover:text-[#425466] dark:hover:text-gray-300"
                   )}
                   title={tab.id}
                 >
@@ -1632,8 +1641,10 @@ export default function OutreachPage() {
                   {tab.id === 'All' && <span>{t.dashboard.filters.all}</span>}
                   {tab.count > 0 && (
                     <span className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                      activeFilter === tab.id ? "bg-black/20 text-black" : "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
+                      activeFilter === tab.id
+                        ? "bg-[#0f172a]/10 text-[#0f172a]"
+                        : "bg-white dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-700"
                     )}>
                       {tab.count}
                     </span>
@@ -1643,57 +1654,78 @@ export default function OutreachPage() {
             </div>
           </div>
 
-          {/* Right: Export + Actions - NEO-BRUTALIST */}
+          {/* Right: Export + Actions */}
           {/* January 29th, 2026: Added export button (subscription-gated) */}
           <div className="flex items-center gap-3">
-            {/* Export Button - January 29th, 2026 */}
-            {/* February 9th, 2026: Subscription-gated — trial users see upgrade modal */}
+            {/* Export Button - January 29th, 2026
+                February 9th, 2026: Subscription-gated — trial users see upgrade modal.
+                Smoover refresh (April 23, 2026): hairline border, rounded-full,
+                soft shadow, subtle lift on hover. Dropped `uppercase` +
+                `font-black` for the softer smoover voice. Icon stroke/size
+                dialled down slightly to match the lighter weight. */}
             <button
               onClick={() => hasAutoScanAccess ? setIsExportModalOpen(true) : setIsUpgradeModalOpen(true)}
-              className="flex items-center justify-center gap-1.5 h-10 px-3 bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all text-xs font-black uppercase"
+              className="flex items-center justify-center gap-2 h-10 px-4 bg-white dark:bg-[#0f0f0f] text-[#425466] dark:text-gray-300 border border-[#e6ebf1] dark:border-gray-800 rounded-full shadow-soft-sm hover:bg-[#f6f9fc] dark:hover:bg-gray-900 hover:-translate-y-0.5 transition-all text-xs font-semibold"
               title={hasAutoScanAccess ? "Export to CSV" : "Upgrade to export"}
             >
-              <Download size={16} strokeWidth={2.5} />
+              <Download size={14} strokeWidth={2} />
               <span>Export</span>
             </button>
             {selectedAffiliates.size > 0 && (
               <>
-                {/* January 17, 2026: Using i18n translations for selection actions */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] border-2 border-black text-xs font-black text-black">
-                  <Check size={12} />
+                {/* =============================================================
+                    SELECTED CHIP
+                    Smoover refresh (April 23rd, 2026) — Phase 2e
+                    Before: neo-brutalist square with black border, font-black
+                    uppercase.
+                    After:  rounded-full yellow pill with shadow-yellow-glow-sm
+                    to match the primary CTA voice. Note: `.toUpperCase()` on
+                    the i18n string is preserved to avoid churn in translations;
+                    the uppercase *class* has been dropped.
+                    ============================================================= */}
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm text-xs font-semibold">
+                  <Check size={12} strokeWidth={2.5} />
                   {selectedAffiliates.size} {t.dashboard.outreach.selected.toUpperCase()}
                 </div>
+                {/* Deselect All — soft outline, rounded-full */}
                 <button
                   onClick={handleSelectAll}
-                  className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
+                  className="text-xs font-semibold text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white transition-all px-3 py-1.5 border border-[#e6ebf1] dark:border-gray-800 rounded-full hover:bg-[#f6f9fc] dark:hover:bg-gray-900"
                 >
                   {t.dashboard.outreach.deselectAll}
                 </button>
               </>
             )}
-            {/* January 17, 2026: Using i18n translation */}
+            {/* Select All (empty selection state) — soft outline */}
             {selectedAffiliates.size === 0 && filteredResults.length > 0 && (
               <button
                 onClick={handleSelectAll}
-                className="text-xs font-black uppercase text-gray-600 hover:text-black transition-colors px-3 py-1.5 border-2 border-gray-300 dark:border-gray-600 hover:border-black"
+                className="text-xs font-semibold text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white transition-all px-3 py-1.5 border border-[#e6ebf1] dark:border-gray-800 rounded-full hover:bg-[#f6f9fc] dark:hover:bg-gray-900"
               >
                 {t.dashboard.outreach.selectAll}
               </button>
             )}
             {/* ================================================================
-                BULK GENERATE BUTTON - NEO-BRUTALIST (Updated January 6th, 2026)
+                BULK GENERATE BUTTON
+                Smoover refresh (April 23rd, 2026) — Phase 2e
+                Before: neo-brutalist (Jan 6, 2026) — yellow + black border +
+                offset black drop shadow, font-black uppercase.
+                After: primary yellow CTA in the same voice as the landing
+                hero / Find Affiliates button: rounded-full,
+                shadow-yellow-glow-sm, subtle hover lift, hover:bg-#e5ac20.
+                Three progressive states preserved (bulkProgress /
+                generatingIds / idle).
                 ================================================================ */}
             <button
               onClick={handleGenerateMessages}
               disabled={selectedAffiliates.size === 0 || generatingIds.size > 0}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 font-black text-xs uppercase transition-all",
+                "flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full transition-all",
                 selectedAffiliates.size > 0 && generatingIds.size === 0
-                  ? "bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                  ? "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5"
+                  : "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed"
               )}
             >
-              {/* January 17, 2026: Using i18n translations */}
               {bulkProgress ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
@@ -1706,7 +1738,7 @@ export default function OutreachPage() {
                 </>
               ) : (
                 <>
-                  <Wand2 size={14} />
+                  <Wand2 size={14} strokeWidth={2} />
                   {t.dashboard.outreach.generate} ({selectedAffiliates.size})
                 </>
               )}
@@ -1739,43 +1771,54 @@ export default function OutreachPage() {
           {/* Results Content */}
           <div className="flex-1">
           
-          {/* Loading State - Neo-brutalist */}
+          {/* =========================================================================
+              LOADING STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
+              Ring weights dropped 4 → 3, gray track uses hairline #e6ebf1,
+              label uses muted #8898aa.
+              ========================================================================= */}
           {loading && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="relative w-12 h-12 mx-auto">
-                <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
+                <div className="absolute inset-0 border-[3px] border-[#e6ebf1] dark:border-gray-800 rounded-full"></div>
+                <div className="absolute inset-0 border-[3px] border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
               </div>
-              {/* January 17, 2026: Using i18n translation */}
-              <p className="text-gray-500 text-sm mt-4 font-medium">{t.dashboard.outreach.loading}</p>
+              <p className="text-[#8898aa] text-sm mt-4 font-medium">{t.dashboard.outreach.loading}</p>
             </div>
           )}
           
-          {/* Empty State - Updated January 16, 2026: Only shows when no affiliates have emails */}
+          {/* =========================================================================
+              EMPTY STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
+              Shown only when no affiliates on the pipeline have emails. Soft
+              icon badge + font-semibold heading + muted body.
+              ========================================================================= */}
           {!loading && affiliatesWithEmail.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                <MessageSquare size={24} className="text-gray-300" />
+              <div className="w-16 h-16 bg-[#f6f9fc] dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
+                <MessageSquare size={24} className="text-[#8898aa]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#0f172a] dark:text-white mb-1">
                 {t.dashboard.outreach.emptyState.title}
               </h3>
-              <p className="text-gray-500 text-sm max-w-xs">
+              <p className="text-[#8898aa] text-sm max-w-xs">
                 {t.dashboard.outreach.emptyState.subtitle}
               </p>
             </div>
           )}
           
-          {/* No Results State - Neo-brutalist (Updated January 17, 2026: i18n) */}
+          {/* =========================================================================
+              NO-RESULTS STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
+              Shown when the pipeline has emails but current filters match zero
+              rows. Same visual treatment as the empty state.
+              ========================================================================= */}
           {!loading && affiliatesWithEmail.length > 0 && filteredResults.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                <Search size={24} className="text-gray-300" />
+              <div className="w-16 h-16 bg-[#f6f9fc] dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
+                <Search size={24} className="text-[#8898aa]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#0f172a] dark:text-white mb-1">
                 {t.dashboard.outreach.noResults.title}
               </h3>
-              <p className="text-gray-500 text-sm max-w-xs">
+              <p className="text-[#8898aa] text-sm max-w-xs">
                 {t.dashboard.outreach.noResults.subtitle}
               </p>
             </div>

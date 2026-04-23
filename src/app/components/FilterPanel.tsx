@@ -529,7 +529,22 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
   return (
     <>
-      {/* Main Filter Toggle Button - Neo-brutalist style */}
+      {/* =========================================================================
+          MAIN FILTER TOGGLE BUTTON
+          Smoover refresh (April 23rd, 2026) — Phase 2e
+          ---------------------------------------------------------------------------
+          Shared across /find, /discovered, /saved, /outreach — single change flips
+          the filter icon everywhere. Previously neo-brutalist (40x40 square,
+          hard-black border, offset black shadow). Now a pill/circle:
+            - `rounded-full` (circle to match the new smoover voice)
+            - hairline border `border-[#e6ebf1]` on idle state
+            - `shadow-soft-sm` at rest, subtle `hover:-translate-y-0.5` lift
+            - Active state (panel open OR any filter applied) retains brand yellow
+              but swaps the offset black drop for `shadow-yellow-glow-sm` so it
+              matches the landing-page hero CTA.
+          Dark-mode tweaks match the sidebar refresh.
+          Icon stroke dropped from 2.5 → 2 for the lighter smoover weight.
+          ========================================================================= */}
       <button
         onClick={() => {
           if (isOpen) {
@@ -539,13 +554,14 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           }
         }}
         className={cn(
-          "flex items-center justify-center w-10 h-10 border-2 transition-all",
+          "flex items-center justify-center w-10 h-10 rounded-full transition-all",
           isOpen || activeFilterCount > 0
-            ? "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000000]"
-            : "bg-white dark:bg-[#0a0a0a] text-gray-600 dark:text-gray-400 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900"
+            ? "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:-translate-y-0.5"
+            : "bg-white dark:bg-[#0a0a0a] text-[#425466] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm hover:bg-[#f6f9fc] dark:hover:bg-gray-900 hover:-translate-y-0.5"
         )}
+        aria-label="Toggle filters"
       >
-        <SlidersHorizontal size={16} strokeWidth={2.5} />
+        <SlidersHorizontal size={16} strokeWidth={2} />
       </button>
 
       {/* Filter Overlay - Slide-out panel from right */}

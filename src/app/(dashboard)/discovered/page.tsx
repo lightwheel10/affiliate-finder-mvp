@@ -537,20 +537,28 @@ export default function DiscoveredPage() {
       </header>
 
       {/* =============================================================================
-          ENRICHMENT STATUS BANNER - January 30, 2026
-          
-          Shows when affiliates are still being discovered in the background.
-          Indicates which sources have completed vs still processing.
+          ENRICHMENT STATUS BANNER
+          ---------------------------------------------------------------------------
+          HISTORY:
+            Jan 30, 2026 — Introduced. Shows while background enrichment jobs
+                           are running; indicates which sources have completed
+                           vs which are still processing.
+            Apr 23, 2026 — Smoover refresh (Phase 2e). Previously border-b-2
+                           amber + font-bold headings. Now softened to a
+                           hairline border-b, lighter spinner ring, font-
+                           semibold headings. Gradient fill + semantic amber/
+                           emerald colours preserved so the warning signal is
+                           not lost.
           ============================================================================= */}
       {enrichmentStatus?.hasActiveJobs && (
-        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b-2 border-amber-200 dark:border-amber-800 px-6 py-3">
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b border-amber-200 dark:border-amber-800 px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-5 h-5 border-2 border-amber-500 rounded-full animate-spin border-t-transparent"></div>
+                <div className="w-5 h-5 border-[2px] border-amber-500 rounded-full animate-spin border-t-transparent"></div>
               </div>
               <div>
-                <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
                   Still finding more affiliates...
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-300">
@@ -594,37 +602,47 @@ export default function DiscoveredPage() {
       <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
 
         {/* =============================================================================
-            FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            FILTERS ROW
             
             LAYOUT FIX - January 23, 2026
             FilterPanel now uses a dropdown approach so filter pills don't take 
             up horizontal space.
+
+            SMOOVER REFRESH - April 23, 2026
+            Mirrored from find/page.tsx. Scope: search input + platform pill
+            segmented control on the LEFT side only. See find/page.tsx for the
+            full rationale (hairline borders, rounded-full pills, soft shadows,
+            yellow glow on active state, muted text colors). NOTE: the count
+            badge here renders whenever `tab.count > 0` (no `hasSearched &&`
+            gate, unlike the find page) — that per-page difference is preserved.
             ============================================================================= */}
         <div className="flex flex-row justify-between items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
-            {/* Search Input - Translated (January 9th, 2026) */}
+            {/* Search Input — Translated (January 9th, 2026).
+                Smoover refresh (April 23, 2026) — see find/page.tsx. */}
             <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#8898aa]" size={16} />
               <input 
                 type="text" 
                 placeholder={t.dashboard.filters.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
+                className="w-full h-10 pl-11 pr-4 border border-[#e6ebf1] dark:border-gray-800 rounded-full bg-white dark:bg-[#0f0f0f] text-sm text-[#0f172a] dark:text-white placeholder:text-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:shadow-yellow-glow-sm transition-all"
               />
             </div>
             
-            {/* Platform Filter Pills - DashboardDemo exact styling with counts */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800">
+            {/* Platform Filter Pills — segmented control.
+                Smoover refresh (April 23, 2026) — see find/page.tsx. */}
+            <div className="flex items-center gap-1 bg-[#f6f9fc] dark:bg-[#0f0f0f] p-1 rounded-full border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
               {filterTabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilter(tab.id)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-bold",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all text-xs font-semibold",
                     activeFilter === tab.id
-                      ? "bg-[#ffbf23] text-black shadow-sm"
-                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      ? "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm"
+                      : "text-[#8898aa] hover:text-[#425466] dark:hover:text-gray-300"
                   )}
                   title={tab.id}
                 >
@@ -632,8 +650,10 @@ export default function DiscoveredPage() {
                   {tab.id === 'All' && <span>{t.dashboard.filters.all}</span>}
                   {tab.count > 0 && (
                     <span className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                      activeFilter === tab.id ? "bg-black/20 text-black" : "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
+                      activeFilter === tab.id
+                        ? "bg-[#0f172a]/10 text-[#0f172a]"
+                        : "bg-white dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-700"
                     )}>
                       {tab.count}
                     </span>
@@ -661,13 +681,10 @@ export default function DiscoveredPage() {
         </div>
 
         {/* =============================================================================
-            BULK ACTIONS BAR - NEO-BRUTALIST DESIGN
-            Updated: January 16, 2026
-            
-            Matches the Saved page styling for design consistency across dashboard.
-            - Yellow (#ffbf23) accent color with black borders
-            - font-black uppercase text
-            - Neo-brutalist shadow-[2px_2px_0px_0px_#000] on buttons
+            BULK ACTIONS BAR
+            Smoover refresh (April 23rd, 2026) — Phase 2e
+            Mirror of /find bulk bar (same structure, same translations).
+            See find/page.tsx for full rationale.
             ============================================================================= */}
         {visibleSelectedLinks.size > 0 && (() => {
           const alreadySavedCount = Array.from(visibleSelectedLinks).filter(link => isAffiliateSaved(link)).length;
@@ -675,71 +692,71 @@ export default function DiscoveredPage() {
           const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
           
           return (
-          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700">
+          <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                {/* Checkbox icon - Neo-brutalist yellow square */}
-                <div className="w-6 h-6 bg-[#ffbf23] border-2 border-black flex items-center justify-center">
-                  <Check size={14} className="text-black" />
+                {/* Checkbox icon — rounded yellow badge with soft glow */}
+                <div className="w-6 h-6 bg-[#ffbf23] rounded-full flex items-center justify-center shadow-yellow-glow-sm">
+                  <Check size={14} className="text-[#0f172a]" strokeWidth={2.5} />
                 </div>
-                <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                <span className="text-sm font-semibold text-[#0f172a] dark:text-white">
                   {visibleSelectedLinks.size} {t.dashboard.find.bulkActions.selected}
                 </span>
                 {alreadySavedCount > 0 && (
-                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border-2 border-emerald-200 px-2 py-0.5">
+                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                     {alreadySavedCount} {t.dashboard.find.bulkActions.alreadyInPipeline}
                   </span>
                 )}
               </div>
-              <div className="h-4 w-0.5 bg-black dark:bg-gray-600"></div>
+              <div className="h-4 w-px bg-[#e6ebf1] dark:bg-gray-800"></div>
               <button
                 onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
-                className="text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                className="text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
                 {allVisibleSelected ? t.dashboard.find.bulkActions.deselectAll : t.dashboard.find.bulkActions.selectAllVisible}
               </button>
             </div>
             <div className="flex items-center gap-2">
-              {/* Cancel button - Neo-brutalist outline */}
+              {/* Cancel — soft outline */}
               <button
                 onClick={deselectAllVisible}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase text-gray-500 hover:text-black dark:hover:text-white border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white border border-[#e6ebf1] dark:border-gray-800 rounded-full hover:bg-[#f6f9fc] dark:hover:bg-gray-900 transition-all"
               >
-                <X size={14} />
+                <X size={14} strokeWidth={2} />
                 {t.common.cancel}
               </button>
-              {/* Block domain(s) */}
+              {/* Block domain(s) — amber warning */}
               <button
                 onClick={handleBulkBlockDomains}
                 disabled={isBlockLimitReached || isBulkBlocking}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-amber-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-500 text-white rounded-full shadow-soft-sm hover:bg-amber-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 title={isBlockLimitReached ? t.dashboard.find.bulkActions.blockLimitReached : t.dashboard.find.bulkActions.blockDomains}
               >
                 {isBulkBlocking ? <Loader2 size={14} className="animate-spin" /> : null}
                 {t.dashboard.find.bulkActions.blockDomains}
               </button>
-              {/* Delete button - Neo-brutalist red */}
+              {/* Delete — destructive red */}
               <button
                 onClick={handleBulkDelete}
                 disabled={isBulkDeleting}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-full shadow-soft-sm hover:bg-red-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
-                {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {isBulkDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} strokeWidth={2} />}
                 {t.dashboard.find.bulkActions.deleteSelected}
               </button>
-              {/* Save button - Neo-brutalist yellow */}
+              {/* Save — primary yellow CTA */}
               <button
                 onClick={handleBulkSave}
                 disabled={isBulkSaving || newToSaveCount === 0}
                 className={cn(
-                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-black uppercase transition-all border-2",
+                  "flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-full transition-all",
                   newToSaveCount === 0
-                    ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
-                    : "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    ? "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed"
+                    : "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 )}
                 title={newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${t.dashboard.find.bulkActions.saveToPipeline} (${newToSaveCount})`}
               >
-                {isBulkSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {isBulkSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2} />}
                 {newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${newToSaveCount} ${t.dashboard.find.bulkActions.saveToPipeline}`}
               </button>
             </div>
@@ -771,13 +788,18 @@ export default function DiscoveredPage() {
           {/* Results Content */}
           <div className="flex-1">
           {loading ? (
-            /* Loading State - Neo-brutalist style */
+            /* =========================================================================
+               LOADING STATE
+               Smoover refresh (April 23rd, 2026) — Phase 2e
+               Ring weights dropped 4 → 3, gray track uses hairline #e6ebf1,
+               label uses muted #8898aa.
+               ========================================================================= */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="relative w-12 h-12 mx-auto">
-                <div className="absolute inset-0 border-4 border-gray-200 dark:border-gray-800 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
+                <div className="absolute inset-0 border-[3px] border-[#e6ebf1] dark:border-gray-800 rounded-full"></div>
+                <div className="absolute inset-0 border-[3px] border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <p className="text-gray-500 text-sm mt-4 font-medium">{t.dashboard.discovered.loading}</p>
+              <p className="text-[#8898aa] text-sm mt-4 font-medium">{t.dashboard.discovered.loading}</p>
             </div>
           ) : filteredResults.length > 0 ? (
             filteredResults.map((item) => (
@@ -810,15 +832,18 @@ export default function DiscoveredPage() {
               />
             ))
           ) : (
-            /* Empty State - Neo-brutalist style - Translated (January 9th, 2026) */
+            /* =========================================================================
+               EMPTY STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
+               Soft icon badge + font-semibold heading + muted body.
+               ========================================================================= */
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border-2 border-gray-100 dark:border-gray-800">
-                <Search size={24} className="text-gray-300" />
+              <div className="w-16 h-16 bg-[#f6f9fc] dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
+                <Search size={24} className="text-[#8898aa]" strokeWidth={2} />
               </div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#0f172a] dark:text-white mb-1">
                 {t.dashboard.discovered.emptyState.title}
               </h3>
-              <p className="text-gray-500 text-sm max-w-xs">
+              <p className="text-[#8898aa] text-sm max-w-xs">
                 {t.dashboard.discovered.emptyState.subtitle}
               </p>
             </div>
