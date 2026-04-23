@@ -594,37 +594,47 @@ export default function DiscoveredPage() {
       <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
 
         {/* =============================================================================
-            FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            FILTERS ROW
             
             LAYOUT FIX - January 23, 2026
             FilterPanel now uses a dropdown approach so filter pills don't take 
             up horizontal space.
+
+            SMOOVER REFRESH - April 23, 2026
+            Mirrored from find/page.tsx. Scope: search input + platform pill
+            segmented control on the LEFT side only. See find/page.tsx for the
+            full rationale (hairline borders, rounded-full pills, soft shadows,
+            yellow glow on active state, muted text colors). NOTE: the count
+            badge here renders whenever `tab.count > 0` (no `hasSearched &&`
+            gate, unlike the find page) — that per-page difference is preserved.
             ============================================================================= */}
         <div className="flex flex-row justify-between items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
-            {/* Search Input - Translated (January 9th, 2026) */}
+            {/* Search Input — Translated (January 9th, 2026).
+                Smoover refresh (April 23, 2026) — see find/page.tsx. */}
             <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#8898aa]" size={16} />
               <input 
                 type="text" 
                 placeholder={t.dashboard.filters.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
+                className="w-full h-10 pl-11 pr-4 border border-[#e6ebf1] dark:border-gray-800 rounded-full bg-white dark:bg-[#0f0f0f] text-sm text-[#0f172a] dark:text-white placeholder:text-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:shadow-yellow-glow-sm transition-all"
               />
             </div>
             
-            {/* Platform Filter Pills - DashboardDemo exact styling with counts */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800">
+            {/* Platform Filter Pills — segmented control.
+                Smoover refresh (April 23, 2026) — see find/page.tsx. */}
+            <div className="flex items-center gap-1 bg-[#f6f9fc] dark:bg-[#0f0f0f] p-1 rounded-full border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
               {filterTabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilter(tab.id)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-bold",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all text-xs font-semibold",
                     activeFilter === tab.id
-                      ? "bg-[#ffbf23] text-black shadow-sm"
-                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      ? "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm"
+                      : "text-[#8898aa] hover:text-[#425466] dark:hover:text-gray-300"
                   )}
                   title={tab.id}
                 >
@@ -632,8 +642,10 @@ export default function DiscoveredPage() {
                   {tab.id === 'All' && <span>{t.dashboard.filters.all}</span>}
                   {tab.count > 0 && (
                     <span className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                      activeFilter === tab.id ? "bg-black/20 text-black" : "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
+                      activeFilter === tab.id
+                        ? "bg-[#0f172a]/10 text-[#0f172a]"
+                        : "bg-white dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-700"
                     )}>
                       {tab.count}
                     </span>
