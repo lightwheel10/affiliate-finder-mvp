@@ -537,20 +537,28 @@ export default function DiscoveredPage() {
       </header>
 
       {/* =============================================================================
-          ENRICHMENT STATUS BANNER - January 30, 2026
-          
-          Shows when affiliates are still being discovered in the background.
-          Indicates which sources have completed vs still processing.
+          ENRICHMENT STATUS BANNER
+          ---------------------------------------------------------------------------
+          HISTORY:
+            Jan 30, 2026 — Introduced. Shows while background enrichment jobs
+                           are running; indicates which sources have completed
+                           vs which are still processing.
+            Apr 23, 2026 — Smoover refresh (Phase 2e). Previously border-b-2
+                           amber + font-bold headings. Now softened to a
+                           hairline border-b, lighter spinner ring, font-
+                           semibold headings. Gradient fill + semantic amber/
+                           emerald colours preserved so the warning signal is
+                           not lost.
           ============================================================================= */}
       {enrichmentStatus?.hasActiveJobs && (
-        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b-2 border-amber-200 dark:border-amber-800 px-6 py-3">
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b border-amber-200 dark:border-amber-800 px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-5 h-5 border-2 border-amber-500 rounded-full animate-spin border-t-transparent"></div>
+                <div className="w-5 h-5 border-[2px] border-amber-500 rounded-full animate-spin border-t-transparent"></div>
               </div>
               <div>
-                <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
                   Still finding more affiliates...
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-300">

@@ -1124,24 +1124,34 @@ export default function FindNewPage() {
           ============================================================================= */}
       <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
         
-        {/* Previous Results Warning - Neo-brutalist style - Translated (January 9th, 2026) */}
+        {/* =============================================================================
+            PREVIOUS-RESULTS WARNING BANNER
+            Smoover refresh (April 23rd, 2026) — Phase 2e
+            ---------------------------------------------------------------------------
+            Shown briefly after a new search to let the user know the list has been
+            cleared. Previously neo-brutalist (Jan 9, 2026): border-2 yellow, square
+            corners, font-bold black text, square icon tile.
+            Now: hairline yellow/30 border, rounded-xl, shadow-soft-sm; icon tile is
+            a rounded-full yellow badge with shadow-yellow-glow-sm matching the
+            landing hero CTA; heading font-semibold, body muted.
+            ============================================================================= */}
         {showWarning && (
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/20 border-2 border-[#ffbf23] rounded-lg mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center justify-center w-8 h-8 bg-[#ffbf23] rounded shrink-0">
-              <Search size={16} className="text-black" />
+          <div className="flex items-center gap-3 px-4 py-3 bg-[#ffbf23]/10 border border-[#ffbf23]/30 rounded-xl shadow-soft-sm mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center justify-center w-8 h-8 bg-[#ffbf23] rounded-full shadow-yellow-glow-sm shrink-0">
+              <Search size={16} className="text-[#0f172a]" strokeWidth={2} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-black">{t.dashboard.find.newSearchWarning.title}</p>
-              <p className="text-xs text-gray-600 mt-0.5">
+              <p className="text-sm font-semibold text-[#0f172a]">{t.dashboard.find.newSearchWarning.title}</p>
+              <p className="text-xs text-[#8898aa] mt-0.5">
                 {t.dashboard.find.newSearchWarning.subtitle}
               </p>
             </div>
             <button
               onClick={() => setShowWarning(false)}
-              className="text-black hover:text-gray-600 transition-colors p-1"
+              className="text-[#8898aa] hover:text-[#0f172a] transition-colors p-1 rounded-full hover:bg-[#ffbf23]/20"
               aria-label="Dismiss"
             >
-              <X size={16} />
+              <X size={16} strokeWidth={2} />
             </button>
           </div>
         )}
