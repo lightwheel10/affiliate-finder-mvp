@@ -1147,42 +1147,60 @@ export default function FindNewPage() {
         )}
 
         {/* =============================================================================
-            FILTERS ROW - DashboardDemo.tsx EXACT STYLING
+            FILTERS ROW
             
             LAYOUT FIX - January 23, 2026
             Restored justify-between layout. FilterPanel now uses a dropdown approach
             so filter pills don't take up horizontal space.
+
+            SMOOVER REFRESH - April 23, 2026
+            Scope of this pass: ONLY the search input and the platform pills group
+            (left side). Visual tokens aligned with the landing + dashboard header:
+              - Hairline borders (#e6ebf1) replace border-2 border-black
+              - Fully rounded pill shapes (rounded-full) replace rounded corners
+              - Softer text colors (#8898aa muted, #0f172a ink, #425466 body)
+              - Soft drop shadows (shadow-soft-sm) and yellow glow on focus/active
+                (shadow-yellow-glow-sm) instead of hard neo-brutalist shadows
+              - Interactive behaviour, state, filter counts, i18n strings,
+                dark-mode support, icons, and the FilterPanel trigger on the
+                right are all UNCHANGED in this pass.
+            The FilterPanel trigger button (right side) is defined inside
+            components/FilterPanel.tsx and is shared across 4 pages; it will
+            be restyled in its own PR so the four pages flip together.
             ============================================================================= */}
         <div className="flex flex-row justify-between items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
-            {/* Search Input - DashboardDemo exact:
-                border-2 border-brandBlack dark:border-gray-700 rounded bg-white dark:bg-gray-900 
-                focus:border-brandYellow */}
-            {/* Search Input - Translated (January 9th, 2026) */}
+            {/* Search Input — Translated (January 9th, 2026).
+                Smoover refresh (April 23, 2026): hairline border, rounded-full
+                pill, soft bg, muted placeholder, yellow glow on focus. */}
             <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#8898aa]" size={16} />
               <input 
                 type="text" 
                 placeholder={t.dashboard.filters.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border-2 border-black dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-[#ffbf23]"
+                className="w-full h-10 pl-11 pr-4 border border-[#e6ebf1] dark:border-gray-800 rounded-full bg-white dark:bg-[#0f0f0f] text-sm text-[#0f172a] dark:text-white placeholder:text-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:shadow-yellow-glow-sm transition-all"
               />
             </div>
             
-            {/* Platform Filter Pills - DashboardDemo exact:
-                bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800
-                Active: bg-brandYellow text-brandBlack rounded shadow-sm */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded border border-gray-200 dark:border-gray-800">
+            {/* Platform Filter Pills — segmented control.
+                Smoover refresh (April 23, 2026): container pill wrapper with
+                off-white bg (#f6f9fc) + hairline border + soft shadow. Each
+                pill is rounded-full. Active pill gets the yellow glow to echo
+                the landing hero CTA. Count badge inside active pill uses a
+                translucent dark overlay; inside inactive pills, a white pill
+                with hairline border (so it reads against the off-white tray). */}
+            <div className="flex items-center gap-1 bg-[#f6f9fc] dark:bg-[#0f0f0f] p-1 rounded-full border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm">
               {filterTabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilter(tab.id)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-bold",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all text-xs font-semibold",
                     activeFilter === tab.id
-                      ? "bg-[#ffbf23] text-black shadow-sm"
-                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      ? "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm"
+                      : "text-[#8898aa] hover:text-[#425466] dark:hover:text-gray-300"
                   )}
                   title={tab.id}
                 >
@@ -1190,8 +1208,10 @@ export default function FindNewPage() {
                   {tab.id === 'All' && <span>{t.dashboard.filters.all}</span>}
                   {hasSearched && tab.count > 0 && (
                     <span className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                      activeFilter === tab.id ? "bg-black/20 text-black" : "bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
+                      activeFilter === tab.id
+                        ? "bg-[#0f172a]/10 text-[#0f172a]"
+                        : "bg-white dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-700"
                     )}>
                       {tab.count}
                     </span>
