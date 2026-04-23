@@ -1656,7 +1656,33 @@ export default function FindNewPage() {
 
       </div>
 
-      {/* Find Affiliates Modal - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* =============================================================================
+          FIND AFFILIATES MODAL
+          -----------------------------------------------------------------------------
+          The most-used surface in the app. Historically the flagship "neo-brutalist"
+          screen (Jan 8, 2026): black-square hero tile, font-black uppercase title,
+          border-2 form controls, border-4 black CTA with offset shadow.
+
+          Smoover refresh — Phase 2g (April 25, 2026):
+            Flips the modal BODY to the soft design voice that now covers the
+            landing page, auth pages, sidebar, dashboard toolbars, bulk-action
+            bars, filter slide-out, and shared Modal shell. The outer Modal
+            wrapper itself was already migrated in Phase 2b (rounded-2xl + soft
+            shadow + hairline border + font-display title + ghost close button)
+            so only the children of <Modal> are changed here.
+
+          Important: ZERO changes to handlers, state, i18n keys, Modal props
+          (isOpen / onClose / width="max-w-2xl"), MAX_KEYWORDS / MAX_COMPETITORS,
+          Enter-to-add behaviour, disabled-state logic, or edit-brand flow.
+
+          Split into 4 atomic commits for easy review / revert:
+            1. Hero header (this commit)
+            2. Website context row + brand-edit controls
+            3. Keywords + Competitors two-column grid (labels, inputs, Add
+               buttons, list chrome, item rows, number chips, ×, empty copy,
+               Clear-all links)
+            4. Primary Find CTA + tip line
+          ============================================================================= */}
       <Modal 
         isOpen={isFindModalOpen} 
         onClose={() => setIsFindModalOpen(false)}
@@ -1664,13 +1690,27 @@ export default function FindNewPage() {
         width="max-w-2xl"
       >
         <div className="space-y-5">
-          {/* Header - NEO-BRUTALIST - Translated (January 9th, 2026) */}
+          {/* =====================================================================
+              HERO HEADER — smoover (Apr 25, 2026). Chunk 1/4.
+              ---------------------------------------------------------------------
+              Before: w-14 h-14 bg-black border-4 border-black square tile with
+                      a hard 4px yellow offset shadow; font-black uppercase h2.
+              After:  rounded-full yellow badge with shadow-yellow-glow-sm
+                      (same pattern as the count badges on every other page);
+                      font-display font-semibold mixed-case h2 in dark slate;
+                      subtitle muted to #8898aa to match app-wide body copy.
+              Icon sized up slightly (24 → 26) since the badge no longer has a
+              heavy border eating visual weight, and stroke dropped to 2 for the
+              lighter smoover tone.
+              ===================================================================== */}
           <div className="text-center pb-2">
-            <div className="w-14 h-14 bg-black border-4 border-black flex items-center justify-center mx-auto mb-3 shadow-[4px_4px_0px_0px_#ffbf23]">
-              <Search size={24} className="text-[#ffbf23]" />
+            <div className="w-14 h-14 bg-[#ffbf23] rounded-full flex items-center justify-center mx-auto mb-3 shadow-yellow-glow-sm">
+              <Search size={26} className="text-[#0f172a]" strokeWidth={2} />
             </div>
-            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.find.modal.title}</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="font-display text-xl font-semibold text-[#0f172a] dark:text-white tracking-tight">
+              {t.dashboard.find.modal.title}
+            </h2>
+            <p className="text-sm text-[#8898aa] mt-1">
               {t.dashboard.find.modal.subtitle}
             </p>
           </div>
