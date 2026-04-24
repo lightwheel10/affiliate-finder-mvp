@@ -4,29 +4,37 @@
  * =============================================================================
  * SETTINGS PAGE
  * =============================================================================
- * 
- * Updated: January 8th, 2026
- * 
- * NEO-BRUTALIST DESIGN UPDATE (January 8th, 2026):
- * ------------------------------------------------
- * Updated all components to match the neo-brutalist design system:
- *   - Sharp edges (no rounded corners)
- *   - Bold borders (border-2 to border-4 with black)
- *   - Offset shadows (shadow-[Xpx_Xpx_0px_0px_#000000])
- *   - Yellow accent color (#ffbf23)
- *   - Font-black uppercase typography
- *   - Dark mode support
- * 
+ *
+ * Updated: April 25th, 2026 — shell smoover refresh
+ *
+ * DESIGN STATUS:
+ * --------------
+ * SHELL (header + left nav + right panel container): smoover ✓
+ *   - Hairline #e6ebf1 borders, rounded corners, soft drop shadows.
+ *   - Left nav matches Sidebar.tsx NavItem pattern (soft yellow tint active).
+ *   - Right panel matches onboarding card shell + Message Viewer modal.
+ *
+ * TAB CONTENTS (ProfileSettings / PlanSettings / BuyCreditsSettings /
+ * BlockedDomainsSettings / SecuritySettings): still neo-brutalist — each will
+ * be migrated in a subsequent PR. After shell + all 5 tabs are migrated the
+ * settings-wide brutalist design notes below will be removed.
+ *
+ * HISTORICAL (January 8th, 2026) — NEO-BRUTALIST DESIGN UPDATE:
+ * ------------------------------------------------------------
+ * Sharp edges, border-2 to border-4 with black, offset shadows, yellow
+ * accent, font-black uppercase. Preserved in tab sub-components pending
+ * migration.
+ *
  * ARCHITECTURE (January 3rd, 2026):
- * -----------------------------------------
+ * ---------------------------------
  * This page is now part of the (dashboard) route group. The layout handles:
  *   - AuthGuard (authentication + onboarding check)
  *   - ErrorBoundary (error handling)
  *   - Sidebar (navigation - persists across page navigation)
  *   - Main container with ml-64 margin
- * 
+ *
  * This page only renders the content: header + main content area.
- * 
+ *
  * =============================================================================
  */
 
@@ -162,12 +170,19 @@ export default function SettingsPage() {
   //   Hairline bottom border, Archivo display title, unified with the other
   //   four dashboard pages (find / discovered / saved / outreach).
   //
-  // LEFT NAVIGATION — Neo-brutalist (January 8th, 2026)
-  //   Sharp-edged tabs with yellow active state, offset shadow on active.
-  //   NOT yet migrated to smoover — deferred to a later phase.
+  // LEFT NAVIGATION — Smoover refresh (April 25th, 2026)
+  //   Rounded-lg tabs with soft-yellow-tint active state (bg-[#fff4d1] +
+  //   shadow-soft-sm). Matches Sidebar.tsx NavItem exactly — consistent nav
+  //   language across the dashboard + settings.
   //
-  // RIGHT PANEL — Neo-brutalist (January 8th, 2026)
-  //   Sharp edges, border-2 black, offset shadow. NOT yet migrated.
+  // RIGHT PANEL — Smoover refresh (April 25th, 2026)
+  //   Hairline #e6ebf1 border + rounded-2xl + shadow-soft-sm. Matches
+  //   onboarding card shell + Message Viewer modal.
+  //
+  // TAB CONTENTS — Each of the 5 tab sub-components (ProfileSettings /
+  //   PlanSettings / BuyCreditsSettings / BlockedDomainsSettings /
+  //   SecuritySettings) will be migrated in subsequent PRs. The shell above
+  //   now renders their (still-brutalist) contents inside a smoover frame.
   //
   // Note: The outer container with Sidebar is handled by the dashboard layout.
   // This component only renders the header and main content area.
@@ -181,42 +196,39 @@ export default function SettingsPage() {
         </div>
       </header>
 
-        {/* Main Content - NEO-BRUTALIST (Updated January 8th, 2026) */}
+        {/* Main Content — smoover refresh (April 25th, 2026). Left nav matches Sidebar.tsx NavItem pattern; right panel container matches onboarding card shell + Message Viewer modal. */}
         <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full">
           <div className="flex flex-col md:flex-row gap-8 h-[calc(100vh-8rem)]">
-            
-            {/* Left Panel - Navigation - NEO-BRUTALIST */}
+
+            {/* Left Panel — smoover refresh (April 25th, 2026). Tab buttons use soft-yellow-tint active state (bg-[#fff4d1]) matching Sidebar NavItem, not solid yellow (that treatment is reserved for primary CTAs). Indicator dot dropped — the tint is enough signal. */}
             <div className="w-full md:w-64 shrink-0">
               <div className="sticky top-24 space-y-1">
-                <h3 className="px-3 text-xs font-black text-gray-400 uppercase tracking-widest mb-3">{t.dashboard.settings.accountLabel}</h3>
+                <h3 className="px-3 text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider mb-3">{t.dashboard.settings.accountLabel}</h3>
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as SettingsTab)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold transition-all duration-200",
+                      "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200",
                       activeTab === tab.id
-                        ? "bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000000]"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white border-2 border-transparent"
+                        ? "bg-[#fff4d1] dark:bg-[#ffbf23]/10 text-[#0f172a] dark:text-[#ffbf23] font-semibold shadow-soft-sm"
+                        : "text-[#425466] dark:text-gray-400 hover:bg-[#f6f9fc] dark:hover:bg-gray-900 hover:text-[#0f172a] dark:hover:text-white"
                     )}
                   >
                     <span className={cn(
                       "shrink-0",
-                      activeTab === tab.id ? "text-black" : "text-gray-400 group-hover:text-gray-600"
+                      activeTab === tab.id ? "text-[#0f172a] dark:text-[#ffbf23]" : "text-[#8898aa] dark:text-gray-500"
                     )}>
                       {tab.icon}
                     </span>
                     <span className="flex-1 text-left">{tab.label}</span>
-                    {activeTab === tab.id && (
-                      <span className="w-2 h-2 bg-black" />
-                    )}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Right Panel - Content - NEO-BRUTALIST */}
-            <div className="flex-1 min-w-0 bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] overflow-hidden">
+            {/* Right Panel — smoover refresh (April 25th, 2026). Hairline #e6ebf1 border + rounded-2xl + shadow-soft-sm (matches onboarding card shell + Message Viewer modal). */}
+            <div className="flex-1 min-w-0 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm overflow-hidden">
               <div className="h-full overflow-y-auto p-6 lg:p-8">
                 <div className="max-w-2xl">
                   {/* January 13th, 2026: Removed tab title and description as per user request */}
