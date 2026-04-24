@@ -2219,24 +2219,24 @@ export default function OutreachPage() {
               className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
               onClick={() => setViewingMessageId(null)}
             >
-              <div 
-                className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+              <div
+                className="bg-white dark:bg-[#0a0a0a] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Modal Header - NEO-BRUTALIST (January 17, 2026: i18n translations) */}
-                <div className="px-6 py-4 border-b-4 border-black dark:border-white flex items-center justify-between bg-[#ffbf23] shrink-0">
+                {/* Modal Header — smoover refresh (April 25th, 2026). Brand-yellow fill retained (it's a branded affordance, not brutalist); brutalist border-b-4 + offset shadow + font-black uppercase dropped. Title drops uppercase since translations are stored mixed-case. */}
+                <div className="px-6 py-4 flex items-center justify-between bg-[#ffbf23] shrink-0">
                   <div className="flex items-center gap-3">
-                    <Sparkles size={20} className="text-black" />
-                    <h3 className="text-base font-black text-black uppercase">{t.dashboard.outreach.messageViewer.title}</h3>
+                    <Sparkles size={20} className="text-[#1A1D21]" />
+                    <h3 className="text-base font-bold text-[#1A1D21]">{t.dashboard.outreach.messageViewer.title}</h3>
                     {isMultiMessageView && (
-                      <span className="px-2 py-0.5 bg-black text-white text-[10px] font-black uppercase">
+                      <span className="px-2 py-0.5 bg-[#1A1D21] text-white text-[10px] font-semibold rounded-full">
                         {allMessages.length} {t.dashboard.outreach.messagesLabel}
                       </span>
                     )}
                   </div>
                   <button
                     onClick={() => setViewingMessageId(null)}
-                    className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
+                    className="w-8 h-8 rounded-full bg-[#1A1D21] text-white hover:bg-[#0f172a] flex items-center justify-center transition-colors"
                   >
                     ×
                   </button>
@@ -2259,16 +2259,16 @@ export default function OutreachPage() {
                   ];
                   
                   return (
-                    <div className="flex border-b-2 border-black dark:border-gray-600 shrink-0 bg-gray-50 dark:bg-gray-900">
+                    <div className="flex border-b border-[#e6ebf1] dark:border-gray-700 shrink-0 bg-[#f6f9fc] dark:bg-gray-900">
                       {channelTabs.map(tab => (
                         <button
                           key={tab.key}
                           onClick={() => { setActiveChannel(tab.key); handleCancelEdit(); }}
                           className={cn(
-                            "px-4 py-2.5 text-xs font-black uppercase transition-all border-r-2 border-black dark:border-gray-600 last:border-r-0",
+                            "px-4 py-2.5 text-xs font-semibold transition-all border-r border-[#e6ebf1] dark:border-gray-700 last:border-r-0",
                             activeChannel === tab.key
-                              ? "bg-[#ffbf23] text-black"
-                              : "bg-white dark:bg-[#0a0a0a] text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                              ? "bg-[#ffbf23] text-[#1A1D21]"
+                              : "bg-white dark:bg-[#0a0a0a] text-[#8898aa] dark:text-gray-400 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:text-[#0f172a] dark:hover:text-white"
                           )}
                         >
                           {tab.label}
@@ -2310,10 +2310,10 @@ export default function OutreachPage() {
                                 key={idx}
                                 onClick={() => setCurrentMessageIndex(idx)}
                                 className={cn(
-                                  "w-8 h-8 text-sm font-black border-2 transition-all",
+                                  "w-8 h-8 text-sm font-semibold rounded-full transition-all",
                                   idx === safeIndex
-                                    ? "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000]"
-                                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white"
+                                    ? "bg-[#ffbf23] text-[#1A1D21] shadow-yellow-glow-sm"
+                                    : "bg-white dark:bg-gray-800 text-[#8898aa] dark:text-gray-400 border border-[#e6ebf1] dark:border-gray-700 hover:border-[#ffbf23] hover:text-[#0f172a] dark:hover:text-white"
                                 )}
                               >
                                 {idx + 1}
@@ -2323,17 +2323,17 @@ export default function OutreachPage() {
                         )}
                         
                         {/* Current Message Card */}
-                        <div className="border-2 border-black dark:border-gray-600 overflow-hidden">
+                        <div className="border border-[#e6ebf1] dark:border-gray-700 rounded-xl overflow-hidden">
                           {/* Message Header with Email */}
-                          <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b-2 border-black dark:border-gray-600 flex items-center justify-between">
+                          <div className="px-4 py-3 bg-[#f6f9fc] dark:bg-gray-800 border-b border-[#e6ebf1] dark:border-gray-700 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Mail size={14} className="text-emerald-600" />
                               {/* January 17, 2026: Using i18n translation */}
-                              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                              <span className="text-sm font-semibold text-[#0f172a] dark:text-gray-200">
                                 {currentMsg.email || t.dashboard.outreach.messageViewer.primaryContact}
                               </span>
                             </div>
-                            <span className="px-2 py-1 bg-black text-white text-[10px] font-black uppercase">
+                            <span className="px-2 py-1 rounded-full bg-[#1A1D21] text-white text-[10px] font-semibold">
                               {safeIndex + 1} / {allMessages.length}
                             </span>
                           </div>
@@ -2350,7 +2350,7 @@ export default function OutreachPage() {
                                 <textarea
                                   value={editedMessageText}
                                   onChange={(e) => setEditedMessageText(e.target.value)}
-                                  className="w-full bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed border-2 border-[#ffbf23] dark:border-[#ffbf23] min-h-[250px] max-h-[350px] overflow-y-auto font-mono focus:outline-none resize-none"
+                                  className="w-full bg-[#f6f9fc] dark:bg-gray-900 p-4 text-sm text-[#0f172a] dark:text-gray-300 leading-relaxed border border-[#ffbf23] rounded-lg min-h-[250px] max-h-[350px] overflow-y-auto font-mono focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/20 resize-none"
                                   placeholder={t.dashboard.outreach.messageViewer.editPlaceholder}
                                   autoFocus
                                 />
@@ -2360,7 +2360,7 @@ export default function OutreachPage() {
                                   <button
                                     onClick={handleCancelEdit}
                                     disabled={isSavingEdit}
-                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-gray-600 border-gray-300 hover:border-black hover:text-black"
+                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all border border-[#e6ebf1] rounded-full bg-white text-[#425466] hover:border-[#ffbf23] hover:text-[#0f172a]"
                                   >
                                     <X size={12} />
                                     {t.dashboard.outreach.messageViewer.cancel}
@@ -2369,10 +2369,10 @@ export default function OutreachPage() {
                                     onClick={() => handleSaveEdit(affiliateId, currentMsg.email, carouselHasChannels ? activeChannel : undefined)}
                                     disabled={isSavingEdit || !editedMessageText.trim()}
                                     className={cn(
-                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
+                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all",
                                       isSavingEdit
-                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                        : "bg-emerald-500 text-white shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                        ? "bg-[#f6f9fc] text-[#8898aa] border border-[#e6ebf1] cursor-not-allowed"
+                                        : "bg-emerald-500 text-white shadow-soft-sm hover:bg-emerald-600 hover:-translate-y-px"
                                     )}
                                   >
                                     {isSavingEdit ? (
@@ -2392,11 +2392,11 @@ export default function OutreachPage() {
                             ) : (
                               <>
                                 {activeChannel === 'email' && getChannelSubject(currentMsg.data) && (
-                                  <div className="mb-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
-                                    Subject: <span className="text-gray-800 dark:text-gray-200 normal-case font-mono">{getChannelSubject(currentMsg.data)}</span>
+                                  <div className="mb-2 text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
+                                    Subject: <span className="text-[#0f172a] dark:text-gray-200 normal-case font-mono">{getChannelSubject(currentMsg.data)}</span>
                                   </div>
                                 )}
-                                <div className="bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 min-h-[200px] max-h-[300px] overflow-y-auto font-mono">
+                                <div className="bg-[#f6f9fc] dark:bg-gray-900 p-4 text-sm text-[#0f172a] dark:text-gray-300 leading-relaxed whitespace-pre-wrap border border-[#e6ebf1] dark:border-gray-700 rounded-lg min-h-[200px] max-h-[300px] overflow-y-auto font-mono">
                                   {getChannelText(currentMsg.data, activeChannel) || currentMsg.message}
                                 </div>
                                 
@@ -2432,10 +2432,10 @@ export default function OutreachPage() {
                                     }}
                                     disabled={msgRegenerating}
                                     className={cn(
-                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2",
+                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all",
                                       msgRegenerating
-                                        ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-                                        : "bg-white text-black border-black hover:bg-gray-100"
+                                        ? "bg-[#f6f9fc] text-[#8898aa] border border-[#e6ebf1] cursor-not-allowed"
+                                        : "bg-white text-[#0f172a] border border-[#e6ebf1] hover:bg-[#f6f9fc] hover:border-[#ffbf23]"
                                     )}
                                   >
                                     <RefreshCw size={12} className={msgRegenerating ? "animate-spin" : ""} />
@@ -2443,7 +2443,7 @@ export default function OutreachPage() {
                                   </button>
                                   <button
                                     onClick={() => handleStartEdit(msgKey, carouselHasChannels ? activeChannel : undefined)}
-                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-black border-black hover:bg-gray-100"
+                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all border border-[#e6ebf1] bg-white text-[#0f172a] hover:bg-[#f6f9fc] hover:border-[#ffbf23]"
                                   >
                                     <Pencil size={12} />
                                     {t.dashboard.outreach.messageViewer.edit}
@@ -2451,10 +2451,10 @@ export default function OutreachPage() {
                                   <button
                                     onClick={() => handleCopyMessage(msgKey, carouselHasChannels ? activeChannel : undefined)}
                                     className={cn(
-                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
+                                      "flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all",
                                       msgCopied
-                                        ? "bg-emerald-500 text-white"
-                                        : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                        ? "bg-emerald-500 text-white shadow-soft-sm"
+                                        : "bg-[#ffbf23] text-[#1A1D21] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px"
                                     )}
                                   >
                                     {msgCopied ? (
@@ -2482,12 +2482,12 @@ export default function OutreachPage() {
                        Redesigned to match carousel view structure - same card layout
                        with email header, message content, and inline action buttons
                        ===================================================================== */
-                    <div className="border-2 border-black dark:border-gray-600 overflow-hidden">
+                    <div className="border border-[#e6ebf1] dark:border-gray-700 rounded-xl overflow-hidden">
                       {/* Message Header with Email - matches carousel view (January 17, 2026: i18n) */}
-                      <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b-2 border-black dark:border-gray-600 flex items-center justify-between">
+                      <div className="px-4 py-3 bg-[#f6f9fc] dark:bg-gray-800 border-b border-[#e6ebf1] dark:border-gray-700 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Mail size={14} className="text-emerald-600" />
-                          <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                          <span className="text-sm font-semibold text-[#0f172a] dark:text-gray-200">
                             {contactEmail || affiliate?.email || t.dashboard.outreach.messageViewer.primaryContact}
                           </span>
                         </div>
@@ -2504,7 +2504,7 @@ export default function OutreachPage() {
                             <textarea
                               value={editedMessageText}
                               onChange={(e) => setEditedMessageText(e.target.value)}
-                              className="w-full bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed border-2 border-[#ffbf23] dark:border-[#ffbf23] min-h-[250px] max-h-[350px] overflow-y-auto font-mono focus:outline-none resize-none"
+                              className="w-full bg-[#f6f9fc] dark:bg-gray-900 p-4 text-sm text-[#0f172a] dark:text-gray-300 leading-relaxed border border-[#ffbf23] rounded-lg min-h-[250px] max-h-[350px] overflow-y-auto font-mono focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/20 resize-none"
                               placeholder={t.dashboard.outreach.messageViewer.editPlaceholder}
                               autoFocus
                             />
@@ -2515,7 +2515,7 @@ export default function OutreachPage() {
                               <button
                                 onClick={handleCancelEdit}
                                 disabled={isSavingEdit}
-                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-gray-600 border-gray-300 hover:border-black hover:text-black"
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all border border-[#e6ebf1] rounded-full bg-white text-[#425466] hover:border-[#ffbf23] hover:text-[#0f172a]"
                               >
                                 <X size={12} />
                                 {t.dashboard.outreach.messageViewer.cancel}
@@ -2524,10 +2524,10 @@ export default function OutreachPage() {
                                 onClick={() => handleSaveEdit(affiliateId, contactEmail, hasMultipleChannels ? activeChannel : undefined)}
                                 disabled={isSavingEdit || !editedMessageText.trim()}
                                 className={cn(
-                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
+                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all",
                                   isSavingEdit
-                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                    : "bg-emerald-500 text-white shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                    ? "bg-[#f6f9fc] text-[#8898aa] border border-[#e6ebf1] cursor-not-allowed"
+                                    : "bg-emerald-500 text-white shadow-soft-sm hover:bg-emerald-600 hover:-translate-y-px"
                                 )}
                               >
                                 {isSavingEdit ? (
@@ -2547,11 +2547,11 @@ export default function OutreachPage() {
                         ) : (
                           <>
                             {activeChannel === 'email' && getChannelSubject(msgData) && (
-                              <div className="mb-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">
-                                Subject: <span className="text-gray-800 dark:text-gray-200 normal-case font-mono">{getChannelSubject(msgData)}</span>
+                              <div className="mb-2 text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
+                                Subject: <span className="text-[#0f172a] dark:text-gray-200 normal-case font-mono">{getChannelSubject(msgData)}</span>
                               </div>
                             )}
-                            <div className="bg-gray-50 dark:bg-gray-900 p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap border-2 border-gray-200 dark:border-gray-700 min-h-[200px] max-h-[300px] overflow-y-auto font-mono">
+                            <div className="bg-[#f6f9fc] dark:bg-gray-900 p-4 text-sm text-[#0f172a] dark:text-gray-300 leading-relaxed whitespace-pre-wrap border border-[#e6ebf1] dark:border-gray-700 rounded-lg min-h-[200px] max-h-[300px] overflow-y-auto font-mono">
                               {getChannelText(msgData, activeChannel) || msgData?.message}
                             </div>
                             
@@ -2586,10 +2586,10 @@ export default function OutreachPage() {
                                 }}
                                 disabled={isRegenerating}
                                 className={cn(
-                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2",
+                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all",
                                   isRegenerating
-                                    ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-                                    : "bg-white text-black border-black hover:bg-gray-100"
+                                    ? "bg-[#f6f9fc] text-[#8898aa] border border-[#e6ebf1] cursor-not-allowed"
+                                    : "bg-white text-[#0f172a] border border-[#e6ebf1] hover:bg-[#f6f9fc] hover:border-[#ffbf23]"
                                 )}
                               >
                                 <RefreshCw size={12} className={isRegenerating ? "animate-spin" : ""} />
@@ -2597,7 +2597,7 @@ export default function OutreachPage() {
                               </button>
                               <button
                                 onClick={() => handleStartEdit(viewingMessageId, hasMultipleChannels ? activeChannel : undefined)}
-                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 bg-white text-black border-black hover:bg-gray-100"
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all border border-[#e6ebf1] bg-white text-[#0f172a] hover:bg-[#f6f9fc] hover:border-[#ffbf23]"
                               >
                                 <Pencil size={12} />
                                 {t.dashboard.outreach.messageViewer.edit}
@@ -2605,10 +2605,10 @@ export default function OutreachPage() {
                               <button
                                 onClick={() => handleCopyMessage(viewingMessageId, hasMultipleChannels ? activeChannel : undefined)}
                                 className={cn(
-                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase transition-all border-2 border-black",
+                                  "flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all",
                                   isCopied
-                                    ? "bg-emerald-500 text-white"
-                                    : "bg-[#ffbf23] text-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                                    ? "bg-emerald-500 text-white shadow-soft-sm"
+                                    : "bg-[#ffbf23] text-[#1A1D21] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px"
                                 )}
                               >
                                 {isCopied ? (
