@@ -8,21 +8,23 @@ import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 // =============================================================================
-// STEP 7 CARD FORM COMPONENT - NEO-BRUTALIST
+// STEP 7 CARD FORM COMPONENT — SMOOVER REFRESH
 //
-// Last Updated: January 9th, 2026
+// Last Updated: April 24th, 2026
 //
-// NEO-BRUTALIST DESIGN UPDATE (January 9th, 2026):
-// - Sharp edges on all containers (removed rounded-xl, rounded-lg)
-// - Sharp edges on discount input and Apply button
-// - Sharp submit button with offset shadow
-// - Bold typography (font-black uppercase)
-// - Dark mode support throughout
+// CURRENT DESIGN LANGUAGE ("smoover") — see PR #22:
+// - Rounded-xl containers (plan summary card, discount input, apply button).
+// - Rounded-full "Start Trial" primary CTA with shadow-yellow-glow-sm and
+//   subtle hover lift, matching the sign-in page primary CTA.
+// - Hairline #e6ebf1 borders; soft drop shadows.
+// - Archivo display hero title + muted #8898aa secondary labels.
+// - Vivid red / amber / green signal colours retained for error / validation /
+//   applied-discount states.
 //
+// COMPONENT EXTRACTION RATIONALE (unchanged from original):
 // This component is extracted from OnboardingScreen to fix a React re-rendering
-// issue. When defined inside the parent component, the function was recreated 
+// issue. When defined inside the parent component, the function was recreated
 // on every render, causing React to unmount/remount and lose input focus.
-//
 // By extracting it as a separate component, React can properly reconcile the
 // component identity across renders.
 // =============================================================================
