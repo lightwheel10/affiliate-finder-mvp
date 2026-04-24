@@ -395,16 +395,27 @@ export default function SettingsPage() {
 }
 
 // =============================================================================
-// PROFILE SETTINGS - NEO-BRUTALIST (Updated January 13th, 2026)
-// 
-// Design updates:
-// - Sharp-edged input fields
-// - Neo-brutalist Edit Profile button
-// 
-// January 13th, 2026: 
+// PROFILE SETTINGS — SMOOVER REFRESH (April 24th, 2026)
+//
+// Migrated from neo-brutalist to the smoover design language:
+// - Eyebrow labels: text-xs font-semibold text-[#8898aa] uppercase tracking-wider
+//   (no more font-black; muted label token).
+// - Read-mode fields: bg-[#f6f9fc] + border border-[#e6ebf1] + rounded-lg
+//   (hairline cards, soft bg, no offset borders).
+// - Edit-mode inputs: bg-[#f6f9fc] + border border-[#ffbf23] + rounded-lg +
+//   focus:ring-2 focus:ring-[#ffbf23]/20 (matches wizard / onboarding inputs).
+// - Country + language dropdown menus: border border-[#e6ebf1] + rounded-xl +
+//   shadow-soft-lg + hover:bg-[#ffbf23]/10 (no more black border + offset shadow).
+// - Section divider: hairline border-t border-[#e6ebf1].
+// - Cancel: rounded-full hairline secondary (white + hover:bg-[#f6f9fc]).
+// - Save / Edit Profile: rounded-full + shadow-yellow-glow-sm +
+//   hover:bg-[#e5ac20] + hover:-translate-y-px (same primary CTA as every
+//   other smoover yellow button).
+//
+// January 13th, 2026:
 // - Added editable name functionality
 // - Added country and language dropdowns
-// 
+//
 // January 19th, 2026:
 // - Migrated from Stack Auth to Supabase
 // - Updates Supabase database (name, target_country, target_language)
@@ -590,55 +601,56 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
   
   return (
     <div className="space-y-6">
-      {/* User Info - Name & Email (January 13th, 2026)
-          January 17, 2026: Updated with i18n translations */}
+      {/* User Info - Name & Email — smoover refresh (April 25th, 2026).
+          Labels become muted smoover eyebrows; edit-mode inputs keep yellow
+          border as "you're editing" signal but gain rounded-lg + yellow focus
+          ring; read-mode boxes adopt hairline + soft bg. */}
       <div className="grid grid-cols-1 gap-6">
         <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.fullName}</label>
+          <label className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.dashboard.settings.profile.fullName}</label>
           {isEditing ? (
             <input
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-[#ffbf23] text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23]"
+              className="w-full px-3 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#ffbf23] rounded-lg text-sm text-[#0f172a] dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/20"
               placeholder={t.dashboard.settings.profile.enterYourName}
               disabled={isSaving}
               autoFocus
             />
           ) : (
-            <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium">
+            <div className="w-full px-3 py-2.5 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg text-sm text-[#425466] dark:text-gray-300 font-medium">
               {userName}
             </div>
           )}
           {saveError && (
-            <p className="text-xs text-red-500 font-bold">{saveError}</p>
+            <p className="text-xs text-red-500 font-medium">{saveError}</p>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.emailAddress}</label>
+          <label className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.dashboard.settings.profile.emailAddress}</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-3 text-gray-400" size={16} />
-            <div className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium">
+            <Mail className="absolute left-3 top-3 text-[#8898aa]" size={16} />
+            <div className="w-full pl-9 pr-3 py-2.5 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg text-sm text-[#425466] dark:text-gray-300 font-medium">
               {userEmail}
             </div>
           </div>
-          <p className="text-xs text-gray-400">{t.dashboard.settings.profile.emailCannotChange}</p>
+          <p className="text-xs text-[#8898aa]">{t.dashboard.settings.profile.emailCannotChange}</p>
         </div>
       </div>
 
-      {/* Country & Language Section - January 13th, 2026
-          January 17, 2026: Updated with i18n translations */}
-      <div className="pt-4 border-t-2 border-gray-200 dark:border-gray-700">
+      {/* Country & Language Section — smoover refresh (April 25th, 2026) */}
+      <div className="pt-4 border-t border-[#e6ebf1] dark:border-gray-700">
         <div className="flex items-center gap-2 mb-4">
-          <Globe size={16} className="text-gray-500" />
-          <h4 className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.targetMarket}</h4>
+          <Globe size={16} className="text-[#8898aa]" />
+          <h4 className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.dashboard.settings.profile.targetMarket}</h4>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Country Dropdown - January 13th, 2026 */}
+          {/* Country Dropdown — smoover refresh (April 25th, 2026). Matches onboarding Step 2 country dropdown pattern. */}
           <div className="space-y-1.5 relative" ref={countryDropdownRef}>
-            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.country}</label>
+            <label className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.dashboard.settings.profile.country}</label>
             {isEditing ? (
               <>
                 <button
@@ -648,26 +660,26 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                     setIsLanguageOpen(false);
                   }}
                   disabled={isSaving}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-[#ffbf23] text-sm text-left flex items-center justify-between focus:outline-none disabled:opacity-50"
+                  className="w-full px-3 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#ffbf23] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/20 disabled:opacity-50"
                 >
                   {editCountry ? (
                     <span className="flex items-center gap-2">
-                      <img 
+                      <img
                         src={`https://flagcdn.com/w20/${getCountryCode(editCountry)}.png`}
                         alt={editCountry}
-                        className="w-5 h-4 object-cover border border-gray-200"
+                        className="w-5 h-4 object-cover border border-[#e6ebf1]"
                       />
-                      <span className="text-gray-900 dark:text-white">{editCountry}</span>
+                      <span className="text-[#0f172a] dark:text-white">{editCountry}</span>
                     </span>
                   ) : (
-                    <span className="text-gray-400">{t.dashboard.settings.profile.selectCountry}</span>
+                    <span className="text-[#8898aa]">{t.dashboard.settings.profile.selectCountry}</span>
                   )}
-                  <ChevronDown size={14} className={cn("text-gray-400 transition-transform", isCountryOpen && "rotate-180")} />
+                  <ChevronDown size={14} className={cn("text-[#8898aa] transition-transform", isCountryOpen && "rotate-180")} />
                 </button>
-                
+
                 {/* Country Dropdown Menu */}
                 {isCountryOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 max-h-48 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 max-h-48 overflow-y-auto">
                     {COUNTRIES.map((country) => (
                       <button
                         key={country.code}
@@ -677,16 +689,16 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                           setIsCountryOpen(false);
                         }}
                         className={cn(
-                          "w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800",
-                          editCountry === country.name && "bg-[#ffbf23]/20"
+                          "w-full px-3 py-2 text-sm text-left flex items-center gap-2 transition-colors",
+                          editCountry === country.name ? "bg-[#ffbf23]/20" : "hover:bg-[#ffbf23]/10"
                         )}
                       >
-                        <img 
+                        <img
                           src={`https://flagcdn.com/w20/${country.code}.png`}
                           alt={country.name}
-                          className="w-5 h-4 object-cover border border-gray-200"
+                          className="w-5 h-4 object-cover border border-[#e6ebf1]"
                         />
-                        <span className="text-gray-900 dark:text-white">{country.name}</span>
+                        <span className="text-[#0f172a] dark:text-white">{country.name}</span>
                         {editCountry === country.name && <Check size={14} className="ml-auto text-[#ffbf23]" />}
                       </button>
                     ))}
@@ -694,26 +706,26 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                 )}
               </>
             ) : (
-              <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center gap-2">
+              <div className="w-full px-3 py-2.5 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg text-sm text-[#425466] dark:text-gray-300 font-medium flex items-center gap-2">
                 {currentCountry ? (
                   <>
-                    <img 
+                    <img
                       src={`https://flagcdn.com/w20/${getCountryCode(currentCountry)}.png`}
                       alt={currentCountry}
-                      className="w-5 h-4 object-cover border border-gray-200"
+                      className="w-5 h-4 object-cover border border-[#e6ebf1]"
                     />
                     <span>{currentCountry}</span>
                   </>
                 ) : (
-                  <span className="text-gray-400">{t.dashboard.settings.profile.notSet}</span>
+                  <span className="text-[#8898aa]">{t.dashboard.settings.profile.notSet}</span>
                 )}
               </div>
             )}
           </div>
 
-          {/* Language Dropdown - January 13th, 2026 */}
+          {/* Language Dropdown — smoover refresh (April 25th, 2026). Same pattern as Country dropdown above. */}
           <div className="space-y-1.5 relative" ref={languageDropdownRef}>
-            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t.dashboard.settings.profile.language}</label>
+            <label className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.dashboard.settings.profile.language}</label>
             {isEditing ? (
               <>
                 <button
@@ -723,27 +735,27 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                     setIsCountryOpen(false);
                   }}
                   disabled={isSaving}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-[#ffbf23] text-sm text-left flex items-center justify-between focus:outline-none disabled:opacity-50"
+                  className="w-full px-3 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#ffbf23] rounded-lg text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/20 disabled:opacity-50"
                 >
                   {/* February 2, 2026: Updated to show flag instead of symbol */}
                   {editLanguage ? (
                     <span className="flex items-center gap-2">
-                      <img 
+                      <img
                         src={getFlagUrl(getLanguageCode(editLanguage))}
                         alt={editLanguage}
-                        className="w-5 h-4 object-cover border border-gray-200"
+                        className="w-5 h-4 object-cover border border-[#e6ebf1]"
                       />
-                      <span className="text-gray-900 dark:text-white">{editLanguage}</span>
+                      <span className="text-[#0f172a] dark:text-white">{editLanguage}</span>
                     </span>
                   ) : (
-                    <span className="text-gray-400">{t.dashboard.settings.profile.selectLanguage}</span>
+                    <span className="text-[#8898aa]">{t.dashboard.settings.profile.selectLanguage}</span>
                   )}
-                  <ChevronDown size={14} className={cn("text-gray-400 transition-transform", isLanguageOpen && "rotate-180")} />
+                  <ChevronDown size={14} className={cn("text-[#8898aa] transition-transform", isLanguageOpen && "rotate-180")} />
                 </button>
-                
+
                 {/* Language Dropdown Menu - February 2, 2026: Updated to show flags */}
                 {isLanguageOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 max-h-48 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 max-h-48 overflow-y-auto">
                     {LANGUAGES.map((lang) => (
                       <button
                         key={lang.name}
@@ -753,16 +765,16 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                           setIsLanguageOpen(false);
                         }}
                         className={cn(
-                          "w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800",
-                          editLanguage === lang.name && "bg-[#ffbf23]/20"
+                          "w-full px-3 py-2 text-sm text-left flex items-center gap-2 transition-colors",
+                          editLanguage === lang.name ? "bg-[#ffbf23]/20" : "hover:bg-[#ffbf23]/10"
                         )}
                       >
-                        <img 
+                        <img
                           src={getFlagUrl(lang.code)}
                           alt={lang.name}
-                          className="w-5 h-4 object-cover border border-gray-200"
+                          className="w-5 h-4 object-cover border border-[#e6ebf1]"
                         />
-                        <span className="text-gray-900 dark:text-white">{lang.name}</span>
+                        <span className="text-[#0f172a] dark:text-white">{lang.name}</span>
                         {editLanguage === lang.name && <Check size={14} className="ml-auto text-[#ffbf23]" />}
                       </button>
                     ))}
@@ -771,18 +783,18 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
               </>
             ) : (
               /* February 2, 2026: Updated to show flag instead of symbol */
-              <div className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center gap-2">
+              <div className="w-full px-3 py-2.5 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg text-sm text-[#425466] dark:text-gray-300 font-medium flex items-center gap-2">
                 {currentLanguage ? (
                   <>
-                    <img 
+                    <img
                       src={getFlagUrl(getLanguageCode(currentLanguage))}
                       alt={currentLanguage}
-                      className="w-5 h-4 object-cover border border-gray-200"
+                      className="w-5 h-4 object-cover border border-[#e6ebf1]"
                     />
                     <span>{currentLanguage}</span>
                   </>
                 ) : (
-                  <span className="text-gray-400">{t.dashboard.settings.profile.notSet}</span>
+                  <span className="text-[#8898aa]">{t.dashboard.settings.profile.notSet}</span>
                 )}
               </div>
             )}
@@ -790,22 +802,25 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
         </div>
       </div>
 
-      {/* Action Buttons - NEO-BRUTALIST (Updated January 13th, 2026)
-          January 17, 2026: Updated with i18n translations */}
-      <div className="pt-4 border-t-2 border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+      {/* Action Buttons — smoover refresh (April 24th, 2026)
+          Divider: hairline border-t border-[#e6ebf1].
+          Cancel: rounded-full hairline secondary (matches smoover secondary pattern).
+          Save / Edit Profile: rounded-full + shadow-yellow-glow-sm primary CTA
+          (identical to every other smoover yellow CTA). */}
+      <div className="pt-4 border-t border-[#e6ebf1] dark:border-gray-700 flex justify-end gap-3">
         {isEditing ? (
           <>
-            <button 
+            <button
               onClick={handleCancel}
               disabled={isSaving}
-              className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
+              className="px-5 py-2 text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white bg-white dark:bg-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-700 border border-[#e6ebf1] dark:border-gray-600 rounded-full transition-all disabled:opacity-50"
             >
               {t.dashboard.settings.profile.cancel}
             </button>
-            <button 
+            <button
               onClick={handleSave}
               disabled={isSaving || !editName.trim()}
-              className="px-5 py-2 bg-[#ffbf23] text-black text-sm font-black uppercase tracking-wide border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-5 py-2 bg-[#ffbf23] text-[#1A1D21] text-sm font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-2"
             >
               {isSaving ? (
                 <>
@@ -821,9 +836,9 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
             </button>
           </>
         ) : (
-          <button 
+          <button
             onClick={() => setIsEditing(true)}
-            className="px-5 py-2.5 bg-[#ffbf23] text-black text-sm font-black uppercase tracking-wide border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            className="px-5 py-2.5 bg-[#ffbf23] text-[#1A1D21] text-sm font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all"
           >
             {t.dashboard.settings.profile.editProfile}
           </button>
@@ -1620,44 +1635,47 @@ function BlockedDomainsSettings() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 size={24} className="animate-spin text-gray-400" />
+        <Loader2 size={24} className="animate-spin text-[#8898aa]" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Header — smoover refresh (April 25th, 2026). Title drops uppercase + font-black; body text + counter soften to smoover tokens. */}
       <div>
-        <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wide">{title}</h2>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{description}</p>
-        <p className="mt-2 text-xs font-bold text-gray-500 dark:text-gray-500">
+        <h2 className="text-lg font-semibold text-[#0f172a] dark:text-white">{title}</h2>
+        <p className="mt-1 text-sm text-[#425466] dark:text-gray-400">{description}</p>
+        <p className="mt-2 text-xs font-medium text-[#8898aa] dark:text-gray-500">
           {counter.replace('{count}', String(count))}
         </p>
       </div>
       {rawData.length === 0 ? (
-        <div className="py-12 border-2 border-gray-200 dark:border-gray-700 rounded-lg text-center">
-          <p className="font-bold text-gray-900 dark:text-white">{emptyTitle}</p>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{emptySubtitle}</p>
+        /* Empty state — smoover refresh (April 25th, 2026). Hairline + rounded-xl + soft bg (matches onboarding empty states). */
+        <div className="py-12 border border-[#e6ebf1] dark:border-gray-700 rounded-xl bg-[#f6f9fc] dark:bg-gray-900 text-center">
+          <p className="font-semibold text-[#0f172a] dark:text-white">{emptyTitle}</p>
+          <p className="mt-1 text-sm text-[#8898aa] dark:text-gray-400">{emptySubtitle}</p>
         </div>
       ) : (
+        /* Blocked domains list — smoover refresh (April 25th, 2026). List rows become rounded-lg hairline cards; red unblock button keeps vivid confirm state but softer idle tint. */
         <ul className="space-y-2">
           {rawData.map((row: { domain: string; created_at: string }) => (
             <li
               key={row.domain}
-              className="flex items-center justify-between gap-4 py-3 px-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700"
+              className="flex items-center justify-between gap-4 py-3 px-4 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg"
             >
               <div>
-                <span className="font-bold text-gray-900 dark:text-white">{row.domain}</span>
-                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                <span className="font-semibold text-[#0f172a] dark:text-white">{row.domain}</span>
+                <span className="ml-2 text-xs text-[#8898aa] dark:text-gray-400">
                   {domainBlockedOn} {row.created_at ? new Date(row.created_at).toLocaleDateString() : ''}
                 </span>
               </div>
               <button
                 onClick={() => handleUnblockClick(row.domain)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border-2 transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border rounded-full transition-all ${
                   unblockConfirming === row.domain
-                    ? 'bg-red-500 text-white border-red-600 animate-pulse'
-                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50'
+                    ? 'bg-red-500 text-white border-red-500 animate-pulse'
+                    : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50'
                 }`}
               >
                 {unblockConfirming === row.domain ? confirmUnblock : unblockBtn}
