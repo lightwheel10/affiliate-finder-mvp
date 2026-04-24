@@ -2662,28 +2662,28 @@ export default function OutreachPage() {
             className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
             onClick={() => setContactPicker(prev => ({ ...prev, isOpen: false }))}
           >
-            <div 
-              className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-lg w-full max-h-[80vh] overflow-hidden"
+            <div
+              className="bg-white dark:bg-[#0a0a0a] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl max-w-lg w-full max-h-[80vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Header - NEO-BRUTALIST */}
-              <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23]">
+              {/* Modal Header — smoover refresh (April 25th, 2026). Brand-yellow fill retained; brutalist border-b-4 + font-black uppercase dropped. */}
+              <div className="px-6 py-4 bg-[#ffbf23]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center">
-                      <Users size={20} className="text-black" />
+                    <div className="w-10 h-10 rounded-lg bg-white border border-[#e6ebf1] flex items-center justify-center shadow-soft-sm">
+                      <Users size={20} className="text-[#1A1D21]" />
                     </div>
                     {/* January 17, 2026: Using i18n translations */}
                     <div>
-                      <h3 className="text-base font-black text-black uppercase">{t.dashboard.outreach.contactPicker.title}</h3>
-                      <p className="text-xs text-black/70 font-medium">
+                      <h3 className="text-base font-bold text-[#1A1D21]">{t.dashboard.outreach.contactPicker.title}</h3>
+                      <p className="text-xs text-[#1A1D21]/70 font-medium">
                         {contactPicker.affiliate.domain}
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setContactPicker(prev => ({ ...prev, isOpen: false }))}
-                    className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
+                    className="w-8 h-8 rounded-full bg-[#1A1D21] text-white hover:bg-[#0f172a] flex items-center justify-center transition-colors"
                   >
                     ×
                   </button>
@@ -2692,7 +2692,7 @@ export default function OutreachPage() {
 
               {/* Contact List - NEO-BRUTALIST (January 17, 2026: i18n) */}
               <div className="p-4 overflow-y-auto max-h-[50vh] bg-white dark:bg-[#0a0a0a]">
-                <p className="text-xs text-gray-500 mb-3 font-medium">
+                <p className="text-xs text-[#8898aa] mb-3 font-medium">
                   {t.dashboard.outreach.contactPicker.subtitle}
                 </p>
                 
@@ -2720,10 +2720,10 @@ export default function OutreachPage() {
                         key={contact.email}
                         onClick={() => toggleContactSelection(contact.email)}
                         className={cn(
-                          "flex items-center gap-3 p-3 border-2 cursor-pointer transition-all",
-                          isSelected 
-                            ? "bg-[#ffbf23]/20 border-black" 
-                            : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-black dark:hover:border-white"
+                          "flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all",
+                          isSelected
+                            ? "bg-[#ffbf23]/10 border-[#ffbf23]"
+                            : "bg-white dark:bg-gray-900 border-[#e6ebf1] dark:border-gray-700 hover:border-[#ffbf23] hover:bg-[#ffbf23]/5"
                         )}
                       >
                         <input
@@ -2744,22 +2744,22 @@ export default function OutreachPage() {
                             <>
                               {/* Has name - show name as primary */}
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-black text-gray-900 dark:text-white truncate">
+                                <p className="text-sm font-semibold text-[#0f172a] dark:text-white truncate">
                                   {displayName}
                                 </p>
                                 {hasExistingMessage && (
-                                  <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase border border-black">
+                                  <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-semibold rounded-full">
                                     {t.dashboard.outreach.contactPicker.alreadyGenerated}
                                   </span>
                                 )}
                               </div>
                               {contact.title && (
-                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 font-medium">
+                                <p className="text-xs text-[#8898aa] flex items-center gap-1 mt-0.5 font-medium">
                                   <Briefcase size={10} />
                                   {contact.title}
                                 </p>
                               )}
-                              <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-0.5 font-mono">
+                              <p className="text-xs text-[#425466] dark:text-gray-400 flex items-center gap-1 mt-0.5 font-mono">
                                 <Mail size={10} />
                                 {contact.email}
                               </p>
@@ -2768,18 +2768,18 @@ export default function OutreachPage() {
                             <>
                               {/* No name - show email as primary */}
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-black text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                                <p className="text-sm font-semibold text-[#0f172a] dark:text-white truncate flex items-center gap-1.5">
                                   <Mail size={12} />
                                   {contact.email}
                                 </p>
                                 {hasExistingMessage && (
-                                  <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase border border-black">
+                                  <span className="shrink-0 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-semibold rounded-full">
                                     {t.dashboard.outreach.contactPicker.alreadyGenerated}
                                   </span>
                                 )}
                               </div>
                               {contact.title && (
-                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 font-medium">
+                                <p className="text-xs text-[#8898aa] flex items-center gap-1 mt-0.5 font-medium">
                                   <Briefcase size={10} />
                                   {contact.title}
                                 </p>
@@ -2789,8 +2789,8 @@ export default function OutreachPage() {
                         </div>
                         
                         <ChevronRight size={14} className={cn(
-                          "text-gray-300 transition-colors",
-                          isSelected && "text-black"
+                          "text-[#8898aa] transition-colors",
+                          isSelected && "text-[#ffbf23]"
                         )} />
                       </div>
                     );
@@ -2798,31 +2798,31 @@ export default function OutreachPage() {
                 </div>
               </div>
 
-              {/* Modal Footer - NEO-BRUTALIST */}
-              <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900">
+              {/* Modal Footer — smoover refresh (April 25th, 2026) */}
+              <div className="px-6 py-4 border-t border-[#e6ebf1] dark:border-gray-700 bg-[#f6f9fc] dark:bg-gray-900">
                 <div className="flex items-center justify-between">
                   {/* Credit cost indicator - January 17, 2026: i18n translations */}
                   <div className="text-xs">
                     {contactPicker.selectedContacts.size > 0 ? (
                       <span className="flex items-center gap-1.5">
                         <Sparkles size={12} className="text-[#ffbf23]" />
-                        <span className="text-gray-600 dark:text-gray-400 font-medium">
+                        <span className="text-[#425466] dark:text-gray-400 font-medium">
                           {t.dashboard.outreach.contactPicker.creditsUsed}{' '}
-                          <span className="font-black text-black dark:text-white">
+                          <span className="font-semibold text-[#0f172a] dark:text-white">
                             {contactPicker.selectedContacts.size} {contactPicker.selectedContacts.size !== 1 ? t.dashboard.outreach.contactPicker.credits : t.dashboard.outreach.contactPicker.credit}
                           </span>
                         </span>
                       </span>
                     ) : (
-                      <span className="text-gray-400 font-medium">{t.dashboard.outreach.contactPicker.selectContacts}</span>
+                      <span className="text-[#8898aa] font-medium">{t.dashboard.outreach.contactPicker.selectContacts}</span>
                     )}
                   </div>
                   
-                  {/* Action buttons - NEO-BRUTALIST (January 17, 2026: i18n) */}
+                  {/* Action buttons — smoover refresh (April 25th, 2026) */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setContactPicker(prev => ({ ...prev, isOpen: false }))}
-                      className="px-3 py-1.5 text-xs font-black uppercase text-gray-600 hover:text-black transition-colors"
+                      className="px-3 py-1.5 text-xs font-semibold text-[#425466] hover:text-[#0f172a] transition-colors"
                     >
                       {t.dashboard.outreach.contactPicker.cancel}
                     </button>
@@ -2830,10 +2830,10 @@ export default function OutreachPage() {
                       onClick={handleGenerateForSelectedContacts}
                       disabled={contactPicker.selectedContacts.size === 0}
                       className={cn(
-                        "flex items-center gap-2 px-4 py-1.5 text-xs font-black uppercase transition-all border-2",
+                        "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-full transition-all",
                         contactPicker.selectedContacts.size > 0
-                          ? "bg-[#ffbf23] text-black border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
-                          : "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                          ? "bg-[#ffbf23] text-[#1A1D21] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px"
+                          : "bg-[#f6f9fc] text-[#8898aa] border border-[#e6ebf1] cursor-not-allowed"
                       )}
                     >
                       <Wand2 size={12} />
@@ -2958,11 +2958,11 @@ export default function OutreachPage() {
           ============================================================================= */}
       {customToast?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              {/* Icon Box - Color based on type */}
+              {/* Icon Box — smoover refresh (April 25th, 2026). Drops brutalist border-2 border-black; type-based fills kept as-is (status signals). */}
               <div className={cn(
-                "w-10 h-10 border-2 border-black flex items-center justify-center shrink-0",
+                "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
                 customToast.type === 'success' && "bg-emerald-500",
                 customToast.type === 'error' && "bg-red-500",
                 customToast.type === 'warning' && "bg-amber-400",
@@ -2970,26 +2970,26 @@ export default function OutreachPage() {
               )}>
                 {customToast.type === 'success' && <Check size={20} className="text-white" />}
                 {customToast.type === 'error' && <X size={20} className="text-white" />}
-                {customToast.type === 'warning' && <AlertTriangle size={20} className="text-black" />}
+                {customToast.type === 'warning' && <AlertTriangle size={20} className="text-[#1A1D21]" />}
                 {customToast.type === 'info' && <Sparkles size={20} className="text-white" />}
               </div>
-              
+
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white uppercase tracking-wider">
                   {customToast.title}
                 </h4>
                 {customToast.message && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                  <p className="text-xs text-[#425466] dark:text-gray-400 mt-0.5">
                     {customToast.message}
                   </p>
                 )}
               </div>
-              
+
               {/* Close Button */}
               <button
                 onClick={() => setCustomToast(prev => prev ? { ...prev, show: false } : null)}
-                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                className="text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
                 <X size={16} />
               </button>
