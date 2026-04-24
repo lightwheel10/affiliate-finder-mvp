@@ -1475,94 +1475,94 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep3 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Same treatment as Steps 1+2 logo row. */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '2').replace('{total}', '5')}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.stepOf.replace('{current}', '2').replace('{total}', '5')}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Fill condition (i<=2 = 2 completed steps) unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= 2 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= 2 ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Question Block — smoover refresh (April 24th, 2026). Yellow-tinted icon tile softened with rounded-md; question text uses text-[#0f172a] + font-semibold. */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] rounded-md border border-[#ffbf23]/30">
             <Sparkles size={12} />
           </div>
-          <p className="text-gray-900 dark:text-white font-bold text-sm">
+          <p className="text-[#0f172a] dark:text-white font-semibold text-sm">
             {t.onboarding.step3.title}
           </p>
         </div>
 
-        {/* Competitor Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Competitor Input — smoover refresh (April 24th, 2026). Input adopts hairline + rounded-xl + soft bg. Add button trades the brutalist offset shadow for shadow-yellow-glow-sm + subtle lift. Enter-to-add + 5-item cap logic unchanged. */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
-            <input 
+            <input
               type="text"
               value={competitorInput}
               onChange={(e) => setCompetitorInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomCompetitor())}
               placeholder={t.onboarding.step3.inputPlaceholder}
-              className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
+              className="flex-1 px-4 py-2 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-sm text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all font-medium"
             />
-            <button 
+            <button
               type="button"
               onClick={addCustomCompetitor}
               disabled={!competitorInput.trim() || competitors.length >= 5}
-              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] border-2 border-black dark:border-gray-600 hover:bg-yellow-400 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] rounded-xl hover:bg-[#e5ac20] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-yellow-glow-sm hover:shadow-yellow-glow hover:-translate-y-px"
             >
               <Plus size={16} />
             </button>
           </div>
-          
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-1 font-medium">
+
+          <p className="text-[11px] text-[#8898aa] dark:text-gray-500 ml-1 font-medium">
             {t.onboarding.step3.count.replace('{count}', String(competitors.length))}
           </p>
         </div>
 
         {/* =================================================================
           AI SUGGESTIONS DISPLAY (January 3rd, 2026)
-          Updated to NEO-BRUTALIST (January 9th, 2026)
-          
+          Smoover refresh (April 24th, 2026)
+
           Shows AI-generated competitor suggestions if available.
           User can click to add/remove suggestions.
           Suggestions come from /api/suggestions/generate endpoint.
           ================================================================= */}
-        
-        {/* AI Suggested Competitors - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+
+        {/* AI Suggested Competitors — smoover refresh (April 24th, 2026). Eyebrow softened; suggestion cards switch to hairline border + rounded-xl. 5-item cap + click-to-toggle logic unchanged. */}
         {suggestedCompetitors.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 flex items-center gap-1 uppercase tracking-wider">
               <Sparkles size={10} className="text-[#ffbf23]" />
               {t.onboarding.step3.suggestionsTitle}
             </p>
-            
+
             {/* =================================================================
               LAYOUT HISTORY:
               - January 9th, 2026: Initial grid-cols-3 layout
               - January 17th, 2026: Changed to grid-cols-2 (domains truncated)
               - January 21st, 2026: Changed to SINGLE COLUMN LIST (client request)
-              
+
               January 21st, 2026 - CLIENT REQUEST (Linear Issue):
-              "This one will be better as a list - cause if the domain names 
+              "This one will be better as a list - cause if the domain names
               are longer it cant be read exactly."
-              
+
               CHANGE: grid-cols-2 → flex flex-col (single column list)
               REASON: Long domain names like "herbalsolutions.de" were getting
                       truncated in 2-column layout. List ensures full visibility.
@@ -1578,15 +1578,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     onClick={() => toggleCompetitor(comp.domain)}
                     disabled={competitors.length >= 5}
                     className={cn(
-                      "group relative flex items-center gap-3 p-2.5 border-2 text-left transition-all",
+                      "group relative flex items-center gap-3 p-2.5 border rounded-xl text-left transition-all",
                       competitors.length >= 5
-                        ? "border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed"
-                        : "border-gray-200 dark:border-gray-700 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10"
+                        ? "border-[#e6ebf1] dark:border-gray-700 opacity-50 cursor-not-allowed"
+                        : "border-[#e6ebf1] dark:border-gray-700 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10"
                     )}
                   >
-                    {/* Favicon - NEO-BRUTALIST (January 9th, 2026) */}
-                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-gray-200 dark:border-gray-700">
-                      <img 
+                    {/* Favicon — softened with rounded-md + hairline border */}
+                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden rounded-md border border-[#e6ebf1] dark:border-gray-700">
+                      <img
                         src={`https://www.google.com/s2/favicons?domain=${comp.domain}&sz=32`}
                         alt={comp.name}
                         className="w-5 h-5 object-contain"
@@ -1595,17 +1595,17 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <span className="hidden text-xs font-bold text-gray-400">
+                      <span className="hidden text-xs font-bold text-[#8898aa]">
                         {comp.name[0].toUpperCase()}
                       </span>
                     </div>
                     {/* January 21st, 2026: Single line layout - name and domain inline */}
                     <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{comp.name}</p>
-                      <span className="text-gray-300 dark:text-gray-600">•</span>
-                      <p className="text-xs text-gray-400">{comp.domain}</p>
+                      <p className="text-xs font-semibold text-[#0f172a] dark:text-gray-300">{comp.name}</p>
+                      <span className="text-[#8898aa] dark:text-gray-600">•</span>
+                      <p className="text-xs text-[#8898aa]">{comp.domain}</p>
                     </div>
-                    <Plus size={14} className="text-gray-300 group-hover:text-[#ffbf23] transition-colors shrink-0" />
+                    <Plus size={14} className="text-[#8898aa] group-hover:text-[#ffbf23] transition-colors shrink-0" />
                   </button>
                 ))}
             </div>
@@ -1614,35 +1614,38 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
         {/* =================================================================
           SELECTED COMPETITORS SECTION
-          
+
           LAYOUT HISTORY:
           - January 9th, 2026: Initial NEO-BRUTALIST grid-cols-3
           - January 17th, 2026: Changed to grid-cols-2 (domains truncated)
           - January 21st, 2026: Changed to SINGLE COLUMN LIST (client request)
-          
+          - April 24th, 2026: Smoover refresh (visual only — hairline border,
+                              rounded-xl, softened text tokens). Layout + logic
+                              unchanged.
+
           January 21st, 2026 - CLIENT REQUEST:
           Matching the suggestions layout above - single column list for
           consistent UX and full domain visibility.
           ================================================================= */}
         {competitors.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">{t.onboarding.step3.yourCompetitors}</p>
-            
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.step3.yourCompetitors}</p>
+
             <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto scrollbar-hide">
               {competitors.map(comp => {
                 const suggestion = suggestedCompetitors.find(s => s.domain === comp);
                 const displayName = suggestion?.name || comp;
-                
+
                 return (
                   <button
                     key={comp}
                     type="button"
                     onClick={() => toggleCompetitor(comp)}
-                    className="group relative flex items-center gap-3 p-2.5 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-left transition-all hover:bg-[#ffbf23]/20"
+                    className="group relative flex items-center gap-3 p-2.5 bg-[#ffbf23]/10 border border-[#ffbf23] rounded-xl text-left transition-all hover:bg-[#ffbf23]/20"
                   >
-                    {/* Favicon - NEO-BRUTALIST (January 9th, 2026) */}
-                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-[#ffbf23]/30">
-                      <img 
+                    {/* Favicon — softened with rounded-md */}
+                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden rounded-md border border-[#ffbf23]/30">
+                      <img
                         src={`https://www.google.com/s2/favicons?domain=${comp}&sz=32`}
                         alt={displayName}
                         className="w-5 h-5 object-contain"
@@ -1651,18 +1654,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <span className="hidden text-xs font-bold text-gray-400">
+                      <span className="hidden text-xs font-bold text-[#8898aa]">
                         {displayName[0].toUpperCase()}
                       </span>
                     </div>
                     {/* January 21st, 2026: Single line layout - name and domain inline */}
                     <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <p className="text-xs font-bold text-gray-900 dark:text-white">{displayName}</p>
-                      <span className="text-gray-300 dark:text-gray-600">•</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{comp}</p>
+                      <p className="text-xs font-semibold text-[#0f172a] dark:text-white">{displayName}</p>
+                      <span className="text-[#8898aa] dark:text-gray-600">•</span>
+                      <p className="text-xs text-[#8898aa] dark:text-gray-400">{comp}</p>
                     </div>
-                    {/* Remove button - appears on hover */}
-                    <div className="w-5 h-5 bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    {/* Remove button — appears on hover */}
+                    <div className="w-5 h-5 bg-red-500 text-white rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <X size={12} />
                     </div>
                   </button>
@@ -1671,11 +1674,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             </div>
           </div>
         )}
-        
-        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+
+        {/* Empty state — smoover refresh (April 24th, 2026). Dashed border kept for "empty" vibe; softened to hairline + rounded-xl + #f6f9fc bg. */}
         {competitors.length === 0 && suggestedCompetitors.length === 0 && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+          <div className="p-4 bg-[#f6f9fc] dark:bg-gray-900 border border-dashed border-[#e6ebf1] dark:border-gray-700 rounded-xl text-center">
+            <p className="text-xs text-[#8898aa] dark:text-gray-400 font-medium">
               {t.onboarding.step3.emptyState}
             </p>
           </div>
