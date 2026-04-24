@@ -1084,36 +1084,36 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep1 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Sparkles motif preserved; tile softened to rounded-md + hairline border. Wordmark mirrors sign-in (font-display + text-gradient-brand on "One"). */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.gettingStarted}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.gettingStarted}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Rounded pills on a hairline #e6ebf1 track; yellow fill unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= step ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= step ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Welcome Text - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Welcome Text — smoover refresh (April 24th, 2026). Archivo display title over muted eyebrow. i18n keys unchanged. */}
       <div className="text-center mb-5">
-        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wide mb-1">
+        <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider mb-1">
           {t.onboarding.step1.header}
         </p>
-        <h1 className="text-xl md:text-2xl text-gray-900 dark:text-white font-black tracking-tight">
+        <h1 className="font-display text-xl md:text-2xl font-bold text-[#0f172a] dark:text-white tracking-tight">
           {t.onboarding.step1.title}
         </h1>
       </div>
