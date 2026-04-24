@@ -1084,56 +1084,56 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep1 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Sparkles motif preserved; tile softened to rounded-md + hairline border. Wordmark mirrors sign-in (font-display + text-gradient-brand on "One"). */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.gettingStarted}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.gettingStarted}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Rounded pills on a hairline #e6ebf1 track; yellow fill unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= 0 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= 0 ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Welcome Text - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Welcome Text — smoover refresh (April 24th, 2026). Archivo display title over muted eyebrow. i18n keys unchanged. */}
       <div className="text-center mb-5">
-        <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wide mb-1">
+        <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider mb-1">
           {t.onboarding.step1.header}
         </p>
-        <h1 className="text-xl md:text-2xl text-gray-900 dark:text-white font-black tracking-tight">
+        <h1 className="font-display text-xl md:text-2xl font-bold text-[#0f172a] dark:text-white tracking-tight">
           {t.onboarding.step1.title}
         </h1>
       </div>
 
       <div className="space-y-4">
-        {/* Name Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Name Input — smoover refresh (April 24th, 2026). Hairline border, rounded-xl, soft bg. Label drops uppercase per smoover; translation text already sentence-cased. */}
         <div className="space-y-1.5">
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.nameLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step1.nameLabel}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all text-sm placeholder:text-gray-400"
+            className="w-full px-3.5 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all text-sm font-medium"
             placeholder={t.onboarding.step1.namePlaceholder}
           />
         </div>
 
-        {/* Role Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Role Dropdown — smoover refresh (April 24th, 2026). Trigger + menu adopt hairline border, rounded-xl, soft-lg shadow in place of offset brutalist shadow. Logic (open/search/filter) unchanged. */}
         <div className="space-y-1.5 relative" ref={roleDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.roleLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step1.roleLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -1142,28 +1142,28 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => roleSearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
-              !role ? "text-gray-400" : "text-gray-900 dark:text-white"
+              "w-full px-3.5 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all text-sm font-medium",
+              !role ? "text-[#8898aa]" : "text-[#0f172a] dark:text-white"
             )}
           >
             {role || t.onboarding.step1.rolePlaceholder}
-            <ChevronDown className={cn("text-gray-400 transition-transform", isRoleDropdownOpen && "rotate-180")} size={16} />
+            <ChevronDown className={cn("text-[#8898aa] transition-transform", isRoleDropdownOpen && "rotate-180")} size={16} />
           </button>
 
-          {/* Role Dropdown Menu - NEO-BRUTALIST (January 9th, 2026) */}
+          {/* Role Dropdown Menu — smoover refresh (April 24th, 2026) */}
           {isRoleDropdownOpen && (
-            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 overflow-hidden">
               {/* Search Input */}
-              <div className="p-2 border-b-2 border-gray-200 dark:border-gray-700">
+              <div className="p-2 border-b border-[#e6ebf1] dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8898aa]" />
                   <input
                     ref={roleSearchRef}
                     type="text"
                     value={roleSearch}
                     onChange={(e) => setRoleSearch(e.target.value)}
                     placeholder={t.onboarding.common.search}
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 text-[#0f172a] dark:text-white placeholder-[#8898aa]"
                   />
                 </div>
               </div>
@@ -1178,26 +1178,23 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsRoleDropdownOpen(false);
                       setRoleSearch('');
                     }}
-                    className="w-full text-left px-3.5 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-3.5 py-2 text-[#425466] dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-[#0f172a] dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     {r}
                     {role === r && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
                 {roles.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase())).length === 0 && (
-                  <p className="px-3.5 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
+                  <p className="px-3.5 py-2 text-sm text-[#8898aa]">{t.onboarding.common.noResults}</p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Brand Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026)
-            Domain validation provides two levels of feedback:
-            1. Instant format validation (regex) - shows red/green border
-            2. Server reachability validation (on Continue) - shows loading/error */}
+        {/* Brand Input — smoover refresh (April 24th, 2026). Same validation state machine (red/amber/green 500-level borders kept for clarity); default state adopts hairline + rounded-xl + soft bg. Helper + error text soften to smoover tokens. */}
         <div className="space-y-1.5">
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.brandLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step1.brandLabel}</label>
           <div className="relative">
             <input
               type="text"
@@ -1205,15 +1202,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               onChange={(e) => handleBrandChange(e.target.value)}
               disabled={isBrandValidating}
               className={cn(
-                "w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 text-gray-900 dark:text-white focus:outline-none transition-all text-sm pr-10",
-                // Dynamic border color based on validation state (January 9th, 2026)
-                brandError 
+                "w-full px-3.5 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border rounded-xl text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none transition-all text-sm font-medium pr-10",
+                // Dynamic border color based on validation state (vivid signal colors retained on purpose)
+                brandError
                   ? "border-red-500 focus:border-red-500"
                   : brandFormatValid === false
                     ? "border-amber-500 focus:border-amber-500"
                     : brandValidated
                       ? "border-green-500 focus:border-green-500"
-                      : "border-gray-300 dark:border-gray-600 focus:border-[#ffbf23]",
+                      : "border-[#e6ebf1] dark:border-gray-700 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a]",
                 isBrandValidating && "opacity-70 cursor-not-allowed"
               )}
               placeholder={t.onboarding.step1.brandPlaceholder}
@@ -1221,7 +1218,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             {/* Validation status indicator */}
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {isBrandValidating ? (
-                <Loader2 size={16} className="animate-spin text-gray-400" />
+                <Loader2 size={16} className="animate-spin text-[#8898aa]" />
               ) : brandValidated ? (
                 <Check size={16} className="text-green-500" />
               ) : brandFormatValid === false && brand.trim() ? (
@@ -1229,24 +1226,24 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               ) : null}
             </div>
           </div>
-          
+
           {/* Error message */}
           {brandError && (
-            <p className="text-red-500 text-xs font-bold px-1 pt-0.5 flex items-center gap-1">
+            <p className="text-red-500 text-xs font-medium px-1 pt-0.5 flex items-center gap-1">
               <X size={12} />
               {brandError}
             </p>
           )}
-          
-          {/* Format hint (shown only when format is invalid) - Translated (January 9th, 2026) */}
+
+          {/* Format hint (shown only when format is invalid) */}
           {brandFormatValid === false && brand.trim() && !brandError && (
             <p className="text-amber-500 text-xs font-medium px-1 pt-0.5">
               {t.onboarding.step1.validation.invalidFormat}
             </p>
           )}
-          
-          {/* Helper text - Translated (January 9th, 2026) */}
-          <p className="text-gray-500 dark:text-gray-400 text-xs leading-relaxed px-1 pt-0.5">
+
+          {/* Helper text */}
+          <p className="text-[#8898aa] dark:text-gray-400 text-xs leading-relaxed px-1 pt-0.5">
             {t.onboarding.step1.helpText}
           </p>
         </div>
@@ -1267,44 +1264,44 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep2 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Same treatment as Step 1 logo row. */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '1').replace('{total}', '5')}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.stepOf.replace('{current}', '1').replace('{total}', '5')}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Rounded pills on hairline track; fill condition (i<=1 = 1 completed step) unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= 1 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= 1 ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Question Block — smoover refresh (April 24th, 2026). Yellow-tinted icon tile softened with rounded-md; question text uses text-[#0f172a] + font-semibold. */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] rounded-md border border-[#ffbf23]/30">
             <Globe size={12} />
           </div>
-          <p className="text-gray-900 dark:text-white font-bold text-sm">
+          <p className="text-[#0f172a] dark:text-white font-semibold text-sm">
             {t.onboarding.step2.title}
           </p>
         </div>
 
-        {/* Country Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Country Dropdown — smoover refresh (April 24th, 2026). Same pattern as Step 1 role dropdown: hairline border, rounded-xl, shadow-soft-lg on menu. Flag + localized-name logic untouched. */}
         <div className="space-y-1.5 relative" ref={countryDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step2.countryLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step2.countryLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -1313,45 +1310,44 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => countrySearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-4 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
-              !targetCountry ? "text-gray-400" : "text-gray-900 dark:text-white"
+              "w-full px-4 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all text-sm font-medium",
+              !targetCountry ? "text-[#8898aa]" : "text-[#0f172a] dark:text-white"
             )}
           >
-            {/* January 21st, 2026: Updated to show localized country name */}
+            {/* Localized country name + flag (untouched) */}
             {targetCountry ? (
               <span className="flex items-center gap-2">
-                <img 
-                  src={getFlagUrl(countries.find(c => c.name === targetCountry)?.code || '')} 
-                  alt="" 
+                <img
+                  src={getFlagUrl(countries.find(c => c.name === targetCountry)?.code || '')}
+                  alt=""
                   className="w-5 h-auto"
                 />
                 <span>{getLocalizedName(countries.find(c => c.name === targetCountry) || { name: targetCountry, nameDE: targetCountry })}</span>
               </span>
             ) : t.onboarding.step2.countryPlaceholder}
-            <ChevronDown className={cn("text-gray-400 transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
+            <ChevronDown className={cn("text-[#8898aa] transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
           </button>
-          
-          {/* Country Dropdown Menu - NEO-BRUTALIST (January 9th, 2026) */}
+
+          {/* Country Dropdown Menu — smoover refresh (April 24th, 2026) */}
           {isCountryDropdownOpen && (
-            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 overflow-hidden">
               {/* Search Input */}
-              <div className="p-2 border-b-2 border-gray-200 dark:border-gray-700">
+              <div className="p-2 border-b border-[#e6ebf1] dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8898aa]" />
                   <input
                     ref={countrySearchRef}
                     type="text"
                     value={countrySearch}
                     onChange={(e) => setCountrySearch(e.target.value)}
                     placeholder={t.onboarding.common.search}
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 text-[#0f172a] dark:text-white placeholder-[#8898aa]"
                   />
                 </div>
               </div>
-              {/* Options - Flag images from flagcdn.com
-                  January 21st, 2026: Updated to show localized names and search both EN/DE */}
+              {/* Options — flag images from flagcdn.com; localized name + EN/DE search logic untouched */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
-                {countries.filter(c => 
+                {countries.filter(c =>
                   c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
                   c.nameDE.toLowerCase().includes(countrySearch.toLowerCase())
                 ).map((c) => (
@@ -1363,7 +1359,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsCountryDropdownOpen(false);
                       setCountrySearch('');
                     }}
-                    className="w-full text-left px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-4 py-2 text-[#425466] dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-[#0f172a] dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     <span className="flex items-center gap-2">
                       <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto" />
@@ -1372,21 +1368,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     {targetCountry === c.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
-                {countries.filter(c => 
+                {countries.filter(c =>
                   c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
                   c.nameDE.toLowerCase().includes(countrySearch.toLowerCase())
                 ).length === 0 && (
-                  <p className="px-4 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
+                  <p className="px-4 py-2 text-sm text-[#8898aa]">{t.onboarding.common.noResults}</p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Language Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026)
-            January 21st, 2026: Added flags and localized language names per client request */}
+        {/* Language Dropdown — smoover refresh (April 24th, 2026). Same pattern as Country dropdown above; menu opens upward with search at bottom. Flag + localized language-name logic (Jan 21, 2026) untouched. */}
         <div className="space-y-1.5 relative" ref={langDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step2.languageLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step2.languageLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -1395,31 +1390,30 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => langSearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-4 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
-              !targetLanguage ? "text-gray-400" : "text-gray-900 dark:text-white"
+              "w-full px-4 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all text-sm font-medium",
+              !targetLanguage ? "text-[#8898aa]" : "text-[#0f172a] dark:text-white"
             )}
           >
-            {/* January 21st, 2026: Updated to show flag + localized language name */}
+            {/* Flag + localized language name (untouched) */}
             {targetLanguage ? (
               <span className="flex items-center gap-2">
-                <img 
-                  src={getFlagUrl(languages.find(l => l.name === targetLanguage)?.code || '')} 
-                  alt="" 
+                <img
+                  src={getFlagUrl(languages.find(l => l.name === targetLanguage)?.code || '')}
+                  alt=""
                   className="w-5 h-auto"
                 />
                 <span>{getLocalizedName(languages.find(l => l.name === targetLanguage) || { name: targetLanguage, nameDE: targetLanguage })}</span>
               </span>
             ) : t.onboarding.step2.languagePlaceholder}
-            <ChevronDown className={cn("text-gray-400 transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
+            <ChevronDown className={cn("text-[#8898aa] transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
           </button>
-          
-          {/* Language Dropdown Menu - NEO-BRUTALIST (January 9th, 2026)
-              January 21st, 2026: Updated to show flags + localized names per client request */}
+
+          {/* Language Dropdown Menu — smoover refresh (April 24th, 2026). Opens upward; search at bottom. */}
           {isLangDropdownOpen && (
-            <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
-              {/* Options first (dropdown opens upward) - Now with flags instead of symbols */}
+            <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 overflow-hidden">
+              {/* Options first (dropdown opens upward) */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
-                {languages.filter(l => 
+                {languages.filter(l =>
                   l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
                   l.nameDE.toLowerCase().includes(langSearch.toLowerCase())
                 ).map((l) => (
@@ -1431,7 +1425,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsLangDropdownOpen(false);
                       setLangSearch('');
                     }}
-                    className="w-full text-left px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-4 py-2 text-[#425466] dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-[#0f172a] dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     <span className="flex items-center gap-2">
                       <img src={getFlagUrl(l.code)} alt="" className="w-5 h-auto" />
@@ -1440,24 +1434,24 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     {targetLanguage === l.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
-                {languages.filter(l => 
+                {languages.filter(l =>
                   l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
                   l.nameDE.toLowerCase().includes(langSearch.toLowerCase())
                 ).length === 0 && (
-                  <p className="px-4 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
+                  <p className="px-4 py-2 text-sm text-[#8898aa]">{t.onboarding.common.noResults}</p>
                 )}
               </div>
               {/* Search Input at bottom (dropdown opens upward) */}
-              <div className="p-2 border-t-2 border-gray-200 dark:border-gray-700">
+              <div className="p-2 border-t border-[#e6ebf1] dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8898aa]" />
                   <input
                     ref={langSearchRef}
                     type="text"
                     value={langSearch}
                     onChange={(e) => setLangSearch(e.target.value)}
                     placeholder={t.onboarding.common.search}
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 text-[#0f172a] dark:text-white placeholder-[#8898aa]"
                   />
                 </div>
               </div>
@@ -1481,94 +1475,94 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep3 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Same treatment as Steps 1+2 logo row. */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '2').replace('{total}', '5')}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.stepOf.replace('{current}', '2').replace('{total}', '5')}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Fill condition (i<=2 = 2 completed steps) unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= 2 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= 2 ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Question Block — smoover refresh (April 24th, 2026). Yellow-tinted icon tile softened with rounded-md; question text uses text-[#0f172a] + font-semibold. */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] rounded-md border border-[#ffbf23]/30">
             <Sparkles size={12} />
           </div>
-          <p className="text-gray-900 dark:text-white font-bold text-sm">
+          <p className="text-[#0f172a] dark:text-white font-semibold text-sm">
             {t.onboarding.step3.title}
           </p>
         </div>
 
-        {/* Competitor Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Competitor Input — smoover refresh (April 24th, 2026). Input adopts hairline + rounded-xl + soft bg. Add button trades the brutalist offset shadow for shadow-yellow-glow-sm + subtle lift. Enter-to-add + 5-item cap logic unchanged. */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
-            <input 
+            <input
               type="text"
               value={competitorInput}
               onChange={(e) => setCompetitorInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomCompetitor())}
               placeholder={t.onboarding.step3.inputPlaceholder}
-              className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
+              className="flex-1 px-4 py-2 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-sm text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all font-medium"
             />
-            <button 
+            <button
               type="button"
               onClick={addCustomCompetitor}
               disabled={!competitorInput.trim() || competitors.length >= 5}
-              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] border-2 border-black dark:border-gray-600 hover:bg-yellow-400 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] rounded-xl hover:bg-[#e5ac20] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-yellow-glow-sm hover:shadow-yellow-glow hover:-translate-y-px"
             >
               <Plus size={16} />
             </button>
           </div>
-          
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-1 font-medium">
+
+          <p className="text-[11px] text-[#8898aa] dark:text-gray-500 ml-1 font-medium">
             {t.onboarding.step3.count.replace('{count}', String(competitors.length))}
           </p>
         </div>
 
         {/* =================================================================
           AI SUGGESTIONS DISPLAY (January 3rd, 2026)
-          Updated to NEO-BRUTALIST (January 9th, 2026)
-          
+          Smoover refresh (April 24th, 2026)
+
           Shows AI-generated competitor suggestions if available.
           User can click to add/remove suggestions.
           Suggestions come from /api/suggestions/generate endpoint.
           ================================================================= */}
-        
-        {/* AI Suggested Competitors - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+
+        {/* AI Suggested Competitors — smoover refresh (April 24th, 2026). Eyebrow softened; suggestion cards switch to hairline border + rounded-xl. 5-item cap + click-to-toggle logic unchanged. */}
         {suggestedCompetitors.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 flex items-center gap-1 uppercase tracking-wider">
               <Sparkles size={10} className="text-[#ffbf23]" />
               {t.onboarding.step3.suggestionsTitle}
             </p>
-            
+
             {/* =================================================================
               LAYOUT HISTORY:
               - January 9th, 2026: Initial grid-cols-3 layout
               - January 17th, 2026: Changed to grid-cols-2 (domains truncated)
               - January 21st, 2026: Changed to SINGLE COLUMN LIST (client request)
-              
+
               January 21st, 2026 - CLIENT REQUEST (Linear Issue):
-              "This one will be better as a list - cause if the domain names 
+              "This one will be better as a list - cause if the domain names
               are longer it cant be read exactly."
-              
+
               CHANGE: grid-cols-2 → flex flex-col (single column list)
               REASON: Long domain names like "herbalsolutions.de" were getting
                       truncated in 2-column layout. List ensures full visibility.
@@ -1584,15 +1578,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     onClick={() => toggleCompetitor(comp.domain)}
                     disabled={competitors.length >= 5}
                     className={cn(
-                      "group relative flex items-center gap-3 p-2.5 border-2 text-left transition-all",
+                      "group relative flex items-center gap-3 p-2.5 border rounded-xl text-left transition-all",
                       competitors.length >= 5
-                        ? "border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed"
-                        : "border-gray-200 dark:border-gray-700 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10"
+                        ? "border-[#e6ebf1] dark:border-gray-700 opacity-50 cursor-not-allowed"
+                        : "border-[#e6ebf1] dark:border-gray-700 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10"
                     )}
                   >
-                    {/* Favicon - NEO-BRUTALIST (January 9th, 2026) */}
-                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-gray-200 dark:border-gray-700">
-                      <img 
+                    {/* Favicon — softened with rounded-md + hairline border */}
+                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden rounded-md border border-[#e6ebf1] dark:border-gray-700">
+                      <img
                         src={`https://www.google.com/s2/favicons?domain=${comp.domain}&sz=32`}
                         alt={comp.name}
                         className="w-5 h-5 object-contain"
@@ -1601,17 +1595,17 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <span className="hidden text-xs font-bold text-gray-400">
+                      <span className="hidden text-xs font-bold text-[#8898aa]">
                         {comp.name[0].toUpperCase()}
                       </span>
                     </div>
                     {/* January 21st, 2026: Single line layout - name and domain inline */}
                     <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{comp.name}</p>
-                      <span className="text-gray-300 dark:text-gray-600">•</span>
-                      <p className="text-xs text-gray-400">{comp.domain}</p>
+                      <p className="text-xs font-semibold text-[#0f172a] dark:text-gray-300">{comp.name}</p>
+                      <span className="text-[#8898aa] dark:text-gray-600">•</span>
+                      <p className="text-xs text-[#8898aa]">{comp.domain}</p>
                     </div>
-                    <Plus size={14} className="text-gray-300 group-hover:text-[#ffbf23] transition-colors shrink-0" />
+                    <Plus size={14} className="text-[#8898aa] group-hover:text-[#ffbf23] transition-colors shrink-0" />
                   </button>
                 ))}
             </div>
@@ -1620,35 +1614,38 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
         {/* =================================================================
           SELECTED COMPETITORS SECTION
-          
+
           LAYOUT HISTORY:
           - January 9th, 2026: Initial NEO-BRUTALIST grid-cols-3
           - January 17th, 2026: Changed to grid-cols-2 (domains truncated)
           - January 21st, 2026: Changed to SINGLE COLUMN LIST (client request)
-          
+          - April 24th, 2026: Smoover refresh (visual only — hairline border,
+                              rounded-xl, softened text tokens). Layout + logic
+                              unchanged.
+
           January 21st, 2026 - CLIENT REQUEST:
           Matching the suggestions layout above - single column list for
           consistent UX and full domain visibility.
           ================================================================= */}
         {competitors.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">{t.onboarding.step3.yourCompetitors}</p>
-            
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.step3.yourCompetitors}</p>
+
             <div className="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto scrollbar-hide">
               {competitors.map(comp => {
                 const suggestion = suggestedCompetitors.find(s => s.domain === comp);
                 const displayName = suggestion?.name || comp;
-                
+
                 return (
                   <button
                     key={comp}
                     type="button"
                     onClick={() => toggleCompetitor(comp)}
-                    className="group relative flex items-center gap-3 p-2.5 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-left transition-all hover:bg-[#ffbf23]/20"
+                    className="group relative flex items-center gap-3 p-2.5 bg-[#ffbf23]/10 border border-[#ffbf23] rounded-xl text-left transition-all hover:bg-[#ffbf23]/20"
                   >
-                    {/* Favicon - NEO-BRUTALIST (January 9th, 2026) */}
-                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden border border-[#ffbf23]/30">
-                      <img 
+                    {/* Favicon — softened with rounded-md */}
+                    <div className="w-7 h-7 bg-white dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden rounded-md border border-[#ffbf23]/30">
+                      <img
                         src={`https://www.google.com/s2/favicons?domain=${comp}&sz=32`}
                         alt={displayName}
                         className="w-5 h-5 object-contain"
@@ -1657,18 +1654,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                      <span className="hidden text-xs font-bold text-gray-400">
+                      <span className="hidden text-xs font-bold text-[#8898aa]">
                         {displayName[0].toUpperCase()}
                       </span>
                     </div>
                     {/* January 21st, 2026: Single line layout - name and domain inline */}
                     <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <p className="text-xs font-bold text-gray-900 dark:text-white">{displayName}</p>
-                      <span className="text-gray-300 dark:text-gray-600">•</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{comp}</p>
+                      <p className="text-xs font-semibold text-[#0f172a] dark:text-white">{displayName}</p>
+                      <span className="text-[#8898aa] dark:text-gray-600">•</span>
+                      <p className="text-xs text-[#8898aa] dark:text-gray-400">{comp}</p>
                     </div>
-                    {/* Remove button - appears on hover */}
-                    <div className="w-5 h-5 bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    {/* Remove button — appears on hover */}
+                    <div className="w-5 h-5 bg-red-500 text-white rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <X size={12} />
                     </div>
                   </button>
@@ -1677,11 +1674,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             </div>
           </div>
         )}
-        
-        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+
+        {/* Empty state — smoover refresh (April 24th, 2026). Dashed border kept for "empty" vibe; softened to hairline + rounded-xl + #f6f9fc bg. */}
         {competitors.length === 0 && suggestedCompetitors.length === 0 && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+          <div className="p-4 bg-[#f6f9fc] dark:bg-gray-900 border border-dashed border-[#e6ebf1] dark:border-gray-700 rounded-xl text-center">
+            <p className="text-xs text-[#8898aa] dark:text-gray-400 font-medium">
               {t.onboarding.step3.emptyState}
             </p>
           </div>
@@ -1703,86 +1700,85 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep4 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Same treatment as Steps 1-3 logo row. */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '3').replace('{total}', '5')}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.stepOf.replace('{current}', '3').replace('{total}', '5')}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Fill condition (i<=3 = 3 completed steps) unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= 3 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= 3 ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Question Block — smoover refresh (April 24th, 2026). Yellow-tinted MessageSquare tile softened with rounded-md; question text uses text-[#0f172a] + font-semibold. */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] rounded-md border border-[#ffbf23]/30">
             <MessageSquare size={12} />
           </div>
-          <p className="text-gray-900 dark:text-white font-bold text-sm">
+          <p className="text-[#0f172a] dark:text-white font-semibold text-sm">
             {t.onboarding.step4.title}
           </p>
         </div>
 
-        {/* Topic Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Topic Input — smoover refresh (April 24th, 2026). Input adopts hairline + rounded-xl + soft bg; add (+) button matches Step 3 (rounded-xl + shadow-yellow-glow-sm with subtle lift). MAX_TOPICS_LIMIT disabled state + Enter-to-add logic unchanged. */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
-            <input 
+            <input
               type="text"
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTopic())}
               placeholder={t.onboarding.step4.inputPlaceholder}
-              className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
+              className="flex-1 px-4 py-2 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-sm text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all font-medium"
             />
             {/* Add button disabled when MAX_TOPICS_LIMIT reached - January 15th, 2026 */}
-            <button 
+            <button
               type="button"
               onClick={addCustomTopic}
               disabled={!topicInput.trim() || topics.length >= MAX_TOPICS_LIMIT}
-              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] border-2 border-black dark:border-gray-600 hover:bg-yellow-400 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] rounded-xl hover:bg-[#e5ac20] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-yellow-glow-sm hover:shadow-yellow-glow hover:-translate-y-px"
             >
               <Plus size={16} />
             </button>
           </div>
-          
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-1 font-medium">
+
+          <p className="text-[11px] text-[#8898aa] dark:text-gray-500 ml-1 font-medium">
             {t.onboarding.step4.count.replace('{count}', String(topics.length))}
           </p>
         </div>
 
         {/* =================================================================
           AI SUGGESTIONS DISPLAY (January 3rd, 2026)
-          Updated to NEO-BRUTALIST (January 9th, 2026)
-          Translated (January 9th, 2026)
-          
+          Smoover refresh (April 24th, 2026)
+
           Shows AI-generated topic suggestions if available.
           User can click to add/remove suggestions.
           Suggestions come from /api/suggestions/generate endpoint.
           ================================================================= */}
-        
-        {/* AI Suggested Topics - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+
+        {/* AI Suggested Topics — smoover refresh (April 24th, 2026). Eyebrow softened; topic pills become rounded-full with hairline border. MAX_TOPICS_LIMIT disabled-state + click-to-toggle logic unchanged. */}
         {suggestedTopics.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 flex items-center gap-1 uppercase tracking-wider">
               <Sparkles size={10} className="text-[#ffbf23]" />
               {t.onboarding.step4.suggestionsTitle}
             </p>
-            
+
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
               {/* AI suggestions - limited to MAX_TOPICS_LIMIT selections - January 15th, 2026 */}
               {suggestedTopics
@@ -1795,35 +1791,35 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     onClick={() => toggleTopic(t.keyword)}
                     disabled={topics.length >= MAX_TOPICS_LIMIT}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 py-1 border-2 text-[11px] transition-all",
+                      "flex items-center gap-1 px-2.5 py-1 border rounded-full text-[11px] transition-all",
                       topics.length >= MAX_TOPICS_LIMIT
-                        ? "border-gray-200 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
-                        : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10 hover:text-gray-900 dark:hover:text-white"
+                        ? "border-[#e6ebf1] dark:border-gray-700 text-[#8898aa] dark:text-gray-600 cursor-not-allowed"
+                        : "border-[#e6ebf1] dark:border-gray-700 text-[#425466] dark:text-gray-400 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10 hover:text-[#0f172a] dark:hover:text-white"
                     )}
                   >
                     {t.keyword}
-                    <Plus size={10} className="text-gray-300" />
+                    <Plus size={10} className="text-[#8898aa]" />
                   </button>
                 ))}
             </div>
           </div>
         )}
 
-        {/* Selected Topics - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Selected Topics — smoover refresh (April 24th, 2026). Yellow-tinted pills become rounded-full with hairline yellow border; inline X chip becomes circular. Click-to-remove logic unchanged. */}
         {topics.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">{t.onboarding.step4.yourTopics}</p>
-            
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.step4.yourTopics}</p>
+
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
               {topics.map(topic => (
                 <button
                   key={topic}
                   type="button"
                   onClick={() => toggleTopic(topic)}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-[11px] font-bold text-[#1A1D21] dark:text-[#ffbf23] transition-all text-left hover:bg-[#ffbf23]/20"
+                  className="group relative flex items-center gap-1.5 px-3 py-1.5 bg-[#ffbf23]/10 border border-[#ffbf23] rounded-full text-[11px] font-semibold text-[#1A1D21] dark:text-[#ffbf23] transition-all text-left hover:bg-[#ffbf23]/20"
                 >
                   {topic}
-                  <div className="w-3.5 h-3.5 bg-[#ffbf23]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
+                  <div className="w-3.5 h-3.5 bg-[#ffbf23]/30 text-[#1A1D21] rounded-full flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
                     <X size={8} />
                   </div>
                 </button>
@@ -1831,11 +1827,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             </div>
           </div>
         )}
-        
-        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+
+        {/* Empty state — smoover refresh (April 24th, 2026). Dashed border kept for "empty" vibe; softened to hairline + rounded-xl + #f6f9fc bg (matches Step 3 empty state). */}
         {topics.length === 0 && suggestedTopics.length === 0 && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+          <div className="p-4 bg-[#f6f9fc] dark:bg-gray-900 border border-dashed border-[#e6ebf1] dark:border-gray-700 rounded-xl text-center">
+            <p className="text-xs text-[#8898aa] dark:text-gray-400 font-medium">
               {t.onboarding.step4.emptyState}
             </p>
           </div>
