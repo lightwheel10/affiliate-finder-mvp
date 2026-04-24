@@ -23,38 +23,39 @@ interface TranslatedErrorBoundaryProps extends ErrorBoundaryProps {
 
 /**
  * =============================================================================
- * ErrorBoundary Component - NEO-BRUTALIST
+ * ErrorBoundary Component — SMOOVER REFRESH
  * =============================================================================
- * 
+ *
  * Created: 29th December 2025
- * Updated: January 8th, 2026
+ * Updated: April 24th, 2026 — smoover visual refresh
  * i18n Migration: January 10th, 2026 - Priority 5: Shared Components
- * 
- * NEO-BRUTALIST DESIGN UPDATE:
- * - Sharp edges (no rounded corners)
- * - Bold borders (border-2 to border-4 with black)
- * - Yellow accent color (#ffbf23)
- * - Square elements throughout
- * - Bold typography (font-black uppercase)
- * - Dark mode support
- * 
+ *
+ * CURRENT DESIGN LANGUAGE ("smoover"):
+ * - Red icon tile: rounded-2xl + shadow-soft-lg (no more brutalist offset).
+ * - Title: Archivo display (font-display) + tracking-tight, mixed case.
+ * - "Try again" CTA: rounded-full + shadow-yellow-glow-sm + hover lift,
+ *   matching sign-in / onboarding primary CTAs.
+ * - Vivid red (bg-red-500) preserved as the error signal colour.
+ *
  * PURPOSE:
  * Catches React errors and shows a friendly message instead of crashing.
  * This prevents users from seeing a blank white screen when something breaks.
- * 
+ *
  * HOW IT WORKS:
- * - Wraps page content (Dashboard, Saved, Discovered, Outreach, Settings)
- * - If any child component throws an error, this catches it
- * - Shows "Something went wrong" message with refresh button
- * - Logs error to console for debugging
- * 
+ * - Wraps page content under the (dashboard) route group, which also hosts
+ *   OnboardingScreen via AuthGuard — so this is the error UI for both the
+ *   dashboard pages AND the onboarding flow.
+ * - If any child component throws an error, this catches it.
+ * - Shows "Something went wrong" message with refresh button.
+ * - Logs error to console for debugging.
+ *
  * i18n NOTES:
  * Since ErrorBoundary is a class component (required for error boundaries),
  * we use a wrapper functional component to access the translation hook and
  * pass translations as props to the class component.
- * 
+ *
  * All UI strings have been migrated to use the translation dictionary.
- * 
+ *
  * =============================================================================
  */
 
@@ -85,29 +86,29 @@ class ErrorBoundaryInner extends Component<TranslatedErrorBoundaryProps, ErrorBo
       return (
         <div className="flex items-center justify-center min-h-[400px] p-8">
           <div className="text-center max-w-md">
-            {/* Icon - NEO-BRUTALIST square */}
-            <div className="w-16 h-16 bg-red-500 border-4 border-black flex items-center justify-center mx-auto mb-4 shadow-[4px_4px_0px_0px_#000000]">
+            {/* Icon — smoover refresh (April 24th, 2026). Red signal colour kept vivid; tile softened to rounded-2xl + shadow-soft-lg. */}
+            <div className="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-soft-lg">
               <AlertTriangle className="w-8 h-8 text-white" />
             </div>
-            
-            {/* Message - NEO-BRUTALIST */}
-            <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2 uppercase tracking-wide">
+
+            {/* Message — smoover Archivo display title + muted body */}
+            <h2 className="text-lg font-display font-bold text-[#0f172a] dark:text-white mb-2 tracking-tight">
               {translations.title}
             </h2>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-[#8898aa] dark:text-gray-400 mb-6">
               {translations.message}{' '}
-              <a 
-                href="mailto:support@afforceone.com" 
-                className="text-black dark:text-white font-bold hover:underline"
+              <a
+                href="mailto:support@afforceone.com"
+                className="text-[#0f172a] dark:text-white font-semibold hover:underline"
               >
                 {translations.contactPrefix}
               </a>
             </p>
-            
-            {/* Refresh Button - NEO-BRUTALIST */}
+
+            {/* Refresh Button — smoover primary CTA (rounded-full + shadow-yellow-glow-sm) */}
             <button
               onClick={this.handleRefresh}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ffbf23] text-black font-black uppercase tracking-wide border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ffbf23] text-[#1A1D21] font-bold uppercase tracking-wide rounded-full hover:bg-[#e5ac20] shadow-yellow-glow-sm hover:shadow-yellow-glow hover:-translate-y-px transition-all"
             >
               <RefreshCw size={16} />
               {translations.tryAgain}
