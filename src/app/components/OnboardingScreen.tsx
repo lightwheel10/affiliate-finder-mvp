@@ -1852,42 +1852,42 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep5 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Same treatment as Steps 1-4 logo row. */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '4').replace('{total}', '5')}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.stepOf.replace('{current}', '4').replace('{total}', '5')}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Fill condition (i<=4 = 4 completed steps) unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= 4 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= 4 ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Question Block — smoover refresh (April 24th, 2026). Yellow-tinted MousePointerClick tile softened with rounded-md; title uses text-[#0f172a] + font-semibold. i18n key t.onboarding.step6.title (pre-existing naming quirk in dictionary) preserved exactly. */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] rounded-md border border-[#ffbf23]/30">
             <MousePointerClick size={12} />
           </div>
-          <p className="text-gray-900 dark:text-white font-bold text-sm">
+          <p className="text-[#0f172a] dark:text-white font-semibold text-sm">
             {t.onboarding.step6.title}
           </p>
         </div>
 
-        {/* Affiliate Types Grid - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Affiliate Types Grid — smoover refresh (April 24th, 2026). 2-col toggle grid: cards adopt hairline border + rounded-xl, hover picks up yellow tint (matches Step 3 suggestion cards). Inline checkbox indicator becomes rounded-sm with hairline border. AFFILIATE_TYPES list + toggleAffiliateType logic unchanged. */}
         <div className="grid grid-cols-2 gap-1.5">
           {AFFILIATE_TYPES.map((type) => {
             const isSelected = affiliateTypes.includes(type);
@@ -1897,18 +1897,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 type="button"
                 onClick={() => toggleAffiliateType(type)}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2.5 border-2 text-sm font-bold transition-all text-left group",
-                  isSelected 
-                    ? "bg-[#ffbf23]/10 border-[#ffbf23] text-gray-900 dark:text-white" 
-                    : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-white"
+                  "flex items-center gap-2.5 px-3 py-2.5 border rounded-xl text-sm font-semibold transition-all text-left group",
+                  isSelected
+                    ? "bg-[#ffbf23]/10 border-[#ffbf23] text-[#0f172a] dark:text-white"
+                    : "border-[#e6ebf1] dark:border-gray-700 text-[#425466] dark:text-gray-400 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10 hover:text-[#0f172a] dark:hover:text-white"
                 )}
               >
-                {/* Checkbox indicator - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
+                {/* Checkbox indicator — hairline border + rounded-sm */}
                 <div className={cn(
-                  "w-3.5 h-3.5 border-2 flex items-center justify-center transition-colors",
-                  isSelected 
-                    ? "bg-[#ffbf23] border-[#ffbf23] text-[#1A1D21]" 
-                    : "border-gray-300 dark:border-gray-600 group-hover:border-[#ffbf23]"
+                  "w-3.5 h-3.5 border rounded-sm flex items-center justify-center transition-colors",
+                  isSelected
+                    ? "bg-[#ffbf23] border-[#ffbf23] text-[#1A1D21]"
+                    : "border-[#e6ebf1] dark:border-gray-600 group-hover:border-[#ffbf23]"
                 )}>
                   {isSelected && <Check size={8} strokeWidth={3} />}
                 </div>
@@ -1926,27 +1926,25 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // IMPORTANT: This is billing-related UI - do not modify logic, only styling
   const renderStep6 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - Translated (January 9th, 2026) */}
-      {/* January 22nd, 2026: Added dark mode text colors */}
+      {/* Header — smoover refresh (April 24th, 2026). Archivo display title + #8898aa subtitle. */}
       <div className="text-center mb-4">
-        <h1 className="text-lg text-slate-900 dark:text-white font-bold tracking-tight mb-1">
+        <h1 className="text-lg font-display text-[#0f172a] dark:text-white font-bold tracking-tight mb-1">
           {t.onboarding.step5.title}
         </h1>
-        <p className="text-slate-500 dark:text-gray-400 text-xs mb-3">
+        <p className="text-[#8898aa] dark:text-gray-400 text-xs mb-3">
           {t.onboarding.step5.trialInfo}
         </p>
 
-        {/* Billing Toggle - Translated (January 9th, 2026) */}
-        {/* January 22nd, 2026: Added dark mode background and text colors */}
-        <div className="inline-flex items-center bg-slate-100 dark:bg-gray-800 p-1 rounded-lg">
+        {/* Billing Toggle — smoover refresh (April 24th, 2026). Slate bg replaced with #f6f9fc; active pill uses shadow-soft-sm. Font-bold softened to font-semibold. Discount badge unchanged (font-extrabold kept for 9px legibility). */}
+        <div className="inline-flex items-center bg-[#f6f9fc] dark:bg-gray-800 p-1 rounded-lg">
           <button
             type="button"
             onClick={() => setBillingInterval('monthly')}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-              billingInterval === 'monthly' 
-                ? "bg-white dark:bg-gray-700 text-slate-900 dark:text-white shadow-sm" 
-                : "text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200"
+              "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+              billingInterval === 'monthly'
+                ? "bg-white dark:bg-gray-700 text-[#0f172a] dark:text-white shadow-soft-sm"
+                : "text-[#8898aa] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-gray-200"
             )}
           >
             {t.onboarding.step5.monthly}
@@ -1955,10 +1953,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             type="button"
             onClick={() => setBillingInterval('annual')}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5",
-              billingInterval === 'annual' 
-                ? "bg-white dark:bg-gray-700 text-slate-900 dark:text-white shadow-sm" 
-                : "text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200"
+              "px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5",
+              billingInterval === 'annual'
+                ? "bg-white dark:bg-gray-700 text-[#0f172a] dark:text-white shadow-soft-sm"
+                : "text-[#8898aa] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-gray-200"
             )}
           >
             {t.onboarding.step5.annual}
@@ -2007,16 +2005,16 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               type="button"
               onClick={() => setSelectedPlan(plan.id)}
               className={cn(
-                "relative rounded-lg bg-white dark:bg-[#0f0f0f] flex flex-col text-left transition-all",
+                "relative rounded-xl bg-white dark:bg-[#0f0f0f] flex flex-col text-left transition-all",
                 isPopular
-                  ? "border-2 border-[#ffbf23] shadow-md shadow-[#ffbf23]/10"
-                  : "border border-slate-200 dark:border-gray-700 shadow-sm",
+                  ? "border border-[#ffbf23] shadow-yellow-glow-sm"
+                  : "border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm",
                 isSelected && "ring-2 ring-[#1A1D21] dark:ring-[#ffbf23] ring-offset-1 dark:ring-offset-black"
               )}
             >
               {isPopular && (
                 <div className="absolute -top-2.5 left-0 right-0 flex justify-center">
-                  <div className="bg-[#1A1D21] text-[#ffbf23] text-[9px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                  <div className="bg-[#1A1D21] text-[#ffbf23] text-[9px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full shadow-soft-sm flex items-center gap-1">
                     <Star size={8} fill="currentColor" />
                     {t.onboarding.step5.mostPopular}
                   </div>
@@ -2027,14 +2025,14 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 {/* Plan Name - January 22nd, 2026: Added dark mode */}
                 <div className="mb-2">
                   <h3 className={cn(
-                    "text-sm font-bold",
+                    "text-sm font-semibold",
                     isPopular
                       ? "text-[#1A1D21] dark:text-[#ffbf23]"
-                      : "text-slate-900 dark:text-white"
+                      : "text-[#0f172a] dark:text-white"
                   )}>
                     {planName}
                   </h3>
-                  <p className="text-[10px] text-slate-500 dark:text-gray-400 leading-snug line-clamp-2">{planDescription}</p>
+                  <p className="text-[10px] text-[#8898aa] dark:text-gray-400 leading-snug line-clamp-2">{planDescription}</p>
                 </div>
 
                 {/* Price - January 22nd, 2026: Added dark mode
@@ -2043,8 +2041,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     numeric prices. */}
                 <div className="mb-2">
                   <div className="flex items-baseline gap-0.5">
-                    <span className="text-xl font-bold text-slate-900 dark:text-white">{CURRENCY_SYMBOL}{price}</span>
-                    <span className="text-slate-400 dark:text-gray-500 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
+                    <span className="text-xl font-bold text-[#0f172a] dark:text-white">{CURRENCY_SYMBOL}{price}</span>
+                    <span className="text-[#8898aa] dark:text-gray-500 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
                   </div>
                   {billingInterval === 'annual' && (
                     <p className="text-[9px] text-[#1A1D21] dark:text-[#ffbf23] font-medium">{t.onboarding.step5.billedAnnually.replace('{amount}', `${CURRENCY_SYMBOL}${price * 12}`)}</p>
@@ -2055,12 +2053,12 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     April 14th, 2026: Removed the `isEnterprise ? contactSales`
                     branch — only Selected / Select Plan states remain. */}
                 <div className={cn(
-                  "w-full py-1.5 rounded-md text-[10px] font-bold mb-2 transition-all flex items-center justify-center gap-1",
+                  "w-full py-1.5 rounded-lg text-[10px] font-semibold mb-2 transition-all flex items-center justify-center gap-1",
                   isSelected
                     ? "bg-[#ffbf23] text-[#1A1D21]"
                     : isPopular
                       ? "bg-[#1A1D21]/10 dark:bg-[#ffbf23]/10 text-[#1A1D21] dark:text-[#ffbf23]"
-                      : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300"
+                      : "bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300"
                 )}>
                   {isSelected ? (
                     <>
@@ -2074,18 +2072,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
                 {/* Features List - January 22nd, 2026: Added dark mode */}
                 <div className="space-y-1 flex-1">
-                  <p className="text-[9px] font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">{t.onboarding.step5.included}</p>
+                  <p className="text-[9px] font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider mb-1">{t.onboarding.step5.included}</p>
                   {planFeatures.slice(0, 5).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-1.5">
                       <div className={cn(
                         "mt-0.5 w-3 h-3 rounded-full flex items-center justify-center shrink-0",
-                        isPopular 
-                          ? "bg-[#1A1D21] text-[#ffbf23]" 
-                          : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300"
+                        isPopular
+                          ? "bg-[#1A1D21] text-[#ffbf23]"
+                          : "bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300"
                       )}>
                         <Check size={6} strokeWidth={4} />
                       </div>
-                      <span className="text-[10px] text-slate-600 dark:text-gray-400 leading-tight">
+                      <span className="text-[10px] text-[#425466] dark:text-gray-400 leading-tight">
                         {feature}
                       </span>
                     </div>
