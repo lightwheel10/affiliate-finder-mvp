@@ -1119,21 +1119,21 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       </div>
 
       <div className="space-y-4">
-        {/* Name Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Name Input — smoover refresh (April 24th, 2026). Hairline border, rounded-xl, soft bg. Label drops uppercase per smoover; translation text already sentence-cased. */}
         <div className="space-y-1.5">
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.nameLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step1.nameLabel}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all text-sm placeholder:text-gray-400"
+            className="w-full px-3.5 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all text-sm font-medium"
             placeholder={t.onboarding.step1.namePlaceholder}
           />
         </div>
 
-        {/* Role Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Role Dropdown — smoover refresh (April 24th, 2026). Trigger + menu adopt hairline border, rounded-xl, soft-lg shadow in place of offset brutalist shadow. Logic (open/search/filter) unchanged. */}
         <div className="space-y-1.5 relative" ref={roleDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.roleLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step1.roleLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -1142,28 +1142,28 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => roleSearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
-              !role ? "text-gray-400" : "text-gray-900 dark:text-white"
+              "w-full px-3.5 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all text-sm font-medium",
+              !role ? "text-[#8898aa]" : "text-[#0f172a] dark:text-white"
             )}
           >
             {role || t.onboarding.step1.rolePlaceholder}
-            <ChevronDown className={cn("text-gray-400 transition-transform", isRoleDropdownOpen && "rotate-180")} size={16} />
+            <ChevronDown className={cn("text-[#8898aa] transition-transform", isRoleDropdownOpen && "rotate-180")} size={16} />
           </button>
 
-          {/* Role Dropdown Menu - NEO-BRUTALIST (January 9th, 2026) */}
+          {/* Role Dropdown Menu — smoover refresh (April 24th, 2026) */}
           {isRoleDropdownOpen && (
-            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 overflow-hidden">
               {/* Search Input */}
-              <div className="p-2 border-b-2 border-gray-200 dark:border-gray-700">
+              <div className="p-2 border-b border-[#e6ebf1] dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8898aa]" />
                   <input
                     ref={roleSearchRef}
                     type="text"
                     value={roleSearch}
                     onChange={(e) => setRoleSearch(e.target.value)}
                     placeholder={t.onboarding.common.search}
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 text-[#0f172a] dark:text-white placeholder-[#8898aa]"
                   />
                 </div>
               </div>
@@ -1178,26 +1178,23 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsRoleDropdownOpen(false);
                       setRoleSearch('');
                     }}
-                    className="w-full text-left px-3.5 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-3.5 py-2 text-[#425466] dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-[#0f172a] dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     {r}
                     {role === r && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
                 {roles.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase())).length === 0 && (
-                  <p className="px-3.5 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
+                  <p className="px-3.5 py-2 text-sm text-[#8898aa]">{t.onboarding.common.noResults}</p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Brand Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026)
-            Domain validation provides two levels of feedback:
-            1. Instant format validation (regex) - shows red/green border
-            2. Server reachability validation (on Continue) - shows loading/error */}
+        {/* Brand Input — smoover refresh (April 24th, 2026). Same validation state machine (red/amber/green 500-level borders kept for clarity); default state adopts hairline + rounded-xl + soft bg. Helper + error text soften to smoover tokens. */}
         <div className="space-y-1.5">
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step1.brandLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step1.brandLabel}</label>
           <div className="relative">
             <input
               type="text"
@@ -1205,15 +1202,15 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               onChange={(e) => handleBrandChange(e.target.value)}
               disabled={isBrandValidating}
               className={cn(
-                "w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border-2 text-gray-900 dark:text-white focus:outline-none transition-all text-sm pr-10",
-                // Dynamic border color based on validation state (January 9th, 2026)
-                brandError 
+                "w-full px-3.5 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border rounded-xl text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none transition-all text-sm font-medium pr-10",
+                // Dynamic border color based on validation state (vivid signal colors retained on purpose)
+                brandError
                   ? "border-red-500 focus:border-red-500"
                   : brandFormatValid === false
                     ? "border-amber-500 focus:border-amber-500"
                     : brandValidated
                       ? "border-green-500 focus:border-green-500"
-                      : "border-gray-300 dark:border-gray-600 focus:border-[#ffbf23]",
+                      : "border-[#e6ebf1] dark:border-gray-700 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a]",
                 isBrandValidating && "opacity-70 cursor-not-allowed"
               )}
               placeholder={t.onboarding.step1.brandPlaceholder}
@@ -1221,7 +1218,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             {/* Validation status indicator */}
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {isBrandValidating ? (
-                <Loader2 size={16} className="animate-spin text-gray-400" />
+                <Loader2 size={16} className="animate-spin text-[#8898aa]" />
               ) : brandValidated ? (
                 <Check size={16} className="text-green-500" />
               ) : brandFormatValid === false && brand.trim() ? (
@@ -1229,24 +1226,24 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               ) : null}
             </div>
           </div>
-          
+
           {/* Error message */}
           {brandError && (
-            <p className="text-red-500 text-xs font-bold px-1 pt-0.5 flex items-center gap-1">
+            <p className="text-red-500 text-xs font-medium px-1 pt-0.5 flex items-center gap-1">
               <X size={12} />
               {brandError}
             </p>
           )}
-          
-          {/* Format hint (shown only when format is invalid) - Translated (January 9th, 2026) */}
+
+          {/* Format hint (shown only when format is invalid) */}
           {brandFormatValid === false && brand.trim() && !brandError && (
             <p className="text-amber-500 text-xs font-medium px-1 pt-0.5">
               {t.onboarding.step1.validation.invalidFormat}
             </p>
           )}
-          
-          {/* Helper text - Translated (January 9th, 2026) */}
-          <p className="text-gray-500 dark:text-gray-400 text-xs leading-relaxed px-1 pt-0.5">
+
+          {/* Helper text */}
+          <p className="text-[#8898aa] dark:text-gray-400 text-xs leading-relaxed px-1 pt-0.5">
             {t.onboarding.step1.helpText}
           </p>
         </div>
