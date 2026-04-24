@@ -1700,86 +1700,85 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep4 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Same treatment as Steps 1-3 logo row. */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '3').replace('{total}', '5')}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.stepOf.replace('{current}', '3').replace('{total}', '5')}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Fill condition (i<=3 = 3 completed steps) unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= 3 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= 3 ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Question Block — smoover refresh (April 24th, 2026). Yellow-tinted MessageSquare tile softened with rounded-md; question text uses text-[#0f172a] + font-semibold. */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] rounded-md border border-[#ffbf23]/30">
             <MessageSquare size={12} />
           </div>
-          <p className="text-gray-900 dark:text-white font-bold text-sm">
+          <p className="text-[#0f172a] dark:text-white font-semibold text-sm">
             {t.onboarding.step4.title}
           </p>
         </div>
 
-        {/* Topic Input - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Topic Input — smoover refresh (April 24th, 2026). Input adopts hairline + rounded-xl + soft bg; add (+) button matches Step 3 (rounded-xl + shadow-yellow-glow-sm with subtle lift). MAX_TOPICS_LIMIT disabled state + Enter-to-add logic unchanged. */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
-            <input 
+            <input
               type="text"
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTopic())}
               placeholder={t.onboarding.step4.inputPlaceholder}
-              className="flex-1 px-4 py-2 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#ffbf23] transition-all placeholder:text-gray-400"
+              className="flex-1 px-4 py-2 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-sm text-[#0f172a] dark:text-white placeholder-[#8898aa] focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all font-medium"
             />
             {/* Add button disabled when MAX_TOPICS_LIMIT reached - January 15th, 2026 */}
-            <button 
+            <button
               type="button"
               onClick={addCustomTopic}
               disabled={!topicInput.trim() || topics.length >= MAX_TOPICS_LIMIT}
-              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] border-2 border-black dark:border-gray-600 hover:bg-yellow-400 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[2px_2px_0px_0px_#000000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+              className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] rounded-xl hover:bg-[#e5ac20] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-yellow-glow-sm hover:shadow-yellow-glow hover:-translate-y-px"
             >
               <Plus size={16} />
             </button>
           </div>
-          
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 ml-1 font-medium">
+
+          <p className="text-[11px] text-[#8898aa] dark:text-gray-500 ml-1 font-medium">
             {t.onboarding.step4.count.replace('{count}', String(topics.length))}
           </p>
         </div>
 
         {/* =================================================================
           AI SUGGESTIONS DISPLAY (January 3rd, 2026)
-          Updated to NEO-BRUTALIST (January 9th, 2026)
-          Translated (January 9th, 2026)
-          
+          Smoover refresh (April 24th, 2026)
+
           Shows AI-generated topic suggestions if available.
           User can click to add/remove suggestions.
           Suggestions come from /api/suggestions/generate endpoint.
           ================================================================= */}
-        
-        {/* AI Suggested Topics - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+
+        {/* AI Suggested Topics — smoover refresh (April 24th, 2026). Eyebrow softened; topic pills become rounded-full with hairline border. MAX_TOPICS_LIMIT disabled-state + click-to-toggle logic unchanged. */}
         {suggestedTopics.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 flex items-center gap-1 uppercase tracking-wider">
               <Sparkles size={10} className="text-[#ffbf23]" />
               {t.onboarding.step4.suggestionsTitle}
             </p>
-            
+
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
               {/* AI suggestions - limited to MAX_TOPICS_LIMIT selections - January 15th, 2026 */}
               {suggestedTopics
@@ -1792,35 +1791,35 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     onClick={() => toggleTopic(t.keyword)}
                     disabled={topics.length >= MAX_TOPICS_LIMIT}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 py-1 border-2 text-[11px] transition-all",
+                      "flex items-center gap-1 px-2.5 py-1 border rounded-full text-[11px] transition-all",
                       topics.length >= MAX_TOPICS_LIMIT
-                        ? "border-gray-200 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed"
-                        : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10 hover:text-gray-900 dark:hover:text-white"
+                        ? "border-[#e6ebf1] dark:border-gray-700 text-[#8898aa] dark:text-gray-600 cursor-not-allowed"
+                        : "border-[#e6ebf1] dark:border-gray-700 text-[#425466] dark:text-gray-400 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10 hover:text-[#0f172a] dark:hover:text-white"
                     )}
                   >
                     {t.keyword}
-                    <Plus size={10} className="text-gray-300" />
+                    <Plus size={10} className="text-[#8898aa]" />
                   </button>
                 ))}
             </div>
           </div>
         )}
 
-        {/* Selected Topics - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Selected Topics — smoover refresh (April 24th, 2026). Yellow-tinted pills become rounded-full with hairline yellow border; inline X chip becomes circular. Click-to-remove logic unchanged. */}
         {topics.length > 0 && (
           <div className="space-y-2">
-            <p className="text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-wide">{t.onboarding.step4.yourTopics}</p>
-            
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.step4.yourTopics}</p>
+
             <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto scrollbar-hide">
               {topics.map(topic => (
                 <button
                   key={topic}
                   type="button"
                   onClick={() => toggleTopic(topic)}
-                  className="group relative flex items-center gap-1.5 px-3 py-1.5 bg-[#ffbf23]/10 border-2 border-[#ffbf23] text-[11px] font-bold text-[#1A1D21] dark:text-[#ffbf23] transition-all text-left hover:bg-[#ffbf23]/20"
+                  className="group relative flex items-center gap-1.5 px-3 py-1.5 bg-[#ffbf23]/10 border border-[#ffbf23] rounded-full text-[11px] font-semibold text-[#1A1D21] dark:text-[#ffbf23] transition-all text-left hover:bg-[#ffbf23]/20"
                 >
                   {topic}
-                  <div className="w-3.5 h-3.5 bg-[#ffbf23]/30 text-[#1A1D21] flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
+                  <div className="w-3.5 h-3.5 bg-[#ffbf23]/30 text-[#1A1D21] rounded-full flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
                     <X size={8} />
                   </div>
                 </button>
@@ -1828,11 +1827,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             </div>
           </div>
         )}
-        
-        {/* Empty state - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+
+        {/* Empty state — smoover refresh (April 24th, 2026). Dashed border kept for "empty" vibe; softened to hairline + rounded-xl + #f6f9fc bg (matches Step 3 empty state). */}
         {topics.length === 0 && suggestedTopics.length === 0 && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+          <div className="p-4 bg-[#f6f9fc] dark:bg-gray-900 border border-dashed border-[#e6ebf1] dark:border-gray-700 rounded-xl text-center">
+            <p className="text-xs text-[#8898aa] dark:text-gray-400 font-medium">
               {t.onboarding.step4.emptyState}
             </p>
           </div>
