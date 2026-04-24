@@ -1102,7 +1102,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             key={i} 
             className={cn(
               "h-1.5 flex-1 transition-all duration-500",
-              i <= 0 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
+              i <= step ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
             )} 
           />
         ))}
