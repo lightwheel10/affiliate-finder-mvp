@@ -1264,44 +1264,44 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const renderStep2 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - NEO-BRUTALIST (January 9th, 2026) */}
+      {/* Header — smoover refresh (April 24th, 2026). Same treatment as Step 1 logo row. */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-[#1A1D21] flex items-center justify-center text-[#ffbf23] border border-black dark:border-gray-600">
+          <div className="w-5 h-5 bg-[#1A1D21] dark:bg-[#1a1a1a] flex items-center justify-center text-[#ffbf23] rounded-md border border-[#e6ebf1] dark:border-gray-700">
             <Sparkles size={10} fill="currentColor" className="opacity-90" />
           </div>
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Afforce <span className="text-[#1A1D21] dark:text-[#ffbf23]">One</span></span>
+          <span className="font-display font-bold text-sm tracking-tight text-[#0f172a] dark:text-white">Afforce <span className="text-gradient-brand">One</span></span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wide">{t.onboarding.navigation.stepOf.replace('{current}', '1').replace('{total}', '5')}</span>
+        <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">{t.onboarding.navigation.stepOf.replace('{current}', '1').replace('{total}', '5')}</span>
       </div>
 
-      {/* Progress Bar - NEO-BRUTALIST sharp edges (January 9th, 2026) */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Rounded pills on hairline track; fill condition (i<=1 = 1 completed step) unchanged. */}
       <div className="flex gap-1.5 mb-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
-              "h-1.5 flex-1 transition-all duration-500",
-              i <= 1 ? "bg-[#ffbf23]" : "bg-gray-200 dark:bg-gray-700"
-            )} 
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              i <= 1 ? "bg-[#ffbf23]" : "bg-[#e6ebf1] dark:bg-gray-700"
+            )}
           />
         ))}
       </div>
 
-      {/* Question Block - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+      {/* Question Block — smoover refresh (April 24th, 2026). Yellow-tinted icon tile softened with rounded-md; question text uses text-[#0f172a] + font-semibold. */}
       <div className="space-y-4">
         <div className="flex gap-2 items-center">
-          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] border border-[#ffbf23]/30">
+          <div className="w-6 h-6 bg-[#ffbf23]/20 flex items-center justify-center shrink-0 text-[#1A1D21] dark:text-[#ffbf23] rounded-md border border-[#ffbf23]/30">
             <Globe size={12} />
           </div>
-          <p className="text-gray-900 dark:text-white font-bold text-sm">
+          <p className="text-[#0f172a] dark:text-white font-semibold text-sm">
             {t.onboarding.step2.title}
           </p>
         </div>
 
-        {/* Country Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026) */}
+        {/* Country Dropdown — smoover refresh (April 24th, 2026). Same pattern as Step 1 role dropdown: hairline border, rounded-xl, shadow-soft-lg on menu. Flag + localized-name logic untouched. */}
         <div className="space-y-1.5 relative" ref={countryDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step2.countryLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step2.countryLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -1310,45 +1310,44 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => countrySearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-4 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
-              !targetCountry ? "text-gray-400" : "text-gray-900 dark:text-white"
+              "w-full px-4 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all text-sm font-medium",
+              !targetCountry ? "text-[#8898aa]" : "text-[#0f172a] dark:text-white"
             )}
           >
-            {/* January 21st, 2026: Updated to show localized country name */}
+            {/* Localized country name + flag (untouched) */}
             {targetCountry ? (
               <span className="flex items-center gap-2">
-                <img 
-                  src={getFlagUrl(countries.find(c => c.name === targetCountry)?.code || '')} 
-                  alt="" 
+                <img
+                  src={getFlagUrl(countries.find(c => c.name === targetCountry)?.code || '')}
+                  alt=""
                   className="w-5 h-auto"
                 />
                 <span>{getLocalizedName(countries.find(c => c.name === targetCountry) || { name: targetCountry, nameDE: targetCountry })}</span>
               </span>
             ) : t.onboarding.step2.countryPlaceholder}
-            <ChevronDown className={cn("text-gray-400 transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
+            <ChevronDown className={cn("text-[#8898aa] transition-transform", isCountryDropdownOpen && "rotate-180")} size={14} />
           </button>
-          
-          {/* Country Dropdown Menu - NEO-BRUTALIST (January 9th, 2026) */}
+
+          {/* Country Dropdown Menu — smoover refresh (April 24th, 2026) */}
           {isCountryDropdownOpen && (
-            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
+            <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 overflow-hidden">
               {/* Search Input */}
-              <div className="p-2 border-b-2 border-gray-200 dark:border-gray-700">
+              <div className="p-2 border-b border-[#e6ebf1] dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8898aa]" />
                   <input
                     ref={countrySearchRef}
                     type="text"
                     value={countrySearch}
                     onChange={(e) => setCountrySearch(e.target.value)}
                     placeholder={t.onboarding.common.search}
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 text-[#0f172a] dark:text-white placeholder-[#8898aa]"
                   />
                 </div>
               </div>
-              {/* Options - Flag images from flagcdn.com
-                  January 21st, 2026: Updated to show localized names and search both EN/DE */}
+              {/* Options — flag images from flagcdn.com; localized name + EN/DE search logic untouched */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
-                {countries.filter(c => 
+                {countries.filter(c =>
                   c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
                   c.nameDE.toLowerCase().includes(countrySearch.toLowerCase())
                 ).map((c) => (
@@ -1360,7 +1359,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsCountryDropdownOpen(false);
                       setCountrySearch('');
                     }}
-                    className="w-full text-left px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-4 py-2 text-[#425466] dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-[#0f172a] dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     <span className="flex items-center gap-2">
                       <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto" />
@@ -1369,21 +1368,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     {targetCountry === c.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
-                {countries.filter(c => 
+                {countries.filter(c =>
                   c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
                   c.nameDE.toLowerCase().includes(countrySearch.toLowerCase())
                 ).length === 0 && (
-                  <p className="px-4 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
+                  <p className="px-4 py-2 text-sm text-[#8898aa]">{t.onboarding.common.noResults}</p>
                 )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Language Dropdown - NEO-BRUTALIST (January 9th, 2026) - Translated (January 9th, 2026)
-            January 21st, 2026: Added flags and localized language names per client request */}
+        {/* Language Dropdown — smoover refresh (April 24th, 2026). Same pattern as Country dropdown above; menu opens upward with search at bottom. Flag + localized language-name logic (Jan 21, 2026) untouched. */}
         <div className="space-y-1.5 relative" ref={langDropdownRef}>
-          <label className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wide">{t.onboarding.step2.languageLabel}</label>
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">{t.onboarding.step2.languageLabel}</label>
           <button
             type="button"
             onClick={() => {
@@ -1392,31 +1390,30 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               setTimeout(() => langSearchRef.current?.focus(), 100);
             }}
             className={cn(
-              "w-full px-4 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] transition-all text-sm",
-              !targetLanguage ? "text-gray-400" : "text-gray-900 dark:text-white"
+              "w-full px-4 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all text-sm font-medium",
+              !targetLanguage ? "text-[#8898aa]" : "text-[#0f172a] dark:text-white"
             )}
           >
-            {/* January 21st, 2026: Updated to show flag + localized language name */}
+            {/* Flag + localized language name (untouched) */}
             {targetLanguage ? (
               <span className="flex items-center gap-2">
-                <img 
-                  src={getFlagUrl(languages.find(l => l.name === targetLanguage)?.code || '')} 
-                  alt="" 
+                <img
+                  src={getFlagUrl(languages.find(l => l.name === targetLanguage)?.code || '')}
+                  alt=""
                   className="w-5 h-auto"
                 />
                 <span>{getLocalizedName(languages.find(l => l.name === targetLanguage) || { name: targetLanguage, nameDE: targetLanguage })}</span>
               </span>
             ) : t.onboarding.step2.languagePlaceholder}
-            <ChevronDown className={cn("text-gray-400 transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
+            <ChevronDown className={cn("text-[#8898aa] transition-transform", isLangDropdownOpen && "rotate-180")} size={14} />
           </button>
-          
-          {/* Language Dropdown Menu - NEO-BRUTALIST (January 9th, 2026)
-              January 21st, 2026: Updated to show flags + localized names per client request */}
+
+          {/* Language Dropdown Menu — smoover refresh (April 24th, 2026). Opens upward; search at bottom. */}
           {isLangDropdownOpen && (
-            <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-600 shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#333333] z-50 overflow-hidden">
-              {/* Options first (dropdown opens upward) - Now with flags instead of symbols */}
+            <div className="absolute bottom-[calc(100%+4px)] left-0 w-full bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 overflow-hidden">
+              {/* Options first (dropdown opens upward) */}
               <div className="max-h-44 overflow-y-auto scrollbar-hide py-1">
-                {languages.filter(l => 
+                {languages.filter(l =>
                   l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
                   l.nameDE.toLowerCase().includes(langSearch.toLowerCase())
                 ).map((l) => (
@@ -1428,7 +1425,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       setIsLangDropdownOpen(false);
                       setLangSearch('');
                     }}
-                    className="w-full text-left px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-gray-900 dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
+                    className="w-full text-left px-4 py-2 text-[#425466] dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-[#0f172a] dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     <span className="flex items-center gap-2">
                       <img src={getFlagUrl(l.code)} alt="" className="w-5 h-auto" />
@@ -1437,24 +1434,24 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     {targetLanguage === l.name && <Check size={14} className="text-[#ffbf23]" />}
                   </button>
                 ))}
-                {languages.filter(l => 
+                {languages.filter(l =>
                   l.name.toLowerCase().includes(langSearch.toLowerCase()) ||
                   l.nameDE.toLowerCase().includes(langSearch.toLowerCase())
                 ).length === 0 && (
-                  <p className="px-4 py-2 text-sm text-gray-400">{t.onboarding.common.noResults}</p>
+                  <p className="px-4 py-2 text-sm text-[#8898aa]">{t.onboarding.common.noResults}</p>
                 )}
               </div>
               {/* Search Input at bottom (dropdown opens upward) */}
-              <div className="p-2 border-t-2 border-gray-200 dark:border-gray-700">
+              <div className="p-2 border-t border-[#e6ebf1] dark:border-gray-700">
                 <div className="relative">
-                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8898aa]" />
                   <input
                     ref={langSearchRef}
                     type="text"
                     value={langSearch}
                     onChange={(e) => setLangSearch(e.target.value)}
                     placeholder={t.onboarding.common.search}
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#ffbf23] text-gray-900 dark:text-white"
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 text-[#0f172a] dark:text-white placeholder-[#8898aa]"
                   />
                 </div>
               </div>
