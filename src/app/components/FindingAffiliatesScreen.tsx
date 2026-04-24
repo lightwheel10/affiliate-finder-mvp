@@ -1,28 +1,32 @@
 /**
  * =============================================================================
- * FindingAffiliatesScreen Component - NEO-BRUTALIST
+ * FindingAffiliatesScreen Component — SMOOVER REFRESH
  * =============================================================================
- * 
+ *
  * Created: January 15th, 2026
  * Updated: January 21st, 2026 - Enhanced with progress bar and step checklist
- * 
+ * Updated: April 24th, 2026 — smoover visual refresh (rounded tiles, hairline
+ *          borders, shadow-yellow-glow-sm on the yellow spinner tile, rounded-
+ *          full progress bar). Vivid green completion colour + yellow-on-black
+ *          icon tile preserved.
+ *
  * PURPOSE:
  * This component displays an animated loading screen after payment succeeds.
  * It shows while we pre-fetch affiliate results in the background.
- * 
+ *
  * DESIGN (January 21st, 2026):
  * Client requested enhanced progress indication with:
  * - VISIBLE CHECKLIST of all steps (not just cycling text)
  * - Current step highlighted, completed steps checked off
  * - Animated progress bar (0% -> 95%, then 100% on completion)
  * - Elapsed time display
- * 
+ *
  * TECHNICAL NOTES:
- * - Progress is "fake" - we animate 0% -> 95% over ~120 seconds
+ * - Progress is "fake" - we animate 0% -> 95% over ~540 seconds (Feb 2 2026)
  * - Progress bar NEVER reaches 100% until API returns (isComplete=true)
- * - Steps advance every ~20 seconds (6 steps over ~120 seconds)
+ * - Steps advance every ~90 seconds (6 steps over ~540 seconds)
  * - When API completes, all steps show as complete
- * 
+ *
  * =============================================================================
  */
 
@@ -160,43 +164,43 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
   // ===========================================================================
   return (
     <div className="animate-in fade-in duration-500 text-center py-6">
-      {/* Icon - Checkmark when complete, Loader when searching */}
+      {/* Icon — smoover refresh (April 24th, 2026). Tiles gain rounded-2xl; yellow spinner tile uses shadow-yellow-glow-sm + soft-lg for green. Pulse/ping background kept. */}
       <div className="flex justify-center mb-5">
         <div className="relative">
           {isComplete ? (
             <>
               {/* Pulsing background for celebration */}
-              <div className="absolute inset-0 w-16 h-16 bg-green-500/20 animate-ping" />
-              
+              <div className="absolute inset-0 w-16 h-16 bg-green-500/20 rounded-2xl animate-ping" />
+
               {/* Success checkmark */}
-              <div className="relative w-16 h-16 bg-green-500 border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_#000000]">
+              <div className="relative w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center shadow-soft-lg">
                 <CheckCircle2 size={32} className="text-white" strokeWidth={3} />
               </div>
             </>
           ) : (
             <>
               {/* Pulsing background */}
-              <div className="absolute inset-0 w-16 h-16 bg-[#ffbf23]/20 animate-pulse" />
-              
+              <div className="absolute inset-0 w-16 h-16 bg-[#ffbf23]/20 rounded-2xl animate-pulse" />
+
               {/* Spinning loader */}
-              <div className="relative w-16 h-16 bg-[#ffbf23] border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_#000000]">
-                <Loader2 size={32} className="text-black animate-spin" strokeWidth={3} />
+              <div className="relative w-16 h-16 bg-[#ffbf23] rounded-2xl flex items-center justify-center shadow-yellow-glow-sm">
+                <Loader2 size={32} className="text-[#1A1D21] animate-spin" strokeWidth={3} />
               </div>
             </>
           )}
         </div>
       </div>
 
-      {/* Main Title */}
+      {/* Main Title — Archivo display, mixed-case */}
       <h2 className={cn(
-        "text-lg font-black text-gray-900 dark:text-white mb-1 uppercase tracking-wide",
+        "text-lg font-display font-bold text-[#0f172a] dark:text-white mb-1 tracking-tight",
         isComplete && "text-green-600 dark:text-green-400"
       )}>
         {isComplete ? t.findingAffiliates.complete : 'Finding Your Affiliates'}
       </h2>
 
       {/* Elapsed Time */}
-      <p className="text-gray-500 dark:text-gray-400 text-sm font-mono mb-4">
+      <p className="text-[#8898aa] dark:text-gray-400 text-sm font-mono mb-4">
         {formatTime(elapsedSeconds)} {t.findingAffiliates.elapsed || 'elapsed'}
       </p>
 
@@ -213,15 +217,15 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
           const isCompleted = index < currentStep || isComplete;
           const isCurrent = index === currentStep && !isComplete;
           const isPending = index > currentStep && !isComplete;
-          
+
           return (
-            <div 
+            <div
               key={index}
               className={cn(
                 "flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-all duration-300",
                 isCompleted && "text-green-600 dark:text-green-400",
-                isCurrent && "text-gray-900 dark:text-white bg-[#ffbf23]/20 border-l-2 border-[#ffbf23]",
-                isPending && "text-gray-400 dark:text-gray-500"
+                isCurrent && "text-[#0f172a] dark:text-white bg-[#ffbf23]/10 rounded-lg border-l-2 border-[#ffbf23]",
+                isPending && "text-[#8898aa] dark:text-gray-500"
               )}
             >
               {/* Step indicator icon */}
@@ -231,13 +235,13 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
                 ) : isCurrent ? (
                   <ArrowRight size={14} className="text-[#ffbf23] animate-pulse" />
                 ) : (
-                  <Circle size={14} className="text-gray-300 dark:text-gray-600" />
+                  <Circle size={14} className="text-[#8898aa] dark:text-gray-600" />
                 )}
               </span>
-              
+
               {/* Step text */}
               <span className={cn(
-                isCurrent && "font-bold"
+                isCurrent && "font-semibold"
               )}>
                 {stepText}
               </span>
@@ -246,24 +250,23 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
         })}
       </div>
 
-      {/* Progress Bar Container */}
+      {/* Progress Bar — smoover refresh (April 24th, 2026). Rounded-full pill on a hairline #e6ebf1 track (was a brutalist rectangle with border-2 black). Slightly reduced height (h-5 -> h-4) to keep proportions right with rounded ends. */}
       <div className="max-w-xs mx-auto mb-3">
-        {/* Progress bar background */}
-        <div className="h-5 bg-gray-200 dark:bg-gray-800 border-2 border-black dark:border-gray-600 relative overflow-hidden">
+        <div className="h-4 bg-[#e6ebf1] dark:bg-gray-800 rounded-full relative overflow-hidden">
           {/* Progress bar fill */}
-          <div 
+          <div
             className={cn(
-              "h-full transition-all duration-300 ease-out",
-              isComplete 
-                ? "bg-green-500" 
+              "h-full rounded-full transition-all duration-300 ease-out",
+              isComplete
+                ? "bg-green-500"
                 : "bg-[#ffbf23]"
             )}
             style={{ width: `${progress}%` }}
           />
-          
+
           {/* Percentage text overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[10px] font-black text-black dark:text-white mix-blend-difference">
+            <span className="text-[10px] font-semibold text-[#1A1D21] dark:text-white mix-blend-difference">
               {Math.round(progress)}%
             </span>
           </div>
@@ -272,7 +275,7 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
 
       {/* Estimated Time Note (only when not complete) */}
       {!isComplete && (
-        <p className="text-gray-400 dark:text-gray-500 text-[10px]">
+        <p className="text-[#8898aa] dark:text-gray-500 text-[10px]">
           {t.findingAffiliates.estimatedTime}
         </p>
       )}

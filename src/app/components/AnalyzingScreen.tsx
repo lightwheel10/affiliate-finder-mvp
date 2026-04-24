@@ -1,29 +1,32 @@
 /**
  * =============================================================================
- * AnalyzingScreen Component - NEO-BRUTALIST
+ * AnalyzingScreen Component — SMOOVER REFRESH
  * =============================================================================
- * 
- * Updated: January 8th, 2026
- * 
- * NEO-BRUTALIST DESIGN UPDATE:
- * - Sharp edges (no rounded corners)
- * - Bold borders (border-2 to border-4 with black)
- * - Yellow accent color (#ffbf23)
- * - Square elements throughout
- * - Bold typography (font-black uppercase)
- * - Dark mode support
- * 
+ *
+ * Updated: April 24th, 2026
+ *
+ * CURRENT DESIGN LANGUAGE ("smoover"):
+ * - Hairline #e6ebf1 borders; rounded-xl cards + rounded-md icon tiles.
+ * - Soft drop shadows; shadow-yellow-glow-sm on the yellow CTA.
+ * - Archivo display title + text-gradient-brand wordmark.
+ * - Vivid green / amber status colours preserved for completed / error.
+ * - Dark-mode support preserved.
+ *
  * PURPOSE:
- * This component displays an animated loading screen while we analyze the user's
- * brand website using Firecrawl + OpenAI. It's shown between Step 1 (brand info)
- * and Step 2 (target market) of the onboarding flow.
- * 
+ * This component displays an animated loading screen while we analyze the
+ * user's brand website using Firecrawl + OpenAI. It is shown AFTER Step 2
+ * (target country + language) of the onboarding flow — the analysis uses
+ * the country + language fields to localise the AI-generated competitor
+ * and topic suggestions. (Earlier versions of this component ran between
+ * Step 1 and Step 2; the trigger was moved in the January 17th, 2026 change
+ * — see `fetchAISuggestions` in OnboardingScreen.tsx.)
+ *
  * USER EXPERIENCE:
  * The screen shows 3 animated steps that transition sequentially:
  * 1. "Analyzing your website..." - While Firecrawl scrapes the site
  * 2. "Understanding your products..." - While OpenAI processes content
  * 3. "Finding your competitors..." - While we validate competitor domains
- * 
+ *
  * =============================================================================
  */
 
@@ -90,48 +93,48 @@ export function AnalyzingScreen({
   ];
   return (
     <div className="animate-in fade-in duration-500">
-      {/* Header - NEO-BRUTALIST */}
+      {/* Header — smoover refresh (April 24th, 2026). Logo tile softened to rounded-md + hairline. Wordmark uses font-display + text-gradient-brand on "One". Title drops uppercase for Archivo display. */}
       <div className="text-center mb-6">
         {/* Logo */}
         <div className="flex items-center justify-center gap-1.5 mb-4">
-          <img src="/logo.svg" alt="Afforce One" className="w-8 h-8 border-2 border-black shadow-[2px_2px_0px_0px_#ffbf23]" />
-          <span className="font-black text-lg tracking-tight text-gray-900 dark:text-white uppercase">
-            Afforce<span className="text-black dark:text-white">One</span>
+          <img src="/logo.svg" alt="Afforce One" className="w-8 h-8 rounded-md border border-[#e6ebf1] dark:border-gray-700" />
+          <span className="font-display font-bold text-lg tracking-tight text-[#0f172a] dark:text-white">
+            Afforce <span className="text-gradient-brand">One</span>
           </span>
         </div>
-        
-        {/* Title - Translated (January 9th, 2026) */}
-        <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1 uppercase tracking-wide">
+
+        {/* Title */}
+        <h2 className="text-xl font-display font-bold text-[#0f172a] dark:text-white mb-1 tracking-tight">
           {error ? t.onboarding.analyzing.titleError : t.onboarding.analyzing.title}
         </h2>
-        
-        {/* Subtitle with brand name - Translated (January 9th, 2026) */}
+
+        {/* Subtitle with brand name */}
         {brandName && !error && (
-          <p className="text-gray-500 text-sm font-medium">
-            {t.onboarding.analyzing.gettingInsightsFor} <span className="font-bold text-gray-700 dark:text-gray-300">{brandName}</span>
+          <p className="text-[#8898aa] dark:text-gray-400 text-sm font-medium">
+            {t.onboarding.analyzing.gettingInsightsFor} <span className="font-semibold text-[#0f172a] dark:text-white">{brandName}</span>
           </p>
         )}
       </div>
 
-      {/* Error State - NEO-BRUTALIST - Translated (January 9th, 2026) */}
+      {/* Error State — smoover refresh (April 24th, 2026). Amber callout becomes hairline + rounded-xl; vivid amber kept as the signal colour. Skip CTA matches the sign-in / onboarding Continue button pattern (rounded-full + shadow-yellow-glow-sm). */}
       {error ? (
         <div className="space-y-4">
           {/* Error Message Box */}
-          <div className="bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500 p-4 text-center">
-            <p className="text-amber-800 dark:text-amber-300 text-sm font-bold mb-1">
+          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-500 rounded-xl p-4 text-center">
+            <p className="text-amber-800 dark:text-amber-300 text-sm font-semibold mb-1">
               {t.onboarding.analyzing.errorTitle}
             </p>
             <p className="text-amber-600 dark:text-amber-400 text-xs">
               {error}
             </p>
           </div>
-          
-          {/* Skip Button - NEO-BRUTALIST - Translated (January 9th, 2026) */}
+
+          {/* Skip Button */}
           {onSkip && (
             <button
               type="button"
               onClick={onSkip}
-              className="w-full py-3 font-black text-sm bg-[#ffbf23] text-black uppercase tracking-wide border-2 border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+              className="w-full py-3 font-bold text-sm bg-[#ffbf23] text-[#1A1D21] uppercase tracking-wide rounded-full hover:bg-[#e5ac20] shadow-yellow-glow-sm hover:shadow-yellow-glow hover:-translate-y-px transition-all"
             >
               {t.onboarding.analyzing.continueManually}
             </button>
@@ -139,30 +142,30 @@ export function AnalyzingScreen({
         </div>
       ) : (
         <>
-          {/* Progress Steps - NEO-BRUTALIST */}
+          {/* Progress Steps — smoover refresh (April 24th, 2026). Step cards adopt hairline border + rounded-xl; icon tiles become rounded-md. Vivid green (completed) + yellow (active) signal colours preserved. Text palette migrates to smoover tokens. */}
           <div className="space-y-3 mb-6">
             {ANALYSIS_STEPS.map((step) => {
               const isCompleted = currentStep > step.id;
               const isActive = currentStep === step.id;
               const isPending = currentStep < step.id;
               const Icon = step.icon;
-              
+
               return (
                 <div
                   key={step.id}
                   className={cn(
-                    "flex items-center gap-3 p-3 transition-all duration-500 border-2",
-                    isActive && "bg-[#ffbf23]/20 border-[#ffbf23]",
-                    isCompleted && "bg-green-100 dark:bg-green-900/30 border-green-500",
-                    isPending && "opacity-50 border-gray-200 dark:border-gray-700"
+                    "flex items-center gap-3 p-3 transition-all duration-500 border rounded-xl",
+                    isActive && "bg-[#ffbf23]/10 border-[#ffbf23]",
+                    isCompleted && "bg-green-50 dark:bg-green-900/30 border-green-500",
+                    isPending && "opacity-60 border-[#e6ebf1] dark:border-gray-700"
                   )}
                 >
-                  {/* Step Icon/Status - NEO-BRUTALIST square */}
+                  {/* Step Icon/Status — softened tile */}
                   <div className={cn(
-                    "w-10 h-10 flex items-center justify-center shrink-0 transition-all duration-500 border-2",
-                    isCompleted && "bg-green-500 text-white border-black",
-                    isActive && "bg-black text-[#ffbf23] border-black",
-                    isPending && "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600"
+                    "w-10 h-10 flex items-center justify-center shrink-0 transition-all duration-500 rounded-md",
+                    isCompleted && "bg-green-500 text-white",
+                    isActive && "bg-[#1A1D21] dark:bg-[#0f0f0f] text-[#ffbf23] shadow-yellow-glow-sm",
+                    isPending && "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700"
                   )}>
                     {isCompleted ? (
                       <Check size={18} strokeWidth={3} className="animate-in zoom-in duration-300" />
@@ -172,14 +175,14 @@ export function AnalyzingScreen({
                       <Icon size={18} />
                     )}
                   </div>
-                  
+
                   {/* Step Text */}
                   <div className="flex-1 min-w-0">
                     <p className={cn(
-                      "font-bold text-sm transition-colors",
+                      "font-semibold text-sm transition-colors",
                       isCompleted && "text-green-700 dark:text-green-400",
-                      isActive && "text-black dark:text-white",
-                      isPending && "text-gray-400"
+                      isActive && "text-[#0f172a] dark:text-white",
+                      isPending && "text-[#8898aa]"
                     )}>
                       {step.label}
                       {isActive && <span className="animate-pulse">...</span>}
@@ -187,13 +190,13 @@ export function AnalyzingScreen({
                     <p className={cn(
                       "text-xs transition-colors",
                       isCompleted && "text-green-600/70 dark:text-green-500/70",
-                      isActive && "text-gray-500",
-                      isPending && "text-gray-300 dark:text-gray-600"
+                      isActive && "text-[#425466] dark:text-gray-400",
+                      isPending && "text-[#8898aa] dark:text-gray-500"
                     )}>
                       {step.description}
                     </p>
                   </div>
-                  
+
                   {/* Completed checkmark on the right */}
                   {isCompleted && (
                     <div className="text-green-500 animate-in fade-in slide-in-from-right-2 duration-300">
@@ -205,17 +208,17 @@ export function AnalyzingScreen({
             })}
           </div>
 
-          {/* Bottom Progress Bar - NEO-BRUTALIST */}
+          {/* Bottom Progress Bar — smoover refresh (April 24th, 2026). Rounded-full track on a hairline rail. */}
           <div className="space-y-2">
-            <div className="h-3 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div 
-                className="h-full bg-[#ffbf23] transition-all duration-700 ease-out"
-                style={{ 
-                  width: `${Math.min(((currentStep - 1) / ANALYSIS_STEPS.length) * 100 + 15, 100)}%` 
+            <div className="h-2 bg-[#e6ebf1] dark:bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#ffbf23] rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${Math.min(((currentStep - 1) / ANALYSIS_STEPS.length) * 100 + 15, 100)}%`
                 }}
               />
             </div>
-            <p className="text-center text-xs text-gray-400 font-medium">
+            <p className="text-center text-xs text-[#8898aa] font-medium">
               {t.onboarding.analyzing.timeEstimate}
             </p>
           </div>
