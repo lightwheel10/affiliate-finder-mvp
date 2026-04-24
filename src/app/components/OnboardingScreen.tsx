@@ -1926,27 +1926,25 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // IMPORTANT: This is billing-related UI - do not modify logic, only styling
   const renderStep6 = () => (
     <div className="animate-in slide-in-from-right-8 duration-500">
-      {/* Header - Translated (January 9th, 2026) */}
-      {/* January 22nd, 2026: Added dark mode text colors */}
+      {/* Header — smoover refresh (April 24th, 2026). Archivo display title + #8898aa subtitle. */}
       <div className="text-center mb-4">
-        <h1 className="text-lg text-slate-900 dark:text-white font-bold tracking-tight mb-1">
+        <h1 className="text-lg font-display text-[#0f172a] dark:text-white font-bold tracking-tight mb-1">
           {t.onboarding.step5.title}
         </h1>
-        <p className="text-slate-500 dark:text-gray-400 text-xs mb-3">
+        <p className="text-[#8898aa] dark:text-gray-400 text-xs mb-3">
           {t.onboarding.step5.trialInfo}
         </p>
 
-        {/* Billing Toggle - Translated (January 9th, 2026) */}
-        {/* January 22nd, 2026: Added dark mode background and text colors */}
-        <div className="inline-flex items-center bg-slate-100 dark:bg-gray-800 p-1 rounded-lg">
+        {/* Billing Toggle — smoover refresh (April 24th, 2026). Slate bg replaced with #f6f9fc; active pill uses shadow-soft-sm. Font-bold softened to font-semibold. Discount badge unchanged (font-extrabold kept for 9px legibility). */}
+        <div className="inline-flex items-center bg-[#f6f9fc] dark:bg-gray-800 p-1 rounded-lg">
           <button
             type="button"
             onClick={() => setBillingInterval('monthly')}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-bold transition-all",
-              billingInterval === 'monthly' 
-                ? "bg-white dark:bg-gray-700 text-slate-900 dark:text-white shadow-sm" 
-                : "text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200"
+              "px-3 py-1.5 rounded-md text-xs font-semibold transition-all",
+              billingInterval === 'monthly'
+                ? "bg-white dark:bg-gray-700 text-[#0f172a] dark:text-white shadow-soft-sm"
+                : "text-[#8898aa] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-gray-200"
             )}
           >
             {t.onboarding.step5.monthly}
@@ -1955,10 +1953,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             type="button"
             onClick={() => setBillingInterval('annual')}
             className={cn(
-              "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5",
-              billingInterval === 'annual' 
-                ? "bg-white dark:bg-gray-700 text-slate-900 dark:text-white shadow-sm" 
-                : "text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200"
+              "px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5",
+              billingInterval === 'annual'
+                ? "bg-white dark:bg-gray-700 text-[#0f172a] dark:text-white shadow-soft-sm"
+                : "text-[#8898aa] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-gray-200"
             )}
           >
             {t.onboarding.step5.annual}
@@ -2007,16 +2005,16 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
               type="button"
               onClick={() => setSelectedPlan(plan.id)}
               className={cn(
-                "relative rounded-lg bg-white dark:bg-[#0f0f0f] flex flex-col text-left transition-all",
+                "relative rounded-xl bg-white dark:bg-[#0f0f0f] flex flex-col text-left transition-all",
                 isPopular
-                  ? "border-2 border-[#ffbf23] shadow-md shadow-[#ffbf23]/10"
-                  : "border border-slate-200 dark:border-gray-700 shadow-sm",
+                  ? "border border-[#ffbf23] shadow-yellow-glow-sm"
+                  : "border border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm",
                 isSelected && "ring-2 ring-[#1A1D21] dark:ring-[#ffbf23] ring-offset-1 dark:ring-offset-black"
               )}
             >
               {isPopular && (
                 <div className="absolute -top-2.5 left-0 right-0 flex justify-center">
-                  <div className="bg-[#1A1D21] text-[#ffbf23] text-[9px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                  <div className="bg-[#1A1D21] text-[#ffbf23] text-[9px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full shadow-soft-sm flex items-center gap-1">
                     <Star size={8} fill="currentColor" />
                     {t.onboarding.step5.mostPopular}
                   </div>
@@ -2027,14 +2025,14 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                 {/* Plan Name - January 22nd, 2026: Added dark mode */}
                 <div className="mb-2">
                   <h3 className={cn(
-                    "text-sm font-bold",
+                    "text-sm font-semibold",
                     isPopular
                       ? "text-[#1A1D21] dark:text-[#ffbf23]"
-                      : "text-slate-900 dark:text-white"
+                      : "text-[#0f172a] dark:text-white"
                   )}>
                     {planName}
                   </h3>
-                  <p className="text-[10px] text-slate-500 dark:text-gray-400 leading-snug line-clamp-2">{planDescription}</p>
+                  <p className="text-[10px] text-[#8898aa] dark:text-gray-400 leading-snug line-clamp-2">{planDescription}</p>
                 </div>
 
                 {/* Price - January 22nd, 2026: Added dark mode
@@ -2043,8 +2041,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     numeric prices. */}
                 <div className="mb-2">
                   <div className="flex items-baseline gap-0.5">
-                    <span className="text-xl font-bold text-slate-900 dark:text-white">{CURRENCY_SYMBOL}{price}</span>
-                    <span className="text-slate-400 dark:text-gray-500 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
+                    <span className="text-xl font-bold text-[#0f172a] dark:text-white">{CURRENCY_SYMBOL}{price}</span>
+                    <span className="text-[#8898aa] dark:text-gray-500 text-xs font-medium">{t.onboarding.step5.perMonth}</span>
                   </div>
                   {billingInterval === 'annual' && (
                     <p className="text-[9px] text-[#1A1D21] dark:text-[#ffbf23] font-medium">{t.onboarding.step5.billedAnnually.replace('{amount}', `${CURRENCY_SYMBOL}${price * 12}`)}</p>
@@ -2055,12 +2053,12 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     April 14th, 2026: Removed the `isEnterprise ? contactSales`
                     branch — only Selected / Select Plan states remain. */}
                 <div className={cn(
-                  "w-full py-1.5 rounded-md text-[10px] font-bold mb-2 transition-all flex items-center justify-center gap-1",
+                  "w-full py-1.5 rounded-lg text-[10px] font-semibold mb-2 transition-all flex items-center justify-center gap-1",
                   isSelected
                     ? "bg-[#ffbf23] text-[#1A1D21]"
                     : isPopular
                       ? "bg-[#1A1D21]/10 dark:bg-[#ffbf23]/10 text-[#1A1D21] dark:text-[#ffbf23]"
-                      : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300"
+                      : "bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300"
                 )}>
                   {isSelected ? (
                     <>
@@ -2074,18 +2072,18 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
                 {/* Features List - January 22nd, 2026: Added dark mode */}
                 <div className="space-y-1 flex-1">
-                  <p className="text-[9px] font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">{t.onboarding.step5.included}</p>
+                  <p className="text-[9px] font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider mb-1">{t.onboarding.step5.included}</p>
                   {planFeatures.slice(0, 5).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-1.5">
                       <div className={cn(
                         "mt-0.5 w-3 h-3 rounded-full flex items-center justify-center shrink-0",
-                        isPopular 
-                          ? "bg-[#1A1D21] text-[#ffbf23]" 
-                          : "bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300"
+                        isPopular
+                          ? "bg-[#1A1D21] text-[#ffbf23]"
+                          : "bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300"
                       )}>
                         <Check size={6} strokeWidth={4} />
                       </div>
-                      <span className="text-[10px] text-slate-600 dark:text-gray-400 leading-tight">
+                      <span className="text-[10px] text-[#425466] dark:text-gray-400 leading-tight">
                         {feature}
                       </span>
                     </div>
