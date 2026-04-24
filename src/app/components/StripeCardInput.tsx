@@ -64,48 +64,53 @@ interface StripeCardInputProps {
   showSecurityBadge?: boolean;
 }
 
-// Element styling options to match app design - now supports dark mode
-// Stripe Elements use iframes so they don't inherit CSS dark mode classes
-// We need to detect dark mode and pass explicit color values
+// Element styling options - smoover refresh (April 24th, 2026).
+// Stripe Elements use iframes so they don't inherit CSS dark-mode classes;
+// we detect dark mode and pass explicit color values. Light-mode colors
+// migrated from slate-800/slate-400/slate-500 to smoover #0f172a / #8898aa.
+// Dark-mode values unchanged. Invalid (#ef4444) + complete-check (#22c55e)
+// signal colors kept vivid for clarity.
 const getElementStyles = (isDarkMode: boolean) => ({
   style: {
     base: {
       fontSize: '14px',
-      color: isDarkMode ? '#f1f5f9' : '#1e293b', // Light text in dark mode, dark in light mode
+      color: isDarkMode ? '#f1f5f9' : '#0f172a',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSmoothing: 'antialiased',
       '::placeholder': {
-        color: isDarkMode ? '#64748b' : '#94a3b8', // Slightly darker placeholder in dark mode
+        color: isDarkMode ? '#64748b' : '#8898aa',
       },
-      iconColor: isDarkMode ? '#94a3b8' : '#64748b',
+      iconColor: isDarkMode ? '#94a3b8' : '#8898aa',
     },
     invalid: {
       color: '#ef4444',
       iconColor: '#ef4444',
     },
     complete: {
-      color: isDarkMode ? '#f1f5f9' : '#1e293b', // Match base color
+      color: isDarkMode ? '#f1f5f9' : '#0f172a',
       iconColor: '#22c55e',
     },
   },
 });
 
-// Card brand display component - NEO-BRUTALIST (Updated January 8th, 2026)
+// Card brand display component — smoover refresh (April 24th, 2026).
+// Drops the brutalist black border; adopts rounded-md + font-bold for a
+// softer chip that still reads clearly on coloured brand backgrounds.
 const CardBrandBadge: React.FC<{ brand: string | null }> = ({ brand }) => {
   if (!brand || brand === 'unknown') return null;
-  
+
   const brandColors: Record<string, string> = {
     visa: 'bg-blue-600',
     mastercard: 'bg-gradient-to-r from-red-500 to-yellow-500',
     amex: 'bg-blue-800',
     discover: 'bg-orange-500',
   };
-  
+
   const bgClass = brandColors[brand] || 'bg-gray-500';
-  
+
   return (
     <span className={cn(
-      "text-[10px] px-1.5 py-0.5 text-white uppercase font-black border border-black",
+      "text-[10px] px-1.5 py-0.5 text-white uppercase font-bold rounded-md",
       bgClass
     )}>
       {brand}
@@ -206,33 +211,36 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
     setCardCvcError(event.error?.message || null);
   }, []);
 
-  // Shared input container styles - NEO-BRUTALIST (Updated January 8th, 2026)
+  // Shared input container styles — smoover refresh (April 24th, 2026).
+  // Wraps each Stripe Element iframe. Hairline #e6ebf1 default border,
+  // yellow focus border + ring (matches wizard inputs), vivid red/green
+  // signal colours kept for invalid/complete states.
   const getInputContainerClass = (focused: boolean, error: string | null, complete: boolean) => cn(
-    "px-3 py-3 bg-white dark:bg-gray-900 border-2 transition-all",
-    focused 
-      ? "border-black dark:border-white" 
-      : error 
-        ? "border-red-500" 
+    "px-3 py-3 bg-[#f6f9fc] dark:bg-[#1a1a1a] border rounded-xl transition-all",
+    focused
+      ? "border-[#ffbf23] ring-2 ring-[#ffbf23]/20 bg-white dark:bg-[#1a1a1a]"
+      : error
+        ? "border-red-500"
         : complete
           ? "border-green-500"
-          : "border-gray-300 dark:border-gray-600",
-    disabled && "bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60"
+          : "border-[#e6ebf1] dark:border-gray-700",
+    disabled && "bg-[#f6f9fc] dark:bg-gray-800 cursor-not-allowed opacity-60"
   );
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Security Badge with Stripe Logo - NEO-BRUTALIST (Updated January 24th, 2026) */}
+      {/* Security Badge with Stripe Logo — smoover refresh (April 24th, 2026). Softer blue-50/blue-200 callout (was blue-100 + 2px blue-500 brutalist border); hairline + rounded-xl. "Secure payment" uses smoover eyebrow pattern. */}
       {showSecurityBadge && (
-        <div className="flex items-center justify-between p-3 bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-500">
+        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl">
           <div className="flex items-center gap-2">
             <Lock size={14} className="text-blue-600 shrink-0" />
-            <span className="text-xs font-black text-blue-800 dark:text-blue-300 uppercase">Secure payment</span>
+            <span className="text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Secure payment</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Powered by</span>
-            <Image 
-              src="/stripe-logo.png" 
-              alt="Stripe" 
+            <span className="text-[10px] text-[#8898aa] dark:text-gray-400 font-medium">Powered by</span>
+            <Image
+              src="/stripe-logo.png"
+              alt="Stripe"
               width={50}
               height={20}
               className="h-5 w-auto"
@@ -241,9 +249,9 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
         </div>
       )}
 
-      {/* Cardholder Name - NEO-BRUTALIST */}
+      {/* Cardholder Name — smoover refresh (April 24th, 2026). Label switches to step-1-style sentence-case form label. Input adopts hairline + rounded-xl + soft bg + yellow focus ring. autoComplete + disabled logic unchanged. */}
       <div className="space-y-1.5">
-        <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+        <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">
           Cardholder Name
         </label>
         <input
@@ -254,17 +262,17 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
           disabled={disabled}
           autoComplete="cc-name"
           className={cn(
-            "w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white",
-            "focus:outline-none focus:border-black dark:focus:border-white",
-            "transition-all placeholder:text-gray-400",
-            disabled && "bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60"
+            "w-full px-3 py-2.5 bg-[#f6f9fc] dark:bg-[#1a1a1a] border border-[#e6ebf1] dark:border-gray-700 rounded-xl text-sm text-[#0f172a] dark:text-white font-medium",
+            "focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 focus:bg-white dark:focus:bg-[#1a1a1a]",
+            "transition-all placeholder-[#8898aa]",
+            disabled && "bg-[#f6f9fc] dark:bg-gray-800 cursor-not-allowed opacity-60"
           )}
         />
       </div>
 
       {/* Card Number - NEO-BRUTALIST */}
       <div className="space-y-1.5">
-        <label className="text-xs font-black text-gray-700 dark:text-gray-300 flex items-center gap-2 uppercase tracking-wide">
+        <label className="flex items-center gap-2 text-sm font-semibold text-[#0f172a] dark:text-white">
           Card Number
           <CardBrandBadge brand={cardBrand} />
         </label>
@@ -300,7 +308,7 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
       <div className="grid grid-cols-2 gap-4">
         {/* Expiry Date */}
         <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">
             Expiry Date
           </label>
           <div className={getInputContainerClass(cardExpiryFocused, cardExpiryError, cardExpiryComplete)}>
@@ -324,7 +332,7 @@ export const StripeCardInput: React.FC<StripeCardInputProps> = ({
 
         {/* CVC - NEO-BRUTALIST */}
         <div className="space-y-1.5">
-          <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+          <label className="block text-sm font-semibold text-[#0f172a] dark:text-white">
             CVC
           </label>
           <div className={getInputContainerClass(cardCvcFocused, cardCvcError, cardCvcComplete)}>
