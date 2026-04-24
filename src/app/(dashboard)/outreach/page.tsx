@@ -1747,11 +1747,14 @@ export default function OutreachPage() {
         </div>
 
         {/* =============================================================================
-            TABLE AREA - DashboardDemo.tsx EXACT STYLING (Outreach)
+            TABLE AREA — smoover refresh (April 25th, 2026)
+            Shell adopts hairline + rounded-2xl + shadow-soft-sm (matches
+            onboarding card shell). Header row softens to muted eyebrow
+            (#8898aa + font-semibold + tracking-wider).
             ============================================================================= */}
-        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
+        <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm min-h-[500px] flex flex-col">
           {/* Table Header - Updated January 16, 2026: Adjusted columns for more Discovery Method space */}
-          <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+          <div className="grid grid-cols-12 gap-4 p-4 border-b border-[#e6ebf1] dark:border-gray-800 text-[10px] font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 flex justify-center">
               <input
                 type="checkbox"
@@ -1879,7 +1882,7 @@ export default function OutreachPage() {
                 <div
                   key={item.id}
                   className={cn(
-                    "grid grid-cols-12 gap-4 items-center px-4 py-4 border-b-2 border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors",
+                    "grid grid-cols-12 gap-4 items-center px-4 py-4 border-b border-[#e6ebf1] dark:border-gray-800 last:border-b-0 hover:bg-[#f6f9fc] dark:hover:bg-gray-900/50 transition-colors",
                     isSelected && "bg-[#ffbf23]/10 hover:bg-[#ffbf23]/20"
                   )}
                 >
@@ -1896,13 +1899,13 @@ export default function OutreachPage() {
                   {/* Affiliate Info - col-span-2 (reduced January 16, 2026 to give Discovery Method more space) */}
                   {/* January 17, 2026: Show favicon for Web results using Google's favicon service */}
                   <div className="col-span-2 flex items-center gap-2 min-w-0">
-                    <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 border-2 border-black dark:border-gray-600 flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="w-10 h-10 bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-full shadow-soft-sm flex items-center justify-center shrink-0 overflow-hidden">
                       {item.thumbnail ? (
                         <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
                       ) : item.source === 'Web' && item.domain ? (
                         /* Web results: Show favicon from Google's service */
-                        <img 
-                          src={`https://www.google.com/s2/favicons?domain=${item.domain}&sz=32`} 
+                        <img
+                          src={`https://www.google.com/s2/favicons?domain=${item.domain}&sz=32`}
                           alt={item.domain}
                           className="w-6 h-6"
                         />
@@ -1911,8 +1914,8 @@ export default function OutreachPage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-black text-gray-900 dark:text-white truncate">{item.title}</h3>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
+                      <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white truncate">{item.title}</h3>
+                      <p className="text-xs text-[#8898aa] flex items-center gap-1 truncate">
                         <Globe size={10} className="shrink-0" />
                         <span className="truncate">{item.domain}</span>
                       </p>
@@ -1949,19 +1952,19 @@ export default function OutreachPage() {
 
                       return (
                         <div className="flex flex-col gap-1">
-                          {/* Row 1: Creator name + verified badge */}
+                          {/* Row 1: Creator name + verified badge — smoover refresh (April 25th, 2026). font-bold matches AffiliateRow.tsx line 1233. */}
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-gray-900 dark:text-white truncate" title={creatorName}>
+                            <span className="font-bold text-sm text-[#0f172a] dark:text-white truncate" title={creatorName}>
                               {creatorName}
                             </span>
                             {isVerified && (
                               <CheckCircle2 size={12} className="text-blue-500 fill-blue-500 shrink-0" />
                             )}
                           </div>
-                          
-                          {/* Row 2: Followers badge - Neo-brutalist style (matches AffiliateRow) */}
+
+                          {/* Row 2: Followers pill — smoover refresh (April 25th, 2026). Matches AffiliateRow.tsx line 1255 exactly: rounded-full yellow pill with shadow-yellow-glow-sm. */}
                           {isSocialMedia && followersDisplay && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#ffbf23] text-black border-2 border-black w-fit">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm w-fit">
                               <Users size={10} />
                               {followersDisplay}
                             </span>
@@ -1983,8 +1986,8 @@ export default function OutreachPage() {
                           : fullText;
                         
                         return (
-                          <span 
-                            className="inline-block px-2 py-1 bg-white dark:bg-black border-2 border-black dark:border-gray-600 text-gray-800 dark:text-gray-200 font-bold max-w-[180px] truncate"
+                          <span
+                            className="inline-block px-2.5 py-1 text-[11px] font-semibold rounded-full bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 border border-[#e6ebf1] dark:border-gray-700 max-w-[160px] truncate"
                             title={fullText}
                           >
                             {truncatedText}
@@ -1992,27 +1995,27 @@ export default function OutreachPage() {
                         );
                       })()
                     ) : (
-                      <span className="text-gray-400 italic">—</span>
+                      <span className="text-[#8898aa] italic">—</span>
                     )}
                   </div>
 
-                  {/* Email - col-span-2 (Full email - January 16, 2026) */}
+                  {/* Email - col-span-2 (Full email - January 16, 2026). Smoover refresh (April 25th, 2026): text tokens + rounded-full +N badge. emerald-600 signal icon kept. */}
                   <div className="col-span-2 text-xs min-w-0">
                     {item.email ? (
                       <div className="flex items-center gap-1.5 min-w-0">
                         <Mail size={12} className="text-emerald-600 shrink-0" />
-                        <span className="truncate text-gray-700 dark:text-gray-300 font-mono text-[11px]" title={item.email}>
+                        <span className="truncate text-[#0f172a] dark:text-gray-300 font-mono text-[11px]" title={item.email}>
                           {item.email}
                         </span>
                         {item.emailResults?.emails && item.emailResults.emails.length > 1 && (
-                          <span className="shrink-0 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded">
+                          <span className="shrink-0 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold rounded-full">
                             +{item.emailResults.emails.length - 1}
                           </span>
                         )}
                       </div>
                     ) : (
                       /* January 17, 2026: Using i18n translation */
-                      <span className="inline-flex items-center gap-1 text-gray-400">
+                      <span className="inline-flex items-center gap-1 text-[#8898aa]">
                         <Mail size={10} />
                         {t.dashboard.saved.emailStatus.none}
                       </span>
@@ -2044,7 +2047,7 @@ export default function OutreachPage() {
                       // GENERATING STATE: Show spinner
                       <button
                         disabled
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 border-2 border-gray-300 dark:border-gray-600 cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 rounded-full cursor-not-allowed"
                       >
                         <Loader2 size={12} className="animate-spin" />
                         {t.dashboard.outreach.generating}
@@ -2085,7 +2088,7 @@ export default function OutreachPage() {
                               setActiveChannel('email');
                               setViewingMessageId(`${item.id}`);
                             }}
-                            className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-black uppercase bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                            className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-semibold bg-white dark:bg-gray-800 text-[#0f172a] dark:text-white border border-[#e6ebf1] dark:border-gray-700 rounded-full shadow-soft-sm hover:bg-[#f6f9fc] dark:hover:bg-gray-700 transition-all"
                             title={`View ${messageCount} generated message${messageCount > 1 ? 's' : ''}`}
                           >
                             <MessageSquare size={11} />
@@ -2095,7 +2098,7 @@ export default function OutreachPage() {
                           {/* GENERATE MORE BUTTON - Opens contact picker */}
                           <button
                             onClick={() => openContactPicker(item)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all"
                             title={`Generate for ${contactCount - messageCount} more contact${contactCount - messageCount > 1 ? 's' : ''}`}
                           >
                             <Users size={12} />
@@ -2106,7 +2109,7 @@ export default function OutreachPage() {
                         // NO MESSAGES YET: Single button to open contact picker
                         <button
                           onClick={() => openContactPicker(item)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all"
                         >
                           <Users size={12} />
                           {contactCount} {t.dashboard.outreach.contacts}
@@ -2121,7 +2124,7 @@ export default function OutreachPage() {
                           setActiveChannel('email');
                           setViewingMessageId(messageCount > 1 ? `${item.id}` : messageKey);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all"
                       >
                         <MessageSquare size={12} />
                         {messageCount > 1 ? `${messageCount} ${t.dashboard.outreach.messages}` : t.dashboard.outreach.viewMessage}
@@ -2130,7 +2133,7 @@ export default function OutreachPage() {
                       // FAILED STATE: Show red "Failed - Retry" button
                       <button
                         onClick={() => handleGenerateForSingle(item.id!)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-red-500 text-white border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-full shadow-soft-sm hover:bg-red-600 hover:-translate-y-px transition-all"
                       >
                         <AlertTriangle size={12} />
                         {t.dashboard.outreach.retry}
@@ -2141,7 +2144,7 @@ export default function OutreachPage() {
                       // catches this case. Kept as safety fallback. (January 24th, 2026)
                       <button
                         onClick={() => openContactPicker(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all"
                       >
                         <Users size={12} />
                         {multipleContacts!.length} {t.dashboard.outreach.contacts}
@@ -2150,7 +2153,7 @@ export default function OutreachPage() {
                       // DEFAULT STATE: Show yellow "Generate" button (single contact)
                       <button
                         onClick={() => handleGenerateForSingle(item.id!)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase bg-[#ffbf23] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#ffbf23] text-[#0f172a] rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all"
                       >
                         <Wand2 size={12} />
                         {t.dashboard.outreach.generate}
