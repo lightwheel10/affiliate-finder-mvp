@@ -19,28 +19,34 @@ import Image from 'next/image';
 
 /**
  * =============================================================================
- * STRIPE CARD INPUT COMPONENT (Split Elements) - NEO-BRUTALIST
+ * STRIPE CARD INPUT COMPONENT (Split Elements) — SMOOVER REFRESH
  * =============================================================================
- * 
- * Updated: January 24th, 2026
  *
- * NEO-BRUTALIST DESIGN UPDATE:
- * - Sharp edges (no rounded corners)
- * - Bold borders (border-2 with black)
- * - Yellow accent color (#ffbf23)
- * - Bold typography (font-black uppercase labels)
- * - Dark mode support (Stripe Elements now adapt to dark mode)
+ * Updated: April 24th, 2026
+ *
+ * CURRENT DESIGN LANGUAGE ("smoover") — see PR #22:
+ * - Hairline #e6ebf1 borders + rounded-xl around each Stripe Element iframe.
+ * - Yellow focus border + yellow ring on the active field.
+ * - Sentence-case form labels (text-sm font-semibold text-[#0f172a]) in place
+ *   of font-black uppercase labels.
+ * - Softer "Powered by Stripe" callout: blue-50 + hairline blue-200 border.
+ * - CardBrandBadge: rounded-md pill (drops the brutalist black border).
+ * - Stripe iframes receive explicit #0f172a / #8898aa colour tokens via
+ *   getElementStyles (iframes don't inherit CSS classes).
+ * - Vivid red (#ef4444) + green (#22c55e) signal colours retained for
+ *   invalid / complete states.
+ * - Dark-mode support preserved.
  *
  * A secure card input component using separate Stripe Elements for:
  * - Card Number
- * - Expiry Date  
+ * - Expiry Date
  * - CVC
  *
- * Card data is collected directly by Stripe's secure iframes - 
+ * Card data is collected directly by Stripe's secure iframes —
  * sensitive data NEVER touches our servers.
  *
- * SECURITY:
- * - PCI DSS compliant - card data handled entirely by Stripe
+ * SECURITY (unchanged):
+ * - PCI DSS compliant — card data handled entirely by Stripe
  * - 3D Secure authentication handled automatically
  * - Real-time card validation via Stripe.js
  * - No raw card data stored anywhere

@@ -2,51 +2,49 @@
 
 /**
  * =============================================================================
- * OnboardingScreen - NEO-BRUTALIST
+ * OnboardingScreen — SMOOVER REFRESH
  * =============================================================================
- * 
- * Last Updated: January 9th, 2026
  *
- * NEO-BRUTALIST DESIGN UPDATE:
- * - Sharp edges (no rounded corners) 
- * - Bold borders (border-2 with black)
- * - Yellow accent color (#ffbf23)
- * - Bold typography (font-black uppercase)
- * - Dark mode support
- * 
+ * Last Updated: April 24th, 2026
+ *
+ * CURRENT DESIGN LANGUAGE ("smoover"):
+ * - Soft rounded corners (rounded-xl inputs, rounded-2xl card shell,
+ *   rounded-full progress pills + primary CTAs).
+ * - Hairline #e6ebf1 borders in place of border-2 with black.
+ * - Soft drop shadows (shadow-soft-sm / shadow-soft-xl) + shadow-yellow-glow
+ *   on the primary CTA, in place of offset brutalist shadows.
+ * - Archivo display font on hero titles + text-gradient-brand on "One".
+ * - Text palette: #0f172a primary, #425466 body, #8898aa muted.
+ * - Brand yellow (#ffbf23) + dark-mode support retained.
+ *
  * =============================================================================
  * CHANGELOG:
- * 
- * January 9th, 2026:
- * - Updated Step 1 (Name/Role/Brand) to neo-brutalist design
- *   - Added header with logo and progress bar
- *   - Sharp edges on all inputs and dropdowns
- *   - Dark mode support throughout
- * 
- * - Updated Step 2 (Country/Language) to neo-brutalist design
- *   - Sharp edges on country and language dropdowns
- *   - Neo-brutalist dropdown menus with offset shadow
- *   - Updated icon containers to sharp edges
- * 
- * - Updated Step 3 (Competitors) to neo-brutalist design
- *   - Sharp edges on input, add button, suggestion cards, selected cards
- *   - Updated empty state styling
- * 
- * - Updated Step 4 (Topics) to neo-brutalist design
- *   - Sharp edges on input, add button, topic pills
- *   - Updated suggestion and selected topic styling
- * 
- * - Updated Step 5 (Affiliate Types) to neo-brutalist design
- *   - Sharp edges on type buttons and checkbox indicators
- *   - Dark mode support for all elements
- * 
+ *
+ * April 24th, 2026 — smoover refresh (shipped across PRs #21, #22, and the
+ * shell/button unifying pass):
+ * - Steps 1–4 body: hero rows, progress bars, inputs, dropdowns, competitor
+ *   cards, topic pills (see PR #21).
+ * - Steps 5–7 body: affiliate-type grid, pricing cards, card form + Stripe
+ *   card input (see PR #22).
+ * - Shared outer card shell: border-4 black + 8px offset shadow ->
+ *   border-[#e6ebf1] + shadow-soft-xl + rounded-2xl.
+ * - Shared Continue / Back buttons: brutalist offset-shadow yellow button ->
+ *   rounded-full + shadow-yellow-glow-sm + subtle hover lift.
+ * - Page background: bg-gray-100 -> bg-[#fdfdfd] (matches sign-in).
+ * - Zero logic / state / prop / i18n / Stripe-SDK changes anywhere.
+ *
+ * January 9th, 2026 — neo-brutalist pass (superseded; step-by-step notes
+ * archived in git history / PR descriptions for #21 and #22):
+ * - All 5 content-entry step bodies were brought to neo-brutalist design
+ *   (sharp edges, border-2 black, font-black uppercase, etc.).
+ *
  * January 8th, 2026:
- * - Initial neo-brutalist container and button styling
- * 
+ * - Initial neo-brutalist container and button styling (superseded).
+ *
  * January 3rd, 2026:
- * - Added AI suggestions functionality
- * - Domain validation with format checking
- * - Back button navigation for steps 3-5
+ * - Added AI suggestions functionality (logic — still in use).
+ * - Domain validation with format checking (logic — still in use).
+ * - Back button navigation for steps 3–5 (logic — still in use).
  * =============================================================================
  */
 
@@ -2226,10 +2224,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   );
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-100 dark:bg-black font-sans py-4 px-4">
-      {/* Main Card Container - NEO-BRUTALIST (Updated January 8th, 2026) */}
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#fdfdfd] dark:bg-[#0a0a0a] font-sans py-4 px-4">
+      {/* Main Card Container — smoover refresh (April 24th, 2026). Hairline #e6ebf1 border + shadow-soft-xl + rounded-2xl, mirroring the sign-in auth card shell. Page bg #fdfdfd matches sign-in (was gray-100). Step-specific max-width + scale-[0.9] for Step 7 preserved. */}
       <div className={cn(
-        "bg-white dark:bg-[#0f0f0f] border-4 border-black dark:border-gray-600 shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#333333] relative flex flex-col",
+        "bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl relative flex flex-col",
         "p-5",
         step === 6 ? "w-full max-w-3xl" : "w-full max-w-[420px]",
         step === 7 ? "origin-center scale-[0.9]" : "max-h-[90vh]"
@@ -2306,21 +2304,21 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                       <button
                         type="button"
                         onClick={handleGoBack}
-                        className="w-12 py-3 font-bold text-sm transition-all duration-200 border-2 border-gray-300 dark:border-gray-600 hover:border-black dark:hover:border-white hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400"
+                        className="w-12 py-3 font-semibold text-sm transition-all duration-200 border border-[#e6ebf1] dark:border-gray-700 rounded-full hover:border-[#ffbf23] hover:bg-[#ffbf23]/5 dark:hover:bg-gray-800 flex items-center justify-center text-[#425466] dark:text-gray-400"
                       >
                         <ChevronLeft size={18} />
                       </button>
                     )}
-                    
-                    {/* Continue/Next Button - NEO-BRUTALIST - Translated (January 9th, 2026) */}
+
+                    {/* Continue/Next Button — smoover refresh (April 24th, 2026). Matches sign-in primary CTA + Step 7 Start-Trial button: rounded-full + shadow-yellow-glow-sm + subtle hover lift. font-black -> font-bold; uppercase kept for label-case consistency with the existing button translations. Disabled state migrates to smoover gray tokens. */}
                     <button
                       type="submit"
                       disabled={isDisabled}
                       className={cn(
-                        "flex-1 py-3 font-black text-sm transition-all duration-200 flex items-center justify-center gap-2 uppercase border-2",
+                        "flex-1 py-3 font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 uppercase rounded-full",
                         isDisabled
-                          ? "bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-600 cursor-not-allowed"
-                          : "bg-[#ffbf23] text-black border-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]"
+                          ? "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed"
+                          : "bg-[#ffbf23] text-[#1A1D21] hover:bg-[#e5ac20] shadow-yellow-glow-sm hover:shadow-yellow-glow hover:-translate-y-px"
                       )}
                     >
                       {isLoading || isBrandValidating ? (
