@@ -1,16 +1,63 @@
 /**
  * =============================================================================
- * Input Components - NEO-BRUTALIST
+ * Input Components — DEAD CODE (kept in repo, not currently rendered)
  * =============================================================================
- * 
- * Updated: January 8th, 2026
  *
- * NEO-BRUTALIST DESIGN UPDATE:
- * - Sharp edges (no rounded corners)
- * - Bold borders (border-2 with black)
- * - Yellow accent color (#ffbf23)
- * - Bold typography (font-black uppercase)
- * - Dark mode support
+ * STATUS (verified April 25, 2026): nothing in the app imports or renders
+ * <SearchInput /> or <SourceToggle />. Both exports are unreferenced.
+ *
+ * HISTORY:
+ *   - Used in v1 of the app (initial commit + a few early enhancement
+ *     commits — see `git log --all -S "<SearchInput"`).
+ *   - Replaced when:
+ *       (a) the dashboard pages got their own INLINE search bars (the
+ *           Find / Discovered / Saved page.tsx files render the search
+ *           UI inline rather than importing this component), and
+ *       (b) source filtering moved into the FilterPanel slide-out.
+ *   - These files were never deleted after the refactor.
+ *   - Last code change: 2026-01-08 (the brutalist redesign commit). Has
+ *     not been touched in 3+ months as of this audit.
+ *
+ * AUDIT (April 25, 2026 — smoover design migration sweep):
+ *   Five independent checks, all zero hits outside this file:
+ *     1. Whole-repo grep for `SearchInput` / `SourceToggle` (excluding
+ *        node_modules, .next, .git): only this file's declarations match.
+ *     2. JSX-usage grep `<SearchInput` / `<SourceToggle`: zero real
+ *        matches (only TS generic syntax `<SearchInputProps>` etc. inside
+ *        this file).
+ *     3. Import grep across all variations (`from './Input'`, `from
+ *        '@/...Input'`, `require()`, dynamic `import()`, `import * as`):
+ *        zero matches. The only `Input`-related import in the codebase
+ *        is `StripeCardInput`, which is a different file entirely.
+ *     4. No barrel `index.ts` re-exports `Input.tsx` (only enrichment +
+ *        dictionaries have barrel files, neither touches `components/`).
+ *     5. `git log --all -S "<SearchInput"` shows the JSX appears only in
+ *        the initial commit and one early commit, then was removed and
+ *        has not appeared on main since. Same result for `<SourceToggle`.
+ *
+ * WHY NOT MIGRATED TO SMOOVER:
+ *   The app-wide neo-brutalist → smoover refresh (April 2026) deliberately
+ *   skipped these components because migrating dead code is wasted effort
+ *   and adds maintenance burden with zero user-visible benefit. The
+ *   brutalist styles below are intentionally left as-is.
+ *
+ * WHAT TO DO IF YOU LAND HERE:
+ *   - Preferred: delete this file (`git rm src/app/components/Input.tsx`)
+ *     and remove the audit entry from MEMORY/notes. Re-run the five
+ *     checks above first to confirm nothing has started using it since
+ *     April 25, 2026.
+ *   - Or: if you actually want to USE <SearchInput /> on a page, you MUST
+ *     migrate the brutalist classNames below to smoover first (see
+ *     AffiliateRow.tsx, FilterPanel.tsx slide-out, or the Settings page
+ *     for the pattern). Do NOT ship the brutalist version into a smoover
+ *     surface — it will look badly out of place.
+ *
+ * Original (now-stale) brutalist design notes — preserved for archaeology:
+ *   - Sharp edges (no rounded corners)
+ *   - Bold borders (border-2 with black)
+ *   - Yellow accent color (#ffbf23)
+ *   - Bold typography (font-black uppercase)
+ *   - Dark mode support
  *
  * =============================================================================
  */
