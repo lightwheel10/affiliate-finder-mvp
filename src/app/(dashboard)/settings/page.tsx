@@ -2,28 +2,35 @@
 
 /**
  * =============================================================================
- * SETTINGS PAGE
+ * SETTINGS PAGE — SMOOVER (complete)
  * =============================================================================
  *
- * Updated: April 25th, 2026 — shell smoover refresh
+ * Updated: April 25th, 2026 — full smoover migration finished.
  *
  * DESIGN STATUS:
  * --------------
- * SHELL (header + left nav + right panel container): smoover ✓
+ * Every surface is now smoover:
+ *   - SHELL (header + left nav + right panel container) — PR #30.
+ *   - ProfileSettings + BlockedDomainsSettings — PR #31.
+ *   - SecuritySettings (tab + Password Modal body + Delete Account
+ *     Modal body) — PR #32.
+ *   - PlanSettings + BuyCreditsSettings — PR #33.
+ *   - Cancel Plan Modal body (in this file) + AddCardModal body
+ *     (components/AddCardModal.tsx) — this PR.
+ *
+ * Smoover language:
  *   - Hairline #e6ebf1 borders, rounded corners, soft drop shadows.
- *   - Left nav matches Sidebar.tsx NavItem pattern (soft yellow tint active).
- *   - Right panel matches onboarding card shell + Message Viewer modal.
- *
- * TAB CONTENTS (ProfileSettings / PlanSettings / BuyCreditsSettings /
- * BlockedDomainsSettings / SecuritySettings): still neo-brutalist — each will
- * be migrated in a subsequent PR. After shell + all 5 tabs are migrated the
- * settings-wide brutalist design notes below will be removed.
- *
- * HISTORICAL (January 8th, 2026) — NEO-BRUTALIST DESIGN UPDATE:
- * ------------------------------------------------------------
- * Sharp edges, border-2 to border-4 with black, offset shadows, yellow
- * accent, font-black uppercase. Preserved in tab sub-components pending
- * migration.
+ *   - Smoover tokens: #0f172a (primary text), #425466 (body),
+ *     #8898aa (muted), #e6ebf1 (hairline), #f6f9fc (soft bg),
+ *     #ffbf23 (brand yellow), #fff4d1 (yellow nav-active tint).
+ *   - Yellow primary CTAs: rounded-full + shadow-yellow-glow-sm +
+ *     hover:bg-[#e5ac20] + hover:-translate-y-px + font-semibold.
+ *   - Destructive primary (irreversible): rounded-full + bg-red-500 +
+ *     shadow-soft-lg, no translate-y hover.
+ *   - Status / banner pattern: rounded-xl + bg-*-50 + hairline border-*-500
+ *     (vivid border kept as signal).
+ *   - Eyebrow labels: font-semibold + text-[#8898aa] + uppercase +
+ *     tracking-wider.
  *
  * ARCHITECTURE (January 3rd, 2026):
  * ---------------------------------
@@ -303,8 +310,14 @@ export default function SettingsPage() {
         />
       )}
 
-      {/* Cancel Plan Confirmation Modal - NEO-BRUTALIST (Updated January 8th, 2026)
-          January 17, 2026: Added i18n translations */}
+      {/* Cancel Plan Confirmation Modal — smoover refresh (April 25th, 2026).
+          Modal shell already smoover (Modal.tsx Phase 2b).
+          Resume mode: smoover muted body + Keep-Canceled secondary pill +
+          Resume yellow primary CTA.
+          Cancel mode: smoover red callout warning + Keep-Subscription
+          secondary pill + Cancel destructive primary (matches Security
+          Delete Account confirm: bg-red-500 + rounded-full + shadow-soft-lg
+          + no translate-y hover — irreversible action). */}
       <Modal
         isOpen={isCancelModalOpen}
         onClose={() => setIsCancelModalOpen(false)}
@@ -314,13 +327,13 @@ export default function SettingsPage() {
         <div className="space-y-4">
           {subscription?.cancel_at_period_end ? (
             <>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              <p className="text-sm text-[#425466] dark:text-gray-400 leading-relaxed">
                 {t.dashboard.settings.plan.cancelModal.resumeMessage}
               </p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   onClick={() => setIsCancelModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase"
+                  className="px-5 py-2 text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white bg-white dark:bg-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-700 border border-[#e6ebf1] dark:border-gray-600 rounded-full transition-all"
                 >
                   {t.dashboard.settings.plan.cancelModal.keepCanceled}
                 </button>
@@ -333,7 +346,7 @@ export default function SettingsPage() {
                     setIsCancelModalOpen(false);
                   }}
                   disabled={isCanceling}
-                  className="px-4 py-2 text-xs font-black text-black bg-[#ffbf23] hover:bg-yellow-400 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 uppercase"
+                  className="px-5 py-2 bg-[#ffbf23] text-[#1A1D21] text-sm font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-2"
                 >
                   {isCanceling ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -346,24 +359,24 @@ export default function SettingsPage() {
             </>
           ) : (
             <>
-              <div className="p-4 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
+              <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-500 rounded-xl">
                 <div className="flex items-start gap-3">
                   <XCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-black text-red-800 dark:text-red-300">{t.dashboard.settings.plan.cancelModal.cancelWarning}</p>
+                    <p className="text-sm font-semibold text-red-800 dark:text-red-300">{t.dashboard.settings.plan.cancelModal.cancelWarning}</p>
                     <p className="text-xs text-red-700 dark:text-red-400 mt-1">
                       {t.dashboard.settings.plan.cancelModal.cancelMessage}
                     </p>
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[#8898aa] dark:text-gray-500">
                 {t.dashboard.settings.plan.subscriptionWillRemainActive}
               </p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   onClick={() => setIsCancelModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase"
+                  className="px-5 py-2 text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white bg-white dark:bg-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-700 border border-[#e6ebf1] dark:border-gray-600 rounded-full transition-all"
                 >
                   {t.dashboard.settings.plan.cancelModal.keepSubscription}
                 </button>
@@ -376,7 +389,7 @@ export default function SettingsPage() {
                     setIsCancelModalOpen(false);
                   }}
                   disabled={isCanceling}
-                  className="px-4 py-2 text-xs font-black text-white bg-red-500 hover:bg-red-600 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 uppercase"
+                  className="px-5 py-2 bg-red-500 text-white text-sm font-semibold rounded-full shadow-soft-lg hover:bg-red-600 hover:shadow-soft-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isCanceling ? (
                     <Loader2 size={14} className="animate-spin" />
