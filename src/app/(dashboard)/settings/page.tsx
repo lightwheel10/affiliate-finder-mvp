@@ -1689,13 +1689,46 @@ function BlockedDomainsSettings() {
 }
 
 // =============================================================================
-// SECURITY SETTINGS - NEO-BRUTALIST (Updated January 13th, 2026)
-// 
-// Design updates:
-// - Sharp-edged buttons
-// - Bold typography
-// - Neo-brutalist Danger Zone section
-// 
+// SECURITY SETTINGS — SMOOVER REFRESH (April 25th, 2026)
+//
+// Migrated from neo-brutalist to the smoover design language. Modal shells
+// were already smoover via src/app/components/Modal.tsx (Phase 2b, April 23rd);
+// this pass covers the BODY content of both modals plus the main tab content.
+//
+// Main tab:
+// - Section titles (Password & Security, Danger Zone): font-black uppercase
+//   tracking-wide -> font-semibold text-[#0f172a] (Danger Zone keeps red-600
+//   as signal colour).
+// - Divider: h-0.5 bg-gray-200 -> h-px bg-[#e6ebf1] (hairline).
+// - Change Password: rounded-full hairline secondary (hover:bg-[#f6f9fc]).
+// - Delete Account (opens modal): rounded-full + bg-red-50 + hairline
+//   red-200; hover promotes to vivid red-500 (matches Unblock idle pattern
+//   from BlockedDomainsSettings).
+//
+// Password Change Modal body:
+// - Success + error banners: bg-*-100 + border-2 -> rounded-xl + bg-*-50 +
+//   hairline border-*-500 (matches StripeProvider error callout). font-bold
+//   -> font-semibold.
+// - 3x password fields: brutalist -> smoover inputs (bg-[#f6f9fc] + hairline
+//   border + rounded-lg + focus:ring-2 focus:ring-[#ffbf23]/20). Eye-toggle
+//   icons use muted #8898aa -> #0f172a hover.
+// - Labels: eyebrow pattern (font-semibold text-[#8898aa] uppercase
+//   tracking-wider).
+// - Cancel: rounded-full hairline secondary. Save: smoover primary yellow
+//   (rounded-full + shadow-yellow-glow-sm + hover:-translate-y-px).
+//
+// Delete Account Modal body:
+// - Warning banner + error banner: same smoover red callout (rounded-xl +
+//   bg-red-50 + hairline red-500).
+// - "What will be deleted" heading: eyebrow pattern. List body uses #425466.
+// - DELETE confirmation input: hairline red-400 + rounded-lg + focus ring
+//   red-500/20. font-bold -> font-semibold. uppercase tracking-widest kept
+//   — it IS the "type DELETE" visual signal.
+// - Cancel: rounded-full hairline secondary. Delete Account: destructive
+//   PRIMARY — rounded-full + bg-red-500 + font-semibold + shadow-soft-lg.
+//   Deliberately NO translate-y hover: irreversible actions shouldn't feel
+//   playful.
+//
 // January 13th, 2026:
 // - Added custom password change form with user.updatePassword()
 // - Simple modal with current/new/confirm password fields
@@ -1875,38 +1908,44 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
 
   return (
     <div className="space-y-6">
-      {/* January 17, 2026: Updated with i18n translations */}
+      {/* Password & Security — smoover refresh (April 25th, 2026).
+          Title drops font-black + uppercase tracking-wide; description uses
+          smoover body token; Change Password is a rounded-full hairline
+          secondary (no more border-2 + font-bold uppercase). */}
       <div className="space-y-4">
-        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wide">{t.dashboard.settings.security.passwordSecurity}</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white">{t.dashboard.settings.security.passwordSecurity}</h3>
+        <p className="text-sm text-[#425466] dark:text-gray-400">
           {t.dashboard.settings.security.securityDescription}
         </p>
         <div className="pt-2">
-          {/* January 13th, 2026: Opens password change modal */}
-          <button 
+          <button
             onClick={() => setIsPasswordModalOpen(true)}
-            className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors uppercase"
+            className="px-5 py-2 text-sm font-semibold text-[#0f172a] dark:text-white bg-white dark:bg-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-700 border border-[#e6ebf1] dark:border-gray-600 rounded-full transition-colors"
           >
             {t.dashboard.settings.security.changePassword}
           </button>
         </div>
       </div>
-      
-      <div className="h-0.5 bg-gray-200 dark:bg-gray-700" />
+
+      {/* Divider — hairline smoover (was h-0.5 bg-gray-200). */}
+      <div className="h-px bg-[#e6ebf1] dark:bg-gray-800" />
 
       {/* ================================================================= */}
-      {/* DANGER ZONE - January 13th, 2026                                  */}
-      {/* Delete Account button opens confirmation modal                    */}
-      {/* January 17, 2026: Updated with i18n translations                  */}
+      {/* DANGER ZONE — smoover refresh (April 25th, 2026).                 */}
+      {/* Title keeps red-600 signal colour but drops font-black + uppercase */}
+      {/* tracking-wide. Delete Account button mirrors the Unblock idle     */}
+      {/* pattern: rounded-full + red-50 bg + red-200 hairline + font-      */}
+      {/* semibold (hover promotes to vivid red-500). Opens confirmation    */}
+      {/* modal — the PRIMARY destructive action lives inside that modal.   */}
       {/* ================================================================= */}
       <div className="space-y-4">
-        <h3 className="text-sm font-black text-red-600 uppercase tracking-wide">{t.dashboard.settings.security.dangerZone}</h3>
-        <p className="text-xs text-gray-500">
+        <h3 className="text-base font-semibold text-red-600">{t.dashboard.settings.security.dangerZone}</h3>
+        <p className="text-xs text-[#8898aa] dark:text-gray-500">
           {t.dashboard.settings.security.dangerZoneWarning}
         </p>
-        <button 
+        <button
           onClick={() => setIsDeleteModalOpen(true)}
-          className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-2 border-red-400 text-sm font-bold hover:bg-red-500 hover:text-white hover:border-red-600 transition-all uppercase flex items-center gap-2"
+          className="px-5 py-2 text-sm font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-500 hover:text-white border border-red-200 dark:border-red-800 hover:border-red-500 rounded-full transition-all flex items-center gap-2"
         >
           <Trash2 size={14} />
           {t.dashboard.settings.security.deleteAccount}
@@ -1926,25 +1965,30 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
         width="max-w-md"
       >
         <div className="space-y-4">
-          {/* Success Message */}
+          {/* Success banner — smoover refresh. bg-*-100 + border-2 -> rounded-xl
+              + bg-*-50 + hairline border-*-500 (vivid border stays as signal).
+              font-bold -> font-semibold. */}
           {passwordSuccess && (
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 flex items-center gap-2">
-              <Check size={16} className="text-green-600" />
-              <span className="text-sm font-bold text-green-700 dark:text-green-400">{t.dashboard.settings.security.passwordModal.success}</span>
+            <div className="p-3 bg-green-50 dark:bg-green-900/30 border border-green-500 rounded-xl flex items-center gap-2">
+              <Check size={16} className="text-green-600 shrink-0" />
+              <span className="text-sm font-semibold text-green-700 dark:text-green-400">{t.dashboard.settings.security.passwordModal.success}</span>
             </div>
           )}
 
-          {/* Error Message */}
+          {/* Error banner — smoover refresh (matches StripeProvider error callout). */}
           {passwordError && (
-            <div className="p-3 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 flex items-center gap-2">
-              <XCircle size={16} className="text-red-600" />
-              <span className="text-sm font-bold text-red-700 dark:text-red-400">{passwordError}</span>
+            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-500 rounded-xl flex items-center gap-2">
+              <XCircle size={16} className="text-red-600 shrink-0" />
+              <span className="text-sm font-semibold text-red-700 dark:text-red-400">{passwordError}</span>
             </div>
           )}
 
-          {/* Current Password */}
+          {/* Current Password — smoover refresh.
+              Label: eyebrow pattern (font-semibold + muted #8898aa).
+              Input: bg-[#f6f9fc] + hairline border + rounded-lg + focus ring
+              (same as Profile edit inputs). Eye-toggle: muted smoover tokens. */}
           <div className="space-y-1.5">
-            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            <label className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
               {t.dashboard.settings.security.passwordModal.currentPassword}
             </label>
             <div className="relative">
@@ -1953,22 +1997,22 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 disabled={isChangingPassword || passwordSuccess}
-                className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
+                className="w-full px-3 py-2.5 pr-10 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-600 rounded-lg text-sm text-[#0f172a] dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:opacity-50 transition-colors"
                 placeholder={t.dashboard.settings.security.passwordModal.currentPlaceholder}
               />
               <button
                 type="button"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
                 {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          {/* New Password */}
+          {/* New Password — smoover refresh (same pattern as Current Password). */}
           <div className="space-y-1.5">
-            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            <label className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
               {t.dashboard.settings.security.passwordModal.newPassword}
             </label>
             <div className="relative">
@@ -1977,22 +2021,22 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={isChangingPassword || passwordSuccess}
-                className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
+                className="w-full px-3 py-2.5 pr-10 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-600 rounded-lg text-sm text-[#0f172a] dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:opacity-50 transition-colors"
                 placeholder={t.dashboard.settings.security.passwordModal.newPlaceholder}
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
                 {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          {/* Confirm New Password */}
+          {/* Confirm New Password — smoover refresh (same pattern). */}
           <div className="space-y-1.5">
-            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            <label className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
               {t.dashboard.settings.security.passwordModal.confirmPassword}
             </label>
             <div className="relative">
@@ -2001,32 +2045,35 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isChangingPassword || passwordSuccess}
-                className="w-full px-3 py-2.5 pr-10 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 text-sm text-gray-900 dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] disabled:opacity-50"
+                className="w-full px-3 py-2.5 pr-10 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-600 rounded-lg text-sm text-[#0f172a] dark:text-white font-medium focus:outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:opacity-50 transition-colors"
                 placeholder={t.dashboard.settings.security.passwordModal.confirmPlaceholder}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
                 {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons — smoover refresh.
+              Cancel: rounded-full hairline secondary (identical to Profile Cancel).
+              Save: smoover primary CTA (rounded-full + shadow-yellow-glow-sm +
+              hover:-translate-y-px + font-semibold). */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               onClick={handleClosePasswordModal}
               disabled={isChangingPassword}
-              className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
+              className="px-5 py-2 text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white bg-white dark:bg-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-700 border border-[#e6ebf1] dark:border-gray-600 rounded-full transition-all disabled:opacity-50"
             >
               {t.dashboard.settings.security.passwordModal.cancel}
             </button>
             <button
               onClick={handleChangePassword}
               disabled={isChangingPassword || passwordSuccess || !currentPassword || !newPassword || !confirmPassword}
-              className="px-4 py-2 text-xs font-black text-black bg-[#ffbf23] hover:bg-yellow-400 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 py-2 bg-[#ffbf23] text-[#1A1D21] text-sm font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-2"
             >
               {isChangingPassword ? (
                 <>
@@ -2056,12 +2103,14 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
         width="max-w-md"
       >
         <div className="space-y-4">
-          {/* Warning Banner */}
-          <div className="p-4 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
+          {/* Warning Banner — smoover refresh.
+              bg-*-100 + border-2 -> rounded-xl + bg-red-50 + hairline border-red-500
+              (vivid border preserved as signal). Title drops font-black uppercase. */}
+          <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-500 rounded-xl">
             <div className="flex items-start gap-3">
               <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-black text-red-800 dark:text-red-300 uppercase">
+                <p className="text-sm font-semibold text-red-800 dark:text-red-300">
                   {t.dashboard.settings.security.deleteModal.warning}
                 </p>
                 <p className="text-xs text-red-700 dark:text-red-400 mt-1">
@@ -2071,12 +2120,13 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
             </div>
           </div>
 
-          {/* What will be deleted */}
+          {/* What will be deleted — smoover refresh. Heading uses eyebrow pattern;
+              list items use smoover body token. */}
           <div className="space-y-2">
-            <p className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase">
+            <p className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
               {t.dashboard.settings.security.deleteModal.willBeDeleted}
             </p>
-            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 pl-4">
+            <ul className="text-xs text-[#425466] dark:text-gray-400 space-y-1 pl-4">
               <li>• {t.dashboard.settings.security.deleteModal.items.subscription}</li>
               <li>• {t.dashboard.settings.security.deleteModal.items.savedAffiliates}</li>
               <li>• {t.dashboard.settings.security.deleteModal.items.discoveredAffiliates}</li>
@@ -2085,17 +2135,20 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
             </ul>
           </div>
 
-          {/* Error Message */}
+          {/* Error banner — smoover refresh (matches Password Modal error). */}
           {deleteError && (
-            <div className="p-3 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 flex items-center gap-2">
-              <XCircle size={16} className="text-red-600" />
-              <span className="text-sm font-bold text-red-700 dark:text-red-400">{deleteError}</span>
+            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-500 rounded-xl flex items-center gap-2">
+              <XCircle size={16} className="text-red-600 shrink-0" />
+              <span className="text-sm font-semibold text-red-700 dark:text-red-400">{deleteError}</span>
             </div>
           )}
 
-          {/* Confirmation Input */}
+          {/* Confirmation Input — smoover refresh.
+              Label: eyebrow pattern. Input: hairline red-400 border + rounded-lg +
+              focus:ring-2 focus:ring-red-500/20. font-bold -> font-semibold.
+              uppercase tracking-widest preserved — it IS the "type DELETE" signal. */}
           <div className="space-y-1.5">
-            <label className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+            <label className="text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
               {t.dashboard.settings.security.deleteModal.typeToConfirm}
             </label>
             <input
@@ -2103,25 +2156,29 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
               disabled={isDeleting}
-              className="w-full px-3 py-2.5 bg-white dark:bg-gray-900 border-2 border-red-400 text-sm text-gray-900 dark:text-white font-bold focus:outline-none focus:border-red-600 disabled:opacity-50 uppercase tracking-widest"
+              className="w-full px-3 py-2.5 bg-[#f6f9fc] dark:bg-gray-900 border border-red-400 rounded-lg text-sm text-[#0f172a] dark:text-white font-semibold focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-500/20 disabled:opacity-50 uppercase tracking-widest transition-colors"
               placeholder="DELETE"
               autoComplete="off"
             />
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons — smoover refresh.
+              Cancel: rounded-full hairline secondary (same as Password Modal Cancel).
+              Delete: destructive PRIMARY — rounded-full + bg-red-500 + font-semibold
+              + shadow-soft-lg. NO translate-y hover: irreversible actions should
+              not feel playful. */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               onClick={handleCloseDeleteModal}
               disabled={isDeleting}
-              className="px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 transition-all uppercase disabled:opacity-50"
+              className="px-5 py-2 text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white bg-white dark:bg-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-700 border border-[#e6ebf1] dark:border-gray-600 rounded-full transition-all disabled:opacity-50"
             >
               {t.dashboard.settings.security.deleteModal.cancel}
             </button>
             <button
               onClick={handleDeleteAccount}
               disabled={isDeleting || deleteConfirmText !== 'DELETE'}
-              className="px-4 py-2 text-xs font-black text-white bg-red-600 hover:bg-red-700 border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 py-2 bg-red-500 text-white text-sm font-semibold rounded-full shadow-soft-lg hover:bg-red-600 hover:shadow-soft-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isDeleting ? (
                 <>
