@@ -1058,13 +1058,15 @@ export default function FindNewPage() {
 
   // ==========================================================================
   // RENDER - January 3rd, 2026 (Updated January 6th, 2026)
-  // 
-  // DESIGN UPDATE: Neo-brutalist style from DashboardDemo.tsx
-  // - Bold borders (border-4)
-  // - Industrial typography (uppercase, tracking)
-  // - Neo-brutalist buttons with offset shadows
-  // - Timer and credit pills in header
-  // 
+  //
+  // DESIGN UPDATE: Originally neo-brutalist from DashboardDemo.tsx (border-4,
+  // industrial typography, offset shadows). Migrated to "smoover" across
+  // multiple PRs in April 2026 — see in-line docblocks above each migrated
+  // surface (table chrome, toasts, loading skeleton, plus AffiliateRow.tsx
+  // for the row + modals). What remains brutalist now is documented at the
+  // call-site of any individual block; the header itself + table outer +
+  // toasts + loading skeleton are smoover as of April 25, 2026.
+  //
   // NOTE: The outer div with flex and Sidebar is NOT here.
   // It's in the parent layout.tsx file (src/app/(dashboard)/layout.tsx).
   // This component only renders the main content area.
@@ -1364,23 +1366,49 @@ export default function FindNewPage() {
         })()}
 
         {/* =============================================================================
-            TABLE AREA - DashboardDemo.tsx EXACT STYLING
-            bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 
-            rounded-lg min-h-[500px] flex flex-col
-            
-            OVERFLOW FIX - January 23, 2026
-            Added max-w-full and overflow-hidden to prevent long content (URLs, titles)
-            from causing horizontal expansion that pushes filters off-screen.
-            ============================================================================= */}
-        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col max-w-full overflow-hidden">
-          {/* Table Header - Translated (January 9th, 2026) */}
-          <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            TABLE OUTER + HEADER ROW — smoover refresh (April 25, 2026)
+            -----------------------------------------------------------------------------
+            Brutalist -> smoover migration of the search-results table chrome.
+            Mirrors the smoover treatment used by Settings -> Plan invoice table
+            (PR #33) so all dashboard tables share one visual voice.
+
+            Outer container:
+              Was:  border-4 border-gray-200 + rounded-lg (heavy gray frame,
+                    DashboardDemo.tsx-derived styling).
+              Now:  hairline border-[#e6ebf1] + rounded-xl + shadow-soft-sm
+                    (soft elevation, no heavy frame).
+              Preserved: max-w-full + overflow-hidden. These exist for the
+                    OVERFLOW FIX (January 23, 2026) — long content like URLs
+                    or titles was causing horizontal expansion that pushed
+                    the filter button off-screen. DO NOT remove them.
+
+            Header row:
+              Was:  border-b-2 border-gray-100 + font-black + text-gray-400 +
+                    uppercase + tracking-widest (brutalist column header).
+              Now:  bg-[#f6f9fc] subtle tint + hairline border-b + font-
+                    semibold + text-[#8898aa] + uppercase + tracking-wider
+                    (smoover eyebrow pattern). text-[10px] sizing preserved
+                    — kept compact for the dense dashboard density.
+
+            Behaviour preserved 1:1:
+              - 12-column grid, identical column spans
+                (1 checkbox + 3 affiliate + 3 content + 2 discovery + 1 date
+                + 2 action). MUST stay in sync with AffiliateRow.tsx render.
+              - Select-all checkbox logic + accent-[#ffbf23] color.
+              - All i18n keys (t.dashboard.table.*).
+
+            Same change applied to /discovered + /saved page tables. If you
+            tweak the visual here, mirror it in those two files for a
+            consistent dashboard chrome. ============================================================================= */}
+        <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl shadow-soft-sm min-h-[500px] flex flex-col max-w-full overflow-hidden">
+          {/* Table Header — smoover (Apr 25, 2026); see docblock above. */}
+          <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-[#f6f9fc] dark:bg-gray-800/50 border-b border-[#e6ebf1] dark:border-gray-800 text-[10px] font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 flex justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
                 onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
-                className="accent-[#ffbf23]" 
+                className="accent-[#ffbf23]"
               />
             </div>
             <div className="col-span-3">{t.dashboard.table.affiliate}</div>
@@ -2114,28 +2142,54 @@ export default function FindNewPage() {
       />
 
       {/* =============================================================================
-          BULK SAVE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
-          Updated: January 16, 2026
+          DASHBOARD FEEDBACK TOASTS — smoover refresh (April 25, 2026)
+          -----------------------------------------------------------------------------
+          Two toast components live in this file (bulk-save success + delete).
+          Identical templates also live in /discovered (2 toasts) and /saved
+          (2 toasts: delete + a 4-variant email-results toast). All six share
+          this template; if you tweak the visual here, mirror the change
+          across those files for a consistent dashboard chrome.
+
+          Brutalist -> smoover mapping (same for every toast):
+            - Outer card: border-2 border-black + shadow-[4px_4px_0px_0px_#000]
+                          -> border border-[#e6ebf1] + rounded-2xl +
+                          shadow-soft-xl (matches the shared Modal.tsx shell).
+            - Icon tile:  w-10 h-10 bg-*-500 + border-2 border-black (square)
+                          -> w-10 h-10 bg-*-500 + rounded-full + shadow-soft-sm
+                          (round colored badge, no black frame).
+            - Title h4:   text-sm font-black uppercase
+                          -> text-sm font-semibold text-[#0f172a] (drops
+                          uppercase + drops font-black).
+            - Body p:     text-xs text-gray-600
+                          -> text-xs text-[#425466] (smoover muted body).
+            - Inline sub-line (amber duplicates etc.): font-bold -> font-semibold.
+            - Close button: text-gray-400 hover:text-black (plain X)
+                            -> w-7 h-7 rounded-full + text-[#8898aa] +
+                            hover:text-[#0f172a] + hover:bg-[#f6f9fc]
+                            (smoover ghost close, matches Modal.tsx + the
+                            Email Results modal close in AffiliateRow.tsx).
+
+          Behaviour preserved 1:1: positioning (fixed bottom-6 right-6 z-50),
+          slide-in / fade-in animation, dismiss handler, every i18n key.
           ============================================================================= */}
-      {/* January 17, 2026: Updated with i18n translations */}
       {bulkSaveResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-emerald-500 border-2 border-black flex items-center justify-center shrink-0">
-                <Check size={20} className="text-white" />
+              <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shrink-0 shadow-soft-sm">
+                <Check size={20} className="text-white" strokeWidth={2.5} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
-                  {bulkSaveResult.savedCount > 0 
+                <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">
+                  {bulkSaveResult.savedCount > 0
                     ? `${bulkSaveResult.savedCount} ${t.dashboard.find.toasts.affiliatesSaved}`
                     : t.dashboard.find.toasts.noNewAffiliatesSaved
                   }
                 </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                <p className="text-xs text-[#425466] dark:text-gray-400 mt-0.5">
                   {bulkSaveResult.savedCount > 0 && t.dashboard.find.toasts.addedToPipeline}
                   {bulkSaveResult.duplicateCount > 0 && (
-                    <span className="block text-amber-600 font-bold mt-1">
+                    <span className="block text-amber-600 font-semibold mt-1">
                       {bulkSaveResult.duplicateCount} {t.dashboard.find.toasts.alreadyInPipeline}
                     </span>
                   )}
@@ -2143,43 +2197,41 @@ export default function FindNewPage() {
               </div>
               <button
                 onClick={() => setBulkSaveResult(prev => prev ? { ...prev, show: false } : null)}
-                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                aria-label="Dismiss"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* =============================================================================
-          DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
-          Updated: January 16, 2026
-          ============================================================================= */}
-      {/* January 17, 2026: Updated with i18n translations */}
+      {/* Delete feedback toast — smoover (Apr 25, 2026); see docblock above. */}
       {deleteResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-red-500 border-2 border-black flex items-center justify-center shrink-0">
-                <Trash2 size={20} className="text-white" />
+              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shrink-0 shadow-soft-sm">
+                <Trash2 size={20} className="text-white" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
-                  {deleteResult.count === 1 
+                <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">
+                  {deleteResult.count === 1
                     ? t.dashboard.find.toasts.affiliateDeleted
                     : `${deleteResult.count} ${t.dashboard.find.toasts.affiliatesDeleted}`
                   }
                 </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                <p className="text-xs text-[#425466] dark:text-gray-400 mt-0.5">
                   {t.dashboard.find.toasts.removedFromDiscovered}
                 </p>
               </div>
               <button
                 onClick={() => setDeleteResult(prev => prev ? { ...prev, show: false } : null)}
-                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                aria-label="Dismiss"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
           </div>

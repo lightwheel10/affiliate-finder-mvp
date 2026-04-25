@@ -967,67 +967,74 @@ export default function SavedPage() {
         })()}
 
         {/* =============================================================================
-            TABLE AREA - DashboardDemo.tsx EXACT STYLING (Pipeline View)
+            TABLE AREA (Pipeline View) — smoover refresh (April 25, 2026)
+            -----------------------------------------------------------------------------
+            Brutalist border-4 + heavy column header -> hairline rounded-xl shell
+            with soft tinted header (matches Settings -> Plan invoice table from
+            PR #33 and the Find / Discovered page tables).
+
+            Outer:  border-4 border-gray-200 + rounded-lg
+                    -> border border-[#e6ebf1] + rounded-xl + shadow-soft-sm.
+            Header: border-b-2 + font-black + text-gray-400 + tracking-widest
+                    -> bg-[#f6f9fc] subtle tint + hairline border-b + font-
+                    semibold + text-[#8898aa] + tracking-wider (smoover eyebrow).
+
+            Pipeline-specific column 5 (the clickable Email filter button) is
+            preserved EXACTLY as before — only the small `font-black` count
+            badge inside it (when the filter is active) is softened to
+            `font-semibold` to match the smoover voice.
+
+            Column spans + sync requirement (preserved):
+              Jan 25, 2026 — removed Status column, gave Email col-span-2.
+              Feb  2, 2026 — reduced Action to col-span-1 (3 circular buttons
+                             + gaps = ~112px > ~69px cell).
+              Apr 23, 2026 — Email col-span-2 -> col-span-1 so header and
+                             content both naturally left-anchor together.
+                             Column allocation MATCHES the non-pipeline
+                             (Discovered / Find) pages exactly.
+              Pipeline view: 1+3+3+2+1+2 = 12. 5th column is Email here, Date
+              there. MUST stay in sync with AffiliateRow.tsx pipeline render.
             ============================================================================= */}
-        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
-          {/* Table Header - Translated (January 9th, 2026)
-              HISTORY:
-                Jan 25, 2026 — removed Status column, gave Email col-span-2.
-                Feb  2, 2026 — reduced Action to col-span-1 (under-measured:
-                               3 circular buttons + gaps = 112px > ~69px cell).
-                Apr 23, 2026 — iterated on action-overflow fix; final layout
-                               shrinks Email col-span-2 → col-span-1 so header
-                               and content both naturally left-anchor together
-                               (no more header/content vertical misalignment).
-                               Column allocation now MATCHES the non-pipeline
-                               (Discovered / Find) pages exactly.
-
-              Column spans (pipeline view): 1+3+3+2+1+2 = 12
-                (identical structure to Discovered / Find; 5th column is Email
-                 here, Date there — see AffiliateRow.tsx GRID LAYOUT comment.)
-
-              MUST stay in sync with AffiliateRow.tsx pipeline render. If you
-              change column spans in one, change them in the other. */}
-          <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+        <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl shadow-soft-sm min-h-[500px] flex flex-col">
+          {/* Table Header — smoover (Apr 25, 2026); see docblock above. */}
+          <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-[#f6f9fc] dark:bg-gray-800/50 border-b border-[#e6ebf1] dark:border-gray-800 text-[10px] font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 flex justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
                 onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
-                className="accent-[#ffbf23] w-4 h-4" 
+                className="accent-[#ffbf23] w-4 h-4"
               />
             </div>
             <div className="col-span-3">{t.dashboard.table.affiliate}</div>
             <div className="col-span-3">{t.dashboard.table.relevantContent}</div>
             <div className="col-span-2">{t.dashboard.table.discoveryMethod}</div>
-            {/* Email column with clickable filter
-                Jan 16, 2026 — introduced as clickable filter.
-                Jan 25, 2026 — col-span-1 → col-span-2 (Status column removed).
-                Apr 23, 2026 — col-span-2 → col-span-1 so header and content
-                               both sit at the left of a tight cell with no
-                               visible blank space between them. */}
+            {/* Email column with clickable filter — preserved as-is. The small
+                count badge inside softens font-black -> font-semibold for the
+                smoover voice; everything else (emerald active state, hover
+                tint, Mail icon, i18n key) untouched. */}
             <div className="col-span-1">
               <button
                 onClick={() => setShowOnlyWithEmail(!showOnlyWithEmail)}
                 className={cn(
                   "flex items-center gap-1 px-1.5 py-0.5 rounded transition-all cursor-pointer",
-                  showOnlyWithEmail 
-                    ? "bg-emerald-500 text-white" 
+                  showOnlyWithEmail
+                    ? "bg-emerald-500 text-white"
                     : "hover:bg-gray-100 dark:hover:bg-gray-800"
                 )}
                 title={showOnlyWithEmail ? "Show all affiliates" : `Show only affiliates with email (${emailsFoundCount})`}
               >
                 <Mail size={10} className={showOnlyWithEmail ? "text-white" : "text-emerald-500"} />
                 <span>{t.dashboard.table.email}</span>
-                {/* Only show count when filter is active */}
+                {/* Count badge — smoover (Apr 25, 2026): font-black -> font-semibold. */}
                 {showOnlyWithEmail && emailsFoundCount > 0 && (
-                  <span className="px-1 py-0.5 text-[9px] font-black rounded bg-white/20 text-white">
+                  <span className="px-1 py-0.5 text-[9px] font-semibold rounded bg-white/20 text-white">
                     {emailsFoundCount}
                   </span>
                 )}
               </button>
             </div>
-            {/* Apr 23, 2026: col-span-1 → col-span-2 to fit the 3-button action
+            {/* Apr 23, 2026: col-span-1 -> col-span-2 to fit the 3-button action
                 cluster (~112px) without overflowing into Email column. */}
             <div className="col-span-2 text-right">{t.dashboard.table.action}</div>
           </div>
@@ -1194,71 +1201,84 @@ export default function SavedPage() {
       />
 
       {/* =============================================================================
-          DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
-          Updated: January 16, 2026
+          DASHBOARD FEEDBACK TOASTS — smoover refresh (April 25, 2026)
+          -----------------------------------------------------------------------------
+          Two toasts on this page: delete confirmation + a 4-variant email-
+          results toast (success / error / warning / info). Same template +
+          same brutalist -> smoover mapping as on /find and /discovered.
+          Full design rationale lives in /find/page.tsx above the equivalent
+          block — mirror any future visual tweak across all three files.
+
+          Email-results toast specifics:
+            - Round colored icon tile picks the bg from emailToast.type
+              (emerald = success, red = error, amber = warning, blue = info).
+            - All four variants share the same smoover chrome (round icon
+              tile, hairline border, rounded-2xl, shadow-soft-xl).
+
+          Behaviour preserved 1:1 (positioning, animation, dismiss handlers,
+          conditional subtitle, every i18n key under t.dashboard.saved.toasts).
           ============================================================================= */}
-      {/* January 17, 2026: Updated with i18n translations */}
       {deleteResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-red-500 border-2 border-black flex items-center justify-center shrink-0">
-                <Trash2 size={20} className="text-white" />
+              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shrink-0 shadow-soft-sm">
+                <Trash2 size={20} className="text-white" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
-                  {deleteResult.count === 1 
+                <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">
+                  {deleteResult.count === 1
                     ? t.dashboard.saved.toasts.affiliateRemoved
                     : `${deleteResult.count} ${t.dashboard.saved.toasts.affiliatesRemoved}`
                   }
                 </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                <p className="text-xs text-[#425466] dark:text-gray-400 mt-0.5">
                   {t.dashboard.saved.toasts.removedFromPipeline}
                 </p>
               </div>
               <button
                 onClick={() => setDeleteResult(prev => prev ? { ...prev, show: false } : null)}
-                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                aria-label="Dismiss"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* =============================================================================
-          EMAIL RESULTS TOAST - NEO-BRUTALIST DESIGN
-          Updated: January 16, 2026
-          ============================================================================= */}
+      {/* Email-results toast — smoover (Apr 25, 2026); see docblock above.
+          Round icon tile bg picks from emailToast.type (4 variants). */}
       {emailToast?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl p-4 max-w-sm">
             <div className="flex items-start gap-3">
               <div className={cn(
-                "w-10 h-10 border-2 border-black flex items-center justify-center shrink-0",
+                "w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-soft-sm",
                 emailToast.type === 'success' && "bg-emerald-500",
                 emailToast.type === 'error' && "bg-red-500",
                 emailToast.type === 'warning' && "bg-amber-500",
                 emailToast.type === 'info' && "bg-blue-500"
               )}>
-                <Mail size={20} className="text-white" />
+                <Mail size={20} className="text-white" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">
                   {emailToast.title}
                 </h4>
                 {emailToast.subtitle && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                  <p className="text-xs text-[#425466] dark:text-gray-400 mt-0.5">
                     {emailToast.subtitle}
                   </p>
                 )}
               </div>
               <button
                 onClick={() => setEmailToast(null)}
-                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                aria-label="Dismiss"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
           </div>
