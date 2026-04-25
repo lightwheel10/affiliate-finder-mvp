@@ -8,14 +8,25 @@
  *
  * HISTORY:
  *   January 10th, 2026 — i18n migration: all strings go through useLanguage().
- *   April   23rd, 2026 — "Smoover" refresh for the INLINE row only
- *                        (Phase 2e). Soft borders, rounded pills, yellow
- *                        glow CTA matching the landing hero, hairline table
- *                        divider. The THREE MODALS (Relevant Content, Email
- *                        Results, View details) and their per-platform content
- *                        renderers (YouTube / Instagram / TikTok / Web) are
- *                        still neo-brutalist and will be migrated in follow-up
- *                        PRs so changes stay reviewable.
+ *   April   23rd, 2026 — "Smoover" refresh for the INLINE row only (Phase 2e).
+ *                        Soft borders, rounded pills, yellow glow CTA matching
+ *                        the landing hero, hairline table divider.
+ *   April   25th, 2026 — Smoover refresh for the View details modal pair
+ *                        (Social + Web detail) — see commit 5184c74.
+ *   April   25th, 2026 — Smoover refresh for the Relevant Content modal
+ *                        (this change-set) + minor sweep on the inline row's
+ *                        article-title link (font-black -> font-semibold +
+ *                        smoover token migration). See the in-line docblock
+ *                        immediately above the modal markup for the full
+ *                        brutalist -> smoover mapping.
+ *   April   27th, 2026 — Smoover refresh for the Email Results modal (Phase 2h)
+ *                        — see the in-line docblock immediately above the
+ *                        Email Results modal markup further down this file.
+ *
+ * As of April 27th, 2026 every visible surface in this component (inline row +
+ * Relevant Content modal + Email Results modal + View details modal pair) is
+ * smoover. Per-platform content renderers (YouTube / Instagram / TikTok / Web)
+ * inside the View details modals were migrated alongside the modal shells.
  *
  * Translation hook usage: const { t } = useLanguage();
  * =============================================================================
@@ -1331,11 +1342,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
           {/* Updated January 25, 2026: Increased max-w-[200px] to max-w-[280px] to use expanded column space */}
           <div className="flex-1 min-w-0 max-w-[280px] space-y-1 overflow-hidden">
             {/* Title with tooltip, break-words for long URLs/hashtags, line-clamp-2 for 2-line limit */}
-            <a 
+            <a
               href={link}
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-black text-gray-900 dark:text-white hover:text-[#ffbf23] cursor-pointer line-clamp-2 block leading-tight break-words"
+              className="text-xs font-semibold text-[#0f172a] dark:text-white hover:text-[#ffbf23] cursor-pointer line-clamp-2 block leading-tight break-words transition-colors"
               title={title}
             >
               {title}
@@ -1595,98 +1606,276 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         </button>
       </div>
 
-      {/* Relevant Content Modal - NEO-BRUTALIST (Updated January 6th, 2026) */}
-      {/* Updated January 10th, 2026 - i18n migration */}
+      {/* =============================================================================
+          RELEVANT CONTENT MODAL
+          -----------------------------------------------------------------------------
+          Hand-rolled modal (NOT routed through the shared <Modal /> wrapper) that
+          shows every article we matched for this affiliate — the current row's
+          article first, followed by every subItem (other articles found for the
+          same affiliate domain).
+
+          History:
+            Jan  6, 2026   — Original neo-brutalist version (border-4 black, 8px
+                             offset shadow, yellow header block, font-black
+                             uppercase title, black-square close button, brutalist
+                             nested-box badges, emerald + red brutalist offset
+                             footer buttons).
+            Jan 10, 2026   — i18n migration (every visible string keyed to
+                             t.affiliateRow.contentModal.* / t.affiliateRow.actions.*).
+            Apr 25, 2026   — Smoover refresh (this change-set).
+
+          Smoover refresh — Apr 25, 2026
+          -----------------------------------------------------------------------------
+          Mirrors the exact same design voice already used elsewhere in this file
+          for the Email Results modal (Phase 2h, Apr 27, 2026) and for the shared
+          <Modal /> wrapper (Phase 2b, Apr 23, 2026). Visual changes ONLY — every
+          piece of behaviour below is preserved 1:1:
+            • Click-the-backdrop-to-close.
+            • e.stopPropagation() on the inner container so clicks inside don't
+              bubble to the backdrop.
+            • All i18n keys (t.affiliateRow.contentModal.title / .articles /
+              .ranking / .keyword / .discoveredVia, t.affiliateRow.actions.save /
+              .delete).
+            • subItems.map iteration order (current row's article first, then any
+              additional articles).
+            • Conditional fallbacks (item.rank ?? '-', item.keyword ?? keyword,
+              item.discoveryMethod?.type ?? 'search', item.date ?? date ?? today).
+            • The Save / Delete footer buttons remain visual scaffolding (no
+              onClick handlers wired yet — same as the brutalist version). Future
+              devs can attach handlers without further design work.
+
+          Visual mapping (brutalist -> smoover):
+            • Backdrop:   bg-black/60
+                          -> bg-[#0f172a]/40 + backdrop-blur-sm
+                             (matches shared Modal shell + Email Results modal).
+            • Container:  border-4 black + 8px offset shadow
+                          -> hairline border #e6ebf1 + rounded-2xl + shadow-soft-xl
+                             + overflow-hidden so inner corners stay clean.
+            • Header:     solid yellow block + border-b-4 black + font-black
+                          uppercase title + black-square × close
+                          -> clean white (dark-mode respecting) + hairline divider
+                             + rounded-full yellow FileText icon badge with
+                             shadow-yellow-glow-sm + font-display font-semibold
+                             title in #0f172a + muted #8898aa subtitle (channel /
+                             person / domain) + soft yellow "N articles" pill +
+                             rounded-full ghost close button using lucide <X />
+                             (matches the shared Modal's close button).
+            • Article card:
+                          border-2 black + plain hover:bg-gray-50
+                          -> hairline border #e6ebf1 + rounded-xl + soft hover
+                             tint (#f6f9fc/40). External-link affordance gets a
+                             smoover muted hover (rounded-md + #8898aa -> #0f172a)
+                             instead of plain text-gray.
+              Title:      font-black text-black
+                          -> font-semibold text-[#0f172a]; hover stays yellow.
+              Ranking pill:
+                          bg-gray-100 + border-2 + nested font-black bg-white
+                          -> bg-[#f6f9fc] + hairline #e6ebf1 + rounded-full +
+                             font-semibold; the ranking number sits inline with
+                             font-semibold + tabular-nums (no nested box).
+              Keyword pill:
+                          bg-[#ffbf23]/20 + border-2 #ffbf23 + nested box
+                          -> bg-[#ffbf23]/15 + hairline #ffbf23/30 + rounded-full
+                             + font-semibold; keyword inline (no nested box).
+              Date line:  font-bold uppercase + border-b-2 gray-100
+                          -> font-medium muted #8898aa + hairline border-b
+                             #e6ebf1; sentence case (no uppercase). Discovery
+                             method type promoted to #425466 + font-semibold so
+                             it reads as the meaningful chip on the line.
+              Snippet:    text-xs gray-600 + border-l-4 #ffbf23 (KEPT)
+                          -> text-sm #425466 + border-l-4 #ffbf23 (KEPT). The
+                             yellow accent bar on the left is preserved as the
+                             visual signal for the matched-content excerpt.
+            • Footer:     bg-gray-100 + border-t-4 black
+                          -> bg-[#f6f9fc] + hairline border-t #e6ebf1.
+              Save (left):
+                          bg-emerald-500 + border-2 black + 2px offset + press
+                          -> bg-emerald-500 + rounded-full + shadow-soft-sm +
+                             hover:bg-emerald-600 + hover:-translate-y-px +
+                             font-semibold. Emerald (positive / confirm) signal
+                             is intentionally PRESERVED — see the Email Results
+                             modal where the emerald appears as the post-copy
+                             "Done" success state. Same semantic here: green =
+                             positive action.
+              Delete (right):
+                          bg-red-500 + border-2 black + 2px offset + press
+                          -> destructive secondary pill: bg-red-50 + hairline
+                             border-red-200 + text-red-600 + font-semibold;
+                             hover promotes to vivid red-500 with white text.
+                             Identical to the Settings → Security → Delete
+                             Account button + the Settings → Plan → Cancel
+                             Subscription button. This intentionally de-
+                             emphasises the destructive option vs the brutalist
+                             version (where Save and Delete had equal visual
+                             weight — risky for accidental clicks). Button order
+                             (Save left, Delete right) is preserved as-is to
+                             keep the diff a pure visual change; if a future
+                             redesign wants the destructive option on the left,
+                             swap the buttons in a separate behaviour PR.
+
+          NOTE for future devs:
+            - This modal is hand-rolled rather than wrapping the shared <Modal />
+              component because it predates the shared component (Dec 2025). The
+              Email Results modal in this same file is also hand-rolled for the
+              same reason. Migrating either one to the shared component would
+              be a behaviour change (different escape-key / focus-trap / portal
+              behaviour) and is out of scope for the smoover refresh — keep that
+              for a separate refactor PR if you go after it.
+            - If you wire onClick handlers onto the Save/Delete footer buttons,
+              you'll likely want to also surface a confirmation step (especially
+              for Delete) — the smoover destructive secondary pill above gives
+              a soft default state, but a real destructive action should fire a
+              confirmation modal (see the Settings Cancel Plan modal pattern).
+          ============================================================================= */}
       {isModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+        <div
+          className="fixed inset-0 bg-[#0f172a]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setIsModalOpen(false)}
         >
-          <div 
-            className="bg-white dark:bg-[#0a0a0a] border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#ffbf23] max-w-4xl w-full max-h-[80vh] overflow-hidden"
+          <div
+            className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b-4 border-black dark:border-white bg-[#ffbf23] flex items-center justify-between">
-              <h3 className="text-lg font-black text-black uppercase">
-                {t.affiliateRow.contentModal.title} ({(subItems?.length || 0) + 1} {t.affiliateRow.contentModal.articles})
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 bg-black text-white hover:bg-white hover:text-black border-2 border-black flex items-center justify-center transition-colors font-black"
-              >
-                ×
-              </button>
+            {/* Modal Header — round yellow icon badge + display-font title +
+                muted subtitle (channel / person / domain) + soft yellow
+                "N articles" count pill + rounded-full ghost close button. */}
+            <div className="px-6 py-4 border-b border-[#e6ebf1] dark:border-gray-800 bg-white dark:bg-[#0f0f0f] flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 bg-[#ffbf23] rounded-full flex items-center justify-center shadow-yellow-glow-sm shrink-0">
+                  <FileText size={18} className="text-[#0f172a]" strokeWidth={2} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-display text-lg font-semibold text-[#0f172a] dark:text-white tracking-tight truncate">
+                    {t.affiliateRow.contentModal.title}
+                  </h3>
+                  <p className="text-xs text-[#8898aa] truncate">
+                    {channel?.name || personName || domain}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-xs font-semibold rounded-full">
+                  <FileText size={12} strokeWidth={2} />
+                  {(subItems?.length || 0) + 1} {t.affiliateRow.contentModal.articles}
+                </span>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  aria-label="Close content modal"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
+                >
+                  <X size={16} strokeWidth={2} />
+                </button>
+              </div>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)] space-y-4">
-              {/* Render the current item first */}
-              <div className="p-5 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group relative bg-white dark:bg-[#0f0f0f]">
-                <a href={`https://${domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+            {/* Modal Body — article list. The current row's article renders
+                first, then any subItems (other articles found for this same
+                affiliate domain). */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)] space-y-3 bg-white dark:bg-[#0a0a0a]">
+              {/* Current item (the article that triggered this row). */}
+              <div className="relative p-5 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl hover:bg-[#f6f9fc]/40 dark:hover:bg-gray-900/40 transition-colors group">
+                <a
+                  href={`https://${domain}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open domain in new tab"
+                  className="absolute top-4 right-4 p-1.5 rounded-md text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
+                >
                   <ExternalLink size={16} />
                 </a>
-                
-                <a href={link} target="_blank" rel="noreferrer" className="text-base font-black text-black dark:text-white hover:text-[#ffbf23] mb-3 block pr-10">
+
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-base font-semibold text-[#0f172a] dark:text-white hover:text-[#ffbf23] mb-3 block pr-10 leading-snug transition-colors"
+                >
                   {title}
                 </a>
-                
-                <div className="flex flex-wrap gap-2.5 mb-4">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold border-2 border-gray-200 dark:border-gray-600">
-                    {t.affiliateRow.contentModal.ranking} <span className="text-black dark:text-white font-black bg-white dark:bg-black px-1.5 border border-black dark:border-gray-500">{rank}</span>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 text-xs font-semibold border border-[#e6ebf1] dark:border-gray-700 rounded-full">
+                    {t.affiliateRow.contentModal.ranking}
+                    <span className="text-[#0f172a] dark:text-white font-semibold tabular-nums">{rank}</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#ffbf23]/20 text-black dark:text-[#ffbf23] text-xs font-bold border-2 border-[#ffbf23]">
-                    {t.affiliateRow.contentModal.keyword} <span className="font-black bg-white dark:bg-black px-1.5 border border-black dark:border-[#ffbf23]">{keyword}</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-xs font-semibold border border-[#ffbf23]/30 rounded-full">
+                    {t.affiliateRow.contentModal.keyword}
+                    <span className="font-semibold">{keyword}</span>
                   </span>
                 </div>
-                
-                <p className="text-xs font-bold text-gray-400 mb-2.5 border-b-2 border-gray-100 dark:border-gray-700 pb-2 uppercase">
-                  {date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia} {discoveryMethod?.type}
+
+                <p className="text-xs text-[#8898aa] dark:text-gray-500 mb-3 pb-2.5 border-b border-[#e6ebf1] dark:border-gray-800 font-medium">
+                  {date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia}{' '}
+                  <span className="text-[#425466] dark:text-gray-400 font-semibold">{discoveryMethod?.type}</span>
                 </p>
-                
-                <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
+
+                <div className="text-sm text-[#425466] dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
                   {snippet}
                 </div>
               </div>
 
-              {/* Render subItems */}
+              {/* Other articles for the same affiliate domain. Same card
+                  template as the current item above. */}
               {subItems?.map((item, idx) => (
-                <div key={idx} className="p-5 border-2 border-black dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group relative bg-white dark:bg-[#0f0f0f]">
-                  <a href={`https://${item.domain}`} target="_blank" rel="noreferrer" className="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+                <div
+                  key={idx}
+                  className="relative p-5 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl hover:bg-[#f6f9fc]/40 dark:hover:bg-gray-900/40 transition-colors group"
+                >
+                  <a
+                    href={`https://${item.domain}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Open domain in new tab"
+                    className="absolute top-4 right-4 p-1.5 rounded-md text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
+                  >
                     <ExternalLink size={16} />
                   </a>
 
-                  <a href={item.link} target="_blank" rel="noreferrer" className="text-base font-black text-black dark:text-white hover:text-[#ffbf23] mb-3 block pr-10">
+                  <a
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-base font-semibold text-[#0f172a] dark:text-white hover:text-[#ffbf23] mb-3 block pr-10 leading-snug transition-colors"
+                  >
                     {item.title}
                   </a>
 
-                  <div className="flex flex-wrap gap-2.5 mb-4">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-bold border-2 border-gray-200 dark:border-gray-600">
-                      {t.affiliateRow.contentModal.ranking} <span className="text-black dark:text-white font-black bg-white dark:bg-black px-1.5 border border-black dark:border-gray-500">{item.rank || '-'}</span>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 text-xs font-semibold border border-[#e6ebf1] dark:border-gray-700 rounded-full">
+                      {t.affiliateRow.contentModal.ranking}
+                      <span className="text-[#0f172a] dark:text-white font-semibold tabular-nums">{item.rank || '-'}</span>
                     </span>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#ffbf23]/20 text-black dark:text-[#ffbf23] text-xs font-bold border-2 border-[#ffbf23]">
-                      {t.affiliateRow.contentModal.keyword} <span className="font-black bg-white dark:bg-black px-1.5 border border-black dark:border-[#ffbf23]">{item.keyword || keyword}</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-xs font-semibold border border-[#ffbf23]/30 rounded-full">
+                      {t.affiliateRow.contentModal.keyword}
+                      <span className="font-semibold">{item.keyword || keyword}</span>
                     </span>
                   </div>
 
-                  <p className="text-xs font-bold text-gray-400 mb-2.5 border-b-2 border-gray-100 dark:border-gray-700 pb-2 uppercase">
-                    {item.date || date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia} {item.discoveryMethod?.type || 'search'}
+                  <p className="text-xs text-[#8898aa] dark:text-gray-500 mb-3 pb-2.5 border-b border-[#e6ebf1] dark:border-gray-800 font-medium">
+                    {item.date || date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia}{' '}
+                    <span className="text-[#425466] dark:text-gray-400 font-semibold">{item.discoveryMethod?.type || 'search'}</span>
                   </p>
-                  
-                  <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
+
+                  <div className="text-sm text-[#425466] dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
                     {item.snippet}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t-4 border-black dark:border-white bg-gray-100 dark:bg-gray-900 flex justify-end gap-3">
-              <button className="px-4 py-2 bg-emerald-500 text-white text-sm font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2">
-                <Save size={16} /> {t.affiliateRow.actions.save}
+            {/* Modal Footer — Save = emerald primary (positive signal),
+                Delete = red destructive secondary (matches Settings →
+                Security Delete Account / Settings → Plan Cancel Subscription
+                button pattern). Order (Save left, Delete right) preserved
+                from the brutalist version. */}
+            <div className="px-6 py-4 border-t border-[#e6ebf1] dark:border-gray-800 bg-[#f6f9fc] dark:bg-gray-900 flex justify-end gap-3">
+              <button className="px-5 py-2 bg-emerald-500 text-white text-sm font-semibold rounded-full shadow-soft-sm hover:bg-emerald-600 hover:shadow-soft-lg hover:-translate-y-px transition-all flex items-center gap-2">
+                <Save size={14} strokeWidth={2} />
+                {t.affiliateRow.actions.save}
               </button>
-              <button className="px-4 py-2 bg-red-500 text-white text-sm font-black uppercase border-2 border-black shadow-[2px_2px_0px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2">
-                <Trash2 size={16} /> {t.affiliateRow.actions.delete}
+              <button className="px-5 py-2 text-sm font-semibold text-red-600 hover:text-white bg-red-50 dark:bg-red-900/30 hover:bg-red-500 border border-red-200 dark:border-red-800 hover:border-red-500 rounded-full transition-all flex items-center gap-2">
+                <Trash2 size={14} strokeWidth={2} />
+                {t.affiliateRow.actions.delete}
               </button>
             </div>
           </div>
