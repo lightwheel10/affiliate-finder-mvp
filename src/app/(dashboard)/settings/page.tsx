@@ -848,6 +848,45 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
   );
 }
 
+// =============================================================================
+// PLAN SETTINGS — SMOOVER REFRESH (April 25th, 2026)
+//
+// Migrated from neo-brutalist to the smoover design language.
+//
+// Status badges (getStatusBadge + getInvoiceStatusBadge): brutalist solid
+//   blocks (bg-*-500 + text-white + border-black + font-black uppercase)
+//   -> hairline tinted pills (rounded-full + bg-*-50 + text-*-700 +
+//   border-*-200 + font-semibold). Vivid semantic colour preserved as the
+//   signal; weight comes from the tint, not from a heavy block.
+//
+// Current Plan card: border-2 brutalist block -> rounded-2xl + hairline +
+//   shadow-soft-sm. Active/paid uses #fff4d1 (Sidebar nav-active soft yellow
+//   tint). Trialing softens to bg-blue-50 + border-blue-200. Plan name h-tag
+//   drops font-black uppercase. Upgrade/Manage = smoover yellow CTA
+//   (rounded-full + shadow-yellow-glow-sm + hover:-translate-y-px).
+//
+// Trial / Past-due / Subscription-ended callouts: smoover rounded-xl +
+//   bg-*-50 + hairline border-*-500 (matches Security modal warning).
+//
+// Payment Method: filled-state row -> bg-[#f6f9fc] + hairline + rounded-xl;
+//   mini card icon tile becomes a white pill with shadow-soft-sm. Empty
+//   state is dashed hairline + soft bg + rounded-xl. Add Payment Method =
+//   smoover yellow CTA. Update Payment Method becomes a smoover text-button
+//   (no uppercase, font-semibold).
+//
+// Invoice History: loading + empty states use the soft-bg + hairline pattern.
+//   Error matches the smoover red callout. The TABLE switches to a hairline
+//   rounded-xl shell with eyebrow column headers (font-semibold + #8898aa +
+//   tracking-wider) and hairline body row dividers; hover tints to #f6f9fc.
+//   Action icon links pick up rounded-md + smoover muted hover.
+//
+// Cancel Plan: hairline divider + smoover h3 + smoover destructive
+//   secondary pill (matches Security Delete Account button).
+//
+// Cancellation Pending: smoover orange callout + secondary pill (white bg +
+//   hairline orange-200; hover promotes to vivid orange-500).
+//
+// =============================================================================
 interface PlanSettingsProps {
   subscription: any;
   isLoading: boolean;
@@ -934,29 +973,32 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
     });
   };
 
-  // Get status badge styling for invoices - NEO-BRUTALIST (Updated January 8th, 2026)
-  // January 17, 2026: Updated with i18n translations
+  // Get status badge styling for invoices — smoover refresh (April 25th, 2026).
+  // Was: solid bg-*-500 + text-white + border-black brutalist blocks.
+  // Now: hairline tinted pills (bg-*-50 + text-*-700 + border-*-200). Vivid
+  // semantic colour preserved as the signal; weight comes from the tint, not
+  // from a heavy block. Callsite renders `rounded-full + font-semibold`.
   const getInvoiceStatusBadge = (status: string | null) => {
     switch (status) {
       case 'paid':
-        return { label: t.dashboard.settings.plan.invoiceStatus.paid.toUpperCase(), bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.paid.toUpperCase(), bg: 'bg-green-50 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', border: 'border-green-200 dark:border-green-800' };
       case 'open':
-        return { label: t.dashboard.settings.plan.invoiceStatus.open.toUpperCase(), bg: 'bg-blue-500', text: 'text-white', border: 'border-black' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.open.toUpperCase(), bg: 'bg-blue-50 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' };
       case 'draft':
-        return { label: t.dashboard.settings.plan.invoiceStatus.draft.toUpperCase(), bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-400' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.draft.toUpperCase(), bg: 'bg-[#f6f9fc] dark:bg-gray-800', text: 'text-[#425466] dark:text-gray-300', border: 'border-[#e6ebf1] dark:border-gray-700' };
       case 'void':
-        return { label: t.dashboard.settings.plan.invoiceStatus.void.toUpperCase(), bg: 'bg-red-500', text: 'text-white', border: 'border-black' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.void.toUpperCase(), bg: 'bg-red-50 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', border: 'border-red-200 dark:border-red-800' };
       case 'uncollectible':
-        return { label: t.dashboard.settings.plan.invoiceStatus.uncollectible.toUpperCase(), bg: 'bg-orange-500', text: 'text-white', border: 'border-black' };
+        return { label: t.dashboard.settings.plan.invoiceStatus.uncollectible.toUpperCase(), bg: 'bg-orange-50 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-200 dark:border-orange-800' };
       default:
-        return { label: status?.toUpperCase() || t.dashboard.settings.plan.invoiceStatus.unknown.toUpperCase(), bg: 'bg-gray-200 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-400' };
+        return { label: status?.toUpperCase() || t.dashboard.settings.plan.invoiceStatus.unknown.toUpperCase(), bg: 'bg-[#f6f9fc] dark:bg-gray-800', text: 'text-[#425466] dark:text-gray-300', border: 'border-[#e6ebf1] dark:border-gray-700' };
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-[#8898aa]" />
       </div>
     );
   }
@@ -973,58 +1015,66 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
     return names[plan] || plan;
   };
 
-  // Get status badge color - NEO-BRUTALIST (Updated January 8th, 2026)
-  // January 17, 2026: Updated with i18n translations
+  // Get status badge color — smoover refresh (April 25th, 2026).
+  // Same hairline tinted pill pattern as getInvoiceStatusBadge above.
+  // Default (active fallback) uses the soft yellow #fff4d1 tint that matches
+  // the Sidebar nav-active state (bg-[#fff4d1] + #ffbf23/30 hairline).
   const getStatusBadge = () => {
     if (subscription?.cancel_at_period_end) {
-      return { label: t.dashboard.settings.plan.cancelled.toUpperCase(), bg: 'bg-orange-500', text: 'text-white', border: 'border-black' };
+      return { label: t.dashboard.settings.plan.cancelled.toUpperCase(), bg: 'bg-orange-50 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-200 dark:border-orange-800' };
     }
     if (isTrialing) {
-      return { label: t.dashboard.settings.plan.trial.toUpperCase(), bg: 'bg-blue-500', text: 'text-white', border: 'border-black' };
+      return { label: t.dashboard.settings.plan.trial.toUpperCase(), bg: 'bg-blue-50 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' };
     }
     if (subscription?.status === 'active') {
-      return { label: t.dashboard.settings.plan.active.toUpperCase(), bg: 'bg-green-500', text: 'text-white', border: 'border-black' };
+      return { label: t.dashboard.settings.plan.active.toUpperCase(), bg: 'bg-green-50 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', border: 'border-green-200 dark:border-green-800' };
     }
     if (subscription?.status === 'past_due') {
-      return { label: t.dashboard.settings.plan.pastDue.toUpperCase(), bg: 'bg-red-500', text: 'text-white', border: 'border-black' };
+      return { label: t.dashboard.settings.plan.pastDue.toUpperCase(), bg: 'bg-red-50 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', border: 'border-red-200 dark:border-red-800' };
     }
     if (subscription?.status === 'canceled') {
-      return { label: t.dashboard.settings.plan.expired.toUpperCase(), bg: 'bg-gray-500', text: 'text-white', border: 'border-black' };
+      return { label: t.dashboard.settings.plan.expired.toUpperCase(), bg: 'bg-[#f6f9fc] dark:bg-gray-800', text: 'text-[#425466] dark:text-gray-300', border: 'border-[#e6ebf1] dark:border-gray-700' };
     }
-    return { label: t.dashboard.settings.plan.active.toUpperCase(), bg: 'bg-[#ffbf23]', text: 'text-black', border: 'border-black' };
+    return { label: t.dashboard.settings.plan.active.toUpperCase(), bg: 'bg-[#fff4d1] dark:bg-[#ffbf23]/10', text: 'text-[#0f172a] dark:text-[#ffbf23]', border: 'border-[#ffbf23]/30 dark:border-[#ffbf23]/40' };
   };
 
   const statusBadge = getStatusBadge();
 
   return (
     <div className="space-y-8">
-      {/* Current Plan - NEO-BRUTALIST (Updated January 8th, 2026) */}
+      {/* Current Plan card — smoover refresh (April 25th, 2026).
+          border-2 brutalist block -> rounded-2xl + hairline border + soft shadow.
+          Trialing variant softens to bg-blue-50 + border-blue-200.
+          Active/paid variant uses #fff4d1 (Sidebar nav-active soft yellow tint)
+          + #ffbf23/30 hairline (no more solid #ffbf23 border). */}
       <div className={cn(
-        "p-4 border-2 space-y-4",
-        isTrialing ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500" : "bg-[#ffbf23]/10 border-[#ffbf23]"
+        "p-5 rounded-2xl border space-y-4 shadow-soft-sm",
+        isTrialing
+          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+          : "bg-[#fff4d1] dark:bg-[#ffbf23]/10 border-[#ffbf23]/30 dark:border-[#ffbf23]/40"
       )}>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
+              <span className="text-base font-semibold text-[#0f172a] dark:text-white">
                 {subscription ? getPlanDisplayName(subscription.plan) : t.dashboard.settings.plan.noPlan}
               </span>
               {subscription && (
                 <span className={cn(
-                  "px-2 py-0.5 text-[10px] font-black uppercase tracking-wide border-2",
+                  "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border",
                   statusBadge.bg, statusBadge.text, statusBadge.border
                 )}>
                   {statusBadge.label}
                 </span>
               )}
             </div>
-            
+
             {/* Trial info - January 17, 2026: Updated with i18n */}
             {isTrialing && daysLeftInTrial !== null && (
-              <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-400 font-bold">
+              <div className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-400 font-semibold">
                 <Clock size={12} />
                 <span>
-                  {daysLeftInTrial === 0 
+                  {daysLeftInTrial === 0
                     ? t.dashboard.settings.plan.trialEndsToday
                     : daysLeftInTrial === 1
                       ? `1 ${t.dashboard.settings.plan.dayLeftInTrial}`
@@ -1036,7 +1086,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
 
             {/* Billing info - January 17, 2026: Updated with i18n */}
             {subscription && !isTrialing && subscription.nextBillingDate && (
-              <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 font-medium">
+              <div className="flex items-center gap-1.5 text-xs text-[#425466] dark:text-gray-400 font-medium">
                 <Calendar size={12} />
                 <span>{t.dashboard.settings.plan.nextBilling}: {subscription.nextBillingDate}</span>
               </div>
@@ -1044,25 +1094,23 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
 
             {/* Price - January 17, 2026: Updated with i18n */}
             {subscription && subscription.formattedPrice && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+              <p className="text-xs text-[#425466] dark:text-gray-400 font-medium">
                 {subscription.formattedPrice}
                 {subscription.billing_interval === 'annual' && ` (${t.dashboard.settings.plan.billedAnnually})`}
               </p>
             )}
           </div>
-          
-          {/* Upgrade/Manage button - NEO-BRUTALIST */}
-          {/* Updated January 8th, 2026 - contextual button text with neo-brutalist styling
-              January 17, 2026: Updated with i18n */}
+
+          {/* Upgrade / Manage button — smoover primary CTA. */}
           {(!subscription || subscription.plan !== 'enterprise') && (
-            <button 
+            <button
               onClick={onUpgrade}
-              className="px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-1.5"
+              className="px-5 py-2 bg-[#ffbf23] text-[#1A1D21] text-sm font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all flex items-center gap-1.5"
             >
               <Zap size={14} />
-              {!subscription 
+              {!subscription
                 ? t.dashboard.settings.plan.choosePlan
-                : isTrialing 
+                : isTrialing
                   ? t.dashboard.settings.plan.upgradePlan
                   : t.dashboard.settings.plan.managePlan
               }
@@ -1070,84 +1118,88 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
           )}
         </div>
 
-        {/* Trial warning - NEO-BRUTALIST
-            January 17, 2026: Updated with i18n */}
+        {/* Trial warning — smoover callout (matches Security modal warning pattern). */}
         {isTrialing && daysLeftInTrial !== null && daysLeftInTrial <= 1 && (
-          <div className="flex items-start gap-2 p-3 bg-amber-100 dark:bg-amber-900/30 border-2 border-amber-500">
+          <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-500 rounded-xl">
             <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
             <div className="text-xs text-amber-800 dark:text-amber-300">
-              <p className="font-black">{t.dashboard.settings.plan.trialEndingSoon.title}</p>
+              <p className="font-semibold">{t.dashboard.settings.plan.trialEndingSoon.title}</p>
               <p className="text-amber-700 dark:text-amber-400">{t.dashboard.settings.plan.trialEndingSoon.subtitle}</p>
             </div>
           </div>
         )}
 
-        {/* Payment failed - past_due */}
+        {/* Payment failed — past_due. Same smoover red callout as Security errors. */}
         {isPastDue && (
-          <div className="flex items-start gap-2 p-3 bg-red-100 dark:bg-red-900/30 border-2 border-red-500">
+          <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-500 rounded-xl">
             <AlertTriangle size={14} className="text-red-600 shrink-0 mt-0.5" />
             <div className="text-xs text-red-800 dark:text-red-300">
-              <p className="font-black">{t.dashboard.settings.plan.paymentFailedBanner.title}</p>
+              <p className="font-semibold">{t.dashboard.settings.plan.paymentFailedBanner.title}</p>
               <p className="text-red-700 dark:text-red-400">{t.dashboard.settings.plan.paymentFailedBanner.subtitle}</p>
             </div>
           </div>
         )}
 
-        {/* Subscription ended - canceled */}
+        {/* Subscription ended — canceled. Smoover orange callout. */}
         {subscription?.status === 'canceled' && !subscription?.cancel_at_period_end && (
-          <div className="flex items-start gap-2 p-3 bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500">
+          <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-500 rounded-xl">
             <AlertTriangle size={14} className="text-orange-600 shrink-0 mt-0.5" />
             <div className="text-xs text-orange-800 dark:text-orange-300">
-              <p className="font-black">{t.dashboard.settings.plan.subscriptionEndedBanner.title}</p>
+              <p className="font-semibold">{t.dashboard.settings.plan.subscriptionEndedBanner.title}</p>
               <p className="text-orange-700 dark:text-orange-400">{t.dashboard.settings.plan.subscriptionEndedBanner.subtitle}</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Payment Method - NEO-BRUTALIST (Updated January 8th, 2026)
-          January 17, 2026: Updated with i18n */}
+      {/* Payment Method — smoover refresh (April 25th, 2026).
+          h3 drops font-black uppercase. Filled-state row migrates to soft
+          bg-[#f6f9fc] + hairline + rounded-xl; mini card icon tile becomes
+          a subtle white pill with shadow-soft-sm. Update Payment Method
+          becomes a smoover text-button (font-semibold, no uppercase).
+          Empty state mirrors Settings' empty-state language: dashed hairline
+          + soft bg + rounded-xl. Add Payment Method = smoover yellow CTA. */}
       <div>
-        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">{t.dashboard.settings.plan.paymentMethod}</h3>
+        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-4">{t.dashboard.settings.plan.paymentMethod}</h3>
         {subscription?.card_last4 ? (
-          <div className="p-4 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="p-4 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-xl flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-7 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                <CreditCard size={16} className="text-gray-500" />
+              <div className="w-10 h-7 bg-white dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-md flex items-center justify-center shadow-soft-sm">
+                <CreditCard size={16} className="text-[#8898aa]" />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
                   {subscription.card_brand || t.dashboard.settings.plan.card} •••• {subscription.card_last4}
                 </p>
                 {subscription.card_exp_month && subscription.card_exp_year && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[#8898aa] dark:text-gray-500">
                     {t.dashboard.settings.plan.expires} {String(subscription.card_exp_month).padStart(2, '0')}/{String(subscription.card_exp_year).slice(-2)}
                   </p>
                 )}
               </div>
             </div>
-            <button 
+            <button
               onClick={onAddCard}
-              className="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white uppercase"
+              className="text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white transition-colors"
             >
               {t.dashboard.settings.plan.updatePaymentMethod}
             </button>
           </div>
         ) : (
-          <div className="p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
-            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mx-auto mb-3">
-              <CreditCard size={20} className="text-gray-400" />
+          <div className="p-6 bg-[#f6f9fc] dark:bg-gray-900/50 border border-dashed border-[#e6ebf1] dark:border-gray-600 rounded-xl text-center">
+            <div className="w-12 h-12 bg-white dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-soft-sm">
+              <CreditCard size={20} className="text-[#8898aa]" />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 font-bold mb-1">{t.dashboard.settings.plan.noPaymentMethod.title}</p>
-            <p className="text-xs text-gray-500 mb-4">
-              {isTrialing 
+            <p className="text-sm text-[#0f172a] dark:text-gray-300 font-semibold mb-1">{t.dashboard.settings.plan.noPaymentMethod.title}</p>
+            <p className="text-xs text-[#8898aa] dark:text-gray-500 mb-4">
+              {isTrialing
                 ? t.dashboard.settings.plan.noPaymentMethod.trialSubtitle
                 : t.dashboard.settings.plan.noPaymentMethod.defaultSubtitle
               }
             </p>
-            <button 
+            <button
               onClick={onAddCard}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ffbf23] text-black text-xs font-black uppercase border-2 border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+              className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#ffbf23] text-[#1A1D21] text-sm font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all"
             >
               <Plus size={14} />
               {t.dashboard.settings.plan.addPaymentMethod}
@@ -1156,27 +1208,32 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
         )}
       </div>
 
-      {/* Invoices - NEO-BRUTALIST (Updated January 8th, 2026)
-          January 17, 2026: Updated with i18n */}
+      {/* Invoices — smoover refresh (April 25th, 2026).
+          h3 + state panels migrated to smoover tokens. Loading + empty
+          states use the soft-bg + hairline pattern. Error matches the
+          smoover red callout (rounded-xl + bg-red-50 + hairline red-500).
+          The invoice TABLE switches to a hairline rounded-xl shell with
+          eyebrow column headers and hairline body row dividers. Action
+          icon links pick up rounded-md + smoover muted hover. */}
       <div>
-        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">{t.dashboard.settings.plan.invoiceHistory}</h3>
-        
+        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-4">{t.dashboard.settings.plan.invoiceHistory}</h3>
+
         {/* Loading State */}
         {invoicesLoading && (
-          <div className="p-8 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-            <span className="ml-2 text-sm text-gray-500 font-medium">{t.dashboard.settings.plan.loadingInvoices}</span>
+          <div className="p-8 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-xl flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-[#8898aa]" />
+            <span className="ml-2 text-sm text-[#8898aa] dark:text-gray-400 font-medium">{t.dashboard.settings.plan.loadingInvoices}</span>
           </div>
         )}
 
         {/* Error State */}
         {!invoicesLoading && invoicesError && (
-          <div className="p-4 border-2 border-red-500 bg-red-50 dark:bg-red-900/20 flex items-center gap-3">
+          <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-500 flex items-center gap-3">
             <XCircle size={16} className="text-red-500 shrink-0" />
-            <p className="text-sm text-red-700 dark:text-red-400 font-medium">{invoicesError}</p>
-            <button 
+            <p className="text-sm text-red-700 dark:text-red-400 font-semibold">{invoicesError}</p>
+            <button
               onClick={fetchInvoices}
-              className="ml-auto text-xs font-bold text-red-600 hover:text-red-800 uppercase"
+              className="ml-auto text-sm font-semibold text-red-600 hover:text-red-800 transition-colors"
             >
               {t.dashboard.settings.plan.retry}
             </button>
@@ -1185,74 +1242,75 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
 
         {/* Empty State */}
         {!invoicesLoading && !invoicesError && invoices.length === 0 && (
-          <div className="p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
-            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center mx-auto mb-3">
-              <FileText size={20} className="text-gray-400" />
+          <div className="p-8 bg-[#f6f9fc] dark:bg-gray-900/50 border border-dashed border-[#e6ebf1] dark:border-gray-600 rounded-xl text-center">
+            <div className="w-12 h-12 bg-white dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-soft-sm">
+              <FileText size={20} className="text-[#8898aa]" />
             </div>
-            <p className="text-sm text-gray-500 font-bold">{t.dashboard.settings.plan.noInvoicesYet.title}</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-sm text-[#0f172a] dark:text-gray-300 font-semibold">{t.dashboard.settings.plan.noInvoicesYet.title}</p>
+            <p className="text-xs text-[#8898aa] dark:text-gray-500 mt-1">
               {t.dashboard.settings.plan.noInvoicesYet.subtitle}
             </p>
           </div>
         )}
 
-        {/* Invoice List - NEO-BRUTALIST
-            January 17, 2026: Updated with i18n */}
+        {/* Invoice List — smoover hairline table. Header row uses eyebrow tokens
+            (font-semibold + #8898aa + tracking-wider). Body rows hairline-divide
+            on #e6ebf1; hover tints to #f6f9fc. */}
         {!invoicesLoading && !invoicesError && invoices.length > 0 && (
-          <div className="border-2 border-black dark:border-gray-600 overflow-hidden">
+          <div className="border border-[#e6ebf1] dark:border-gray-700 rounded-xl overflow-hidden shadow-soft-sm">
             {/* Table Header */}
-            <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 border-b-2 border-black dark:border-gray-600 grid grid-cols-12 gap-4 text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">
+            <div className="bg-[#f6f9fc] dark:bg-gray-800 px-4 py-3 border-b border-[#e6ebf1] dark:border-gray-700 grid grid-cols-12 gap-4 text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
               <div className="col-span-3">{t.dashboard.settings.plan.invoiceColumns.invoice}</div>
               <div className="col-span-3">{t.dashboard.settings.plan.invoiceColumns.date}</div>
               <div className="col-span-2">{t.dashboard.settings.plan.invoiceColumns.amount}</div>
               <div className="col-span-2">{t.dashboard.settings.plan.invoiceColumns.status}</div>
               <div className="col-span-2 text-right">{t.dashboard.settings.plan.invoiceColumns.actions}</div>
             </div>
-            
+
             {/* Invoice Rows */}
             {invoices.map((invoice) => {
               const statusBadge = getInvoiceStatusBadge(invoice.status);
               return (
-                <div 
+                <div
                   key={invoice.id}
-                  className="px-4 py-3 border-b-2 border-gray-200 dark:border-gray-700 last:border-b-0 grid grid-cols-12 gap-4 items-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="px-4 py-3 border-b border-[#e6ebf1] dark:border-gray-700 last:border-b-0 grid grid-cols-12 gap-4 items-center hover:bg-[#f6f9fc] dark:hover:bg-gray-800/50 transition-colors"
                 >
                   {/* Invoice Number & Description */}
                   <div className="col-span-3">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
                       {invoice.number || t.dashboard.settings.plan.invoiceStatus.draft}
                     </p>
                     {invoice.description && (
-                      <p className="text-xs text-gray-500 truncate" title={invoice.description}>
+                      <p className="text-xs text-[#8898aa] dark:text-gray-500 truncate" title={invoice.description}>
                         {invoice.description}
                       </p>
                     )}
                   </div>
-                  
+
                   {/* Date */}
                   <div className="col-span-3">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    <p className="text-sm text-[#425466] dark:text-gray-400 font-medium">
                       {formatDate(invoice.created)}
                     </p>
                   </div>
-                  
+
                   {/* Amount */}
                   <div className="col-span-2">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
                       {formatAmount(invoice.amount_due, invoice.currency)}
                     </p>
                   </div>
-                  
+
                   {/* Status */}
                   <div className="col-span-2">
                     <span className={cn(
-                      "inline-flex px-2 py-0.5 text-[10px] font-black uppercase tracking-wide border",
+                      "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border",
                       statusBadge.bg, statusBadge.text, statusBadge.border
                     )}>
                       {statusBadge.label}
                     </span>
                   </div>
-                  
+
                   {/* Actions */}
                   <div className="col-span-2 flex items-center justify-end gap-2">
                     {invoice.hosted_invoice_url && (
@@ -1260,7 +1318,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
                         href={invoice.hosted_invoice_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="p-1.5 rounded-md text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 transition-colors"
                         title={t.dashboard.settings.plan.viewInvoice}
                       >
                         <ExternalLink size={14} />
@@ -1271,7 +1329,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
                         href={invoice.invoice_pdf}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        className="p-1.5 rounded-md text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 transition-colors"
                         title={t.dashboard.settings.plan.downloadPdf}
                       >
                         <Download size={14} />
@@ -1285,38 +1343,43 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
         )}
       </div>
 
-      {/* Cancel Plan Section - NEO-BRUTALIST (Updated January 8th, 2026)
-          January 17, 2026: Updated with i18n */}
+      {/* Cancel Plan Section — smoover refresh (April 25th, 2026).
+          Hairline divider, smoover h3 + body, destructive secondary pill
+          (matches Security Delete Account button: rounded-full + bg-red-50
+          + hairline red-200 + font-semibold; hover promotes to red-500). */}
       {subscription && subscription.status !== 'canceled' && !subscription.cancel_at_period_end && (
-        <div className="pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-black text-gray-900 dark:text-white mb-2 uppercase tracking-wide">{t.dashboard.settings.plan.cancelSubscription.title}</h3>
-          <p className="text-xs text-gray-500 mb-4">
+        <div className="pt-6 border-t border-[#e6ebf1] dark:border-gray-700">
+          <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-2">{t.dashboard.settings.plan.cancelSubscription.title}</h3>
+          <p className="text-xs text-[#8898aa] dark:text-gray-500 mb-4">
             {t.dashboard.settings.plan.cancelSubscription.subtitle}
           </p>
-          <button 
+          <button
             onClick={onCancelPlan}
-            className="px-4 py-2 text-xs font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-500 border-2 border-red-400 hover:border-red-600 transition-all uppercase"
+            className="px-5 py-2 text-sm font-semibold text-red-600 hover:text-white bg-red-50 dark:bg-red-900/30 hover:bg-red-500 border border-red-200 dark:border-red-800 hover:border-red-500 rounded-full transition-all"
           >
             {t.dashboard.settings.plan.cancelSubscription.button}
           </button>
         </div>
       )}
 
-      {/* Cancellation pending notice - NEO-BRUTALIST
-          January 17, 2026: Updated with i18n */}
+      {/* Cancellation pending notice — smoover refresh.
+          Inner orange callout matches the warning callout pattern (rounded-xl
+          + bg-orange-50 + hairline orange-500). Resume button is a smoover
+          orange secondary pill (white bg + hairline + hover promotes to vivid
+          orange-500). */}
       {subscription?.cancel_at_period_end && (
-        <div className="pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-          <div className="p-4 bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-500">
+        <div className="pt-6 border-t border-[#e6ebf1] dark:border-gray-700">
+          <div className="p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-500 rounded-xl">
             <div className="flex items-start gap-3">
               <AlertTriangle size={16} className="text-orange-600 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-black text-orange-800 dark:text-orange-300 uppercase">{t.dashboard.settings.plan.cancellationPending.title}</h4>
+                <h4 className="text-base font-semibold text-orange-800 dark:text-orange-300">{t.dashboard.settings.plan.cancellationPending.title}</h4>
                 <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
                   {t.dashboard.settings.plan.cancellationPending.subtitle}
                 </p>
-                <button 
+                <button
                   onClick={onCancelPlan}
-                  className="mt-3 px-3 py-1.5 text-xs font-bold text-orange-700 hover:text-white bg-white hover:bg-orange-500 border-2 border-orange-400 hover:border-orange-600 transition-all uppercase"
+                  className="mt-3 px-4 py-1.5 text-sm font-semibold text-orange-700 hover:text-white bg-white dark:bg-gray-900 hover:bg-orange-500 border border-orange-200 dark:border-orange-800 hover:border-orange-500 rounded-full transition-all"
                 >
                   {t.dashboard.settings.plan.cancellationPending.resumeButton}
                 </button>
@@ -1330,7 +1393,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
 }
 
 // =============================================================================
-// BUY CREDITS SETTINGS - NEO-BRUTALIST (February 2026)
+// BUY CREDITS SETTINGS — SMOOVER REFRESH (April 25th, 2026)
 //
 // One-time credit top-up purchase UI.
 // Credits are added on top of the monthly plan allocation.
@@ -1338,6 +1401,26 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
 //
 // Credit packs: Email credits, AI Outreach credits, Topic Searches
 // Stripe one-time payment (not subscription).
+//
+// Smoover migration:
+// - 4 status callouts (success / cancelled / trial gate / error): bg-*-500/10
+//   + border-2 -> rounded-xl + bg-*-50 + hairline border-*-500. font-bold ->
+//   font-semibold. Dismiss buttons drop uppercase + font-black.
+// - Header callout: bg-[#ffbf23]/10 + border-2 -> #fff4d1 + #ffbf23/30 +
+//   rounded-xl. Icon tile = solid yellow rounded-md + shadow-yellow-glow-sm
+//   (no more black border-2 frame).
+// - Category Selector tiles: brutalist offset shadow -> Sidebar nav-active
+//   pattern (bg-[#fff4d1] + #ffbf23 hairline + shadow-soft-sm). Idle hairline
+//   white tile, hover tints to #f6f9fc. Tile labels drop font-black uppercase.
+// - Pack cards: brutalist 4px offset -> rounded-2xl + hairline + shadow-soft-sm
+//   (popular variant gets shadow-yellow-glow-sm + #ffbf23 hairline). "Most
+//   Popular" ribbon = solid #1A1D21 pill + #ffbf23 hairline + rounded-full +
+//   font-semibold (no more border-2 black frame).
+// - Buy buttons: Popular = smoover yellow primary CTA (rounded-full +
+//   shadow-yellow-glow-sm + hover:-translate-y-px). Regular = dark smoover
+//   secondary (#0f172a -> #1A1D21 hover, rounded-full, shadow-soft-sm).
+// - Info footer: hairline divider; titles drop font-black uppercase to
+//   font-semibold; body uses muted #8898aa. Yellow icons retained as accent.
 // =============================================================================
 
 const CREDIT_PACKS = {
@@ -1409,95 +1492,119 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
 
   return (
     <div className="space-y-8">
+      {/* Status callouts — smoover refresh (April 25th, 2026).
+          bg-*-500/10 + border-2 -> rounded-xl + bg-*-50 + hairline border-*-500.
+          Vivid border kept as the colour signal. font-bold -> font-semibold;
+          dismiss buttons drop uppercase + font-black. */}
       {creditPurchaseSuccess && (
-        <div className="p-4 bg-green-500/10 border-2 border-green-500 flex items-center justify-between">
-          <span className="text-sm font-bold text-green-800 dark:text-green-200">Credits added successfully. Your balance has been updated.</span>
+        <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-500 flex items-center justify-between">
+          <span className="text-sm font-semibold text-green-800 dark:text-green-200">Credits added successfully. Your balance has been updated.</span>
           {onDismissPurchaseSuccess && (
-            <button type="button" onClick={onDismissPurchaseSuccess} className="text-green-700 dark:text-green-300 hover:underline text-xs font-black uppercase">
+            <button type="button" onClick={onDismissPurchaseSuccess} className="text-sm font-semibold text-green-700 dark:text-green-300 hover:underline transition-colors">
               Dismiss
             </button>
           )}
         </div>
       )}
       {creditPurchaseCancelled && (
-        <div className="p-4 bg-gray-200 dark:bg-gray-700 border-2 border-gray-400 dark:border-gray-600 flex items-center justify-between">
-          <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Purchase cancelled. You can try again whenever you’re ready.</span>
+        <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-600 flex items-center justify-between">
+          <span className="text-sm font-semibold text-[#0f172a] dark:text-gray-200">Purchase cancelled. You can try again whenever you’re ready.</span>
           {onDismissPurchaseCancelled && (
-            <button type="button" onClick={onDismissPurchaseCancelled} className="text-gray-600 dark:text-gray-300 hover:underline text-xs font-black uppercase">
+            <button type="button" onClick={onDismissPurchaseCancelled} className="text-sm font-semibold text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white transition-colors">
               Dismiss
             </button>
           )}
         </div>
       )}
       {isTrialing && (
-        <div className="p-4 bg-amber-500/10 border-2 border-amber-500 flex items-start gap-3">
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-500 flex items-start gap-3">
           <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Credit packs are for paid subscribers only</p>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Credit packs are for paid subscribers only</p>
             <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">Subscribe or end your trial to purchase add-on credits.</p>
           </div>
         </div>
       )}
       {purchaseError && (
-        <div className="p-4 bg-red-500/10 border-2 border-red-500 flex items-center justify-between">
-          <span className="text-sm font-bold text-red-800 dark:text-red-200">{purchaseError}</span>
-          <button type="button" onClick={() => setPurchaseError(null)} className="text-red-700 dark:text-red-300 hover:underline text-xs font-black uppercase">
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-500 flex items-center justify-between">
+          <span className="text-sm font-semibold text-red-800 dark:text-red-200">{purchaseError}</span>
+          <button type="button" onClick={() => setPurchaseError(null)} className="text-sm font-semibold text-red-700 dark:text-red-300 hover:underline transition-colors">
             Dismiss
           </button>
         </div>
       )}
-      {/* Header */}
-      <div className="p-4 bg-[#ffbf23]/10 border-2 border-[#ffbf23]">
+      {/* Header — smoover refresh. bg-[#ffbf23]/10 + border-2 -> #fff4d1 +
+          hairline #ffbf23/30 + rounded-xl. Icon tile becomes a solid yellow
+          rounded-md pill (no more border-2 border-black). h3 drops font-black
+          uppercase. */}
+      <div className="p-4 bg-[#fff4d1] dark:bg-[#ffbf23]/10 border border-[#ffbf23]/30 dark:border-[#ffbf23]/40 rounded-xl">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-[#ffbf23] border-2 border-black">
-            <Coins size={20} className="text-black" />
+          <div className="p-2 bg-[#ffbf23] rounded-md shadow-yellow-glow-sm">
+            <Coins size={20} className="text-[#1A1D21]" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase">Top Up Credits</h3>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            <h3 className="text-base font-semibold text-[#0f172a] dark:text-white">Top Up Credits</h3>
+            <p className="text-xs text-[#425466] dark:text-gray-400 mt-1">
               Purchase additional credits instantly. Top-up credits never expire and are used after your monthly plan credits.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Category Selector */}
+      {/* Category Selector — smoover refresh.
+          h3 drops font-black uppercase tracking-wide.
+          Active tile uses the Sidebar nav-active soft yellow tint
+          (bg-[#fff4d1] + hairline #ffbf23 + shadow-soft-sm; no offset shadow).
+          Idle tile is hairline white -> hover:bg-[#f6f9fc] (no more
+          border-thickening hover). Tile labels drop font-black uppercase. */}
       <div>
-        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Select Credit Type</h3>
+        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-4">Select Credit Type</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
               className={cn(
-                "p-4 border-2 text-left transition-all duration-200",
+                "p-4 rounded-xl border text-left transition-all duration-200",
                 selectedCategory === cat.id
-                  ? "bg-[#ffbf23]/10 border-[#ffbf23] shadow-[3px_3px_0px_0px_#ffbf23]"
-                  : "bg-white dark:bg-[#0f0f0f] border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
+                  ? "bg-[#fff4d1] dark:bg-[#ffbf23]/10 border-[#ffbf23] shadow-soft-sm"
+                  : "bg-white dark:bg-[#0f0f0f] border-[#e6ebf1] dark:border-gray-700 hover:bg-[#f6f9fc] dark:hover:bg-gray-900"
               )}
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className={cn(
-                  selectedCategory === cat.id ? "text-[#ffbf23]" : "text-gray-400"
+                  selectedCategory === cat.id ? "text-[#ffbf23]" : "text-[#8898aa]"
                 )}>
                   {cat.icon}
                 </span>
                 <span className={cn(
-                  "text-xs font-black uppercase",
-                  selectedCategory === cat.id ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"
+                  "text-sm font-semibold",
+                  selectedCategory === cat.id ? "text-[#0f172a] dark:text-white" : "text-[#425466] dark:text-gray-400"
                 )}>
                   {cat.label}
                 </span>
               </div>
-              <p className="text-[10px] text-gray-500 leading-relaxed">{cat.description}</p>
+              <p className="text-[10px] text-[#8898aa] dark:text-gray-500 leading-relaxed">{cat.description}</p>
             </button>
           ))}
         </div>
       </div>
 
       {/* Credit Packs */}
+      {/* Credit Pack cards — smoover refresh.
+          h3 drops font-black uppercase tracking-wide.
+          Popular variant: hairline #ffbf23 + rounded-2xl + shadow-yellow-glow-sm
+          (replaces 4px brutalist offset). Regular variant: hairline #e6ebf1
+          + rounded-2xl + shadow-soft-sm; hover promotes to shadow-soft-lg.
+          "Most Popular" ribbon: solid #1A1D21 pill + #ffbf23 hairline +
+          rounded-full + font-semibold (drops uppercase tracking-wide / heavy
+          black border-2 frame).
+          Buy buttons: Popular = smoover yellow primary CTA (rounded-full +
+          shadow-yellow-glow-sm + hover:-translate-y-px). Regular = dark
+          smoover secondary (#0f172a -> #1A1D21 hover, rounded-full,
+          shadow-soft-sm). */}
       <div>
-        <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wide">Choose a Pack</h3>
+        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-4">Choose a Pack</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {currentPacks.map((pack, idx) => {
             const isPopular = idx === 1;
@@ -1507,15 +1614,15 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
               <div
                 key={pack.id}
                 className={cn(
-                  "relative p-5 border-2 flex flex-col transition-all duration-200",
+                  "relative p-5 rounded-2xl border flex flex-col transition-all duration-200",
                   isPopular
-                    ? "border-[#ffbf23] shadow-[4px_4px_0px_0px_#ffbf23] bg-white dark:bg-[#0f0f0f]"
-                    : "border-black dark:border-gray-600 shadow-[3px_3px_0px_0px_#000000] dark:shadow-[3px_3px_0px_0px_#333333] bg-white dark:bg-[#0f0f0f]"
+                    ? "border-[#ffbf23] shadow-yellow-glow-sm bg-white dark:bg-[#0f0f0f]"
+                    : "border-[#e6ebf1] dark:border-gray-700 shadow-soft-sm hover:shadow-soft-lg bg-white dark:bg-[#0f0f0f]"
                 )}
               >
                 {isPopular && (
                   <div className="absolute -top-3 left-0 right-0 flex justify-center">
-                    <span className="bg-black text-[#ffbf23] text-[10px] font-black uppercase tracking-wide px-2 py-0.5 border-2 border-[#ffbf23]">
+                    <span className="bg-[#1A1D21] text-[#ffbf23] text-[10px] font-semibold uppercase tracking-wider px-3 py-1 border border-[#ffbf23] rounded-full shadow-soft-sm">
                       Most Popular
                     </span>
                   </div>
@@ -1529,14 +1636,14 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
                     )}>
                       {selectedCategory === 'email' ? <Mail size={16} /> : selectedCategory === 'ai' ? <Sparkles size={16} /> : <Search size={16} />}
                     </span>
-                    <span className="text-2xl font-black text-gray-900 dark:text-white">{pack.credits}</span>
+                    <span className="text-2xl font-bold text-[#0f172a] dark:text-white tracking-tight">{pack.credits}</span>
                   </div>
-                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wide">credits</p>
+                  <p className="text-[10px] text-[#8898aa] dark:text-gray-500 uppercase font-semibold tracking-wider">credits</p>
                 </div>
 
                 {/* Price */}
                 <div className="mb-4">
-                  <span className="text-2xl font-black text-gray-900 dark:text-white">{CURRENCY_SYMBOL}{pack.price}</span>
+                  <span className="text-2xl font-bold text-[#0f172a] dark:text-white tracking-tight">{CURRENCY_SYMBOL}{pack.price}</span>
                 </div>
 
                 {/* Buy button */}
@@ -1544,11 +1651,11 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
                   onClick={() => handlePurchase(pack.id)}
                   disabled={isPurchasing || !userId || isTrialing}
                   className={cn(
-                    "w-full py-2.5 text-xs font-black uppercase border-2 transition-all duration-200 flex items-center justify-center gap-2",
+                    "w-full py-2.5 text-sm font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2",
                     isPopular
-                      ? "bg-[#ffbf23] text-black border-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px]"
-                      : "bg-black text-white border-black hover:bg-gray-800",
-                    (isPurchasing || !userId || isTrialing) && "opacity-50 cursor-not-allowed"
+                      ? "bg-[#ffbf23] text-[#1A1D21] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px"
+                      : "bg-[#0f172a] text-white shadow-soft-sm hover:bg-[#1A1D21] hover:shadow-soft-lg",
+                    (isPurchasing || !userId || isTrialing) && "opacity-50 cursor-not-allowed hover:translate-y-0"
                   )}
                 >
                   {isPurchasing ? (
@@ -1567,26 +1674,29 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
       </div>
 
       {/* Info footer */}
-      <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-gray-500">
+      {/* Info footer — smoover refresh.
+          Hairline divider; titles drop font-black uppercase to font-semibold;
+          body text uses muted #8898aa. Yellow icons retained as accent. */}
+      <div className="border-t border-[#e6ebf1] dark:border-gray-700 pt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-[#8898aa] dark:text-gray-500">
           <div className="flex items-start gap-2">
             <Clock size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
             <div>
-              <p className="font-black text-gray-900 dark:text-white uppercase">Never Expire</p>
+              <p className="font-semibold text-[#0f172a] dark:text-white">Never Expire</p>
               <p>Top-up credits stay in your account forever</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <Zap size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
             <div>
-              <p className="font-black text-gray-900 dark:text-white uppercase">Instant Delivery</p>
+              <p className="font-semibold text-[#0f172a] dark:text-white">Instant Delivery</p>
               <p>Credits added to your account immediately</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <Shield size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
             <div>
-              <p className="font-black text-gray-900 dark:text-white uppercase">Secure Payment</p>
+              <p className="font-semibold text-[#0f172a] dark:text-white">Secure Payment</p>
               <p>Processed securely through Stripe</p>
             </div>
           </div>
