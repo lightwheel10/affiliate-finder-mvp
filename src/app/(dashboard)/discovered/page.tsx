@@ -765,17 +765,33 @@ export default function DiscoveredPage() {
         })()}
 
         {/* =============================================================================
-            TABLE AREA - DashboardDemo.tsx EXACT STYLING
+            TABLE AREA — smoover refresh (April 25, 2026)
+            -----------------------------------------------------------------------------
+            Brutalist border-4 + heavy column header -> hairline rounded-xl shell
+            with soft tinted header (matches Settings -> Plan invoice table from
+            PR #33 and the Find / Saved page tables).
+
+            Outer:  border-4 border-gray-200 + rounded-lg
+                    -> border border-[#e6ebf1] + rounded-xl + shadow-soft-sm.
+            Header: border-b-2 + font-black + text-gray-400 + tracking-widest
+                    -> bg-[#f6f9fc] subtle tint + hairline border-b + font-
+                    semibold + text-[#8898aa] + tracking-wider (smoover eyebrow).
+
+            Behaviour preserved: 12-column grid, identical column spans, all
+            i18n keys, accent-[#ffbf23] checkbox. The full design rationale +
+            "must stay in sync" callout lives in /find/page.tsx above the
+            equivalent block — mirror any future visual tweak across all 3
+            dashboard tables.
             ============================================================================= */}
-        <div className="bg-white dark:bg-[#0f0f0f] border-4 border-gray-200 dark:border-gray-800 rounded-lg min-h-[500px] flex flex-col">
-          {/* Table Header - Translated (January 9th, 2026) */}
-          <div className="grid grid-cols-12 gap-4 p-4 border-b-2 border-gray-100 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+        <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl shadow-soft-sm min-h-[500px] flex flex-col">
+          {/* Table Header — smoover (Apr 25, 2026); see docblock above. */}
+          <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-[#f6f9fc] dark:bg-gray-800/50 border-b border-[#e6ebf1] dark:border-gray-800 text-[10px] font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider">
             <div className="col-span-1 flex justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
                 onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
-                className="accent-[#ffbf23] w-4 h-4" 
+                className="accent-[#ffbf23] w-4 h-4"
               />
             </div>
             <div className="col-span-3">{t.dashboard.table.affiliate}</div>
@@ -864,28 +880,34 @@ export default function DiscoveredPage() {
       />
 
       {/* =============================================================================
-          BULK SAVE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
-          Updated: January 16, 2026
+          DASHBOARD FEEDBACK TOASTS — smoover refresh (April 25, 2026)
+          -----------------------------------------------------------------------------
+          Bulk-save success + delete toasts. Same template + same brutalist
+          -> smoover mapping as on /find and /saved. Full design rationale
+          lives in /find/page.tsx above the equivalent block — mirror any
+          future visual tweak across all three files for consistency.
+          Behaviour preserved 1:1 (positioning, animation, dismiss handler,
+          every i18n key — these even share the t.dashboard.find.toasts.*
+          dictionary with /find).
           ============================================================================= */}
-      {/* January 17, 2026: Updated with i18n translations */}
       {bulkSaveResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-emerald-500 border-2 border-black flex items-center justify-center shrink-0">
-                <Check size={20} className="text-white" />
+              <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shrink-0 shadow-soft-sm">
+                <Check size={20} className="text-white" strokeWidth={2.5} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
-                  {bulkSaveResult.savedCount > 0 
+                <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">
+                  {bulkSaveResult.savedCount > 0
                     ? `${bulkSaveResult.savedCount} ${t.dashboard.find.toasts.affiliatesSaved}`
                     : t.dashboard.find.toasts.noNewAffiliatesSaved
                   }
                 </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                <p className="text-xs text-[#425466] dark:text-gray-400 mt-0.5">
                   {bulkSaveResult.savedCount > 0 && t.dashboard.find.toasts.addedToPipeline}
                   {bulkSaveResult.duplicateCount > 0 && (
-                    <span className="block text-amber-600 font-bold mt-1">
+                    <span className="block text-amber-600 font-semibold mt-1">
                       {bulkSaveResult.duplicateCount} {t.dashboard.find.toasts.alreadyInPipeline}
                     </span>
                   )}
@@ -893,43 +915,41 @@ export default function DiscoveredPage() {
               </div>
               <button
                 onClick={() => setBulkSaveResult(prev => prev ? { ...prev, show: false } : null)}
-                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                aria-label="Dismiss"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* =============================================================================
-          DELETE FEEDBACK TOAST - NEO-BRUTALIST DESIGN
-          Updated: January 16, 2026
-          ============================================================================= */}
-      {/* January 17, 2026: Updated with i18n translations */}
+      {/* Delete feedback toast — smoover (Apr 25, 2026); see docblock above. */}
       {deleteResult?.show && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className="bg-white dark:bg-[#0f0f0f] border-2 border-black dark:border-gray-700 shadow-[4px_4px_0px_0px_#000] p-4 max-w-sm">
+          <div className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl p-4 max-w-sm">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-red-500 border-2 border-black flex items-center justify-center shrink-0">
-                <Trash2 size={20} className="text-white" />
+              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shrink-0 shadow-soft-sm">
+                <Trash2 size={20} className="text-white" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
-                  {deleteResult.count === 1 
+                <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">
+                  {deleteResult.count === 1
                     ? t.dashboard.find.toasts.affiliateDeleted
                     : `${deleteResult.count} ${t.dashboard.find.toasts.affiliatesDeleted}`
                   }
                 </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                <p className="text-xs text-[#425466] dark:text-gray-400 mt-0.5">
                   {t.dashboard.find.toasts.removedFromDiscovered}
                 </p>
               </div>
               <button
                 onClick={() => setDeleteResult(prev => prev ? { ...prev, show: false } : null)}
-                className="text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                aria-label="Dismiss"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors shrink-0"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
           </div>
