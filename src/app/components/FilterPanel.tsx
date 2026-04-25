@@ -109,8 +109,48 @@ function extractFilterOptions(
 }
 
 // ============================================================================
-// FILTER PILL WITH DROPDOWN
-// Individual filter category that shows a dropdown when clicked
+// FilterPill — DEAD CODE (kept in file, not currently rendered)
+// ----------------------------------------------------------------------------
+// STATUS (verified April 25, 2026): nothing in the app uses <FilterPill />.
+// The component is `const`, NOT exported, and has no internal call sites
+// inside this file either — the live `FilterPanel` component below renders
+// <MultiSelect />, <RangePresets />, <DatePresets /> directly.
+//
+// HISTORY:
+//   - Was the original "horizontal filter pill row" UI before
+//     January 23, 2026.
+//   - Replaced by the slide-out OVERLAY APPROACH (see the comment near
+//     the bottom of this file labelled "OVERLAY APPROACH - January 23,
+//     2026"). The new slide-out panel doesn't need per-filter pill
+//     buttons — every filter is visible inside the panel at once.
+//   - This component was never deleted after the refactor.
+//
+// AUDIT (April 25, 2026 — smoover design migration sweep):
+//   - Whole-repo grep for `FilterPill` returns only the declaration here
+//     (and a Claude worktree backup copy, which is throwaway).
+//   - `<FilterPill` JSX usage: zero matches anywhere.
+//   - `git log --all -S "<FilterPill"`: appears only in two old commits
+//     (initial filter-panel commit + one early enhancement). Then
+//     removed. Has not appeared on main since.
+//
+// WHY NOT MIGRATED TO SMOOVER:
+//   The app-wide neo-brutalist → smoover refresh (April 2026) deliberately
+//   skipped this component because migrating dead code is wasted effort
+//   with zero user-visible benefit. The brutalist `border-2 border-black`
+//   button + `shadow-[2px_2px_0px_0px_#000000]` press effect + `font-black
+//   uppercase tracking-wide` typography below are intentionally left as-is.
+//
+// WHAT TO DO IF YOU LAND HERE:
+//   - Preferred: delete this component block (~120 lines: from
+//     `interface FilterPillProps` through the closing `};` of FilterPill).
+//     Re-run the audit greps above first to confirm nothing has started
+//     using it since April 25, 2026.
+//   - Or: if you actually want to USE <FilterPill /> somewhere, you MUST
+//     migrate the brutalist classNames to smoover first (see the live
+//     `FilterPanel` component lower in this file for the smoover patterns
+//     — rounded-full pills, hairline #e6ebf1 borders, shadow-yellow-glow-sm,
+//     font-semibold mixed-case). Do NOT ship the brutalist version into
+//     a smoover surface — it will look badly out of place.
 // ============================================================================
 interface FilterPillProps {
   label: string;
