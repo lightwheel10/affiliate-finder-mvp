@@ -61,6 +61,8 @@ import {
 } from 'lucide-react';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { FilterPanel } from '../../components/FilterPanel';
+// April 28, 2026: Unified search predicate (Find/Discovered/Saved) — see utils/affiliate-search.ts
+import { affiliateMatchesSearchQuery } from '../../utils/affiliate-search';
 import { useNeonUser } from '../../hooks/useNeonUser';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -339,14 +341,13 @@ export default function DiscoveredPage() {
       if (isBlocked(item.domain)) return false;
       if (activeFilter !== 'All' && item.source !== activeFilter) return false;
 
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const matchesSearch = (
-          item.title?.toLowerCase().includes(q) ||
-          item.domain?.toLowerCase().includes(q) ||
-          (item.keyword && item.keyword.toLowerCase().includes(q))
-        );
-        if (!matchesSearch) return false;
+      // April 28, 2026: Now uses the shared affiliateMatchesSearchQuery helper.
+      // Previously matched only on title / domain / keyword. The helper adds
+      // snippet + personName + summary + channel.name + IG/TT username/display
+      // name so users can find creators by handle/name. Find + Saved use the
+      // same helper. See utils/affiliate-search.ts for the full field list.
+      if (searchQuery && !affiliateMatchesSearchQuery(item, searchQuery)) {
+        return false;
       }
 
       // Advanced filters
