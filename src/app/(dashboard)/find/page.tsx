@@ -75,6 +75,8 @@ import { usePollingSearch, SearchProgress } from '../../hooks/usePollingSearch';
 import { FilterPanel } from '../../components/FilterPanel';
 import { Platform } from '../../services/search';
 import { extractDiscoveryMethod } from '@/app/utils/localized-search';
+// April 28, 2026: Unified search predicate (Find/Discovered/Saved) — see utils/affiliate-search.ts
+import { affiliateMatchesSearchQuery } from '@/app/utils/affiliate-search';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
@@ -745,14 +747,13 @@ export default function FindNewPage() {
     }
 
     // Filter by search query
+    // April 28, 2026: Now uses the shared affiliateMatchesSearchQuery helper.
+    // Adds personName, summary, channel.name, IG/TT username + display name to
+    // the searched fields so users can find creators by handle/name, not just
+    // by article title or domain. Discovered + Saved use the same helper, so
+    // the three pages stay in sync. See utils/affiliate-search.ts for details.
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r =>
-        r.title.toLowerCase().includes(query) ||
-        r.domain.toLowerCase().includes(query) ||
-        r.snippet?.toLowerCase().includes(query) ||
-        r.keyword?.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter(r => affiliateMatchesSearchQuery(r, searchQuery));
     }
 
     // ============================================================================
