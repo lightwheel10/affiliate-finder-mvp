@@ -39,6 +39,8 @@ import { ResultItem, YouTubeChannelInfo } from '../types';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { SupabaseUserData } from '../hooks/useSupabaseUser';
 import { getDiscoveryReasons } from '../utils/discovery';
+// April 28, 2026: Subtle in-row highlighting for the dashboard search-box query.
+import { HighlightMatch } from './HighlightMatch';
 
 // TikTok icon component
 const TikTokIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
@@ -145,6 +147,14 @@ interface AffiliateRowProps {
   // Used only inside View Modal actions for Find/Discovered/Saved pages.
   // ============================================================================
   currentUser?: SupabaseUserData | null;
+  // ============================================================================
+  // SEARCH-MATCH HIGHLIGHTING - April 28, 2026
+  // The user's free-text query from the dashboard search box. When set, visible
+  // text in the row (creator name, article title, web keyword pill) wraps any
+  // matching substring in a soft-yellow <mark>. Empty / undefined disables it
+  // (zero overhead). See components/HighlightMatch.tsx.
+  // ============================================================================
+  searchQuery?: string;
 }
 
 export const AffiliateRow: React.FC<AffiliateRowProps> = ({ 
@@ -182,6 +192,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   affiliateData,     // Added Dec 2025: Full data for View modal
   showStatusInsteadOfDate = false,  // Added Jan 2026: Show "SAVED" status instead of date
   currentUser,                    // Added Jan 22, 2026: User data for match reasons
+  searchQuery = '',               // Added Apr 28, 2026: dashboard search-box highlight
 }) => {
   // i18n translation hook (January 10th, 2026)
   const { t } = useLanguage();
@@ -1242,7 +1253,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             <div className="flex items-center gap-2">
               {getSourceIcon(14)}
               <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                {channel?.name || personName || domain}
+                {/* Apr 28, 2026: highlight search-box matches inside the resolved name. */}
+                <HighlightMatch text={channel?.name || personName || domain} query={searchQuery} />
               </h4>
               {channel?.verified && (
                 <CheckCircle2 size={12} className="text-blue-500 fill-blue-500 shrink-0" />
@@ -1349,7 +1361,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               className="text-xs font-semibold text-[#0f172a] dark:text-white hover:text-[#ffbf23] cursor-pointer line-clamp-2 block leading-tight break-words transition-colors"
               title={title}
             >
-              {title}
+              {/* Apr 28, 2026: highlight search-box matches inside the article/video title. */}
+              <HighlightMatch text={title} query={searchQuery} />
             </a>
             
             {/* Stats row for social media — Phase 2e smoover refresh (April 23rd, 2026)
@@ -1397,7 +1410,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               <div className="flex flex-wrap items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
                 <span className="font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">rank {rank}</span>
                 <span className="whitespace-nowrap">{t.affiliateRow.discovery.rankFor}</span>
-                <span className="font-bold text-gray-900 dark:text-white truncate max-w-[80px]" title={keyword}>{keyword}</span>
+                {/* Apr 28, 2026: highlight search-box matches inside the rank-for keyword pill. */}
+                <span className="font-bold text-gray-900 dark:text-white truncate max-w-[80px]" title={keyword}><HighlightMatch text={keyword} query={searchQuery} /></span>
               </div>
             )}
 

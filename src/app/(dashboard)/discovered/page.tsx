@@ -820,7 +820,7 @@ export default function DiscoveredPage() {
             </div>
           ) : filteredResults.length > 0 ? (
             filteredResults.map((item) => (
-              <AffiliateRow 
+              <AffiliateRow
                 key={item.link}
                 title={item.title}
                 domain={item.domain}
@@ -846,6 +846,7 @@ export default function DiscoveredPage() {
                 onDelete={() => handleSingleDelete(item.link)}
                 affiliateData={item}
                 currentUser={user}
+                searchQuery={searchQuery}
               />
             ))
           ) : (

@@ -1044,7 +1044,7 @@ export default function SavedPage() {
           <div className="flex-1">
           {!loading && filteredResults.length > 0 ? (
             filteredResults.map((item) => (
-              <AffiliateRow 
+              <AffiliateRow
                 key={item.link}
                 id={item.id}
                 title={item.title}
@@ -1075,6 +1075,7 @@ export default function SavedPage() {
                 onDelete={() => handleRemove(item.link)}
                 affiliateData={item}
                 currentUser={user}
+                searchQuery={searchQuery}
               />
             ))
           ) : (
