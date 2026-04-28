@@ -1467,7 +1467,7 @@ export default function FindNewPage() {
                         animationFillMode: 'backwards'
                       }}
                     >
-                      <AffiliateRow 
+                      <AffiliateRow
                         title={group.main.title}
                         domain={group.main.domain}
                         link={group.main.link}
@@ -1493,10 +1493,11 @@ export default function FindNewPage() {
                         onDelete={() => handleSingleDelete(group.main.link)}
                         affiliateData={group.main}
                         currentUser={user}
+                        searchQuery={searchQuery}
                       />
                     </div>
                   ))}
-                  
+
                   {/* Skeletons for upcoming results */}
                   {Array.from({ length: 3 }).map((_, idx) => (
                     <div
@@ -1517,7 +1518,7 @@ export default function FindNewPage() {
                       animationDelay: `${idx * 60}ms`
                     }}
                   >
-                    <AffiliateRow 
+                    <AffiliateRow
                       title={group.main.title}
                       domain={group.main.domain}
                       link={group.main.link}
@@ -1543,6 +1544,7 @@ export default function FindNewPage() {
                       onDelete={() => handleSingleDelete(group.main.link)}
                       affiliateData={group.main}
                       currentUser={user}
+                      searchQuery={searchQuery}
                     />
                   </div>
                 ))
