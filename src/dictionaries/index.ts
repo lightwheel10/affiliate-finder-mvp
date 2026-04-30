@@ -828,6 +828,10 @@ export interface Dictionary {
         expires: string;
         invoiceHistory: string;
         loadingInvoices: string;
+        // April 28, 2026: error message when /api/stripe/invoices fails.
+        // Replaces the previously hardcoded English "Failed to fetch invoices"
+        // / "Failed to load invoices" strings in PlanSettings.fetchInvoices.
+        invoicesError: string;
         noInvoicesYet: {
           title: string;
           subtitle: string;
