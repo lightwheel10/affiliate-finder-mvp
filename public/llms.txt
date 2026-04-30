@@ -44,7 +44,7 @@ All plans include a 7-day free trial.
 
 - Framework: Next.js 16 (App Router)
 - Database: Neon (Serverless PostgreSQL)
-- Authentication: Stack Auth
+- Authentication: Supabase Auth
 - Payments: Stripe
 - Email Enrichment: Apollo, Lusha, Hunter
 - AI: OpenAI GPT-4
