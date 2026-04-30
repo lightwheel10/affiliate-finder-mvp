@@ -595,6 +595,12 @@ export interface Dictionary {
       };
       // January 17, 2026: Added loading message
       loading: string;
+      // April 28, 2026: i18n migration of inline toast strings.
+      // Convention matches other toasts in this file: the count is prepended
+      // at the call site, the value is the noun + verb suffix.
+      toasts: {
+        newAffiliatesFound: string;  // "new affiliate(s) found!" — prefixed with count
+      };
     };
     // Saved (Pipeline) page
     saved: {
@@ -634,6 +640,10 @@ export interface Dictionary {
         readyForOutreach: string;
         found: string;
         notFound: string;
+        // April 28, 2026: CSV export toasts (previously hardcoded English).
+        noAffiliatesToExport: string;
+        noAffiliatesSelected: string;
+        affiliatesExported: string;  // "affiliate(s) exported" — prefixed with count
       };
     };
     // =========================================================================

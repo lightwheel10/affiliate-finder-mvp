@@ -619,6 +619,10 @@ export const en: Dictionary = {
       },
       // January 17, 2026: Added loading message
       loading: 'Loading discovered affiliates...',
+      // April 28, 2026: previously hardcoded inline toast strings.
+      toasts: {
+        newAffiliatesFound: 'new affiliate(s) found!',
+      },
     },
     saved: {
       pageTitle: 'Saved Affiliates',
@@ -657,6 +661,10 @@ export const en: Dictionary = {
         readyForOutreach: 'Ready for outreach',
         found: 'found',
         notFound: 'not found',
+        // April 28, 2026: CSV export toasts.
+        noAffiliatesToExport: 'No affiliates to export',
+        noAffiliatesSelected: 'No affiliates selected',
+        affiliatesExported: 'affiliate(s) exported',
       },
     },
     // =========================================================================
