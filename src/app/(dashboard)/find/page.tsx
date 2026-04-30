@@ -679,7 +679,8 @@ export default function FindNewPage() {
         case 'running':
           return {
             title: `Searching... (${elapsed}s)`,
-            subtitle: 'Apify is scanning YouTube, Instagram, TikTok, and Web',
+            // Apr 28, 2026: drop vendor name from user-facing subtitle.
+            subtitle: 'Scanning YouTube, Instagram, TikTok, and Web',
             badge: `${elapsed}s`
           };
         case 'processing':
