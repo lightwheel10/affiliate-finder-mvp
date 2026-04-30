@@ -410,6 +410,10 @@ export const de: Dictionary = {
         step3Label: 'Deine Wettbewerber werden gefunden',
         step3Desc: 'Ähnliche Unternehmen werden entdeckt',
       },
+      // 28. April 2026: Fehler-Beschreibungstexte für die Analyse-Bildschirm-Box.
+      errorScrapeFailed: 'Wir konnten nicht auf deine Website zugreifen. Bitte überprüfe die URL und versuch es erneut, oder gib deine Daten manuell ein.',
+      errorAnalysisFailed: 'Wir konnten deine Website derzeit nicht analysieren. Bitte gib deine Wettbewerber und Themen manuell ein.',
+      errorGeneric: 'Etwas ist schief gelaufen. Bitte gib deine Daten manuell ein.',
     },
     // Navigation buttons
     navigation: {
