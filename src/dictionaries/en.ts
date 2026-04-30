@@ -849,6 +849,8 @@ export const en: Dictionary = {
         expires: 'Expires',
         invoiceHistory: 'Invoice History',
         loadingInvoices: 'Loading invoices...',
+        // April 28, 2026: error fallback for /api/stripe/invoices failures.
+        invoicesError: 'Failed to load invoices',
         noInvoicesYet: {
           title: 'No invoices yet',
           subtitle: 'Invoices will appear here after your first billing cycle',

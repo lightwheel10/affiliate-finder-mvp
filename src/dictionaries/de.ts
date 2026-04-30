@@ -845,6 +845,8 @@ export const de: Dictionary = {
         expires: 'Läuft ab',
         invoiceHistory: 'Rechnungsverlauf',
         loadingInvoices: 'Rechnungen werden geladen...',
+        // 28. April 2026: Fehlertext für fehlgeschlagene /api/stripe/invoices-Aufrufe.
+        invoicesError: 'Rechnungen konnten nicht geladen werden',
         noInvoicesYet: {
           title: 'Noch keine Rechnungen',
           subtitle: 'Rechnungen werden hier nach deinem ersten Abrechnungszyklus angezeigt',

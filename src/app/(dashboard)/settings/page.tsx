@@ -944,26 +944,31 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
 
   const fetchInvoices = useCallback(async () => {
     if (!userId) return;
-    
+
     setInvoicesLoading(true);
     setInvoicesError(null);
-    
+
     try {
       const response = await fetch(`/api/stripe/invoices?userId=${userId}`);
       const data = await response.json();
-      
+
       if (!response.ok || data.error) {
+        // April 28, 2026: thrown message kept English for console.error logging.
+        // The catch block below ignores it and shows a translated string instead.
         throw new Error(data.error || 'Failed to fetch invoices');
       }
-      
+
       setInvoices(data.invoices || []);
     } catch (err) {
       console.error('[PlanSettings] Error fetching invoices:', err);
-      setInvoicesError(err instanceof Error ? err.message : 'Failed to load invoices');
+      // April 28, 2026: i18n migration. The server's English error and the
+      // English fallback are intentionally dropped from the UI — only logged.
+      // The user always sees the translated `plan.invoicesError` string.
+      setInvoicesError(t.dashboard.settings.plan.invoicesError);
     } finally {
       setInvoicesLoading(false);
     }
-  }, [userId]);
+  }, [userId, t]);
 
   // Fetch invoices when component mounts or userId changes
   useEffect(() => {
