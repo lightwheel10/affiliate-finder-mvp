@@ -894,6 +894,42 @@ export const de: Dictionary = {
           resumeButton: 'Abonnement fortsetzen',
         },
       },
+      // 28. April 2026: Credits-Kaufbereich — zuvor hartcodiertes Englisch.
+      buyCredits: {
+        callouts: {
+          successAdded: 'Credits erfolgreich hinzugefügt. Dein Guthaben wurde aktualisiert.',
+          purchaseCancelled: 'Kauf abgebrochen. Du kannst es jederzeit erneut versuchen.',
+          dismiss: 'Schließen',
+          trialOnly: {
+            title: 'Credit-Pakete sind nur für zahlende Abonnenten verfügbar',
+            subtitle: 'Abonniere oder beende deine Testphase, um zusätzliche Credits zu kaufen.',
+          },
+        },
+        errors: {
+          failedToStartCheckout: 'Bezahlvorgang konnte nicht gestartet werden',
+          invalidResponse: 'Ungültige Antwort vom Server',
+          networkError: 'Netzwerkfehler. Bitte versuch es erneut.',
+        },
+        header: {
+          title: 'Credits aufladen',
+          description: 'Kaufe sofort zusätzliche Credits. Aufgeladene Credits laufen nie ab und werden nach deinen monatlichen Plan-Credits verwendet.',
+        },
+        categories: {
+          email: { label: 'E-Mail-Credits', description: 'Verifizierte E-Mail-Suchen für Affiliates' },
+          ai: { label: 'KI-Kontaktaufnahme', description: 'KI-generierte personalisierte Kontakt-E-Mails' },
+          search: { label: 'Themen-Suchen', description: 'Neue Affiliates nach Thema finden' },
+        },
+        selectType: 'Credit-Typ auswählen',
+        choosePack: 'Paket auswählen',
+        mostPopular: 'Am beliebtesten',
+        creditsLabel: 'Credits',
+        buyNow: 'Jetzt kaufen',
+        benefits: {
+          neverExpire: { title: 'Verfallen nie', description: 'Aufgeladene Credits bleiben dauerhaft in deinem Konto' },
+          instantDelivery: { title: 'Sofortige Lieferung', description: 'Credits werden sofort deinem Konto gutgeschrieben' },
+          securePayment: { title: 'Sichere Zahlung', description: 'Sichere Verarbeitung über Stripe' },
+        },
+      },
       notifications: {
         emailNotifications: 'E-Mail-Benachrichtigungen',
         appNotifications: 'App-Benachrichtigungen',

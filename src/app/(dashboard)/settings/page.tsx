@@ -1468,10 +1468,11 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
+  // April 28, 2026: i18n-migrated — labels/descriptions previously hardcoded English.
   const categories = [
-    { id: 'email' as const, label: 'Email Credits', icon: <Mail size={16} />, description: 'Verified email lookups for affiliates' },
-    { id: 'ai' as const, label: 'AI Outreach', icon: <Sparkles size={16} />, description: 'AI-generated personalized outreach emails' },
-    { id: 'search' as const, label: 'Topic Searches', icon: <Search size={16} />, description: 'Find new affiliates by topic' },
+    { id: 'email' as const, label: t.dashboard.settings.buyCredits.categories.email.label, icon: <Mail size={16} />, description: t.dashboard.settings.buyCredits.categories.email.description },
+    { id: 'ai' as const, label: t.dashboard.settings.buyCredits.categories.ai.label, icon: <Sparkles size={16} />, description: t.dashboard.settings.buyCredits.categories.ai.description },
+    { id: 'search' as const, label: t.dashboard.settings.buyCredits.categories.search.label, icon: <Search size={16} />, description: t.dashboard.settings.buyCredits.categories.search.description },
   ];
 
   const handlePurchase = async (packId: string) => {
@@ -1486,16 +1487,18 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
       });
       const data = await res.json();
       if (!res.ok) {
-        setPurchaseError(data.error || 'Failed to start checkout');
+        // April 28, 2026: i18n migration — server's `data.error` is dropped
+        // since it's English. Always show the translated fallback.
+        setPurchaseError(t.dashboard.settings.buyCredits.errors.failedToStartCheckout);
         return;
       }
       if (data.url) {
         window.location.href = data.url;
         return;
       }
-      setPurchaseError('Invalid response from server');
+      setPurchaseError(t.dashboard.settings.buyCredits.errors.invalidResponse);
     } catch (err) {
-      setPurchaseError('Network error. Please try again.');
+      setPurchaseError(t.dashboard.settings.buyCredits.errors.networkError);
     } finally {
       setPurchasingId(null);
     }
@@ -1509,22 +1512,23 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
           bg-*-500/10 + border-2 -> rounded-xl + bg-*-50 + hairline border-*-500.
           Vivid border kept as the colour signal. font-bold -> font-semibold;
           dismiss buttons drop uppercase + font-black. */}
+      {/* April 28, 2026: i18n-migrated callouts. */}
       {creditPurchaseSuccess && (
         <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-500 flex items-center justify-between">
-          <span className="text-sm font-semibold text-green-800 dark:text-green-200">Credits added successfully. Your balance has been updated.</span>
+          <span className="text-sm font-semibold text-green-800 dark:text-green-200">{t.dashboard.settings.buyCredits.callouts.successAdded}</span>
           {onDismissPurchaseSuccess && (
             <button type="button" onClick={onDismissPurchaseSuccess} className="text-sm font-semibold text-green-700 dark:text-green-300 hover:underline transition-colors">
-              Dismiss
+              {t.dashboard.settings.buyCredits.callouts.dismiss}
             </button>
           )}
         </div>
       )}
       {creditPurchaseCancelled && (
         <div className="p-4 rounded-xl bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-600 flex items-center justify-between">
-          <span className="text-sm font-semibold text-[#0f172a] dark:text-gray-200">Purchase cancelled. You can try again whenever you’re ready.</span>
+          <span className="text-sm font-semibold text-[#0f172a] dark:text-gray-200">{t.dashboard.settings.buyCredits.callouts.purchaseCancelled}</span>
           {onDismissPurchaseCancelled && (
             <button type="button" onClick={onDismissPurchaseCancelled} className="text-sm font-semibold text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white transition-colors">
-              Dismiss
+              {t.dashboard.settings.buyCredits.callouts.dismiss}
             </button>
           )}
         </div>
@@ -1533,8 +1537,8 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
         <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-500 flex items-start gap-3">
           <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Credit packs are for paid subscribers only</p>
-            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">Subscribe or end your trial to purchase add-on credits.</p>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t.dashboard.settings.buyCredits.callouts.trialOnly.title}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">{t.dashboard.settings.buyCredits.callouts.trialOnly.subtitle}</p>
           </div>
         </div>
       )}
@@ -1542,7 +1546,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-500 flex items-center justify-between">
           <span className="text-sm font-semibold text-red-800 dark:text-red-200">{purchaseError}</span>
           <button type="button" onClick={() => setPurchaseError(null)} className="text-sm font-semibold text-red-700 dark:text-red-300 hover:underline transition-colors">
-            Dismiss
+            {t.dashboard.settings.buyCredits.callouts.dismiss}
           </button>
         </div>
       )}
@@ -1556,9 +1560,10 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
             <Coins size={20} className="text-[#1A1D21]" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-[#0f172a] dark:text-white">Top Up Credits</h3>
+            {/* April 28, 2026: i18n-migrated header. */}
+            <h3 className="text-base font-semibold text-[#0f172a] dark:text-white">{t.dashboard.settings.buyCredits.header.title}</h3>
             <p className="text-xs text-[#425466] dark:text-gray-400 mt-1">
-              Purchase additional credits instantly. Top-up credits never expire and are used after your monthly plan credits.
+              {t.dashboard.settings.buyCredits.header.description}
             </p>
           </div>
         </div>
@@ -1571,7 +1576,8 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
           Idle tile is hairline white -> hover:bg-[#f6f9fc] (no more
           border-thickening hover). Tile labels drop font-black uppercase. */}
       <div>
-        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-4">Select Credit Type</h3>
+        {/* April 28, 2026: i18n-migrated section header. */}
+        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-4">{t.dashboard.settings.buyCredits.selectType}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {categories.map((cat) => (
             <button
@@ -1617,7 +1623,8 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
           smoover secondary (#0f172a -> #1A1D21 hover, rounded-full,
           shadow-soft-sm). */}
       <div>
-        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-4">Choose a Pack</h3>
+        {/* April 28, 2026: i18n-migrated section header. */}
+        <h3 className="text-base font-semibold text-[#0f172a] dark:text-white mb-4">{t.dashboard.settings.buyCredits.choosePack}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {currentPacks.map((pack, idx) => {
             const isPopular = idx === 1;
@@ -1636,7 +1643,8 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
                 {isPopular && (
                   <div className="absolute -top-3 left-0 right-0 flex justify-center">
                     <span className="bg-[#1A1D21] text-[#ffbf23] text-[10px] font-semibold uppercase tracking-wider px-3 py-1 border border-[#ffbf23] rounded-full shadow-soft-sm">
-                      Most Popular
+                      {/* April 28, 2026: i18n-migrated. */}
+                      {t.dashboard.settings.buyCredits.mostPopular}
                     </span>
                   </div>
                 )}
@@ -1651,7 +1659,8 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
                     </span>
                     <span className="text-2xl font-bold text-[#0f172a] dark:text-white tracking-tight">{pack.credits}</span>
                   </div>
-                  <p className="text-[10px] text-[#8898aa] dark:text-gray-500 uppercase font-semibold tracking-wider">credits</p>
+                  {/* April 28, 2026: i18n-migrated. */}
+                  <p className="text-[10px] text-[#8898aa] dark:text-gray-500 uppercase font-semibold tracking-wider">{t.dashboard.settings.buyCredits.creditsLabel}</p>
                 </div>
 
                 {/* Price */}
@@ -1676,7 +1685,8 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
                   ) : (
                     <>
                       <ShoppingCart size={12} />
-                      Buy Now
+                      {/* April 28, 2026: i18n-migrated. */}
+                      {t.dashboard.settings.buyCredits.buyNow}
                     </>
                   )}
                 </button>
@@ -1690,27 +1700,28 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
       {/* Info footer — smoover refresh.
           Hairline divider; titles drop font-black uppercase to font-semibold;
           body text uses muted #8898aa. Yellow icons retained as accent. */}
+      {/* April 28, 2026: i18n-migrated benefits footer. */}
       <div className="border-t border-[#e6ebf1] dark:border-gray-700 pt-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-[#8898aa] dark:text-gray-500">
           <div className="flex items-start gap-2">
             <Clock size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-[#0f172a] dark:text-white">Never Expire</p>
-              <p>Top-up credits stay in your account forever</p>
+              <p className="font-semibold text-[#0f172a] dark:text-white">{t.dashboard.settings.buyCredits.benefits.neverExpire.title}</p>
+              <p>{t.dashboard.settings.buyCredits.benefits.neverExpire.description}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <Zap size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-[#0f172a] dark:text-white">Instant Delivery</p>
-              <p>Credits added to your account immediately</p>
+              <p className="font-semibold text-[#0f172a] dark:text-white">{t.dashboard.settings.buyCredits.benefits.instantDelivery.title}</p>
+              <p>{t.dashboard.settings.buyCredits.benefits.instantDelivery.description}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <Shield size={14} className="text-[#ffbf23] shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-[#0f172a] dark:text-white">Secure Payment</p>
-              <p>Processed securely through Stripe</p>
+              <p className="font-semibold text-[#0f172a] dark:text-white">{t.dashboard.settings.buyCredits.benefits.securePayment.title}</p>
+              <p>{t.dashboard.settings.buyCredits.benefits.securePayment.description}</p>
             </div>
           </div>
         </div>
