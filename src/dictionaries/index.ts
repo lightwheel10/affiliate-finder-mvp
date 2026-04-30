@@ -401,6 +401,12 @@ export interface Dictionary {
         step3Label: string;
         step3Desc: string;
       };
+      // April 28, 2026: error description messages — previously sourced from
+      // the server's English `userMessage` field. Now mapped client-side from
+      // the server's stable `error` code so DE users see DE text.
+      errorScrapeFailed: string;
+      errorAnalysisFailed: string;
+      errorGeneric: string;
     };
     // Navigation buttons
     navigation: {

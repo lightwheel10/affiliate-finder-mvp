@@ -593,22 +593,34 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       });
       
       const data = await response.json();
-      
+
       if (!data.success) {
-        // API returned an error - show user-friendly message
-        setSuggestionError(data.userMessage || 'Failed to analyze website');
+        // April 28, 2026: i18n the error description.
+        // The server returns a stable `error` code (e.g. "Failed to scrape website")
+        // plus an English `userMessage`. We map the code to a translated string so
+        // DE users no longer see English text. Unknown codes fall through to the
+        // generic translation. See src/dictionaries/{en,de}.ts → onboarding.analyzing.error*.
+        const code = typeof data.error === 'string' ? data.error : '';
+        const errorMessage =
+          code === 'Failed to scrape website'
+            ? t.onboarding.analyzing.errorScrapeFailed
+            : code === 'Failed to generate suggestions'
+              ? t.onboarding.analyzing.errorAnalysisFailed
+              : t.onboarding.analyzing.errorGeneric;
+        setSuggestionError(errorMessage);
         return false;
       }
-      
+
       // Success! Store the suggestions
       setSuggestedCompetitors(data.competitors || []);
       setSuggestedTopics(data.topics || []);
-      
+
       return true;
-      
+
     } catch (error) {
       console.error('[AI Suggestions] Error:', error);
-      setSuggestionError('Something went wrong. Please enter your details manually.');
+      // April 28, 2026: i18n — network/parse failure falls back to the generic key.
+      setSuggestionError(t.onboarding.analyzing.errorGeneric);
       return false;
     } finally {
       // Always clear timers to prevent state updates after error/unmount

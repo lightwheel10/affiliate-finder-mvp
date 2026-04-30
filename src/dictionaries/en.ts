@@ -414,6 +414,10 @@ export const en: Dictionary = {
         step3Label: 'Finding your competitors',
         step3Desc: 'Discovering similar businesses',
       },
+      // April 28, 2026: error descriptions for the analyzing-screen amber box.
+      errorScrapeFailed: "We couldn't access your website. Please check the URL and try again, or enter your details manually.",
+      errorAnalysisFailed: "We couldn't analyze your website at this time. Please enter your competitors and topics manually.",
+      errorGeneric: 'Something went wrong. Please enter your details manually.',
     },
     // Navigation buttons
     navigation: {
