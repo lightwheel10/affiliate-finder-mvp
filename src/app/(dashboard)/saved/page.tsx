@@ -658,17 +658,18 @@ export default function SavedPage() {
    * Handles "Export All" - exports all affiliates in current filtered view
    */
   const handleExportAll = () => {
+    // April 28, 2026: i18n migration of CSV export toasts.
     if (filteredResults.length === 0) {
-      toast.error('No affiliates to export');
+      toast.error(t.dashboard.saved.toasts.noAffiliatesToExport);
       setIsExportModalOpen(false);
       return;
     }
-    
+
     const csv = generateCSV(filteredResults);
     const date = new Date().toISOString().split('T')[0];
     downloadCSV(csv, `saved-affiliates-${date}.csv`);
-    
-    toast.success(`Exported ${filteredResults.length} affiliates`);
+
+    toast.success(`${filteredResults.length} ${t.dashboard.saved.toasts.affiliatesExported}`);
     setIsExportModalOpen(false);
   };
 
@@ -676,22 +677,23 @@ export default function SavedPage() {
    * Handles "Export Selected" - exports only selected affiliates
    */
   const handleExportSelected = () => {
+    // April 28, 2026: i18n migration of CSV export toasts.
     if (visibleSelectedLinks.size === 0) {
-      toast.error('No affiliates selected');
+      toast.error(t.dashboard.saved.toasts.noAffiliatesSelected);
       setIsExportModalOpen(false);
       return;
     }
-    
+
     // Filter to only selected affiliates
-    const selectedAffiliates = filteredResults.filter(item => 
+    const selectedAffiliates = filteredResults.filter(item =>
       visibleSelectedLinks.has(item.link)
     );
-    
+
     const csv = generateCSV(selectedAffiliates);
     const date = new Date().toISOString().split('T')[0];
     downloadCSV(csv, `saved-affiliates-selected-${date}.csv`);
-    
-    toast.success(`Exported ${selectedAffiliates.length} affiliates`);
+
+    toast.success(`${selectedAffiliates.length} ${t.dashboard.saved.toasts.affiliatesExported}`);
     setIsExportModalOpen(false);
   };
 

@@ -283,6 +283,7 @@ export const en: Dictionary = {
         invalidFormat: 'Enter a valid domain format (e.g., example.com)',
         domainNotReachable: 'Domain is not reachable',
         failedToValidate: 'Failed to validate domain. Please try again.',
+        brandRequired: 'Please enter your brand domain',
       },
     },
     // Step 2: Target Market (Country + Language)
@@ -397,6 +398,11 @@ export const en: Dictionary = {
       cancelAnytime: 'Cancel anytime during your trial',
       noChargeToday: 'No charge today',
       secureFooter: 'Your payment is secured by Stripe. We never store your card details.',
+      // April 28, 2026: payment-flow error messages.
+      errors: {
+        cardIncomplete: 'Please complete all card details',
+        paymentFailed: 'Payment failed. Please try again.',
+      },
     },
     // Analyzing Screen (between step 1 and 2)
     analyzing: {
@@ -619,6 +625,10 @@ export const en: Dictionary = {
       },
       // January 17, 2026: Added loading message
       loading: 'Loading discovered affiliates...',
+      // April 28, 2026: previously hardcoded inline toast strings.
+      toasts: {
+        newAffiliatesFound: 'new affiliate(s) found!',
+      },
     },
     saved: {
       pageTitle: 'Saved Affiliates',
@@ -657,6 +667,10 @@ export const en: Dictionary = {
         readyForOutreach: 'Ready for outreach',
         found: 'found',
         notFound: 'not found',
+        // April 28, 2026: CSV export toasts.
+        noAffiliatesToExport: 'No affiliates to export',
+        noAffiliatesSelected: 'No affiliates selected',
+        affiliatesExported: 'affiliate(s) exported',
       },
     },
     // =========================================================================

@@ -479,46 +479,50 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // 3. Invalid domains would waste API credits
   // ==========================================================================
   const validateBrandDomain = async (): Promise<boolean> => {
+    // April 28, 2026: i18n migration. The existing t.onboarding.step1.validation.*
+    // keys were already translated to DE but the component was still showing
+    // hardcoded English. Server `data.error` is intentionally dropped — it's
+    // English from /api/validate-domain. We always show the translated string.
     if (!brand.trim()) {
-      setBrandError('Please enter your brand domain');
+      setBrandError(t.onboarding.step1.validation.brandRequired);
       return false;
     }
-    
+
     // Quick format check before making API call
     if (!isValidDomainFormat(brand)) {
-      setBrandError('Please enter a valid domain (e.g., example.com)');
+      setBrandError(t.onboarding.step1.validation.invalidFormat);
       return false;
     }
-    
+
     setIsBrandValidating(true);
     setBrandError('');
-    
+
     try {
       const response = await fetch('/api/validate-domain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain: brand }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!data.valid) {
-        setBrandError(data.error || 'Domain is not reachable');
+        setBrandError(t.onboarding.step1.validation.domainNotReachable);
         setBrandValidated(false);
         return false;
       }
-      
+
       // Update brand with normalized version (strips http, www, etc.)
       if (data.normalizedDomain && data.normalizedDomain !== brand) {
         setBrand(data.normalizedDomain);
       }
-      
+
       setBrandValidated(true);
       return true;
-      
+
     } catch (error) {
       console.error('Domain validation failed:', error);
-      setBrandError('Failed to validate domain. Please try again.');
+      setBrandError(t.onboarding.step1.validation.failedToValidate);
       return false;
     } finally {
       setIsBrandValidating(false);
@@ -796,7 +800,8 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // ==========================================================================
   const handleStripeSubmit = async (confirmSetup: (clientSecret: string, name: string) => Promise<{ success: boolean; paymentMethodId?: string; error?: string }>) => {
     if (!isCardReady || !cardholderName.trim()) {
-      setStripeError('Please complete all card details');
+      // April 28, 2026: i18n migration of payment validation message.
+      setStripeError(t.onboarding.step7.errors.cardIncomplete);
       return;
     }
 
@@ -974,9 +979,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       onComplete();
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Payment failed. Please try again.';
+      // April 28, 2026: i18n migration. The throws above (lines 819, 828, 848,
+      // 877) carry English messages from server / Stripe — those are kept for
+      // console.error logging only. The user sees a translated generic message.
       console.error('[Stripe] Payment flow error:', error);
-      setStripeError(errorMessage);
+      setStripeError(t.onboarding.step7.errors.paymentFailed);
       // February 9th, 2026: Reset here so user sees the error on Step 7, not a stuck loading screen
       setIsFindingAffiliates(false);
     } finally {

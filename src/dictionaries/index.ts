@@ -288,6 +288,8 @@ export interface Dictionary {
         invalidFormat: string; // "Enter a valid domain format (e.g., example.com)"
         domainNotReachable: string;
         failedToValidate: string;
+        // April 28, 2026: empty-input error key — previously hardcoded English in OnboardingScreen.tsx.
+        brandRequired: string;
       };
     };
     // Step 2: Target Market (Country + Language)
@@ -384,6 +386,14 @@ export interface Dictionary {
       cancelAnytime: string;
       noChargeToday: string;
       secureFooter: string;
+      // April 28, 2026: payment-flow error keys — previously hardcoded English.
+      // `paymentFailed` is the user-facing message for any throw caught in the
+      // Stripe submit handler; specific server / Stripe error text stays in
+      // console.error for debugging only.
+      errors: {
+        cardIncomplete: string;
+        paymentFailed: string;
+      };
     };
     // Analyzing Screen (between step 1 and 2)
     analyzing: {
@@ -595,6 +605,12 @@ export interface Dictionary {
       };
       // January 17, 2026: Added loading message
       loading: string;
+      // April 28, 2026: i18n migration of inline toast strings.
+      // Convention matches other toasts in this file: the count is prepended
+      // at the call site, the value is the noun + verb suffix.
+      toasts: {
+        newAffiliatesFound: string;  // "new affiliate(s) found!" — prefixed with count
+      };
     };
     // Saved (Pipeline) page
     saved: {
@@ -634,6 +650,10 @@ export interface Dictionary {
         readyForOutreach: string;
         found: string;
         notFound: string;
+        // April 28, 2026: CSV export toasts (previously hardcoded English).
+        noAffiliatesToExport: string;
+        noAffiliatesSelected: string;
+        affiliatesExported: string;  // "affiliate(s) exported" — prefixed with count
       };
     };
     // =========================================================================

@@ -208,7 +208,9 @@ export default function DiscoveredPage() {
   useEffect(() => {
     if (previousAffiliateCount > 0 && discoveredAffiliates.length > previousAffiliateCount) {
       const newCount = discoveredAffiliates.length - previousAffiliateCount;
-      toast.success(`${newCount} new affiliate${newCount > 1 ? 's' : ''} found!`);
+      // April 28, 2026: i18n migration — pluralisation matches the project's
+      // existing "(s)" convention (see t.dashboard.find.toasts.affiliatesSaved).
+      toast.success(`${newCount} ${t.dashboard.discovered.toasts.newAffiliatesFound}`);
     }
     setPreviousAffiliateCount(discoveredAffiliates.length);
   }, [discoveredAffiliates.length, previousAffiliateCount]);
