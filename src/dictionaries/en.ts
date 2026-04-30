@@ -898,6 +898,42 @@ export const en: Dictionary = {
           resumeButton: 'Resume Subscription',
         },
       },
+      // April 28, 2026: Buy Credits section — previously hardcoded English.
+      buyCredits: {
+        callouts: {
+          successAdded: 'Credits added successfully. Your balance has been updated.',
+          purchaseCancelled: "Purchase cancelled. You can try again whenever you're ready.",
+          dismiss: 'Dismiss',
+          trialOnly: {
+            title: 'Credit packs are for paid subscribers only',
+            subtitle: 'Subscribe or end your trial to purchase add-on credits.',
+          },
+        },
+        errors: {
+          failedToStartCheckout: 'Failed to start checkout',
+          invalidResponse: 'Invalid response from server',
+          networkError: 'Network error. Please try again.',
+        },
+        header: {
+          title: 'Top Up Credits',
+          description: 'Purchase additional credits instantly. Top-up credits never expire and are used after your monthly plan credits.',
+        },
+        categories: {
+          email: { label: 'Email Credits', description: 'Verified email lookups for affiliates' },
+          ai: { label: 'AI Outreach', description: 'AI-generated personalized outreach emails' },
+          search: { label: 'Topic Searches', description: 'Find new affiliates by topic' },
+        },
+        selectType: 'Select Credit Type',
+        choosePack: 'Choose a Pack',
+        mostPopular: 'Most Popular',
+        creditsLabel: 'credits',
+        buyNow: 'Buy Now',
+        benefits: {
+          neverExpire: { title: 'Never Expire', description: 'Top-up credits stay in your account forever' },
+          instantDelivery: { title: 'Instant Delivery', description: 'Credits added to your account immediately' },
+          securePayment: { title: 'Secure Payment', description: 'Processed securely through Stripe' },
+        },
+      },
       notifications: {
         emailNotifications: 'Email Notifications',
         appNotifications: 'App Notifications',

@@ -877,6 +877,46 @@ export interface Dictionary {
           resumeButton: string;
         };
       };
+      // =======================================================================
+      // BUY CREDITS SECTION - Added April 28, 2026
+      // Replaces ~21 hardcoded English strings inside BuyCreditsSettings.
+      // The tab label/description live separately under settings.tabs.buyCredits.
+      // =======================================================================
+      buyCredits: {
+        callouts: {
+          successAdded: string;       // "Credits added successfully. Your balance has been updated."
+          purchaseCancelled: string;  // "Purchase cancelled. You can try again whenever you're ready."
+          dismiss: string;            // "Dismiss"
+          trialOnly: {
+            title: string;            // "Credit packs are for paid subscribers only"
+            subtitle: string;         // "Subscribe or end your trial to purchase add-on credits."
+          };
+        };
+        errors: {
+          failedToStartCheckout: string;
+          invalidResponse: string;
+          networkError: string;
+        };
+        header: {
+          title: string;              // "Top Up Credits"
+          description: string;        // "Purchase additional credits instantly. ..."
+        };
+        categories: {
+          email: { label: string; description: string };
+          ai: { label: string; description: string };
+          search: { label: string; description: string };
+        };
+        selectType: string;           // "Select Credit Type"
+        choosePack: string;           // "Choose a Pack"
+        mostPopular: string;          // "Most Popular"
+        creditsLabel: string;         // "credits" — small label under the count
+        buyNow: string;               // "Buy Now"
+        benefits: {
+          neverExpire: { title: string; description: string };
+          instantDelivery: { title: string; description: string };
+          securePayment: { title: string; description: string };
+        };
+      };
       notifications: {
         emailNotifications: string;
         appNotifications: string;
