@@ -281,6 +281,7 @@ export const de: Dictionary = {
         invalidFormat: 'Gib ein gültiges Domain-Format ein (z.B. beispiel.de)',
         domainNotReachable: 'Domain ist nicht erreichbar',
         failedToValidate: 'Domain-Validierung fehlgeschlagen. Bitte versuch es erneut.',
+        brandRequired: 'Bitte gib deine Markendomain ein',
       },
     },
     // Step 2: Target Market (Country + Language)
@@ -393,6 +394,11 @@ export const de: Dictionary = {
       cancelAnytime: 'Jederzeit während der Testphase kündbar',
       noChargeToday: 'Heute keine Abbuchung',
       secureFooter: 'Deine Zahlung wird von Stripe gesichert. Wir speichern niemals deine Kartendaten.',
+      // 28. April 2026: Fehlertexte für den Zahlungsablauf.
+      errors: {
+        cardIncomplete: 'Bitte fülle alle Kartendaten aus',
+        paymentFailed: 'Zahlung fehlgeschlagen. Bitte versuch es erneut.',
+      },
     },
     // Analyzing Screen (between step 1 and 2)
     analyzing: {
