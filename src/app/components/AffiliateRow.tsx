@@ -1599,21 +1599,28 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
         >
           <Eye size={14} />
         </button>
-        {/* Save button — three states: saving (yellow spinner), saved (filled green), default (soft green) */}
-        <button 
+        {/* Save button — three states: saving (yellow spinner), saved (filled
+            green check), default (soft green floppy).
+            Apr 28, 2026 — per client request: saved state shows a checkmark
+            instead of a floppy so the "this is in your pipeline" signal is
+            instantly readable beyond the colour change. The unsaved state
+            keeps the floppy because it semantically means "click to save". */}
+        <button
           onClick={onSave}
           disabled={isSaving}
           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
             isSaving
               ? 'bg-[#ffbf23] shadow-yellow-glow-sm cursor-wait'
-              : isSaved 
-                ? 'bg-emerald-500 text-white shadow-soft-md' 
+              : isSaved
+                ? 'bg-emerald-500 text-white shadow-soft-md'
                 : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shadow-soft-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
           }`}
           title={isSaving ? t.affiliateRow.actions.saving : isSaved ? t.affiliateRow.actions.saved : t.affiliateRow.actions.saveToPipeline}
         >
           {isSaving ? (
             <Loader2 size={14} className="animate-spin text-[#0f172a]" />
+          ) : isSaved ? (
+            <Check size={14} strokeWidth={2.5} />
           ) : (
             <Save size={14} />
           )}
@@ -2354,6 +2361,9 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
               {/* Save & Delete Buttons */}
               <div className="flex items-center gap-2">
+                {/* Apr 28, 2026 — saved state shows a checkmark so the
+                    "in your pipeline" signal reads instantly. Mirrors the
+                    inline-row save button (line 1603 area). */}
                 <button
                   onClick={() => {
                     onSave();
@@ -2365,7 +2375,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                       : 'bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5'
                   }`}
                 >
-                  <Save size={12} strokeWidth={2} />
+                  {isSaved ? (
+                    <Check size={12} strokeWidth={2.5} />
+                  ) : (
+                    <Save size={12} strokeWidth={2} />
+                  )}
                   {isSaved ? t.affiliateRow.actions.saved : t.affiliateRow.actions.save}
                 </button>
                 <button
