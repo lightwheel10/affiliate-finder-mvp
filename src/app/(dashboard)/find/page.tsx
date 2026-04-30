@@ -669,24 +669,28 @@ export default function FindNewPage() {
     if (searchProgress && searchProgress.status !== 'idle' && searchProgress.status !== 'done') {
       const elapsed = searchProgress.elapsedSeconds || 0;
       
+      // Apr 28, 2026: i18n-migrated phase strings; previously hardcoded English.
+      // The "running" badge stays as raw `${elapsed}s` since the seconds suffix
+      // reads identically in EN and DE.
+      const progress = t.dashboard.find.loading.progress;
       switch (searchProgress.status) {
         case 'starting':
           return {
-            title: 'Starting search...',
-            subtitle: 'Initializing search across all platforms',
-            badge: 'Starting'
+            title: progress.starting.title,
+            subtitle: progress.starting.subtitle,
+            badge: progress.starting.badge,
           };
         case 'running':
           return {
-            title: `Searching... (${elapsed}s)`,
-            subtitle: 'Apify is scanning YouTube, Instagram, TikTok, and Web',
-            badge: `${elapsed}s`
+            title: `${progress.running.title} (${elapsed}s)`,
+            subtitle: progress.running.subtitle,
+            badge: `${elapsed}s`,
           };
         case 'processing':
           return {
-            title: 'Processing results...',
-            subtitle: 'Enriching and filtering results',
-            badge: 'Processing'
+            title: progress.processing.title,
+            subtitle: progress.processing.subtitle,
+            badge: progress.processing.badge,
           };
         default:
           break;

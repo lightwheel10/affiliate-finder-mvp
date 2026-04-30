@@ -523,6 +523,23 @@ export const en: Dictionary = {
           title3: 'Building your affiliate list...',
           title4: 'Uncovering hidden gems...',
         },
+        // April 28, 2026: i18n migration of polling-search phase strings.
+        progress: {
+          starting: {
+            title: 'Starting search...',
+            subtitle: 'Initializing search across all platforms',
+            badge: 'Starting',
+          },
+          running: {
+            title: 'Searching...',
+            subtitle: 'Scanning YouTube, Instagram, TikTok, and Web',
+          },
+          processing: {
+            title: 'Processing results...',
+            subtitle: 'Enriching and filtering results',
+            badge: 'Processing',
+          },
+        },
       },
       // January 17, 2026: Added toast messages for save/delete feedback
       toasts: {

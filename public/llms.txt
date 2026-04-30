@@ -13,7 +13,7 @@
 
 ## Overview
 
-Afforce One enables SaaS companies and e-commerce brands to discover affiliates who are already promoting their competitors. The platform uses AI and web scraping to find content creators across YouTube, Instagram, TikTok, and blogs, then enriches their data with verified contact information.
+Afforce One enables SaaS companies and e-commerce brands to discover affiliates who are already promoting their competitors. The platform uses AI to discover content creators across YouTube, Instagram, TikTok, and blogs, then enriches their data with verified contact information.
 
 ## Key Features
 
@@ -44,10 +44,9 @@ All plans include a 7-day free trial.
 
 - Framework: Next.js 16 (App Router)
 - Database: Neon (Serverless PostgreSQL)
-- Authentication: Stack Auth
+- Authentication: Supabase Auth
 - Payments: Stripe
 - Email Enrichment: Apollo, Lusha, Hunter
-- Web Scraping: Apify
 - AI: OpenAI GPT-4
 
 ## Main Pages

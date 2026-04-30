@@ -504,6 +504,15 @@ export interface Dictionary {
           title3: string;
           title4: string;
         };
+        // April 28, 2026: i18n migration of the polling-search phase strings.
+        // Previously hardcoded English in find/page.tsx — German users saw English.
+        // The "running" phase appends `(${elapsed}s)` to title at the call site;
+        // its badge is purely the elapsed-seconds string and so has no i18n key.
+        progress: {
+          starting: { title: string; subtitle: string; badge: string };
+          running: { title: string; subtitle: string };
+          processing: { title: string; subtitle: string; badge: string };
+        };
       };
       // January 17, 2026: Added toast messages for save/delete feedback
       toasts: {
