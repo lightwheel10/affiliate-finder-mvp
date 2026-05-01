@@ -104,7 +104,11 @@ export interface GoogleScraperRunResult {
 }
 
 export interface GoogleScraperStatus {
-  status: 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'ABORTED' | 'TIMED-OUT';
+  // May 1, 2026: 'READY' added — Apify reports this for queued/just-submitted runs
+  // before they start RUNNING. Previously omitted from the type, which caused the
+  // auto-scan cron's polling loop to silently exit without polling. See incident
+  // notes in src/app/api/cron/auto-scan/route.ts (Step 2 polling block).
+  status: 'READY' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'ABORTED' | 'TIMED-OUT';
   progress?: {
     percent: number;
   };

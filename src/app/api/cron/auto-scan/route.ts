@@ -60,6 +60,7 @@ import {
   startGoogleSearchRun,
   getRunStatus,
   fetchAndProcessResults,
+  type GoogleScraperStatus,
 } from '@/app/services/apify-google-scraper';
 import { trackSearch, completeSearch, API_COSTS } from '@/app/services/tracking';
 
@@ -549,25 +550,51 @@ async function runAutoScan(
     
     let status = await getRunStatus(runId);
     let pollCount = 0;
-    
-    while (status.status === 'RUNNING') {
+
+    // ===========================================================================
+    // POLLING LOOP — May 1, 2026 (incident fix)
+    //
+    // Previous condition was `while (status.status === 'RUNNING')`, which
+    // silently exited if the very first status check returned `'READY'`
+    // (Apify's "queued, not started yet" state). Apify reaches READY within
+    // milliseconds of submission and only transitions to RUNNING once it
+    // actually picks the job up. Because our first getRunStatus() call
+    // commonly landed during the READY window, the loop never entered, the
+    // code fell through to the post-loop FAILED/ABORTED check (which doesn't
+    // catch READY either), and we logged "SUCCEEDED" + fetched an empty
+    // dataset. Result: every paying customer's auto-scan was silently
+    // returning 0 affiliates while still consuming a credit. Verified via
+    // production logs on 2026-05-01: David's run uiY0iUaE0d1rIP9iK was logged
+    // as "SUCCEEDED" 32ms after start with 0 dataset items, while Apify's
+    // own records showed it ran for 65s and produced 318 results.
+    //
+    // Fix: poll until status reaches a TERMINAL state. Any non-terminal state
+    // (READY, RUNNING, future states Apify might add) keeps us looping. After
+    // the loop, we also throw on TIMED-OUT (Apify's own actor-side timeout),
+    // which the previous post-loop check missed.
+    // ===========================================================================
+    const TERMINAL_STATES = new Set<GoogleScraperStatus['status']>([
+      'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT',
+    ]);
+
+    while (!TERMINAL_STATES.has(status.status)) {
       const elapsed = Date.now() - pollStartTime;
-      
+
       if (elapsed > MAX_POLL_TIME_MS) {
         throw new Error(`Apify run timed out after ${elapsed/1000}s`);
       }
-      
+
       await sleep(POLL_INTERVAL_MS);
       pollCount++;
       status = await getRunStatus(runId);
-      
+
       console.log(`[AutoScan] Poll #${pollCount}: ${status.status} (${Math.round(elapsed/1000)}s elapsed)`);
     }
-    
-    if (status.status === 'FAILED' || status.status === 'ABORTED') {
+
+    if (status.status === 'FAILED' || status.status === 'ABORTED' || status.status === 'TIMED-OUT') {
       throw new Error(`Apify run ${status.status}`);
     }
-    
+
     console.log(`[AutoScan] Apify run SUCCEEDED`);
     
     // =========================================================================
