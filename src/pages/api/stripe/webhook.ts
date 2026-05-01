@@ -57,14 +57,7 @@ import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan, addTopupCredits } from '@/lib/credits';
 import { getCreditPackDetails, CREDIT_PACK_PRICES } from '@/lib/stripe';
-import { sendEventToN8N } from '@/lib/n8n-webhook';
-
-// =============================================================================
-// CRITICAL: Track pending N8N webhook calls
-// In serverless, we need to ensure async operations complete before the function
-// terminates. We collect all pending promises and await them at the end.
-// =============================================================================
-let pendingN8NCalls: Promise<void>[] = [];
+// 2026-05-01: n8n transactional email integration removed (unreliable in production). See git history.
 
 // =============================================================================
 // CRITICAL: Disable Next.js body parsing
@@ -232,17 +225,7 @@ export default async function handler(
         console.log(`[Webhook] Unhandled event type: ${event.type}`);
     }
 
-    // =========================================================================
-    // CRITICAL: Wait for all N8N webhook calls to complete before returning
-    // In serverless environments, the function can terminate before async
-    // operations complete. This ensures emails are actually sent.
-    // =========================================================================
-    if (pendingN8NCalls.length > 0) {
-      console.log(`[Webhook] ⏳ Waiting for ${pendingN8NCalls.length} pending N8N call(s) to complete...`);
-      await Promise.all(pendingN8NCalls);
-      console.log(`[Webhook] ✅ All N8N calls completed`);
-      pendingN8NCalls = []; // Reset for next invocation
-    }
+    // 2026-05-01: pending-N8N-calls flush block removed here (n8n unreliable). See git history.
 
     return res.status(200).json({ received: true });
 
@@ -318,32 +301,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   }
   
   console.log(`[Webhook] ✅ Credit pack completed: ${amount} ${creditType} for user ${userId}`);
-  
-  try {
-    const users = await sql`
-      SELECT email, name FROM crewcast.users WHERE id = ${userId}
-    `;
-    if (users.length > 0) {
-      const user = users[0];
-      const amountPaid = session.amount_total ?? 0;
-      const currency = (session.currency ?? 'eur').toUpperCase();
-      pendingN8NCalls.push(
-        sendEventToN8N({
-          event_type: 'credit_purchase_success',
-          email: user.email,
-          name: user.name ?? user.email?.split('@')[0] ?? 'User',
-          creditType,
-          creditsAmount: amount,
-          amountPaid,
-          currency,
-        })
-      );
-      console.log(`[Webhook] 📧 Queued credit_purchase_success email for: ${user.email}`);
-    }
-  } catch (notifyError) {
-    // Don't throw for notification failures - credits were already added
-    console.error('[Webhook] Failed to send notification (credits already added):', notifyError);
-  }
+
+  // 2026-05-01: n8n credit_purchase_success email call removed here (n8n unreliable). See git history.
 }
 
 /**
@@ -560,19 +519,9 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
     WHERE id = ${dbUserId}
   `;
 
-  // Fire N8N webhook for subscription_canceled email
-  // CRITICAL: Push to pendingN8NCalls so we await it before function terminates
-  console.log(`[Webhook] 📧 About to send subscription_canceled email to N8N for: ${user.email}`);
-  pendingN8NCalls.push(
-    sendEventToN8N({
-      event_type: 'subscription_canceled',
-      email: user.email,
-      name: user.name || 'User',
-      plan: user.plan || 'pro',
-    })
-  );
+  // 2026-05-01: n8n subscription_canceled email call removed here (n8n unreliable). See git history.
 
-  console.log(`[Webhook] ✅ Subscription canceled for user ${dbUserId}, N8N notification queued`);
+  console.log(`[Webhook] ✅ Subscription canceled for user ${dbUserId}`);
 }
 
 /**
@@ -609,29 +558,10 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
   }
 
   const user = users[0];
-  
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const subObj = subscription as any;
-  const trialEndTimestamp = typeof subObj.trial_end === 'number' ? subObj.trial_end : null;
-  const trialEndsAt = trialEndTimestamp 
-    ? new Date(trialEndTimestamp * 1000).toISOString() 
-    : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Fire N8N webhook for trial_ending email
-  // CRITICAL: Push to pendingN8NCalls so we await it before function terminates
-  console.log(`[Webhook] 📧 About to send trial_ending email to N8N for: ${user.email}`);
-  pendingN8NCalls.push(
-    sendEventToN8N({
-      event_type: 'trial_ending',
-      email: user.email,
-      name: user.name || 'User',
-      plan: user.plan || 'pro',
-      trialEndsAt,
-      daysRemaining: 3,
-    })
-  );
-  
-  console.log(`[Webhook] ✅ Trial ending N8N notification queued for: ${user.email}`);
+  // 2026-05-01: n8n trial_ending email call removed here (n8n unreliable). See git history.
+
+  console.log(`[Webhook] ✅ Trial-will-end event handled for user ${user.email}`);
 }
 
 /**
@@ -868,24 +798,9 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     console.error(`[Webhook] Failed to set auto-scan schedule for user ${dbUserId}:`, autoScanError);
   }
 
-  // ==========================================================================
-  // N8N EMAIL NOTIFICATION - February 2026
-  // CRITICAL: Push to pendingN8NCalls so we await it before function terminates
-  // ==========================================================================
-  console.log(`[Webhook] 📧 About to send payment_success email to N8N for: ${userEmail}`);
-  console.log(`[Webhook] 📧 Payment details: amount=${amountPaid}, plan=${userPlan}`);
-  pendingN8NCalls.push(
-    sendEventToN8N({
-      event_type: 'payment_success',
-      email: userEmail,
-      name: userName || 'User',
-      plan: userPlan || 'pro',
-      amountPaid: amountPaid,
-      currency: 'eur',  // EUR since Stripe is configured in EUR
-    })
-  );
+  // 2026-05-01: n8n payment_success email call removed here (n8n unreliable). See git history.
 
-  console.log(`[Webhook] ✅ Payment success N8N notification queued for: ${userEmail}`);
+  console.log(`[Webhook] ✅ Payment success handled for user ${userEmail} (amount=${amountPaid}, plan=${userPlan})`);
 }
 
 /**
@@ -930,19 +845,9 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     WHERE user_id = ${dbUserId}
   `;
 
-  // Fire N8N webhook for payment_failed email
-  // CRITICAL: Push to pendingN8NCalls so we await it before function terminates
-  console.log(`[Webhook] 📧 About to send payment_failed email to N8N for: ${user.email}`);
-  pendingN8NCalls.push(
-    sendEventToN8N({
-      event_type: 'payment_failed',
-      email: user.email,
-      name: user.name || 'User',
-      plan: user.plan || 'pro',
-    })
-  );
+  // 2026-05-01: n8n payment_failed email call removed here (n8n unreliable). See git history.
 
-  console.log(`[Webhook] ✅ Payment failed for user ${dbUserId} - status set to past_due, N8N notification queued`);
+  console.log(`[Webhook] ✅ Payment failed for user ${dbUserId} - status set to past_due`);
 }
 
 /**

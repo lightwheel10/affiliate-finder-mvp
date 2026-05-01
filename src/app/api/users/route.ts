@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
-import { sendEventToN8N } from '@/lib/n8n-webhook';
-import { waitUntil } from '@vercel/functions';
+// 2026-05-01: n8n transactional email integration removed (unreliable in production). See git history.
 
 // GET /api/users?email=xxx - Get user by email
 export async function GET(request: NextRequest) {
@@ -81,18 +80,7 @@ export async function POST(request: NextRequest) {
 
     const newUser = result[0] as DbUser;
 
-    // Send signup event to N8N webhook (background task)
-    // Uses same N8N_TRANSACTIONAL_EMAILS_URL as all other transactional emails
-    // waitUntil keeps the function alive until the webhook completes
-    console.log(`[Users API] 📧 New user created, sending signup email to N8N for: ${newUser.email}`);
-    waitUntil(sendEventToN8N({
-      event_type: 'signup',
-      email: newUser.email,
-      name: newUser.name,
-      plan: (newUser.plan as 'free_trial' | 'pro' | 'business' | 'enterprise') || 'free_trial',
-      onboardingCompleted: newUser.is_onboarded || false,
-      signupDate: newUser.created_at,
-    }));
+    // 2026-05-01: n8n signup email call removed here (n8n unreliable). See git history.
 
     return NextResponse.json({ user: newUser, created: true });
   } catch (error) {
