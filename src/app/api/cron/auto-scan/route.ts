@@ -173,9 +173,28 @@ export async function GET(request: NextRequest) {
         if (!creditCheck.allowed) {
           console.log(`[AutoScan] User ${userId}: No credits available (${creditCheck.remaining} remaining)`);
           results.push({ userId, email: userEmail, status: 'no_credits' });
-          
-          // Don't update next_auto_scan_at - they'll be picked up when they have credits
-          // But we should still check them next run in case they bought credits
+
+          // ===================================================================
+          // QUEUE SELF-HEAL — May 1, 2026 (incident fix)
+          //
+          // Previous behaviour was `continue` WITHOUT advancing the schedule.
+          // Combined with the `LIMIT 1 ORDER BY next_auto_scan_at ASC` query
+          // above, that pinned any out-of-credits user at the head of the
+          // queue forever — every hour the cron re-fetched the same user,
+          // re-skipped, exited, and starved every other paying user behind
+          // them. We hit exactly that: a single trial-spend user (id=24,
+          // 5/5 used) blocked all other paying customers' weekly scans for
+          // ~3 months. Their countdown UI stayed stuck on "Scanning..."
+          // because next_auto_scan_at never advanced.
+          //
+          // Fix: still advance the schedule by SCAN_INTERVAL_DAYS (same as
+          // the success / no_keywords / error branches already do — see
+          // line 188 + 228) so the queue moves on. The user is re-attempted
+          // on their next natural slot. If they buy credits sooner, the
+          // manual "Find Affiliates" button still works — only the auto-scan
+          // is delayed up to 7 days.
+          // ===================================================================
+          await updateScanSchedule(userId);
           continue;
         }
         
