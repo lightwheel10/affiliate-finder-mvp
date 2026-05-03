@@ -58,6 +58,13 @@ import { sql } from '@/lib/db';
 import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan, addTopupCredits } from '@/lib/credits';
 import { getCreditPackDetails, CREDIT_PACK_PRICES } from '@/lib/stripe';
 // 2026-05-01: n8n transactional email integration removed (unreliable in production). See git history.
+// 2026-05-03: imports for Resend transactional email integration (replaces n8n).
+// First wired email is payment-success below; trial-ending, subscription-canceled,
+// and credits-added are pending — see remaining marker comments in the handlers.
+import { waitUntil } from '@vercel/functions';
+import { sendEmail } from '@/lib/email';
+import { PaymentSuccessEmail, paymentSuccessEmailSubject } from '@/emails/payment-success';
+import { SubscriptionCanceledEmail, subscriptionCanceledEmailSubject } from '@/emails/subscription-canceled'; // 2026-05-03
 
 // =============================================================================
 // CRITICAL: Disable Next.js body parsing
@@ -171,7 +178,12 @@ export default async function handler(
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionUpdate(subscription);
+        // 2026-05-03: pass previous_attributes so handler can detect the
+        // cancel_at_period_end false→true transition (= user clicked cancel).
+        const previousAttributes = event.data.previous_attributes as
+          | Partial<Stripe.Subscription>
+          | undefined;
+        await handleSubscriptionUpdate(subscription, previousAttributes);
         break;
       }
 
@@ -310,7 +322,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
  * 
  * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
  */
-async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
+async function handleSubscriptionUpdate(
+  subscription: Stripe.Subscription,
+  previousAttributes?: Partial<Stripe.Subscription> // 2026-05-03: for cancel-transition detection
+) {
   console.log(`[Webhook] Processing subscription update: ${subscription.id}, status: ${subscription.status}`);
 
   // Safely extract customer ID (can be string or Customer object)
@@ -465,6 +480,56 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       console.error(`[Webhook] Failed to initialize trial credits for user ${dbUserId}:`, creditError);
     }
   }
+
+  // SUBSCRIPTION-CANCELED EMAIL — added 2026-05-03
+  // Fires when cancel_at_period_end flips false→true (= user just clicked cancel),
+  // not when subscription.deleted runs (by then access is already gone, so the
+  // "you have access until X" copy would be stale).
+  // Locale/name/plan trade-offs: same as the payment-success block in handleInvoicePaid.
+  const justCanceled =
+    previousAttributes?.cancel_at_period_end === false &&
+    subData.cancel_at_period_end === true;
+
+  if (justCanceled) {
+    // The query above only fetched u.id — fetch email/name/plan now.
+    const emailRecipients = await sql`
+      SELECT u.email, u.name, u.plan
+      FROM crewcast.users u
+      WHERE u.id = ${dbUserId}
+    `;
+
+    if (emailRecipients.length > 0 && emailRecipients[0].email) {
+      const recipient = emailRecipients[0];
+      const cancelEmailLocale = 'de' as const;
+      const cancelCustomerName = recipient.name ?? 'there';
+      const cancelPlanForEmail =
+        recipient.plan && recipient.plan !== 'free_trial' ? recipient.plan : 'pro';
+      const cancelPlanLabel =
+        cancelPlanForEmail.charAt(0).toUpperCase() + cancelPlanForEmail.slice(1);
+
+      const accessUntilIso = subData.current_period_end
+        ? new Date(subData.current_period_end * 1000).toISOString()
+        : new Date().toISOString();
+
+      waitUntil(
+        sendEmail({
+          to: recipient.email,
+          subject: subscriptionCanceledEmailSubject(cancelEmailLocale),
+          react: SubscriptionCanceledEmail({
+            name: cancelCustomerName,
+            locale: cancelEmailLocale,
+            plan: cancelPlanLabel,
+            accessUntil: accessUntilIso,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one',
+          }),
+        })
+      );
+
+      console.log(`[Webhook] ✅ Cancellation email queued for user ${dbUserId} (access until ${accessUntilIso})`);
+    } else {
+      console.error(`[Webhook] Cannot send cancellation email — no email found for user ${dbUserId}`);
+    }
+  }
 }
 
 /**
@@ -519,7 +584,9 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
     WHERE id = ${dbUserId}
   `;
 
-  // 2026-05-01: n8n subscription_canceled email call removed here (n8n unreliable). See git history.
+  // 2026-05-03: Cancellation email is sent in handleSubscriptionUpdate() when
+  // cancel_at_period_end flips false→true (= user just clicked cancel), not here.
+  // By the time .deleted fires, access has already ended.
 
   console.log(`[Webhook] ✅ Subscription canceled for user ${dbUserId}`);
 }
@@ -798,7 +865,56 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     console.error(`[Webhook] Failed to set auto-scan schedule for user ${dbUserId}:`, autoScanError);
   }
 
-  // 2026-05-01: n8n payment_success email call removed here (n8n unreliable). See git history.
+  // ============================================================================
+  // SEND PAYMENT-SUCCESS EMAIL VIA RESEND — added 2026-05-03
+  //
+  // Replaces the n8n call removed on 2026-05-01 (see git history). Fires for BOTH
+  // first-time conversion AND every monthly/annual renewal, because invoice.paid
+  // is the same event for both.
+  //
+  // SAFETY: sendEmail() never throws — it swallows and logs errors internally.
+  // We wrap with waitUntil() so the serverless function stays alive until the
+  // email is delivered, while Stripe still gets its 200 response immediately.
+  //
+  // LOCALE: hardcoded to 'de' for now. Target market is German-speaking and we
+  // don't yet have a `preferred_language` column on users. If David asks for
+  // both EN and DE, add the column + detect locale from there. If he asks for
+  // EN only, swap this to 'en'.
+  //
+  // PLAN NAME CAVEAT: we use `userPlan` from the original DB fetch (above).
+  // On first-time conversion this MIGHT still read 'free_trial' if Stripe fires
+  // invoice.paid before customer.subscription.updated. We fall back to 'pro' in
+  // that case as a sensible default. If wrong plan names show up in receipts,
+  // hoist `plan` (declared inside the try block above) into outer scope and
+  // use that here instead.
+  //
+  // CURRENCY: amount uses German number formatting via Intl.NumberFormat with
+  // the de-DE locale (e.g. "29,00 €", with comma decimal and trailing €).
+  // Currency code comes from Stripe (lowercase ISO 4217) and is uppercased for
+  // the formatter. Falls back to 'EUR' if Stripe ever returns null.
+  // ============================================================================
+  const emailLocale = 'de' as const;
+  const customerName = userName ?? 'there';
+  const planForEmail = (userPlan && userPlan !== 'free_trial') ? userPlan : 'pro';
+  const planLabel = planForEmail.charAt(0).toUpperCase() + planForEmail.slice(1);
+  const amountFormatted = new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: (invoice.currency || 'eur').toUpperCase(),
+  }).format(amountPaid / 100);
+
+  waitUntil(
+    sendEmail({
+      to: userEmail,
+      subject: paymentSuccessEmailSubject(emailLocale),
+      react: PaymentSuccessEmail({
+        name: customerName,
+        locale: emailLocale,
+        plan: planLabel,
+        amountFormatted,
+        appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one',
+      }),
+    })
+  );
 
   console.log(`[Webhook] ✅ Payment success handled for user ${userEmail} (amount=${amountPaid}, plan=${userPlan})`);
 }
