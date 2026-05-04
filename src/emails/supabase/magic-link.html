@@ -1,0 +1,117 @@
+<!--
+  Supabase Magic Link / OTP email template (DE).
+  Created: 2026-05-01.
+
+  WHERE THIS LIVES IN PRODUCTION:
+    Supabase Dashboard → Authentication → Email Templates → Magic Link
+    (paste the entire HTML below into the template editor)
+
+  WHY IT'S IN THE REPO:
+    Supabase is the source of truth at runtime, but keeping a copy here means
+    future devs can find it, diff it, and re-paste after design changes
+    without reverse-engineering the dashboard.
+
+  SUPABASE TEMPLATE VARIABLES:
+    {{ .Token }}            - the 6-digit OTP code
+    {{ .ConfirmationURL }}  - the magic link URL (clicking it logs the user in)
+
+  DESIGN: Smoover (matches src/emails/* React templates).
+-->
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Afforce One – Login Code</title>
+</head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+<!-- Preheader (hidden inbox preview) -->
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#f6f9fc;">
+  Dein Login-Code für Afforce One: {{ .Token }}
+</div>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f9fc;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+
+      <!-- Card container -->
+      <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border:1px solid #e6ebf1;border-radius:16px;box-shadow:0 4px 12px -2px rgba(16,24,40,0.06),0 2px 4px -2px rgba(16,24,40,0.03);">
+
+        <!-- Brand row -->
+        <tr>
+          <td style="padding:32px 40px 24px;border-bottom:1px solid #e6ebf1;">
+            <span style="font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:20px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;line-height:1.2;">
+              Afforce<span style="color:#ffbf23;"> One</span>
+            </span>
+          </td>
+        </tr>
+
+        <!-- Content -->
+        <tr>
+          <td style="padding:32px 40px 8px;">
+            <h1 style="margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-0.02em;line-height:1.25;">
+              Dein Login-Code
+            </h1>
+            <p style="margin:16px 0 0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;color:#425466;line-height:1.7;">
+              Hi, gib diesen Code in Afforce One ein, um Dich anzumelden:
+            </p>
+
+            <!-- Token card -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;background:#f6f9fc;border:1px solid #e6ebf1;border-radius:12px;">
+              <tr>
+                <td align="center" style="padding:28px 20px;">
+                  <div style="font-family:Menlo,Consolas,'Courier New',monospace;font-size:36px;font-weight:700;color:#0f172a;letter-spacing:0.18em;line-height:1.2;">
+                    {{ .Token }}
+                  </div>
+                  <p style="margin:10px 0 0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:11px;color:#8898aa;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">
+                    Code 10 Minuten gültig
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:28px 0 0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;color:#425466;line-height:1.7;">
+              Oder klicke hier, um Dich direkt einzuloggen:
+            </p>
+
+            <!-- CTA button -->
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
+              <tr>
+                <td>
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#ffbf23;color:#0f172a;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:12px 28px;border-radius:9999px;text-decoration:none;box-shadow:0 4px 14px -2px rgba(255,191,35,0.5);">
+                    Jetzt einloggen
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:28px 0 0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#8898aa;line-height:1.6;">
+              Falls der Button nicht funktioniert, kopiere diesen Link in Deinen Browser:
+            </p>
+            <p style="margin:8px 0 0;font-family:Menlo,Consolas,'Courier New',monospace;font-size:12px;line-height:1.5;word-break:break-all;">
+              <a href="{{ .ConfirmationURL }}" style="color:#425466;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:24px 40px 32px;">
+            <hr style="margin:0 0 20px;border:0;border-top:1px solid #e6ebf1;" />
+            <p style="margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#8898aa;line-height:1.6;">
+              Wenn Du diesen Login nicht angefordert hast, kannst Du diese E-Mail einfach ignorieren.
+              <br><br>
+              <strong style="color:#425466;font-weight:600;">Afforce One</strong> — KI-gestützte Affiliate-Discovery
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { sql, DbUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
-// 2026-05-01: n8n transactional email integration removed (unreliable in production). See git history.
+import { sendEmail, detectLocale } from '@/lib/email';
+import { WelcomeEmail, welcomeEmailSubject } from '@/emails/welcome';
 
 // GET /api/users?email=xxx - Get user by email
 export async function GET(request: NextRequest) {
@@ -80,7 +82,17 @@ export async function POST(request: NextRequest) {
 
     const newUser = result[0] as DbUser;
 
-    // 2026-05-01: n8n signup email call removed here (n8n unreliable). See git history.
+    // Welcome email — fire-and-forget. sendEmail never throws; a send failure
+    // is logged but does not break the signup response.
+    const locale = detectLocale(request.headers.get('accept-language'));
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one';
+    waitUntil(
+      sendEmail({
+        to: newUser.email,
+        subject: welcomeEmailSubject(locale),
+        react: WelcomeEmail({ name: newUser.name, locale, appUrl }),
+      })
+    );
 
     return NextResponse.json({ user: newUser, created: true });
   } catch (error) {
