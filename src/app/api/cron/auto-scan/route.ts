@@ -63,6 +63,11 @@ import {
   type GoogleScraperStatus,
 } from '@/app/services/apify-google-scraper';
 import { trackSearch, completeSearch, API_COSTS } from '@/app/services/tracking';
+// 2026-05-04: Resend transactional email — last of 6 email wirings.
+// See also src/pages/api/stripe/webhook.ts and src/app/api/users/route.ts.
+import { waitUntil } from '@vercel/functions';
+import { sendEmail } from '@/lib/email';
+import { ScanSummaryEmail, scanSummaryEmailSubject } from '@/emails/scan-summary';
 
 // =============================================================================
 // VERCEL FUNCTION CONFIGURATION
@@ -120,6 +125,7 @@ export async function GET(request: NextRequest) {
         s.next_auto_scan_at,
         s.first_payment_at,
         u.email,
+        u.name,
         u.topics,
         u.competitors,
         u.target_country,
@@ -162,6 +168,7 @@ export async function GET(request: NextRequest) {
     for (const user of dueUsers) {
       const userId = user.user_id as number;
       const userEmail = user.email as string;
+      const userName = (user.name as string | null) ?? null; // 2026-05-04: scan-summary email
       const topics = (user.topics as string[]) || [];
       const competitors = (user.competitors as string[]) || [];
       
@@ -238,7 +245,31 @@ export async function GET(request: NextRequest) {
         });
         
         console.log(`[AutoScan] User ${userId}: Scan complete. Found ${scanResult.totalResults} affiliates.`);
-        
+
+        // SCAN-SUMMARY EMAIL — added 2026-05-04
+        // Skip when 0 affiliates (avoid sending a "0 found" filler email).
+        // Locale/name trade-offs: same as the payment-success block in webhook.ts.
+        if (scanResult.totalResults > 0 && userEmail) {
+          const summaryEmailLocale = 'de' as const;
+          const summaryName = userName ?? 'there';
+
+          waitUntil(
+            sendEmail({
+              to: userEmail,
+              subject: scanSummaryEmailSubject(summaryEmailLocale, scanResult.totalResults),
+              react: ScanSummaryEmail({
+                name: summaryName,
+                locale: summaryEmailLocale,
+                affiliatesFound: scanResult.totalResults,
+                sources: scanResult.sourceCounts,
+                appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one',
+              }),
+            })
+          );
+
+          console.log(`[AutoScan] ✅ Scan-summary email queued for user ${userId}`);
+        }
+
       } catch (userError) {
         const errorMessage = userError instanceof Error ? userError.message : 'Unknown error';
         console.error(`[AutoScan] User ${userId}: Error - ${errorMessage}`);
@@ -503,10 +534,17 @@ async function runAutoScan(
   userBrand: string | null,
   targetCountry: string | null,
   targetLanguage: string | null
-): Promise<{ totalResults: number; totalCost: number }> {
+): Promise<{
+  totalResults: number;
+  totalCost: number;
+  sourceCounts: { youtube: number; instagram: number; tiktok: number; web: number }; // 2026-05-04: scan-summary email (renamed to avoid clash with existing `sources` Platform[] below)
+}> {
   let totalResults = 0;
   let totalCost = 0;
-  
+  // 2026-05-04: per-platform breakdown for the scan-summary email.
+  // Counters increment INSIDE the save try block below, so the sum equals totalResults exactly.
+  const sourceCounts = { youtube: 0, instagram: 0, tiktok: 0, web: 0 };
+
   const sources: Platform[] = ['Web', 'YouTube', 'Instagram', 'TikTok'];
   
   // Track the search with descriptive label
@@ -683,6 +721,11 @@ async function runAutoScan(
       try {
         await saveDiscoveredAffiliate(userId, primaryKeyword, result);
         totalResults++;
+        // 2026-05-04: per-platform tracking for scan-summary email
+        if (result.source === 'YouTube') sourceCounts.youtube++;
+        else if (result.source === 'Instagram') sourceCounts.instagram++;
+        else if (result.source === 'TikTok') sourceCounts.tiktok++;
+        else if (result.source === 'Web') sourceCounts.web++;
       } catch (saveError) {
         // Ignore duplicate errors, log others
         const errorMsg = saveError instanceof Error ? saveError.message : '';
@@ -702,7 +745,7 @@ async function runAutoScan(
     await completeSearch(searchId, totalResults, totalCost);
   }
   
-  return { totalResults, totalCost };
+  return { totalResults, totalCost, sourceCounts };
 }
 
 // =============================================================================
