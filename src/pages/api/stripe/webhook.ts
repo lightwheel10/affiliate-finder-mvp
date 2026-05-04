@@ -58,13 +58,13 @@ import { sql } from '@/lib/db';
 import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan, addTopupCredits } from '@/lib/credits';
 import { getCreditPackDetails, CREDIT_PACK_PRICES } from '@/lib/stripe';
 // 2026-05-01: n8n transactional email integration removed (unreliable in production). See git history.
-// 2026-05-03: imports for Resend transactional email integration (replaces n8n).
-// First wired email is payment-success below; trial-ending, subscription-canceled,
-// and credits-added are pending — see remaining marker comments in the handlers.
+// 2026-05-03/04: Resend integration. Wired below: payment-success, subscription-canceled,
+// credits-added. Welcome lives in src/app/api/users/route.ts. Pending: trial-ending, scan-summary.
 import { waitUntil } from '@vercel/functions';
 import { sendEmail } from '@/lib/email';
 import { PaymentSuccessEmail, paymentSuccessEmailSubject } from '@/emails/payment-success';
-import { SubscriptionCanceledEmail, subscriptionCanceledEmailSubject } from '@/emails/subscription-canceled'; // 2026-05-03
+import { SubscriptionCanceledEmail, subscriptionCanceledEmailSubject } from '@/emails/subscription-canceled';
+import { CreditsAddedEmail, creditsAddedEmailSubject } from '@/emails/credits-added'; // 2026-05-04
 
 // =============================================================================
 // CRITICAL: Disable Next.js body parsing
@@ -302,6 +302,17 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   console.log(`[Webhook] Processing credit pack: user=${userId}, type=${creditType}, amount=${amount}, session=${sessionId}`);
 
+  // 2026-05-04: Capture status BEFORE addTopupCredits so we can tell a fresh purchase
+  // apart from a Stripe retry. addTopupCredits returns true in both cases — without
+  // this pre-check we couldn't distinguish them and would email twice on retries.
+  // Race note: same TOCTOU race already accepted for credit_transactions (see
+  // issues.md "Duplicate credit_transactions on webhook replay" — PENDING LOW).
+  const statusBefore = await sql`
+    SELECT status FROM crewcast.credit_purchases
+    WHERE stripe_checkout_session_id = ${sessionId}
+  `;
+  const wasPending = statusBefore.length > 0 && statusBefore[0].status === 'pending';
+
   const ok = await addTopupCredits(userId, creditType, amount, sessionId);
   if (!ok) {
     // CRITICAL: Throw so the main handler returns 500 and Stripe retries.
@@ -311,10 +322,48 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.error(errorMsg);
     throw new Error(errorMsg);
   }
-  
+
   console.log(`[Webhook] ✅ Credit pack completed: ${amount} ${creditType} for user ${userId}`);
 
-  // 2026-05-01: n8n credit_purchase_success email call removed here (n8n unreliable). See git history.
+  // CREDITS-ADDED EMAIL — added 2026-05-04
+  // Only fires on a fresh purchase (wasPending), not on Stripe retries of an already-
+  // completed session. Locale/name trade-offs: same as the payment-success block in
+  // handleInvoicePaid. Currency falls back to 'eur' if Stripe somehow returns null.
+  if (wasPending) {
+    const recipients = await sql`
+      SELECT email, name FROM crewcast.users WHERE id = ${userId}
+    `;
+
+    if (recipients.length > 0 && recipients[0].email) {
+      const recipient = recipients[0];
+      const creditsEmailLocale = 'de' as const;
+      const creditsCustomerName = recipient.name ?? 'there';
+      const amountTotal = typeof session.amount_total === 'number' ? session.amount_total : 0;
+      const amountFormatted = new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: (session.currency || 'eur').toUpperCase(),
+      }).format(amountTotal / 100);
+
+      waitUntil(
+        sendEmail({
+          to: recipient.email,
+          subject: creditsAddedEmailSubject(creditsEmailLocale, amount, creditType),
+          react: CreditsAddedEmail({
+            name: creditsCustomerName,
+            locale: creditsEmailLocale,
+            creditType,
+            creditsAmount: amount,
+            amountFormatted,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one',
+          }),
+        })
+      );
+
+      console.log(`[Webhook] ✅ Credits-added email queued for user ${userId} (${amount} ${creditType})`);
+    } else {
+      console.error(`[Webhook] Cannot send credits-added email — no email found for user ${userId}`);
+    }
+  }
 }
 
 /**
