@@ -232,6 +232,22 @@ export async function GET(request: NextRequest) {
         const consumeResult = await consumeCredits(userId, 'topic_search', 1, 'auto_scan', 'cron');
         if (consumeResult.success) {
           console.log(`[AutoScan] User ${userId}: Consumed 1 credit. New balance: ${consumeResult.newBalance}`);
+        } else {
+          // 2026-05-09 (paras): consumeCredits returned success: false but we
+          // still ran Apify and saved affiliates to the user's discovered list.
+          // Most likely cause: race between the upstream checkCredits (above)
+          // and this deduct — user spent their last credit manually during the
+          // 40-95s Apify window. Other causes: missing user_credits row, DB
+          // exception, UPDATE affected 0 rows (see src/lib/credits.ts).
+          //
+          // We DON'T skip the email or roll back the scan — the user already
+          // got the value (affiliates are in the DB). This is purely an
+          // internal accounting hiccup we eat the Apify cost on (~$0.02-0.10).
+          // The loud log is so we can detect it in Vercel logs / alerting if
+          // it ever starts happening at scale.
+          console.error(
+            `[AutoScan] User ${userId}: consumeCredits FAILED for topic_search (amount=1, source=cron). Apify scan already ran and ${scanResult.totalResults} affiliates were saved — we ate the cost. Investigate user_credits row state.`
+          );
         }
         
         // Update scan schedule
