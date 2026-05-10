@@ -719,19 +719,25 @@ async function runAutoScan(
     
     for (const result of allFilteredResults) {
       try {
-        await saveDiscoveredAffiliate(userId, primaryKeyword, result);
-        totalResults++;
-        // 2026-05-04: per-platform tracking for scan-summary email
-        if (result.source === 'YouTube') sourceCounts.youtube++;
-        else if (result.source === 'Instagram') sourceCounts.instagram++;
-        else if (result.source === 'TikTok') sourceCounts.tiktok++;
-        else if (result.source === 'Web') sourceCounts.web++;
-      } catch (saveError) {
-        // Ignore duplicate errors, log others
-        const errorMsg = saveError instanceof Error ? saveError.message : '';
-        if (!errorMsg.includes('duplicate')) {
-          console.error(`[AutoScan] Failed to save affiliate: ${errorMsg}`);
+        // 2026-05-09 (paras): saveDiscoveredAffiliate now returns true only
+        // when a new row was inserted. We gate the counters on that boolean
+        // so the scan-summary email reflects genuinely-new affiliates only.
+        // Before this fix, duplicates from prior weeks inflated `totalResults`
+        // and the email said "we found N new" when N was wrong.
+        const inserted = await saveDiscoveredAffiliate(userId, primaryKeyword, result);
+        if (inserted) {
+          totalResults++;
+          if (result.source === 'YouTube') sourceCounts.youtube++;
+          else if (result.source === 'Instagram') sourceCounts.instagram++;
+          else if (result.source === 'TikTok') sourceCounts.tiktok++;
+          else if (result.source === 'Web') sourceCounts.web++;
         }
+      } catch (saveError) {
+        // Real DB errors only (constraint violations beyond the dup pre-check,
+        // connection drops, etc). The helper handles duplicates internally now,
+        // so the historical "Ignore duplicate errors" branch is no longer needed.
+        const errorMsg = saveError instanceof Error ? saveError.message : '';
+        console.error(`[AutoScan] Failed to save affiliate: ${errorMsg}`);
       }
     }
     
@@ -751,6 +757,14 @@ async function runAutoScan(
 // =============================================================================
 // HELPER: Save discovered affiliate to database
 // January 29th, 2026 - Updated for Apify enrichment fields
+//
+// 2026-05-09 (paras): Return type changed Promise<void> → Promise<boolean>.
+//   - true  = a new row was inserted (genuinely new affiliate)
+//   - false = the affiliate already exists for this user (skipped, no insert)
+//
+//   The scan-summary email's "we found N new affiliates" headline relies on
+//   this signal — without it the count includes duplicates from prior weeks
+//   and the email becomes a false-flag.
 // =============================================================================
 async function saveDiscoveredAffiliate(
   userId: number,
@@ -804,16 +818,17 @@ async function saveDiscoveredAffiliate(
     tiktokVideoComments?: number;
     tiktokVideoShares?: number;
   }
-): Promise<void> {
+): Promise<boolean> {
   // Check for existing (duplicate detection by link)
   const existing = await sql`
-    SELECT id FROM crewcast.discovered_affiliates 
+    SELECT id FROM crewcast.discovered_affiliates
     WHERE user_id = ${userId} AND link = ${result.link}
   `;
-  
+
   if (existing.length > 0) {
-    // Already exists - skip (no error)
-    return;
+    // 2026-05-09 (paras): return false (not void) so the scan-summary email
+    // counter can skip duplicates instead of double-counting them.
+    return false;
   }
   
   // Insert new affiliate
@@ -850,10 +865,12 @@ async function saveDiscoveredAffiliate(
       ${result.tiktokUsername || null}, ${result.tiktokDisplayName || null}, ${result.tiktokBio || null},
       ${result.tiktokFollowers || null}, ${result.tiktokFollowing || null}, ${result.tiktokLikes || null},
       ${result.tiktokVideosCount || null}, ${result.tiktokIsVerified || null},
-      ${result.tiktokVideoPlays || null}, ${result.tiktokVideoLikes || null}, 
+      ${result.tiktokVideoPlays || null}, ${result.tiktokVideoLikes || null},
       ${result.tiktokVideoComments || null}, ${result.tiktokVideoShares || null}
     )
   `;
+  // 2026-05-09 (paras): true = genuinely new row inserted. See header comment.
+  return true;
 }
 
 // =============================================================================
