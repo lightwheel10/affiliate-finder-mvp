@@ -4,6 +4,11 @@
  * Created 2026-05-01.
  * Replaces src/lib/n8n-webhook.ts (deleted — see git history).
  *
+ * 2026-05-09: EMAIL_FROM is hardcoded below, no longer env-driven. To change
+ * the sender, edit the EMAIL_FROM constant. The @-domain must be a verified
+ * Resend domain — currently revenueworks.ai. Vercel does not need an
+ * EMAIL_FROM env var anymore.
+ *
  * Safety guarantees:
  * - Fire-and-forget: never throws into the caller. A failed email send NEVER
  *   breaks a user-facing API route. Errors are logged and swallowed.
@@ -17,7 +22,7 @@ import { render } from '@react-email/render';
 import type { ReactElement } from 'react';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM;
+const EMAIL_FROM = 'Afforce One <team@revenueworks.ai>'; // 2026-05-09: hardcoded
 const EMAILS_ENABLED = process.env.EMAILS_ENABLED !== 'false'; // default true
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
@@ -52,11 +57,6 @@ export async function sendEmail({ to, subject, react }: SendEmailParams): Promis
 
   if (!resend) {
     console.warn(`[Email] ⚠️ RESEND_API_KEY not configured. Skipping: "${subject}" → ${to}`);
-    return;
-  }
-
-  if (!EMAIL_FROM) {
-    console.warn(`[Email] ⚠️ EMAIL_FROM not configured. Skipping: "${subject}" → ${to}`);
     return;
   }
 
