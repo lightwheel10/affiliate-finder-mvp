@@ -328,15 +328,24 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   ];
 
   // Affiliate types array using translations (January 9th, 2026)
+  //
+  // 2026-05-10 (paras): Removed xTwitter, linkedin, reddit, other. Step 5
+  // should only show platforms our scanner actually scrapes — Web (Publishers/
+  // Bloggers), YouTube, Instagram, TikTok (hardcoded as `sources: Platform[]`
+  // in find/page.tsx, cron/auto-scan, scout/onboarding routes). Showing options
+  // we don't search is a trust issue.
+  //
+  // The 4 removed entries are intentionally LEFT in the i18n dictionary
+  // (de.ts / en.ts / index.ts) and the affiliate_types DB column. Reasons:
+  //   1. Existing users with stale ['LinkedIn', ...] selections don't break —
+  //      values persist silently and only feed the AI outreach context.
+  //   2. Re-adding a platform later (e.g. if we ever build a LinkedIn scraper)
+  //      is a one-line edit, not a refactor.
   const AFFILIATE_TYPES = [
     t.onboarding.step6.types.publishersBloggers,
     t.onboarding.step6.types.instagram,
     t.onboarding.step6.types.tiktok,
-    t.onboarding.step6.types.xTwitter,
-    t.onboarding.step6.types.linkedin,
-    t.onboarding.step6.types.reddit,
     t.onboarding.step6.types.youtube,
-    t.onboarding.step6.types.other,
   ];
 
   // ==========================================================================
