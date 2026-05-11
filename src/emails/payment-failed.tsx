@@ -9,30 +9,35 @@ interface PaymentFailedEmailProps {
   appUrl: string;
 }
 
+// 2026-05-10 (paras): Removed reply-promise from closing (client said we won't
+// respond to email replies). Removed em dashes from subject/intro/alert/closing
+// in both EN and DE. NOTE: this template is not wired into the webhook today.
+// Stripe's built-in dunning email handles failed payments. File kept in repo
+// in case we ever take over from Stripe.
 const copy = {
   en: {
-    subject: 'Action needed — your payment failed',
+    subject: 'Action needed: your payment failed',
     preview: 'Your latest Afforce One payment was declined',
     heading: 'Your payment failed',
     intro: (name: string, plan: string) =>
       `Hi ${name}, we tried to charge your card for your ${plan} plan but the payment was declined. This usually means an expired card, insufficient funds, or a bank block.`,
     alert:
-      'No action from your bank yet — but if you don\'t update your card soon, your account will be paused until the payment goes through.',
+      "No action from your bank yet. But if you don't update your card soon, your account will be paused until the payment goes through.",
     cta: 'Update payment method',
     closing:
-      'If you think this is a mistake or your card is fine, just reply to this email and we\'ll take a look.',
+      "If you think this is a mistake, update your payment method in the Settings page and we'll retry automatically.",
   },
   de: {
-    subject: 'Aktion erforderlich — deine Zahlung ist fehlgeschlagen',
+    subject: 'Aktion erforderlich: deine Zahlung ist fehlgeschlagen',
     preview: 'Deine letzte Afforce-One-Zahlung wurde abgelehnt',
     heading: 'Deine Zahlung ist fehlgeschlagen',
     intro: (name: string, plan: string) =>
-      `Hi ${name}, wir konnten deine Karte für den ${plan}-Plan nicht belasten — die Zahlung wurde abgelehnt. Meist liegt es an einer abgelaufenen Karte, fehlender Deckung oder einer Bank-Sperre.`,
+      `Hi ${name}, wir konnten deine Karte für den ${plan}-Plan nicht belasten. Die Zahlung wurde abgelehnt. Meist liegt es an einer abgelaufenen Karte, fehlender Deckung oder einer Bank-Sperre.`,
     alert:
-      'Noch ist nichts passiert — aber wenn du deine Karte nicht bald aktualisierst, pausieren wir deinen Zugang, bis die Zahlung durchgeht.',
+      'Noch ist nichts passiert. Aber wenn du deine Karte nicht bald aktualisierst, pausieren wir deinen Zugang, bis die Zahlung durchgeht.',
     cta: 'Zahlungsmethode aktualisieren',
     closing:
-      'Wenn das ein Fehler ist oder deine Karte funktioniert, antworte einfach auf diese E-Mail — wir schauen uns das an.',
+      'Wenn das ein Fehler ist, aktualisiere deine Zahlungsmethode in den Einstellungen, und wir versuchen es automatisch erneut.',
   },
 } as const;
 

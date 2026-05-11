@@ -10,30 +10,29 @@ interface SubscriptionCanceledEmailProps {
   appUrl: string;
 }
 
+// 2026-05-10 (paras): Removed `feedback` field (client said we won't respond
+// to email replies; the paragraph existed only to invite a reply). Removed
+// em dashes from preview/intro/closing in both EN and DE.
 const copy = {
   en: {
     subject: 'Your subscription has been canceled',
-    preview: "We've canceled your subscription — you have access until {date}",
+    preview: "We've canceled your subscription. You have access until {date}.",
     heading: "We've canceled your subscription",
     intro: (name: string, plan: string) =>
-      `Hi ${name}, your cancellation request has been processed. You'll keep full access to your ${plan} plan until the end of the current billing period — no further charges will be made.`,
+      `Hi ${name}, your cancellation request has been processed. You'll keep full access to your ${plan} plan until the end of the current billing period. No further charges will be made.`,
     accessLabel: 'Access until',
-    feedback:
-      "If you have a moment, we'd love to hear what we could have done better. Just reply to this email — every piece of feedback is read by our team.",
     cta: 'Reactivate subscription',
     closing: 'You can reactivate any time, and your old data will still be there.',
   },
   de: {
     subject: 'Dein Abo wurde gekündigt',
-    preview: 'Wir haben dein Abo gekündigt — Zugang bis {date}',
+    preview: 'Wir haben dein Abo gekündigt. Zugang bis {date}.',
     heading: 'Wir haben dein Abo gekündigt',
     intro: (name: string, plan: string) =>
-      `Hi ${name}, deine Kündigung wurde verarbeitet. Du behältst vollen Zugriff auf deinen ${plan}-Plan bis zum Ende des aktuellen Abrechnungszeitraums — es werden keine weiteren Beträge abgebucht.`,
+      `Hi ${name}, deine Kündigung wurde verarbeitet. Du behältst vollen Zugriff auf deinen ${plan}-Plan bis zum Ende des aktuellen Abrechnungszeitraums. Es werden keine weiteren Beträge abgebucht.`,
     accessLabel: 'Zugang bis',
-    feedback:
-      'Wenn du einen Moment Zeit hast — wir würden gerne wissen, was wir besser machen können. Einfach auf diese E-Mail antworten, jedes Feedback wird gelesen.',
     cta: 'Abo reaktivieren',
-    closing: 'Du kannst jederzeit reaktivieren — deine Daten warten auf dich.',
+    closing: 'Du kannst jederzeit reaktivieren. Deine Daten warten auf dich.',
   },
 } as const;
 
@@ -64,7 +63,6 @@ export function SubscriptionCanceledEmail({ name, locale, plan, accessUntil, app
           <Text style={emailStyles.infoLabel}>{t.accessLabel}</Text>
           <Text style={emailStyles.infoValue}>{formattedDate}</Text>
         </Section>
-        <Text style={emailStyles.paragraph}>{t.feedback}</Text>
         <Button href={`${appUrl}/settings`} style={emailStyles.primaryButton}>
           {t.cta}
         </Button>

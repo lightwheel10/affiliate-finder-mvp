@@ -8,10 +8,13 @@ interface WelcomeEmailProps {
   appUrl: string;
 }
 
+// 2026-05-10 (paras): Removed reply-promise from closing (client said we won't
+// respond to email replies). Removed em dash from preview. Same rule applies
+// across all email templates in this folder.
 const copy = {
   en: {
     subject: 'Welcome to Afforce One',
-    preview: "Welcome to Afforce One — let's find your first affiliates",
+    preview: "Welcome to Afforce One. Let's find your first affiliates.",
     heading: (name: string) => `Welcome, ${name}!`,
     intro:
       "Thanks for joining Afforce One. We help brands discover the right affiliates and creators using AI-powered search across the web, YouTube, Instagram, and TikTok.",
@@ -22,11 +25,11 @@ const copy = {
       'Save the ones you like and start outreach.',
     ],
     cta: 'Open dashboard',
-    closing: 'Questions? Just reply to this email — we read every one.',
+    closing: "We're glad you're here.",
   },
   de: {
     subject: 'Willkommen bei Afforce One',
-    preview: 'Willkommen bei Afforce One — finden wir deine ersten Affiliates',
+    preview: 'Willkommen bei Afforce One. Finden wir deine ersten Affiliates.',
     heading: (name: string) => `Willkommen, ${name}!`,
     intro:
       'Danke, dass du Afforce One gewählt hast. Wir helfen Marken, mit KI-gestützter Suche im Web, auf YouTube, Instagram und TikTok die passenden Affiliates und Creator zu finden.',
@@ -37,7 +40,7 @@ const copy = {
       'Passende speichern und mit dem Outreach beginnen.',
     ],
     cta: 'Zum Dashboard',
-    closing: 'Fragen? Einfach auf diese E-Mail antworten — wir lesen jede einzelne.',
+    closing: 'Schön, dass du da bist.',
   },
 } as const;
 
