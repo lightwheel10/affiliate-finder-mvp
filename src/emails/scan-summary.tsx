@@ -20,7 +20,8 @@ interface ScanSummaryEmailProps {
 const copy = {
   en: {
     subject: (n: number) => `We found ${n} new affiliate${n === 1 ? '' : 's'} this week`,
-    preview: (n: number) => `Your weekly scan finished — ${n} new affiliate${n === 1 ? '' : 's'} ready to review`,
+    // 2026-05-10 (paras): em dash removed (period instead).
+    preview: (n: number) => `Your weekly scan finished. ${n} new affiliate${n === 1 ? '' : 's'} ready to review.`,
     heading: 'Your weekly scan is in',
     intro: (name: string) =>
       `Hi ${name}, our automated weekly scan just finished and found fresh content creators and affiliates matching your topics. Here's the breakdown:`,
@@ -38,7 +39,7 @@ const copy = {
   },
   de: {
     subject: (n: number) => `Wir haben ${n} neue Affiliate${n === 1 ? '' : 's'} diese Woche gefunden`,
-    preview: (n: number) => `Dein wöchentlicher Scan ist fertig — ${n} neue${n === 1 ? 'r' : ''} Affiliate${n === 1 ? '' : 's'} zum Prüfen`,
+    preview: (n: number) => `Dein wöchentlicher Scan ist fertig. ${n} neue${n === 1 ? 'r' : ''} Affiliate${n === 1 ? '' : 's'} zum Prüfen.`,
     heading: 'Dein wöchentlicher Scan ist da',
     intro: (name: string) =>
       `Hi ${name}, unser automatischer wöchentlicher Scan ist fertig und hat frische Creator und Affiliates zu deinen Themen gefunden. Hier die Übersicht:`,

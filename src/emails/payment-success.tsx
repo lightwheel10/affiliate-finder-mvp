@@ -10,13 +10,15 @@ interface PaymentSuccessEmailProps {
   appUrl: string;
 }
 
+// 2026-05-10 (paras): Removed em dashes from subject/preview/intro (EN+DE).
+// Colon for subject (header-style), period for body (split into sentences).
 const copy = {
   en: {
-    subject: 'Payment received — your Afforce One plan is active',
-    preview: "Thanks for your payment — you're on the {plan} plan",
+    subject: 'Payment received: your Afforce One plan is active',
+    preview: "Thanks for your payment. You're on the {plan} plan.",
     heading: 'Payment received',
     intro: (name: string, plan: string) =>
-      `Thanks ${name} — your payment was successful and your ${plan} plan is now active. Your credits have been refreshed for the new billing period.`,
+      `Thanks ${name}. Your payment was successful and your ${plan} plan is now active. Your credits have been refreshed for the new billing period.`,
     amountLabel: 'Amount charged',
     planLabel: 'Plan',
     cta: 'Open dashboard',
@@ -24,11 +26,11 @@ const copy = {
       'Your invoice and receipt are also available in the Settings page if you need them for accounting.',
   },
   de: {
-    subject: 'Zahlung erhalten — dein Afforce-One-Abo ist aktiv',
-    preview: 'Danke für deine Zahlung — du bist auf dem {plan}-Plan',
+    subject: 'Zahlung erhalten: dein Afforce-One-Abo ist aktiv',
+    preview: 'Danke für deine Zahlung. Du bist auf dem {plan}-Plan.',
     heading: 'Zahlung erhalten',
     intro: (name: string, plan: string) =>
-      `Danke ${name} — deine Zahlung war erfolgreich und dein ${plan}-Plan ist nun aktiv. Deine Credits wurden für den neuen Abrechnungszeitraum aufgefrischt.`,
+      `Danke ${name}. Deine Zahlung war erfolgreich und dein ${plan}-Plan ist nun aktiv. Deine Credits wurden für den neuen Abrechnungszeitraum aufgefrischt.`,
     amountLabel: 'Betrag',
     planLabel: 'Plan',
     cta: 'Zum Dashboard',

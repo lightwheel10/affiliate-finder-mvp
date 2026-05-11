@@ -16,8 +16,11 @@ const copy = {
     subject: (days: number) => `Your trial ends in ${days} day${days === 1 ? '' : 's'}`,
     preview: (days: number) => `Your Afforce One trial ends in ${days} day${days === 1 ? '' : 's'}`,
     heading: (days: number) => `Your trial ends in ${days} day${days === 1 ? '' : 's'}`,
+    // 2026-05-10 (paras): em dashes removed (intro EN+DE, closing DE). Template
+    // not wired into a sender today (3-day trial vs Stripe's 7-day reminder
+    // event makes timing impractical), but copy cleaned for consistency.
     intro: (name: string, plan: string) =>
-      `Hi ${name}, just a heads-up — your free trial of the ${plan} plan ends soon. We'll automatically charge your card on file once the trial ends so your access continues without interruption.`,
+      `Hi ${name}, just a heads-up. Your free trial of the ${plan} plan ends soon. We'll automatically charge your card on file once the trial ends so your access continues without interruption.`,
     detailLabel: 'Trial ends on',
     cta: 'Manage subscription',
     closing:
@@ -28,10 +31,10 @@ const copy = {
     preview: (days: number) => `Deine Afforce-One-Testphase endet in ${days} Tag${days === 1 ? '' : 'en'}`,
     heading: (days: number) => `Deine Testphase endet in ${days} Tag${days === 1 ? '' : 'en'}`,
     intro: (name: string, plan: string) =>
-      `Hi ${name}, kurzer Hinweis — deine kostenlose Testphase des ${plan}-Plans endet bald. Wir buchen die Zahlung automatisch von deiner hinterlegten Karte ab, sodass dein Zugang lückenlos weiterläuft.`,
+      `Hi ${name}, kurzer Hinweis. Deine kostenlose Testphase des ${plan}-Plans endet bald. Wir buchen die Zahlung automatisch von deiner hinterlegten Karte ab, sodass dein Zugang lückenlos weiterläuft.`,
     detailLabel: 'Testphase endet am',
     cta: 'Abo verwalten',
-    closing: 'Du kannst jederzeit in den Einstellungen kündigen — ganz ohne Rückfragen.',
+    closing: 'Du kannst jederzeit in den Einstellungen kündigen, ganz ohne Rückfragen.',
   },
 } as const;
 

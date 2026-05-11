@@ -29,7 +29,8 @@ const creditLabels = {
 const copy = {
   en: {
     subject: (n: number, t: string) => `${n} ${t} added to your account`,
-    preview: (n: number, t: string) => `${n} ${t} have been added — ready to use`,
+    // 2026-05-10 (paras): em dash removed (period instead).
+    preview: (n: number, t: string) => `${n} ${t} have been added. Ready to use.`,
     heading: 'Credits added',
     intro: (name: string, n: number, type: string) =>
       `Hi ${name}, your purchase of ${n} ${type} was successful and they're already in your account, ready to use whenever you need them.`,
@@ -40,7 +41,7 @@ const copy = {
   },
   de: {
     subject: (n: number, t: string) => `${n} ${t} zu deinem Konto hinzugefügt`,
-    preview: (n: number, t: string) => `${n} ${t} wurden hinzugefügt — sofort einsatzbereit`,
+    preview: (n: number, t: string) => `${n} ${t} wurden hinzugefügt. Sofort einsatzbereit.`,
     heading: 'Credits hinzugefügt',
     intro: (name: string, n: number, type: string) =>
       `Hi ${name}, dein Kauf von ${n} ${type} war erfolgreich. Sie sind bereits auf deinem Konto und stehen jederzeit zur Verfügung.`,
