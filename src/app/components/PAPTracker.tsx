@@ -23,7 +23,13 @@ const PAP_TRACKJS_SRC = "https://work.selecdoo.com/scripts/trackjs.js";
 export function PAPTracker() {
   return (
     <Script
-      id="pap-trackjs"
+      // 2026-05-20 (paras): id MUST be exactly "pap_x2s6df8d" — PAP's trackjs
+      // internally does document.getElementById("pap_x2s6df8d") to locate its
+      // own <script> tag. Any other id makes the lookup return null and PAP
+      // crashes with: "Cannot read properties of null (reading 'src')".
+      // Verified in trackjs.js source: var s="pap_x2s6df8d"; ... document
+      // .getElementById(PostAffTracker.U()) ...
+      id="pap_x2s6df8d"
       src={PAP_TRACKJS_SRC}
       strategy="afterInteractive"
       onLoad={() => {
