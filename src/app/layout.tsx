@@ -31,6 +31,9 @@ import type { Metadata } from "next";
 // for the "smoover" landing page refresh. See globals.css design-system log.
 import { Inter, Fira_Code, Archivo, Caveat } from "next/font/google";
 import "./globals.css";
+// 2026-05-20 (paras): PAP tracking lives in a client component because
+// Server Components can't pass event handlers (onLoad) as props.
+import { PAPTracker } from "@/app/components/PAPTracker";
 
 // =============================================================================
 // INTERNATIONALIZATION (i18n) - January 9th, 2026
@@ -169,6 +172,11 @@ export default function RootLayout({
           Updated April 23rd, 2026: Added Archivo + Caveat for landing refresh
           (font-display + font-hand utilities — see globals.css). */}
       <body className={`${inter.variable} ${firaCode.variable} ${archivo.variable} ${caveat.variable} font-sans antialiased`}>
+        {/* 2026-05-20 (paras): PostAffiliatePro tracking script loader.
+            Lives in a client component because layout.tsx is a Server
+            Component and can't pass onLoad function props. See PAPTracker.tsx
+            for the full explanation. */}
+        <PAPTracker />
         {/* =================================================================
             LANGUAGE PROVIDER (January 9th, 2026)
             

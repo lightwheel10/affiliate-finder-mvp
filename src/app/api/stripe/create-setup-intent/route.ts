@@ -40,7 +40,11 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = await request.json();
-    const { userId, email } = body;
+    // 2026-05-20 (paras): papCookie is the optional PostAffiliatePro tracking
+    // value (account ID + visitor ID concatenated) sent by the client when an
+    // affiliate referred this signup. If absent, the signup is treated as
+    // organic and no affiliate attribution happens.
+    const { userId, email, papCookie } = body;
 
     // ==========================================================================
     // INPUT VALIDATION
@@ -120,9 +124,16 @@ export async function POST(request: NextRequest) {
     if (!stripeCustomerId) {
       console.log(`[Stripe] Creating new customer for user ${userId}`);
       
+      // 2026-05-20 (paras): set Stripe customer.description to the PAP cookie
+      // value when an affiliate referred this signup. PAP's Stripe plugin
+      // (configured by David at work.selecdoo.com/plugins/Stripe/stripe.php)
+      // reads this exact field to attribute charges to the right affiliate.
+      // Setting it once at customer creation means every future subscription
+      // / charge tied to this customer inherits the attribution automatically.
       const customer = await stripe.customers.create({
         email: email,
         name: user.name || undefined,
+        description: typeof papCookie === 'string' && papCookie ? papCookie : undefined,
         metadata: {
           neon_user_id: userId.toString(),
           created_from: 'setup_intent',
