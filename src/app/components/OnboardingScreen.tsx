@@ -818,6 +818,27 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     setStripeError(null);
 
     try {
+      // 2026-05-20 (paras): Read PostAffiliatePro tracking cookie if present,
+      // so we can pass it to Stripe's customer.description. PAP's Stripe plugin
+      // reads that field to attribute the sale to the right affiliate.
+      // If PAP didn't load (CDN issue / ad blocker) or the user signed up
+      // organically (no affiliate referral), papCookie stays empty and we just
+      // omit it — signup continues normally as "organic".
+      let papCookie = '';
+      try {
+        const PAP = (window as unknown as {
+          PostAffTracker?: {
+            _getAccountId: () => string;
+            _cmanager: { getVisitorIdOrSaleCookieValue: () => string };
+          };
+        }).PostAffTracker;
+        if (PAP) {
+          papCookie = PAP._getAccountId() + PAP._cmanager.getVisitorIdOrSaleCookieValue();
+        }
+      } catch (err) {
+        console.warn('[PAP] cookie read failed (treating as organic signup):', err);
+      }
+
       // Step 1: Create SetupIntent to securely collect card
       const setupRes = await fetch('/api/stripe/create-setup-intent', {
         method: 'POST',
@@ -825,6 +846,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         body: JSON.stringify({
           userId,
           email: userEmail,
+          papCookie: papCookie || undefined,
         }),
       });
 
