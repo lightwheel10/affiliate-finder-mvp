@@ -27,12 +27,31 @@ export async function GET(request: NextRequest) {
     }
 
     const affiliates = await sql`
-      SELECT * FROM crewcast.discovered_affiliates 
+      SELECT * FROM crewcast.discovered_affiliates
       WHERE user_id = ${userIdNum}
       ORDER BY discovered_at DESC
     `;
 
-    return NextResponse.json({ affiliates: affiliates as DbDiscoveredAffiliate[] });
+    // 2026-05-25 (paras): derive is_new per-request from the user's most
+    // recent auto-scan time. The stored is_new column was set to true on
+    // every insert and never reset, so every row showed the "NEW" badge
+    // forever. Now the badge means "discovered in the most recent scan"
+    // and auto-expires when the next scan runs — no cron, no DB writes.
+    // 1-hour buffer because updateScanSchedule() runs AFTER inserts in
+    // auto-scan/route.ts (~minutes later), so just-inserted rows have a
+    // discovered_at slightly before last_auto_scan_at.
+    const sub = await sql`
+      SELECT last_auto_scan_at FROM crewcast.subscriptions
+      WHERE user_id = ${userIdNum}
+    `;
+    const lastScanIso = sub.length > 0 ? (sub[0] as { last_auto_scan_at: string | null }).last_auto_scan_at : null;
+    const cutoffMs = lastScanIso ? new Date(lastScanIso).getTime() - 60 * 60 * 1000 : null;
+    const result = (affiliates as DbDiscoveredAffiliate[]).map((a) => ({
+      ...a,
+      is_new: cutoffMs !== null && new Date(a.discovered_at).getTime() >= cutoffMs,
+    }));
+
+    return NextResponse.json({ affiliates: result });
   } catch (error) {
     console.error('Error fetching discovered affiliates:', error);
     return NextResponse.json({ error: 'Failed to fetch discovered affiliates' }, { status: 500 });
