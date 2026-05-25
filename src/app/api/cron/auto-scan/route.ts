@@ -278,7 +278,8 @@ export async function GET(request: NextRequest) {
                 locale: summaryEmailLocale,
                 affiliatesFound: scanResult.totalResults,
                 sources: scanResult.sourceCounts,
-                appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one',
+                // 2026-05-22 (paras): hardcoded — see users/route.ts.
+                appUrl: 'https://afforce.revenueworks.ai',
               }),
             })
           );

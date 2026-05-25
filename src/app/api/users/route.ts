@@ -85,7 +85,11 @@ export async function POST(request: NextRequest) {
     // Welcome email — fire-and-forget. sendEmail never throws; a send failure
     // is logged but does not break the signup response.
     const locale = detectLocale(request.headers.get('accept-language'));
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one';
+    // 2026-05-22 (paras): hardcoded production URL. NEXT_PUBLIC_APP_URL was
+    // missing in Vercel and the fallback "https://afforce.one" went out in
+    // every email CTA. Same hardcode applied at the 4 other appUrl sites
+    // (webhook.ts × 3, auto-scan/route.ts × 1).
+    const appUrl = 'https://afforce.revenueworks.ai';
     waitUntil(
       sendEmail({
         to: newUser.email,

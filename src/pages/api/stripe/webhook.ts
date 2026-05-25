@@ -354,7 +354,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
             creditType,
             creditsAmount: amount,
             amountFormatted,
-            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one',
+            // 2026-05-22 (paras): hardcoded — see users/route.ts.
+            appUrl: 'https://afforce.revenueworks.ai',
           }),
         })
       );
@@ -569,7 +570,8 @@ async function handleSubscriptionUpdate(
             locale: cancelEmailLocale,
             plan: cancelPlanLabel,
             accessUntil: accessUntilIso,
-            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one',
+            // 2026-05-22 (paras): hardcoded — see users/route.ts.
+            appUrl: 'https://afforce.revenueworks.ai',
           }),
         })
       );
@@ -960,7 +962,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         locale: emailLocale,
         plan: planLabel,
         amountFormatted,
-        appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://afforce.one',
+        // 2026-05-22 (paras): hardcoded — see users/route.ts.
+        appUrl: 'https://afforce.revenueworks.ai',
       }),
     })
   );
