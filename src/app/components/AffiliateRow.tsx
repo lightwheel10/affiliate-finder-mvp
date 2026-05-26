@@ -178,7 +178,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   isPipelineView = false,
   discoveryMethod = { type: 'keyword', value: keyword || 'Keyword' },
   isAlreadyAffiliate = false,
-  isNew = true,
+  // 2026-05-26 (paras): default false (was true). The true-default + missing
+  // prop on every call site made the NEW badge render on every row in
+  // discovered/saved/find. Callers must now opt in by passing isNew explicitly.
+  isNew = false,
   subItems = [],
   channel,
   duration,

@@ -1487,6 +1487,12 @@ export default function FindNewPage() {
                         highlightedWords={group.main.highlightedWords}
                         discoveryMethod={group.main.discoveryMethod}
                         email={group.main.email}
+                        // 2026-05-26 (paras): see discovered/page.tsx for context.
+                        // usePollingSearch / /api/search/status don't populate isNew,
+                        // so this is always false here = no NEW badges on /find for now.
+                        // TODO(paras): plumb isNew through the polling search backend
+                        // so live results can flag genuinely-new rows.
+                        isNew={group.main.isNew ?? false}
                         subItems={group.subItems}
                         channel={group.main.channel}
                         duration={group.main.duration}
@@ -1538,6 +1544,9 @@ export default function FindNewPage() {
                       highlightedWords={group.main.highlightedWords}
                       discoveryMethod={group.main.discoveryMethod}
                       email={group.main.email}
+                      // 2026-05-26 (paras): see streaming-mode AffiliateRow above for
+                      // full context + TODO on plumbing isNew through polling search.
+                      isNew={group.main.isNew ?? false}
                       subItems={group.subItems}
                       channel={group.main.channel}
                       duration={group.main.duration}
