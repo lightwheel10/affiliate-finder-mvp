@@ -839,6 +839,11 @@ export default function DiscoveredPage() {
                 highlightedWords={item.highlightedWords}
                 discoveryMethod={item.discoveryMethod}
                 email={item.email}
+                // 2026-05-26 (paras): NEW badge gated on API-computed is_new
+                // (PR #62 derives it from last_auto_scan_at). ?? false because
+                // AffiliateRow's default is now false; null/undefined would
+                // otherwise hide the badge silently anyway.
+                isNew={item.isNew ?? false}
                 channel={item.channel}
                 duration={item.duration}
                 personName={item.personName}
