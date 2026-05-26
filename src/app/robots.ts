@@ -13,9 +13,13 @@
 import type { MetadataRoute } from 'next';
 
 /**
- * Base URL for the site - uses environment variable or falls back to production URL
+ * 2026-05-26 (paras): hardcoded production URL. Previous fallback
+ * 'https://afforceone.com' wasn't the real production host, so crawlers
+ * were being pointed at a non-existent domain. NEXT_PUBLIC_SITE_URL was
+ * never set in Vercel either. Same hardcoding philosophy as the email
+ * appUrl fix (see users/route.ts and webhook.ts).
  */
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://afforceone.com';
+const BASE_URL = 'https://afforce.revenueworks.ai';
 
 /**
  * Generates the robots.txt rules for the application
