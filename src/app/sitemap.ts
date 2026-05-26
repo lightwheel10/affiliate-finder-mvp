@@ -16,10 +16,10 @@
 import type { MetadataRoute } from 'next';
 
 /**
- * Base URL for the site - uses environment variable or falls back to production URL
- * Set NEXT_PUBLIC_SITE_URL in your environment for different deployments
+ * 2026-05-26 (paras): hardcoded production URL. See robots.ts header
+ * comment — same rationale (afforceone.com wasn't real production).
  */
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://afforceone.com';
+const BASE_URL = 'https://afforce.revenueworks.ai';
 
 /**
  * Generates the sitemap for the application
