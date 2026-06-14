@@ -31,8 +31,11 @@
 import React from 'react';
 
 interface HighlightMatchProps {
-  /** The text to render. */
-  text: string;
+  // 2026-06-14 (paras): widened from `string` to `string | null | undefined`.
+  // Callers pass nullable DB fields (e.g. keyword, which is null for many web
+  // rows). The old `string` type was a lie — null arrived at runtime and the
+  // type system couldn't catch it. Now the type tells the truth.
+  text?: string | null;
   /** The user's free-text search query. Empty string disables highlighting. */
   query?: string;
 }
@@ -40,11 +43,17 @@ interface HighlightMatchProps {
 const REGEX_ESCAPE = /[.*+?^${}()|[\]\\]/g;
 
 export const HighlightMatch: React.FC<HighlightMatchProps> = ({ text, query }) => {
+  // 2026-06-14 (paras): coerce null/undefined to '' so .split() below can never
+  // throw. Without this, searching on Saved/Discovered/Find crashed the whole
+  // page (caught by the dashboard ErrorBoundary) whenever a visible row had a
+  // null highlighted field. Guarding here protects every current + future
+  // caller, instead of patching each call site.
+  const safeText = text ?? '';
   const q = (query ?? '').trim();
-  if (!q) return <>{text}</>;
+  if (!q) return <>{safeText}</>;
 
   const pattern = q.replace(REGEX_ESCAPE, '\\$&');
-  const parts = text.split(new RegExp(`(${pattern})`, 'gi'));
+  const parts = safeText.split(new RegExp(`(${pattern})`, 'gi'));
   const lower = q.toLowerCase();
 
   return (
