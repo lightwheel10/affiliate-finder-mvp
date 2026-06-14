@@ -63,6 +63,9 @@ import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } f
 import { FilterPanel } from '../../components/FilterPanel';
 // April 28, 2026: Unified search predicate (Find/Discovered/Saved) — see utils/affiliate-search.ts
 import { affiliateMatchesSearchQuery } from '../../utils/affiliate-search';
+// 2026-06-14 (paras): group postings by domain (web) / creator (social).
+// David's request. See utils/affiliate-grouping.ts.
+import { groupAffiliates, groupCountsBySource, type AffiliateGroup } from '../../utils/affiliate-grouping';
 import { useNeonUser } from '../../hooks/useNeonUser';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -79,16 +82,14 @@ export default function DiscoveredPage() {
   const [activeFilter, setActiveFilter] = useState('All');
 
   // Data hooks
-  const { 
-    discoveredAffiliates, 
-    removeDiscoveredAffiliate,
+  const {
+    discoveredAffiliates,
     removeDiscoveredAffiliatesBulk,
-    isLoading: loading 
+    isLoading: loading
   } = useDiscoveredAffiliates();
-  
-  const { 
-    saveAffiliate, 
-    removeAffiliate, 
+
+  const {
+    removeAffiliate,
     isAffiliateSaved,
     saveAffiliatesBulk
   } = useSavedAffiliates();
@@ -215,17 +216,33 @@ export default function DiscoveredPage() {
     setPreviousAffiliateCount(discoveredAffiliates.length);
   }, [discoveredAffiliates.length, previousAffiliateCount]);
 
-  const toggleSave = (item: ResultItem) => {
-    if (isAffiliateSaved(item.link)) {
-      removeAffiliate(item.link);
+  // 2026-06-14 (paras): grouped-row handlers. A row now represents a domain/
+  // creator group, so save/delete/select act on the whole group (main + all
+  // sub-postings), per the agreed behaviour. Bulk save/delete are unaffected:
+  // selecting a group adds every posting's link to selectedLinks, so the
+  // existing link-based bulk handlers already operate on the full group.
+  const toggleSaveGroup = (group: AffiliateGroup) => {
+    const items = [group.main, ...group.subItems];
+    const allSaved = items.every(i => isAffiliateSaved(i.link));
+    if (allSaved) {
+      items.forEach(i => removeAffiliate(i.link));
     } else {
-      saveAffiliate(item);
+      saveAffiliatesBulk(items.filter(i => !isAffiliateSaved(i.link)));
     }
   };
 
-  const handleSingleDelete = async (link: string) => {
-    await removeDiscoveredAffiliate(link);
-    setDeleteResult({ count: 1, show: true });
+  const toggleSelectGroup = (links: string[]) => {
+    setSelectedLinks(prev => {
+      const next = new Set(prev);
+      const selected = next.has(links[0]); // main link represents the group
+      links.forEach(l => { if (selected) next.delete(l); else next.add(l); });
+      return next;
+    });
+  };
+
+  const handleGroupDelete = async (links: string[]) => {
+    await removeDiscoveredAffiliatesBulk(links);
+    setDeleteResult({ count: links.length, show: true });
     setTimeout(() => {
       setDeleteResult(prev => prev ? { ...prev, show: false } : null);
     }, 3000);
@@ -234,18 +251,6 @@ export default function DiscoveredPage() {
   // ============================================================================
   // BULK SELECTION HANDLERS (Added Dec 2025)
   // ============================================================================
-  const toggleSelectItem = (link: string) => {
-    setSelectedLinks(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(link)) {
-        newSet.delete(link);
-      } else {
-        newSet.add(link);
-      }
-      return newSet;
-    });
-  };
-
   const selectAllVisible = () => {
     setSelectedLinks(prev => {
       const newSet = new Set(prev);
@@ -431,6 +436,11 @@ export default function DiscoveredPage() {
     });
   }, [discoveredAffiliates, activeFilter, searchQuery, advancedFilters, isBlocked]);
 
+  // 2026-06-14 (paras): collapse the flat filtered list into domain/creator
+  // groups for rendering. Selection bookkeeping stays link-based below, so the
+  // existing bulk handlers keep working unchanged.
+  const groupedResults = useMemo(() => groupAffiliates(filteredResults), [filteredResults]);
+
   const visibleSelectedLinks = useMemo(() => {
     const visibleLinks = new Set(filteredResults.map(r => r.link));
     const visible = new Set<string>();
@@ -471,15 +481,9 @@ export default function DiscoveredPage() {
     }
   }, [visibleSelectedLinks.size, filteredResults, selectedLinks, blockedDomains.length, blockDomain, t.dashboard.find.bulkActions]);
 
-  const counts = useMemo(() => {
-    return {
-      All: discoveredAffiliates.length,
-      Web: discoveredAffiliates.filter(r => r.source === 'Web').length,
-      YouTube: discoveredAffiliates.filter(r => r.source === 'YouTube').length,
-      Instagram: discoveredAffiliates.filter(r => r.source === 'Instagram').length,
-      TikTok: discoveredAffiliates.filter(r => r.source === 'TikTok').length,
-    };
-  }, [discoveredAffiliates]);
+  // 2026-06-14 (paras): tab badges now count GROUPS (distinct domains/creators),
+  // not individual postings — matches the grouped row display.
+  const counts = useMemo(() => groupCountsBySource(discoveredAffiliates), [discoveredAffiliates]);
 
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
@@ -820,8 +824,14 @@ export default function DiscoveredPage() {
               </div>
               <p className="text-[#8898aa] text-sm mt-4 font-medium">{t.dashboard.discovered.loading}</p>
             </div>
-          ) : filteredResults.length > 0 ? (
-            filteredResults.map((item) => (
+          ) : groupedResults.length > 0 ? (
+            // 2026-06-14 (paras): render one row per group. subItems holds the
+            // creator's/domain's other postings (shown via "+N more" + modals).
+            // Save/Delete/Select act on the whole group.
+            groupedResults.map((group) => {
+              const item = group.main;
+              const groupLinks = [item.link, ...group.subItems.map(s => s.link)];
+              return (
               <AffiliateRow
                 key={item.link}
                 title={item.title}
@@ -830,8 +840,9 @@ export default function DiscoveredPage() {
                 source={item.source}
                 rank={item.rank}
                 keyword={item.keyword}
-                isSaved={isAffiliateSaved(item.link)}
-                onSave={() => toggleSave(item)}
+                subItems={group.subItems}
+                isSaved={[item, ...group.subItems].every(i => isAffiliateSaved(i.link))}
+                onSave={() => toggleSaveGroup(group)}
                 thumbnail={item.thumbnail}
                 views={item.views}
                 date={item.date}
@@ -848,14 +859,15 @@ export default function DiscoveredPage() {
                 duration={item.duration}
                 personName={item.personName}
                 isSelected={selectedLinks.has(item.link)}
-                onSelect={toggleSelectItem}
+                onSelect={() => toggleSelectGroup(groupLinks)}
                 isSaving={savingLinks.has(item.link)}
-                onDelete={() => handleSingleDelete(item.link)}
+                onDelete={() => handleGroupDelete(groupLinks)}
                 affiliateData={item}
                 currentUser={user}
                 searchQuery={searchQuery}
               />
-            ))
+              );
+            })
           ) : (
             /* =========================================================================
                EMPTY STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
