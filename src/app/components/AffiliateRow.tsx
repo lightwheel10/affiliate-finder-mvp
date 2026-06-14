@@ -1130,21 +1130,31 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
         {(snippet || title) && (
           <div className="p-4 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-xl">
-            <h5 className="text-xs font-semibold text-[#8898aa] dark:text-gray-400 mb-3">{t.affiliateRow.viewModal.web.relevantContent}</h5>
-            <a 
-              href={link} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="block p-3 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-600 transition-all group"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-semibold text-[#0f172a] dark:text-white line-clamp-2">{title}</p>
-                <ExternalLink size={12} className="text-gray-400 group-hover:text-black dark:group-hover:text-white flex-shrink-0 mt-0.5" />
-              </div>
-              {snippet && (
-                <p className="text-[10px] text-gray-500 mt-2 line-clamp-3">{snippet}</p>
-              )}
-            </a>
+            <h5 className="text-xs font-semibold text-[#8898aa] dark:text-gray-400 mb-3">
+              {t.affiliateRow.viewModal.web.relevantContent}{subItems && subItems.length > 0 ? ` (${1 + subItems.length})` : ''}
+            </h5>
+            {/* 2026-06-14 (paras): web detail now lists the whole domain group
+                (main + subItems), matching the social detail modal which already
+                listed all of a creator's postings. */}
+            <div className="space-y-2">
+              {[{ title, snippet, link }, ...(subItems ?? []).map(s => ({ title: s.title, snippet: s.snippet, link: s.link }))].map((post, idx) => (
+                <a
+                  key={idx}
+                  href={post.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-3 bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg hover:border-[#cdd5df] dark:hover:border-gray-600 transition-all group"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-semibold text-[#0f172a] dark:text-white line-clamp-2">{post.title}</p>
+                    <ExternalLink size={12} className="text-gray-400 group-hover:text-black dark:group-hover:text-white flex-shrink-0 mt-0.5" />
+                  </div>
+                  {post.snippet && (
+                    <p className="text-[10px] text-gray-500 mt-2 line-clamp-3">{post.snippet}</p>
+                  )}
+                </a>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -1792,99 +1802,98 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
               </div>
             </div>
 
-            {/* Modal Body — article list. The current row's article renders
-                first, then any subItems (other articles found for this same
-                affiliate domain). */}
+            {/* Modal Body — posting list. The current row's posting renders
+                first, then any subItems (other postings under the same domain
+                / creator).
+                2026-06-14 (paras): made source-aware. Web (domain) groups keep
+                the ranking/keyword cards; social (creator) groups render a
+                thumbnail + metrics card, since ranking/keyword/domain-links are
+                web-only concepts and looked wrong for creator postings. */}
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)] space-y-3 bg-white dark:bg-[#0a0a0a]">
-              {/* Current item (the article that triggered this row). */}
-              <div className="relative p-5 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl hover:bg-[#f6f9fc]/40 dark:hover:bg-gray-900/40 transition-colors group">
-                <a
-                  href={`https://${domain}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Open domain in new tab"
-                  className="absolute top-4 right-4 p-1.5 rounded-md text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
-                >
-                  <ExternalLink size={16} />
-                </a>
-
-                <a
-                  href={link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-base font-semibold text-[#0f172a] dark:text-white hover:text-[#ffbf23] mb-3 block pr-10 leading-snug transition-colors"
-                >
-                  {title}
-                </a>
-
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 text-xs font-semibold border border-[#e6ebf1] dark:border-gray-700 rounded-full">
-                    {t.affiliateRow.contentModal.ranking}
-                    <span className="text-[#0f172a] dark:text-white font-semibold tabular-nums">{rank}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-xs font-semibold border border-[#ffbf23]/30 rounded-full">
-                    {t.affiliateRow.contentModal.keyword}
-                    <span className="font-semibold">{keyword}</span>
-                  </span>
-                </div>
-
-                <p className="text-xs text-[#8898aa] dark:text-gray-500 mb-3 pb-2.5 border-b border-[#e6ebf1] dark:border-gray-800 font-medium">
-                  {date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia}{' '}
-                  <span className="text-[#425466] dark:text-gray-400 font-semibold">{discoveryMethod?.type}</span>
-                </p>
-
-                <div className="text-sm text-[#425466] dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
-                  {snippet}
-                </div>
-              </div>
-
-              {/* Other articles for the same affiliate domain. Same card
-                  template as the current item above. */}
-              {subItems?.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="relative p-5 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl hover:bg-[#f6f9fc]/40 dark:hover:bg-gray-900/40 transition-colors group"
-                >
-                  <a
-                    href={`https://${item.domain}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Open domain in new tab"
-                    className="absolute top-4 right-4 p-1.5 rounded-md text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
+              {[(affiliateData ?? {
+                title, link, domain, snippet: snippet || '', source,
+                rank, keyword, date, thumbnail, views, duration, discoveryMethod,
+              } as ResultItem), ...(subItems ?? [])].map((post, idx) => {
+                const postIsSocial = ['youtube', 'instagram', 'tiktok'].includes((post.source || '').toLowerCase());
+                if (postIsSocial) {
+                  // Social posting card — thumbnail + title + views/date.
+                  return (
+                    <div
+                      key={idx}
+                      className="relative flex gap-3 p-4 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl hover:bg-[#f6f9fc]/40 dark:hover:bg-gray-900/40 transition-colors group"
+                    >
+                      {post.thumbnail && (
+                        <a href={post.link} target="_blank" rel="noreferrer" className="shrink-0 relative">
+                          <div className="w-28 h-16 overflow-hidden bg-gray-200 dark:bg-gray-700 rounded-md border border-[#e6ebf1] dark:border-gray-700">
+                            <img src={getProxiedImageUrl(post.thumbnail)} alt="" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                          </div>
+                          {post.duration && (
+                            <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-[#0f172a]/85 text-white text-[8px] font-semibold rounded">{post.duration}</span>
+                          )}
+                        </a>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <a href={post.link} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#0f172a] dark:text-white hover:text-[#ffbf23] line-clamp-2 block mb-2 pr-6 transition-colors">
+                          {post.title}
+                        </a>
+                        <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                          {post.views && <span className="px-2 py-0.5 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 font-medium rounded-full border border-[#e6ebf1] dark:border-gray-700">{post.views} {t.affiliateRow.metrics.views}</span>}
+                          {post.date && <span className="text-gray-400">{formatDate(post.date)}</span>}
+                        </div>
+                      </div>
+                      <a href={post.link} target="_blank" rel="noreferrer" aria-label="Open posting in new tab" className="absolute top-3 right-3 p-1.5 rounded-md text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors">
+                        <ExternalLink size={14} />
+                      </a>
+                    </div>
+                  );
+                }
+                // Web posting card — ranking + keyword + snippet (unchanged).
+                return (
+                  <div
+                    key={idx}
+                    className="relative p-5 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl hover:bg-[#f6f9fc]/40 dark:hover:bg-gray-900/40 transition-colors group"
                   >
-                    <ExternalLink size={16} />
-                  </a>
+                    <a
+                      href={`https://${post.domain}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="Open domain in new tab"
+                      className="absolute top-4 right-4 p-1.5 rounded-md text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <ExternalLink size={16} />
+                    </a>
 
-                  <a
-                    href={item.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-base font-semibold text-[#0f172a] dark:text-white hover:text-[#ffbf23] mb-3 block pr-10 leading-snug transition-colors"
-                  >
-                    {item.title}
-                  </a>
+                    <a
+                      href={post.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-base font-semibold text-[#0f172a] dark:text-white hover:text-[#ffbf23] mb-3 block pr-10 leading-snug transition-colors"
+                    >
+                      {post.title}
+                    </a>
 
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 text-xs font-semibold border border-[#e6ebf1] dark:border-gray-700 rounded-full">
-                      {t.affiliateRow.contentModal.ranking}
-                      <span className="text-[#0f172a] dark:text-white font-semibold tabular-nums">{item.rank || '-'}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-xs font-semibold border border-[#ffbf23]/30 rounded-full">
-                      {t.affiliateRow.contentModal.keyword}
-                      <span className="font-semibold">{item.keyword || keyword}</span>
-                    </span>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#f6f9fc] dark:bg-gray-800 text-[#425466] dark:text-gray-300 text-xs font-semibold border border-[#e6ebf1] dark:border-gray-700 rounded-full">
+                        {t.affiliateRow.contentModal.ranking}
+                        <span className="text-[#0f172a] dark:text-white font-semibold tabular-nums">{post.rank || '-'}</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ffbf23]/15 text-[#0f172a] dark:text-[#ffbf23] text-xs font-semibold border border-[#ffbf23]/30 rounded-full">
+                        {t.affiliateRow.contentModal.keyword}
+                        <span className="font-semibold">{post.keyword || keyword}</span>
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-[#8898aa] dark:text-gray-500 mb-3 pb-2.5 border-b border-[#e6ebf1] dark:border-gray-800 font-medium">
+                      {post.date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia}{' '}
+                      <span className="text-[#425466] dark:text-gray-400 font-semibold">{post.discoveryMethod?.type || 'search'}</span>
+                    </p>
+
+                    <div className="text-sm text-[#425466] dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
+                      {post.snippet}
+                    </div>
                   </div>
-
-                  <p className="text-xs text-[#8898aa] dark:text-gray-500 mb-3 pb-2.5 border-b border-[#e6ebf1] dark:border-gray-800 font-medium">
-                    {item.date || date || new Date().toLocaleDateString()} — {t.affiliateRow.contentModal.discoveredVia}{' '}
-                    <span className="text-[#425466] dark:text-gray-400 font-semibold">{item.discoveryMethod?.type || 'search'}</span>
-                  </p>
-
-                  <div className="text-sm text-[#425466] dark:text-gray-400 leading-relaxed pl-3 border-l-4 border-[#ffbf23]">
-                    {item.snippet}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Modal Footer — Save = emerald primary (positive signal),
