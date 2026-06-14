@@ -546,13 +546,19 @@ export default function OutreachPage() {
       if (activeFilter !== 'All' && item.source !== activeFilter) return false;
       
       // Filter by Search Query
+      // 2026-06-14 (paras): title/domain were not null-guarded — item.title or
+      // item.domain being null threw on .toLowerCase() and crashed the page on
+      // search. Switched to the same null-safe `includes` helper used by the
+      // shared affiliate-search predicate so all search surfaces behave alike.
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
+        const includes = (v?: string | null) =>
+          typeof v === 'string' && v.toLowerCase().includes(q);
         return (
-          item.title.toLowerCase().includes(q) ||
-          item.domain.toLowerCase().includes(q) ||
-          (item.email && item.email.toLowerCase().includes(q)) ||
-          (item.personName && item.personName.toLowerCase().includes(q))
+          includes(item.title) ||
+          includes(item.domain) ||
+          includes(item.email) ||
+          includes(item.personName)
         );
       }
       
