@@ -68,6 +68,7 @@ import {
   fetchAndProcessResults,
 } from '../../../services/apify-google-scraper';
 import { sql } from '@/lib/db';
+import { rehostImageIfNeeded } from '@/lib/image-storage';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
 // January 30, 2026: Import discovery method extraction for correct topic/competitor attribution
 import { extractDiscoveryMethod, DiscoveryMethod } from '../../../utils/localized-search';
@@ -312,6 +313,17 @@ async function saveResultToDb(
       return false; // Already exists
     }
 
+    // 2026-06-15 (paras): re-host Instagram/TikTok avatar + thumbnail to Supabase
+    // Storage before saving. WHY: the scrapers give us signed CDN URLs that expire
+    // in ~3-4 days, after which the images 404 and render black. A permanent Supabase
+    // URL fixes this for good. Best-effort (see lib/image-storage.ts): no-ops for
+    // YouTube/web URLs and falls back to the original on any failure. Placed after
+    // the dup check = once per genuinely-new row; both images re-host in parallel.
+    const [permThumbnail, permChannelThumbnail] = await Promise.all([
+      rehostImageIfNeeded(result.thumbnail),
+      rehostImageIfNeeded(result.channel?.thumbnail),
+    ]);
+
     // Insert new discovered affiliate with ALL fields
     // January 30, 2026: Now uses discovery.type and discovery.value for correct attribution
     await sql`
@@ -374,7 +386,7 @@ async function saveResultToDb(
         ${result.source},
         ${true},
         ${'Found via onboarding search'},
-        ${result.thumbnail || null},
+        ${permThumbnail || null},
         ${result.date || null},
         ${result.views || null},
         ${result.highlightedWords || null},
@@ -382,7 +394,7 @@ async function saveResultToDb(
         ${discovery.value},
         ${result.channel?.name || null},
         ${result.channel?.link || null},
-        ${result.channel?.thumbnail || null},
+        ${permChannelThumbnail || null},
         ${result.channel?.verified || null},
         ${result.channel?.subscribers || null},
         ${result.duration || null},

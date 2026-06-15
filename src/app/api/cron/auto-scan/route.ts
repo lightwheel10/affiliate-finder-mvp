@@ -44,6 +44,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { rehostImageIfNeeded } from '@/lib/image-storage';
 import { checkCredits, consumeCredits } from '@/lib/credits';
 import { 
   SearchResult,
@@ -847,7 +848,19 @@ async function saveDiscoveredAffiliate(
     // counter can skip duplicates instead of double-counting them.
     return false;
   }
-  
+
+  // 2026-06-15 (paras): re-host Instagram/TikTok avatar + thumbnail to Supabase
+  // Storage before saving. WHY: the scrapers give us signed CDN URLs that expire
+  // in ~3-4 days, after which the images 404 and render black. Storing a permanent
+  // Supabase URL fixes this for good. Best-effort (see lib/image-storage.ts): it
+  // no-ops for YouTube/web URLs and falls back to the original URL on any failure,
+  // so the scan is never blocked. Runs only here (after the dup check) = once per
+  // genuinely-new row. Both images re-host in parallel to halve the added latency.
+  const [permThumbnail, permChannelThumbnail] = await Promise.all([
+    rehostImageIfNeeded(result.thumbnail),
+    rehostImageIfNeeded(result.channel?.thumbnail),
+  ]);
+
   // Insert new affiliate
   await sql`
     INSERT INTO crewcast.discovered_affiliates (
@@ -868,11 +881,11 @@ async function saveDiscoveredAffiliate(
     ) VALUES (
       ${userId}, ${searchKeyword}, ${result.title}, ${result.link}, ${result.domain},
       ${result.snippet || ''}, ${result.source},
-      ${result.thumbnail || null}, ${result.views || null}, ${result.date || null},
+      ${permThumbnail || null}, ${result.views || null}, ${result.date || null},
       ${result.rank || null}, ${result.keyword || null},
       ${result.discoveryMethod?.type || 'auto_scan'}, ${result.discoveryMethod?.value || 'auto'},
       true, ${result.channel?.name || null}, ${result.channel?.link || null},
-      ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
+      ${permChannelThumbnail || null}, ${result.channel?.verified || null},
       ${result.channel?.subscribers || null}, ${result.duration || null},
       ${result.youtubeVideoLikes || null}, ${result.youtubeVideoComments || null},
       ${result.instagramUsername || null}, ${result.instagramFullName || null}, ${result.instagramBio || null},
