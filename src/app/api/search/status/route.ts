@@ -51,6 +51,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { sql } from '@/lib/db';
+import { needsRehosting, rehostImageIfNeeded } from '@/lib/image-storage';
 import { consumeCredits } from '@/lib/credits';
 import { 
   getRunStatus, 
@@ -453,6 +454,27 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               ? JSON.stringify((result as any).similarwebTopCountries) 
               : null;
             
+            // 2026-06-15 (paras): permanent IG/TikTok image hosting — see
+            // lib/image-storage.ts. Only social rows have expiring CDN images, and
+            // this helper runs on every 3s status poll, so we re-host an image only
+            // when the row is genuinely new (quick existence check) — otherwise we'd
+            // re-upload the same images many times during one scan. Best-effort:
+            // falls back to the original URL on failure, so a poll is never blocked.
+            let permThumbnail = result.thumbnail;
+            let permChannelThumbnail = result.channel?.thumbnail;
+            if (needsRehosting(permThumbnail) || needsRehosting(permChannelThumbnail)) {
+              const alreadySaved = await sql`
+                SELECT 1 FROM crewcast.discovered_affiliates
+                WHERE user_id = ${userId} AND link = ${result.link} LIMIT 1
+              `;
+              if (alreadySaved.length === 0) {
+                [permThumbnail, permChannelThumbnail] = await Promise.all([
+                  rehostImageIfNeeded(permThumbnail),
+                  rehostImageIfNeeded(permChannelThumbnail),
+                ]);
+              }
+            }
+
             await sql`
               INSERT INTO crewcast.discovered_affiliates (
                 user_id, search_keyword, title, link, domain, snippet, source,
@@ -474,11 +496,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               VALUES (
                 ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
                 ${result.snippet || 'No description available'}, ${result.source},
-                ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
+                ${true}, ${'Found via onboarding search'}, ${permThumbnail || null},
                 ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
                 ${discovery.type}, ${discovery.value},
                 ${result.channel?.name || null}, ${result.channel?.link || null},
-                ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
+                ${permChannelThumbnail || null}, ${result.channel?.verified || null},
                 ${result.channel?.subscribers || null}, ${result.duration || null},
                 ${result.email || null},
                 ${(result as any).youtubeVideoLikes || null}, ${(result as any).youtubeVideoComments || null},
@@ -1016,6 +1038,26 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               topCountries: result.similarwebTopCountries ? JSON.stringify(result.similarwebTopCountries) : null,
             };
             
+            // 2026-06-15 (paras): permanent IG/TikTok image hosting — see
+            // lib/image-storage.ts. Same approach as the incremental save above:
+            // re-host only genuinely-new social rows (this path also relies on
+            // ON CONFLICT, so we existence-check first to avoid re-uploading images
+            // for rows already saved by the incremental poll). Best-effort fallback.
+            let permThumbnail = result.thumbnail;
+            let permChannelThumbnail = result.channel?.thumbnail;
+            if (needsRehosting(permThumbnail) || needsRehosting(permChannelThumbnail)) {
+              const alreadySaved = await sql`
+                SELECT 1 FROM crewcast.discovered_affiliates
+                WHERE user_id = ${userId} AND link = ${result.link} LIMIT 1
+              `;
+              if (alreadySaved.length === 0) {
+                [permThumbnail, permChannelThumbnail] = await Promise.all([
+                  rehostImageIfNeeded(permThumbnail),
+                  rehostImageIfNeeded(permChannelThumbnail),
+                ]);
+              }
+            }
+
             await sql`
               INSERT INTO crewcast.discovered_affiliates (
                 user_id, search_keyword, title, link, domain, snippet, source,
@@ -1036,11 +1078,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               VALUES (
                 ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
                 ${result.snippet || 'No description available'}, ${result.source},
-                ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
+                ${true}, ${'Found via onboarding search'}, ${permThumbnail || null},
                 ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
                 ${discovery.type}, ${discovery.value},
                 ${result.channel?.name || null}, ${result.channel?.link || null},
-                ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
+                ${permChannelThumbnail || null}, ${result.channel?.verified || null},
                 ${result.channel?.subscribers || null}, ${result.duration || null},
                 ${result.email || null},
                 ${result.instagramUsername || null}, ${result.instagramFullName || null},
