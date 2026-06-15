@@ -23,6 +23,39 @@ import { useNeonUser } from './useNeonUser';
 import { ResultItem, SimilarWebData } from '../types';
 
 // =============================================================================
+// SHARED BIO-EMAIL EXTRACTOR — 2026-06-15 (paras)
+//
+// WHY THIS EXISTS:
+// For TikTok/Instagram creators the email (when public) sits in the bio TEXT —
+// it is NOT stored in affiliate.email (that column stays null until a paid
+// lookup writes to it). Both the single "Find Email" button and the bulk
+// "Find Emails" action need to read it.
+//
+// WHAT BUG THIS FIXES (found 2026-06-15):
+// The bulk path used to only check `affiliate.email` (always null for social),
+// so it marked EVERY TikTok/Instagram creator 'not_found' even when the bio
+// clearly contained an email (e.g. "moin@teepir.de"). The single path had its
+// OWN private copy of the regex, so it worked — the two paths silently
+// diverged and the bulk path lost ~all TikTok bio emails for months.
+//
+// To stop that from happening again, BOTH paths now call this ONE helper.
+// Do NOT re-inline the regex in either path — keep a single source of truth.
+//
+// Note: YouTube has no bio field here, so it returns undefined → 'not_found',
+// matching prior behaviour (YouTube email is handled separately / not at all).
+// =============================================================================
+const extractBioEmail = (affiliate: ResultItem): string | undefined => {
+  const source = (affiliate.source || '').toLowerCase();
+  let bioText: string | undefined;
+  if (source.includes('tiktok')) bioText = affiliate.tiktokBio;
+  else if (source.includes('instagram')) bioText = affiliate.instagramBio;
+  if (!bioText) return undefined;
+  const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const matches = bioText.match(EMAIL_REGEX);
+  return matches && matches.length > 0 ? matches[0] : undefined;
+};
+
+// =============================================================================
 // SWR FETCHER - January 3rd, 2026
 // 
 // Standard fetcher function for SWR. Handles API calls and error responses.
@@ -542,34 +575,16 @@ export function useSavedAffiliates() {
     if (isSocialAffiliate) {
       // ========================================================================
       // EXTRACT EMAIL FROM BIO - Updated January 24, 2026
-      // 
-      // CRITICAL FIX: Previously we checked affiliate.email, but bio emails
-      // are no longer stored there (to prevent free email display).
-      // 
-      // Now we extract the email on-demand from the bio field:
-      // - TikTok: affiliate.tiktokBio
-      // - Instagram: affiliate.instagramBio
-      // 
-      // This ensures users must click "Find Email" and pay credits to see it.
+      //
+      // Bio emails live in the bio TEXT, not affiliate.email (that column stays
+      // null until a paid lookup). We extract on-demand so users must click
+      // "Find Email" and pay credits to reveal it.
+      //
+      // 2026-06-15 (paras): migrated to the shared extractBioEmail() helper at
+      // module top. Previously this path had its own private regex copy; the
+      // bulk path had a (broken) different copy. One helper = no more divergence.
       // ========================================================================
-      const extractEmailFromBio = (text: string | undefined | null): string | undefined => {
-        if (!text) return undefined;
-        const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-        const matches = text.match(EMAIL_REGEX);
-        return matches && matches.length > 0 ? matches[0] : undefined;
-      };
-      
-      // Get the appropriate bio field based on platform
-      const sourceLower = affiliate.source.toLowerCase();
-      let bioText: string | undefined;
-      if (sourceLower.includes('tiktok')) {
-        bioText = affiliate.tiktokBio;
-      } else if (sourceLower.includes('instagram')) {
-        bioText = affiliate.instagramBio;
-      }
-      
-      // Extract email from bio (NOT from affiliate.email which is no longer populated)
-      const bioEmail = extractEmailFromBio(bioText);
+      const bioEmail = extractBioEmail(affiliate);
       const emailStatus = bioEmail ? 'found' : 'not_found';
 
       // ========================================================================
@@ -1075,19 +1090,23 @@ export function useSavedAffiliates() {
         if (isSocialAffiliate) {
           // ======================================================================
           // SOCIAL AFFILIATE EMAIL LOOKUP - Updated January 16, 2026
-          // 
-          // For social affiliates, check if bio email already exists.
-          // Note: affiliates with existing emails are already filtered out above,
-          // so if we get here, the social affiliate has NO bio email → not_found
-          // 
-          // CREDIT POLICY UPDATE - January 16, 2026:
-          // Previously bio emails were free. Client decided to charge 1 credit
-          // for ALL email discoveries, including bio-extracted emails.
-          // - If email found: 1 credit charged
-          // - If no email: FREE (user shouldn't pay for failure)
+          //
+          // 2026-06-15 (paras): BUG FIX. This path previously did
+          //   const emailStatus = affiliate.email ? 'found' : 'not_found';
+          // and sent `email: affiliate.email`. But affiliate.email is ALWAYS null
+          // for social creators (bio emails are never written to that column), so
+          // bulk "Find Emails" marked every TikTok/Instagram creator 'not_found'
+          // even when their bio plainly contained an email (e.g. "moin@teepir.de").
+          // The single "Find Email" button worked because it read the bio; this
+          // bulk copy never did. We now read the bio via the SAME shared
+          // extractBioEmail() helper the single path uses — no more divergence.
+          //
+          // CREDIT POLICY (January 16, 2026): 1 credit charged only when an email
+          // is found; not_found is free.
           // ======================================================================
-          const emailStatus = affiliate.email ? 'found' : 'not_found';
-          
+          const bioEmail = extractBioEmail(affiliate);
+          const emailStatus = bioEmail ? 'found' : 'not_found';
+
           // Call PATCH endpoint (now handles credit check/consumption)
           const res = await fetch('/api/affiliates/saved', {
             method: 'PATCH',
@@ -1096,7 +1115,7 @@ export function useSavedAffiliates() {
               affiliateId: affiliate.id,
               userId,
               emailStatus,
-              email: affiliate.email,
+              email: bioEmail,
               provider: 'bio_extraction',
             }),
           });
@@ -1150,9 +1169,18 @@ export function useSavedAffiliates() {
                 a.id === affiliate.id
                   ? {
                       ...a,
+                      // 2026-06-15 (paras): also write the extracted bio email +
+                      // results (not just the status) so the row shows the email
+                      // immediately, matching the single "Find Email" path.
+                      email: bioEmail || a.email,
                       email_status: emailStatus,
                       email_searched_at: new Date().toISOString(),
                       email_provider: 'bio_extraction',
+                      email_results: bioEmail ? {
+                        emails: [bioEmail],
+                        contacts: [],
+                        provider: 'bio_extraction',
+                      } : a.email_results,
                     }
                   : a
               )
