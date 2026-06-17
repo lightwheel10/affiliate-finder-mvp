@@ -98,7 +98,7 @@ class ErrorBoundaryInner extends Component<TranslatedErrorBoundaryProps, ErrorBo
             <p className="text-sm text-[#8898aa] dark:text-gray-400 mb-6">
               {translations.message}{' '}
               <a
-                href="mailto:support@afforceone.com"
+                href="mailto:support@revenueworks.ai"
                 className="text-[#0f172a] dark:text-white font-semibold hover:underline"
               >
                 {translations.contactPrefix}

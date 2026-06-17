@@ -29,7 +29,9 @@ const nextConfig: NextConfig = {
    * Falls back to production URL if not set
    */
   env: {
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://afforceone.com',
+    // 2026-06-16 (paras): correct live host is afforce.revenueworks.ai
+    // (afforceone.com was never the real production domain).
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://afforce.revenueworks.ai',
   },
 
   /**

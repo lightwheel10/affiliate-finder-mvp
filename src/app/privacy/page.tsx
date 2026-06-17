@@ -106,8 +106,8 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-display font-semibold tracking-tight text-[#0f172a] dark:text-white mb-4">{t.legalPages.privacy.sections.contactUs}</h2>
             <p className="text-[#425466] dark:text-gray-400 mb-6">
               {t.legalPages.privacy.sections.contactUsText}{' '}
-              <a href="mailto:privacy@afforceone.com" className="text-[#0f172a] dark:text-white font-semibold hover:text-[#ffbf23] transition-colors">
-                privacy@afforceone.com
+              <a href="mailto:privacy@revenueworks.ai" className="text-[#0f172a] dark:text-white font-semibold hover:text-[#ffbf23] transition-colors">
+                privacy@revenueworks.ai
               </a>
             </p>
           </div>

@@ -1276,7 +1276,7 @@ export const de: Dictionary = {
   errorBoundary: {
     title: 'Etwas ist schiefgelaufen',
     message: 'Bitte versuch es später erneut. Wenn das Problem weiterhin besteht, kontaktiere uns unter',
-    contactPrefix: 'support@afforceone.com',
+    contactPrefix: 'support@revenueworks.ai',
     tryAgain: 'Erneut versuchen',
   },
 
