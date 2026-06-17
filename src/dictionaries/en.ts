@@ -1284,7 +1284,7 @@ export const en: Dictionary = {
   errorBoundary: {
     title: 'Something went wrong',
     message: 'Please try again later. If the problem continues, contact us at',
-    contactPrefix: 'support@afforceone.com',
+    contactPrefix: 'support@revenueworks.ai',
     tryAgain: 'Try Again',
   },
 

@@ -183,7 +183,7 @@ export const InteractiveSearchDemo = () => {
           <div className="flex-1 flex justify-center">
             <div className="w-3/5 h-6 bg-white dark:bg-[#222] rounded-md border border-[#e6ebf1] dark:border-gray-700 flex items-center px-2 gap-2 text-[10px] text-[#8898aa] dark:text-gray-400 font-medium">
               <Search size={10} />
-              <span>afforceone.com/scout</span>
+              <span>afforce.revenueworks.ai/scout</span>
             </div>
           </div>
         </div>

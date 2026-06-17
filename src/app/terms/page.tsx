@@ -114,8 +114,8 @@ export default function TermsOfServicePage() {
             <h2 className="text-xl font-display font-semibold tracking-tight text-[#0f172a] dark:text-white mb-4">{t.legalPages.terms.sections.contactUs}</h2>
             <p className="text-[#425466] dark:text-gray-400 mb-6">
               {t.legalPages.terms.sections.contactUsText}{' '}
-              <a href="mailto:legal@afforceone.com" className="text-[#0f172a] dark:text-white font-semibold hover:text-[#ffbf23] transition-colors">
-                legal@afforceone.com
+              <a href="mailto:legal@revenueworks.ai" className="text-[#0f172a] dark:text-white font-semibold hover:text-[#ffbf23] transition-colors">
+                legal@revenueworks.ai
               </a>
             </p>
           </div>
