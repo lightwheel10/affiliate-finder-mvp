@@ -36,7 +36,6 @@
  * - /sign-in, /sign-up (auth pages)
  * - /auth/callback (Supabase callback)
  * - /api/webhook, /api/stripe/webhook (webhooks use signatures)
- * - /admin (has its own JWT auth)
  * - /privacy, /terms, etc. (legal pages)
  * 
  * For these routes, we still refresh the session if one exists,
@@ -60,8 +59,6 @@ const publicRoutes = [
   "/handler",        // Legacy Stack Auth routes (will be removed)
   "/api/webhook",
   "/api/stripe/webhook", // Stripe webhook - secured by signature
-  "/admin",          // Admin dashboard - has its own JWT auth
-  "/api/admin",      // Admin API routes - have their own auth check
   "/privacy",        // Legal pages
   "/terms",
   "/cookies",

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { addTopupCredits } from '@/lib/credits';
+import { stripe } from '@/lib/stripe';
+import type Stripe from 'stripe';
 
 // =============================================================================
 // POST /api/credits/fulfill
@@ -74,6 +76,31 @@ export async function POST(request: NextRequest) {
       const sessionId = purchase.stripe_checkout_session_id;
 
       console.log(`[Credits Fulfill] Attempting to fulfill purchase #${purchase.id}: ${amount} ${creditType}`);
+
+      // ========================================================================
+      // SECURITY (C1 fix): Verify with Stripe that this checkout session was
+      // actually PAID before granting credits. Previously any 'pending' row was
+      // fulfilled without asking Stripe, letting any logged-in user mint free
+      // credits by creating a checkout session and never paying.
+      //
+      // Same contract as the webhook (payment_status === 'paid'). On any
+      // uncertainty (Stripe error, unpaid) we SKIP and leave the row 'pending'
+      // so the webhook can still fulfill it later if payment eventually lands.
+      // ========================================================================
+      let session: Stripe.Checkout.Session;
+      try {
+        session = await stripe.checkout.sessions.retrieve(sessionId);
+      } catch (stripeError) {
+        console.error(`[Credits Fulfill] ⚠️ Stripe retrieve failed for purchase #${purchase.id} (session ${sessionId}) - skipping, leaving pending`, stripeError);
+        results.push({ id: purchase.id, status: 'skipped_stripe_error', creditType, amount });
+        continue;
+      }
+
+      if (session.payment_status !== 'paid' || !session.amount_total || session.amount_total <= 0) {
+        console.log(`[Credits Fulfill] Purchase #${purchase.id} not paid (payment_status=${session.payment_status}, amount_total=${session.amount_total}) - skipping, leaving pending`);
+        results.push({ id: purchase.id, status: 'skipped_unpaid', creditType, amount });
+        continue;
+      }
 
       const ok = await addTopupCredits(userId, creditType, amount, sessionId);
       if (ok) {

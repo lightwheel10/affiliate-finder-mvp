@@ -826,72 +826,97 @@ export async function addTopupCredits(
       return false;
     }
 
-    const existing = await sql`
-      SELECT id, status FROM crewcast.credit_purchases
-      WHERE stripe_checkout_session_id = ${checkoutSessionId}
-    `;
-    if (existing.length === 0) {
-      console.error(`[Credits] No credit_purchases row for session ${checkoutSessionId}`);
-      return false;
-    }
-    if (existing[0].status === 'completed') {
-      console.log(`[Credits] Idempotency: session ${checkoutSessionId} already completed`);
-      return true;
-    }
+    // ==========================================================================
+    // ATOMIC FULFILLMENT (M2 fix): The purchase row is CLAIMED first
+    // (pending -> completed) and the credit grant happens in the SAME DB
+    // transaction. Two concurrent callers (e.g. webhook + fallback fulfill
+    // endpoint) can no longer both grant: only one claim succeeds, and if
+    // anything fails after the claim, the transaction rolls back and the row
+    // returns to 'pending'.
+    // ==========================================================================
+    // The transaction-scoped client shadows the module-level `sql` so every
+    // query below runs inside the transaction.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const granted: boolean = await sql.begin(async (sql: any) => {
+      // Step 1: Atomically claim the pending purchase.
+      const claimed = await sql`
+        UPDATE crewcast.credit_purchases
+        SET status = 'completed', completed_at = NOW()
+        WHERE stripe_checkout_session_id = ${checkoutSessionId} AND status = 'pending'
+        RETURNING id
+      `;
 
-    let updateResult;
-    switch (creditType) {
-      case 'topic_search':
-        updateResult = await sql`
-          UPDATE crewcast.user_credits
-          SET topic_search_credits_topup = COALESCE(topic_search_credits_topup, 0) + ${amount},
-              updated_at = NOW()
-          WHERE user_id = ${userId}
-          RETURNING topic_search_credits_topup as topup
+      if (claimed.length === 0) {
+        // Either already completed (idempotent) or the row doesn't exist.
+        const existing = await sql`
+          SELECT id, status FROM crewcast.credit_purchases
+          WHERE stripe_checkout_session_id = ${checkoutSessionId}
         `;
-        break;
-      case 'email':
-        updateResult = await sql`
-          UPDATE crewcast.user_credits
-          SET email_credits_topup = COALESCE(email_credits_topup, 0) + ${amount},
-              updated_at = NOW()
-          WHERE user_id = ${userId}
-          RETURNING email_credits_topup as topup
-        `;
-        break;
-      case 'ai':
-        updateResult = await sql`
-          UPDATE crewcast.user_credits
-          SET ai_credits_topup = COALESCE(ai_credits_topup, 0) + ${amount},
-              updated_at = NOW()
-          WHERE user_id = ${userId}
-          RETURNING ai_credits_topup as topup
-        `;
-        break;
-      default:
+        if (existing.length === 0) {
+          console.error(`[Credits] No credit_purchases row for session ${checkoutSessionId}`);
+          return false;
+        }
+        if (existing[0].status === 'completed') {
+          console.log(`[Credits] Idempotency: session ${checkoutSessionId} already completed`);
+          return true;
+        }
+        console.error(`[Credits] Purchase for session ${checkoutSessionId} has unexpected status '${existing[0].status}' - not granting`);
         return false;
-    }
+      }
 
-    if (updateResult.length === 0) {
-      console.error(`[Credits] No user_credits row for user ${userId} - cannot add topup`);
-      return false;
-    }
+      // Step 2: Grant the credits (same transaction as the claim).
+      let updateResult;
+      switch (creditType) {
+        case 'topic_search':
+          updateResult = await sql`
+            UPDATE crewcast.user_credits
+            SET topic_search_credits_topup = COALESCE(topic_search_credits_topup, 0) + ${amount},
+                updated_at = NOW()
+            WHERE user_id = ${userId}
+            RETURNING topic_search_credits_topup as topup
+          `;
+          break;
+        case 'email':
+          updateResult = await sql`
+            UPDATE crewcast.user_credits
+            SET email_credits_topup = COALESCE(email_credits_topup, 0) + ${amount},
+                updated_at = NOW()
+            WHERE user_id = ${userId}
+            RETURNING email_credits_topup as topup
+          `;
+          break;
+        case 'ai':
+          updateResult = await sql`
+            UPDATE crewcast.user_credits
+            SET ai_credits_topup = COALESCE(ai_credits_topup, 0) + ${amount},
+                updated_at = NOW()
+            WHERE user_id = ${userId}
+            RETURNING ai_credits_topup as topup
+          `;
+          break;
+        default:
+          // Throw (not return) so the claim above rolls back.
+          throw new Error(`[Credits] Invalid credit type '${creditType}' for topup`);
+      }
 
-    const newBalance = updateResult[0].topup ?? amount;
+      if (updateResult.length === 0) {
+        // Throw so the transaction rolls back — never leave the purchase marked
+        // 'completed' when no credits were actually granted.
+        throw new Error(`[Credits] No user_credits row for user ${userId} - cannot add topup`);
+      }
 
-    await sql`
-      INSERT INTO crewcast.credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
-      VALUES (${userId}, ${creditType}, ${amount}, ${newBalance}, 'topup_purchase', 'credit_purchase')
-    `;
+      const newBalance = updateResult[0].topup ?? amount;
 
-    await sql`
-      UPDATE crewcast.credit_purchases
-      SET status = 'completed', completed_at = NOW()
-      WHERE stripe_checkout_session_id = ${checkoutSessionId}
-    `;
+      await sql`
+        INSERT INTO crewcast.credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
+        VALUES (${userId}, ${creditType}, ${amount}, ${newBalance}, 'topup_purchase', 'credit_purchase')
+      `;
 
-    console.log(`[Credits] Added ${amount} ${creditType} topup for user ${userId} (session ${checkoutSessionId})`);
-    return true;
+      console.log(`[Credits] Added ${amount} ${creditType} topup for user ${userId} (session ${checkoutSessionId})`);
+      return true;
+    });
+
+    return granted;
   } catch (error) {
     // CRITICAL: Log full error details so we can diagnose failures in Vercel logs
     const err = error as Error;
