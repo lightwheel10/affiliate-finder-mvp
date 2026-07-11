@@ -82,6 +82,12 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       customer: row.stripe_customer_id,
+      // SECURITY: card-only so payment is synchronous — payment_status is final
+      // ('paid' or not) at redirect time. Async methods (Klarna, iDEAL, bank
+      // transfer) would leave the session 'unpaid' at redirect, which the
+      // fallback fulfillment endpoint must not grant. Matches subscriptions
+      // (already card-only).
+      payment_method_types: ['card'],
       line_items: [
         {
           price: packDetails.priceId,
