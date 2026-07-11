@@ -49,7 +49,6 @@ export default function robots(): MetadataRoute.Robots {
           '/sign-up',    // Sign up page
         ],
         disallow: [
-          '/admin/',      // Admin dashboard - internal only
           '/api/',        // API routes - not for indexing
           '/dashboard/',  // User dashboard - requires auth
           '/handler/',    // Stack Auth handlers
@@ -64,7 +63,7 @@ export default function robots(): MetadataRoute.Robots {
         // Specific rules for Googlebot - allow slightly more for rich snippets
         userAgent: 'Googlebot',
         allow: ['/'],
-        disallow: ['/admin/', '/api/', '/handler/'],
+        disallow: ['/api/', '/handler/'],
       },
     ],
     // Reference to sitemap for search engines
