@@ -1003,11 +1003,20 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       
       console.log(`🎓 [Search/Status] Checking onboarding: isOnboarding=${isOnboarding}, topics=${onboardingTopics?.join(',')}`);
       
-      if (isOnboarding && onboardingTopics && onboardingTopics.length > 0) {
-        console.log(`🎓 [Search/Status] Onboarding job detected, saving ${allResults.length} results to discovered_affiliates...`);
+      // 2026-07-14 20:09 IST (Paras): Persist Find-search results on the SERVER.
+      // Before this, only onboarding/auto-scan saved server-side; a normal Find search
+      // relied on the browser to save via the batch endpoint, so results were lost
+      // whenever the tab was closed/navigated or the search ran past the browser's
+      // 3-min poll timeout (e.g. jobs 47/48 saved 0 of ~330 results). Now the server
+      // saves every completed search's results itself.
+      const saveTopics = isOnboarding
+        ? (onboardingTopics || [])
+        : ((job.keyword as string)?.split(' | ').filter(Boolean) ?? []);
+      const saveCompetitors = userSettings?.competitors || [];
+
+      if (allResults.length > 0) {
+        console.log(`💾 [Search/Status] Saving ${allResults.length} results to discovered_affiliates (server-side)...`);
         
-        // January 30, 2026: Get competitors for discovery method extraction
-        const onboardingCompetitors = userSettings?.competitors || [];
         let savedCount = 0;
         let errorCount = 0;
         
@@ -1020,10 +1029,10 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             // Extract the actual topic/competitor that found this result
             const discovery = extractDiscoveryMethod(
               result.searchQuery,
-              onboardingTopics,
-              onboardingCompetitors
+              saveTopics,
+              saveCompetitors
             );
-            
+
             // SimilarWeb fields are added dynamically during enrichment (line ~880)
             const sw = {
               monthlyVisits: result.similarwebMonthlyVisits || null,
@@ -1124,13 +1133,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
           }
         }
         
-        console.log(`🎓 [Search/Status] Saved ${savedCount} results (${errorCount} duplicates/errors) to discovered_affiliates`);
-      } else {
-        // Not onboarding - consume credit
-        if (allResults.length > 0) {
-          await consumeCredits(userId, 'topic_search', 1);
-          console.log(`💳 [Search/Status] Credit consumed for user ${userId}`);
-        }
+        console.log(`💾 [Search/Status] Saved ${savedCount} results (${errorCount} duplicates/errors) to discovered_affiliates`);
+      }
+
+      // Non-onboarding (Find) searches consume a topic_search credit; onboarding is free.
+      if (!isOnboarding && allResults.length > 0) {
+        await consumeCredits(userId, 'topic_search', 1);
+        console.log(`💳 [Search/Status] Credit consumed for user ${userId}`);
       }
       
       // Update job status to done
