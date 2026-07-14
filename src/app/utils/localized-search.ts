@@ -337,7 +337,17 @@ export function buildLocalizedSocialQuery(
     'TikTok': 'tiktok.com',
     'Web': '',
   };
-  
+
+  // 2026-07-14 20:35 IST (Paras): YouTube — drop the generic "erfahrung test
+  // bewertung" padding. Those words match ANY review/test video (cars, games,
+  // cameras) and polluted YouTube results. Verified live with the actual scraper:
+  // padded query = 4/10 relevant (BMW/Borderlands/camera reviews); keyword-only
+  // = 10/10 relevant. Instagram/TikTok keep the padding — they are niche and it
+  // helps there; only YouTube (huge, full of "review" content) is hurt by it.
+  if (platform === 'YouTube') {
+    return `${keyword} site:${domainMap[platform]}`;
+  }
+
   return `${keyword} ${searchTerms} site:${domainMap[platform]}`;
 }
 
