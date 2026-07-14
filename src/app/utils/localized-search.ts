@@ -393,11 +393,13 @@ export function buildLocalizedWebQuery(
   const queries: string[] = [];
   
   if (isCompetitor) {
-    // Competitor/brand search: use first 3 web terms + discount
+    // 2026-07-14 20:44 IST (Paras): dropped the "<brand> rabatt" (discount) query.
+    // It returned almost only coupon-farm sites (gutschein/coupon aggregators), not
+    // real affiliates — verified live: 9/10 results were voucher sites. Competitor
+    // web search now uses only the review terms.
     for (const term of terms.webTerms.slice(0, 3)) {
       queries.push(`"${keyword} ${term}"`);
     }
-    queries.push(`"${keyword} ${terms.discount}"`);
   } else {
     // Niche/keyword search: use all 4 web terms
     for (const term of terms.webTerms) {
