@@ -85,7 +85,10 @@ export default function DiscoveredPage() {
   const {
     discoveredAffiliates,
     removeDiscoveredAffiliatesBulk,
-    isLoading: loading
+    isLoading: loading,
+    // 2026-07-15 07:40 IST (Paras): pull refetch so the live enrichment poll can
+    // refresh the on-screen list after the server saves new rows (see checkEnrichmentStatus).
+    refetch: refetchDiscovered
   } = useDiscoveredAffiliates();
 
   const {
@@ -164,40 +167,57 @@ export default function DiscoveredPage() {
           // Poll status endpoint to trigger incremental saves
           await fetch(`/api/search/status?jobId=${job.jobId}`);
         }
+
+        // 2026-07-15 07:40 IST (Paras): After the status endpoint has saved newly
+        // enriched rows to the DB, refresh the on-screen list so those rows appear
+        // WITHOUT a manual hard refresh. The discovered list uses SWR with no
+        // refreshInterval, so nothing re-fetches it on its own — refetch() (SWR
+        // mutate) pulls the freshly-saved rows. This is why users previously had to
+        // hard-refresh to see results while a search was still finishing.
+        await refetchDiscovered();
       }
-      
+
       return data.hasActiveJobs;
     } catch (error) {
       console.error('[Discovered] Failed to check enrichment status:', error);
       return false;
     }
-  }, []);
+  }, [refetchDiscovered]);
 
-  // Start polling when page loads, stop when enrichment completes
+  // ==========================================================================
+  // 2026-07-15 07:40 IST (Paras): Poll on a fixed 5s interval for the WHOLE time
+  // this page is mounted, instead of only when the very first check happens to
+  // find an active job.
+  //
+  // WHY: Previously the interval was created only inside `if (hasActive)`. If you
+  // opened this page BEFORE a search had entered the 'enriching' state (e.g. you
+  // navigated here during the Google-search phase, or right after starting a
+  // search), the single mount-time check returned "no active jobs", no interval
+  // was ever created, and the page never noticed the job when it started enriching
+  // seconds later. That is exactly why the "Still finding..." banner and the
+  // result-saving only appeared after a MANUAL HARD REFRESH. Polling continuously
+  // means the page reliably picks a job up the moment it becomes active — no
+  // refresh needed.
+  //
+  // COST: when nothing is running, /api/search/enrichment-status returns early with
+  // just one cheap DB read (no Apify calls), so idle polling is inexpensive. The
+  // interval is always cleared on unmount below.
+  // ==========================================================================
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null;
     let mounted = true;
 
-    const startPolling = async () => {
+    const runCheck = async () => {
       if (!mounted) return;
-      
       const hasActive = await checkEnrichmentStatus();
-      
-      if (hasActive && mounted) {
-        setIsPollingEnrichment(true);
-        // Poll every 5 seconds while enrichment is active
-        pollInterval = setInterval(async () => {
-          if (!mounted) return;
-          const stillActive = await checkEnrichmentStatus();
-          if (!stillActive && mounted) {
-            setIsPollingEnrichment(false);
-            if (pollInterval) clearInterval(pollInterval);
-          }
-        }, 5000);
-      }
+      // Track active state for anything that reads it; the banner itself is driven
+      // by enrichmentStatus.hasActiveJobs (set inside checkEnrichmentStatus).
+      if (mounted) setIsPollingEnrichment(!!hasActive);
     };
 
-    startPolling();
+    // Check immediately on mount, then keep checking every 5 seconds while mounted.
+    runCheck();
+    pollInterval = setInterval(runCheck, 5000);
 
     return () => {
       mounted = false;

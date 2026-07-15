@@ -43,13 +43,32 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     
     const userId = users[0].id as number;
     
-    // Find any jobs in 'enriching' status for this user
+    // ==========================================================================
+    // 2026-07-15 07:40 IST (Paras): Also report jobs still in the 'running'
+    // (Google-search) phase, not only 'enriching' ones.
+    //
+    // WHY: The Discovered page's poller calls /api/search/status for whatever this
+    // endpoint reports as active, which is what actually drives a job to completion
+    // and SAVES its results. Previously we only reported 'enriching' jobs, so a job
+    // that stalled in the earlier 'running' phase — because the Find page stopped
+    // polling before Google finished — was invisible here and its results were
+    // never saved. Reporting 'running' jobs too lets the Discovered page recover
+    // ANY in-flight job.
+    //
+    // SAFETY (protection-level code — do not widen this): the enriching branch is
+    // left EXACTLY as before (status='enriching' AND enrichment_status='running').
+    // The new 'running' branch is bounded to jobs created in the last 30 minutes so
+    // we never resurrect an old, dead 'running' row (re-polling one could re-trigger
+    // paid enrichment actors). Real searches finish in well under 30 minutes.
+    // ==========================================================================
     const enrichingJobs = await sql`
       SELECT id, keyword, enrichment_status, enrichment_run_ids, created_at
       FROM crewcast.search_jobs
       WHERE user_id = ${userId}
-        AND status = 'enriching'
-        AND enrichment_status = 'running'
+        AND (
+          (status = 'enriching' AND enrichment_status = 'running')
+          OR (status = 'running' AND created_at > now() - interval '30 minutes')
+        )
       ORDER BY created_at DESC
       LIMIT 5
     `;
