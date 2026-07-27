@@ -1973,13 +1973,41 @@ export default function OutreachPage() {
                   <div className="col-span-2 flex items-center gap-2 min-w-0">
                     <div className="w-10 h-10 bg-[#f6f9fc] dark:bg-gray-800 border border-[#e6ebf1] dark:border-gray-700 rounded-full shadow-soft-sm flex items-center justify-center shrink-0 overflow-hidden">
                       {item.thumbnail ? (
-                        <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
+                        /* =========================================================
+                           2026-07-27 14:55 IST (Paras): graceful broken-image
+                           fallback. Old IG/TikTok rows hold expired signed CDN
+                           URLs that 403 (this page loads them directly, without
+                           the proxy AffiliateRow uses), which rendered broken
+                           avatars. On error: retry once with the domain favicon
+                           (house pattern — AffiliateRow uses the same Google
+                           favicon service as fallback src), and if that also
+                           fails, hide the img so the soft circle bg shows.
+                           data-fallback guards against an onError loop. NOTE:
+                           this fixes the visuals only — the dead URLs still log
+                           a console 403 until the DB backfill nulls them out.
+                           ========================================================= */
+                        <img
+                          src={item.thumbnail}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const img = e.currentTarget;
+                            if (img.dataset.fallback) {
+                              img.style.display = 'none';
+                            } else {
+                              img.dataset.fallback = '1';
+                              img.src = `https://www.google.com/s2/favicons?domain=${item.domain}&sz=32`;
+                            }
+                          }}
+                        />
                       ) : item.source === 'Web' && item.domain ? (
-                        /* Web results: Show favicon from Google's service */
+                        /* Web results: Show favicon from Google's service.
+                           2026-07-27 14:55 IST (Paras): added hide-on-error. */
                         <img
                           src={`https://www.google.com/s2/favicons?domain=${item.domain}&sz=32`}
                           alt={item.domain}
                           className="w-6 h-6"
+                          onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
                       ) : (
                         getSourceIcon(item.source)
