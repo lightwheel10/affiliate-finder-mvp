@@ -468,6 +468,12 @@ export interface Dictionary {
       message: string;
       action: string;
       creator: string;  // January 17, 2026: Added for outreach page table header
+      // 2026-07-27 12:50 IST (Paras): Tooltips for the clickable Email-header
+      // filter on the Saved + Outreach tables. Were hardcoded English on the
+      // Saved page since Jan 16, 2026; extracted when the filter was ported to
+      // Outreach. The live count is appended in JSX, not interpolated here.
+      emailFilterShowAll: string;
+      emailFilterShowWithEmail: string;
     };
     // =========================================================================
     // DISCOVERY REASONS - January 22, 2026

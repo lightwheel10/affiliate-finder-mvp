@@ -1028,7 +1028,11 @@ export default function SavedPage() {
                     ? "bg-emerald-500 text-white"
                     : "hover:bg-gray-100 dark:hover:bg-gray-800"
                 )}
-                title={showOnlyWithEmail ? "Show all affiliates" : `Show only affiliates with email (${emailsFoundCount})`}
+                // 2026-07-27 12:50 IST (Paras): tooltips were hardcoded English
+                // since Jan 16, 2026 while the rest of the page is EN/DE
+                // translated. Moved to i18n keys when this filter was ported to
+                // the Outreach page (which uses the same keys).
+                title={showOnlyWithEmail ? t.dashboard.table.emailFilterShowAll : `${t.dashboard.table.emailFilterShowWithEmail} (${emailsFoundCount})`}
               >
                 <Mail size={10} className={showOnlyWithEmail ? "text-white" : "text-emerald-500"} />
                 <span>{t.dashboard.table.email}</span>

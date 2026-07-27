@@ -474,6 +474,10 @@ export const en: Dictionary = {
       message: 'Message',
       action: 'Action',
       creator: 'Creator',  // January 17, 2026: Added for outreach page table header
+      // 2026-07-27 12:50 IST (Paras): Email-header filter tooltips (Saved +
+      // Outreach). Count is appended in JSX: `${emailFilterShowWithEmail} (N)`.
+      emailFilterShowAll: 'Show all affiliates',
+      emailFilterShowWithEmail: 'Show only affiliates with email',
     },
     // =========================================================================
     // DISCOVERY REASONS - January 22, 2026

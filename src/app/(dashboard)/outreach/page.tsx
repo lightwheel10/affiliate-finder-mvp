@@ -196,7 +196,26 @@ export default function OutreachPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedAffiliates, setSelectedAffiliates] = useState<Set<number>>(new Set());
-  
+
+  // =========================================================================
+  // EMAIL FILTER - 2026-07-27 12:46 IST (Paras)
+  //
+  // WHY: Client request. Since the March 2026 multi-channel change this page
+  // lists ALL saved affiliates (the old email-only filter was removed), but
+  // there was no way to narrow the list back down to contacts that actually
+  // have an email address. This mirrors the clickable Email-header filter
+  // already on the Saved page (saved/page.tsx).
+  //
+  // SEMANTIC NOTE — deliberately DIFFERENT from the Saved page:
+  // Saved filters on `emailStatus === 'found'` (paid email lookups only).
+  // Here we filter on `item.email` being present — i.e. exactly what the
+  // Email column in THIS table visibly renders. If we used emailStatus, a
+  // row that displays an email (e.g. legacy data where email exists but
+  // email_status was never set to 'found') would vanish when the filter is
+  // on, which reads as a bug to the user. Filter must match the column.
+  // =========================================================================
+  const [showOnlyWithEmail, setShowOnlyWithEmail] = useState(false);
+
   // =========================================================================
   // MESSAGE STORAGE (Updated December 25, 2025)
   // 
@@ -544,7 +563,14 @@ export default function OutreachPage() {
     return affiliatesWithEmail.filter(item => {
       // Filter by Source
       if (activeFilter !== 'All' && item.source !== activeFilter) return false;
-      
+
+      // 2026-07-27 12:46 IST (Paras): Email filter — toggled from the Email
+      // column header. Checks `item.email` presence, NOT emailStatus; see the
+      // EMAIL FILTER state block near the top of the component for the WHY.
+      // Must run BEFORE the search-query block below, because that block
+      // `return`s directly and would skip any check placed after it.
+      if (showOnlyWithEmail && !item.email) return false;
+
       // Filter by Search Query
       // 2026-06-14 (paras): title/domain were not null-guarded — item.title or
       // item.domain being null threw on .toLowerCase() and crashed the page on
@@ -564,7 +590,18 @@ export default function OutreachPage() {
       
       return true;
     });
-  }, [affiliatesWithEmail, activeFilter, searchQuery]);
+  }, [affiliatesWithEmail, activeFilter, searchQuery, showOnlyWithEmail]);
+
+  // =========================================================================
+  // EMAIL FOUND COUNT - 2026-07-27 12:46 IST (Paras)
+  // Number of rows in the CURRENT filtered view that have an email. Feeds the
+  // count badge + tooltip on the clickable Email header. Uses the exact same
+  // rule as the filter itself (`item.email` presence) so the badge, tooltip
+  // and filtered rows can never disagree with each other.
+  // =========================================================================
+  const emailsFoundCount = useMemo(() => {
+    return filteredResults.filter(item => !!item.email).length;
+  }, [filteredResults]);
 
   // Calculate counts (only affiliates with email - January 16, 2026)
   const counts = useMemo(() => {
@@ -1773,7 +1810,36 @@ export default function OutreachPage() {
             {/* January 17, 2026: Using i18n translation */}
             <div className="col-span-2">{t.dashboard.table.creator}</div>
             <div className="col-span-3">{t.dashboard.table.discoveryMethod}</div>
-            <div className="col-span-2">{t.dashboard.table.email}</div>
+            {/* =================================================================
+                CLICKABLE EMAIL FILTER HEADER - 2026-07-27 12:46 IST (Paras)
+                Ported 1:1 from saved/page.tsx (same button markup, emerald
+                active state, count badge) so both tables look and behave
+                alike. Only the filter RULE differs: here it is `item.email`
+                presence — see the EMAIL FILTER state block near the top of
+                the component for the WHY.
+                12:50 IST: tooltips moved to i18n keys (were hardcoded EN on
+                the Saved page); Saved updated in the same pass.
+                ================================================================= */}
+            <div className="col-span-2">
+              <button
+                onClick={() => setShowOnlyWithEmail(!showOnlyWithEmail)}
+                className={cn(
+                  "flex items-center gap-1 px-1.5 py-0.5 rounded transition-all cursor-pointer",
+                  showOnlyWithEmail
+                    ? "bg-emerald-500 text-white"
+                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                )}
+                title={showOnlyWithEmail ? t.dashboard.table.emailFilterShowAll : `${t.dashboard.table.emailFilterShowWithEmail} (${emailsFoundCount})`}
+              >
+                <Mail size={10} className={showOnlyWithEmail ? "text-white" : "text-emerald-500"} />
+                <span>{t.dashboard.table.email}</span>
+                {showOnlyWithEmail && emailsFoundCount > 0 && (
+                  <span className="px-1 py-0.5 text-[9px] font-semibold rounded bg-white/20 text-white">
+                    {emailsFoundCount}
+                  </span>
+                )}
+              </button>
+            </div>
             <div className="col-span-2 text-right">{t.dashboard.table.message}</div>
           </div>
 
