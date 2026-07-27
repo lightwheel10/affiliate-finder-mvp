@@ -131,7 +131,15 @@ export interface UsePollingSearchReturn {
 
 const DEFAULT_POLL_INTERVAL_MS = 3000; // 3 seconds
 const DEFAULT_MAX_RETRIES = 2;
-const MAX_POLL_DURATION_MS = 180000; // 3 minutes timeout
+// 2026-07-15 08:56 IST (Paras): Raised the browser polling cap from 3 to 5 minutes.
+// WHY: this is a CLIENT-side "how long the browser keeps polling before giving up"
+// limit — it is NOT a Vercel constraint (each /api/search/status poll is a short
+// request well under that route's 120s maxDuration). Some searches take longer than
+// 3 minutes end-to-end (Google scrape + all enrichment actors), and at 3 minutes the
+// Find page gave up and showed a false "Search timed out" error. 5 minutes gives a
+// full run enough headroom to finish. (Results are still additionally safeguarded by
+// the Discovered page poller, which has no time limit.)
+const MAX_POLL_DURATION_MS = 300000; // 5 minutes timeout
 
 // =============================================================================
 // HOOK IMPLEMENTATION
