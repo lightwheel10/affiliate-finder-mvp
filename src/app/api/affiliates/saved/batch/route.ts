@@ -15,6 +15,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
+// 2026-07-27 13:23 IST (Paras): defensive image re-hosting on save — see the
+// comment above the rehost block in POST for the full WHY.
+import { rehostImageIfNeeded } from '@/lib/image-storage';
+
+// 2026-07-27 13:23 IST (Paras): image re-hosting can add up to ~8s (one CDN
+// fetch timeout) on top of the existing per-row INSERT loop for large batches.
+// Pin the function duration instead of relying on Vercel's default.
+export const maxDuration = 60;
 
 /**
  * POST /api/affiliates/saved/batch
@@ -58,8 +66,36 @@ export async function POST(request: NextRequest) {
     const insertedIds: number[] = [];
     let duplicateCount = 0;
 
+    // =========================================================================
+    // 2026-07-27 13:23 IST (Paras): re-host IG/TikTok images before saving.
+    //
+    // WHY: this endpoint stores whatever thumbnail URLs the client sends. For
+    // Instagram/TikTok those are SIGNED CDN URLs that expire after ~3-4 days
+    // and then 403 forever. Verified against the live DB today: ALL 2,313
+    // saved_affiliates rows had raw CDN URLs (zero permanent ones) — the save
+    // flow was the leak. rehostImageIfNeeded() uploads a permanent copy to
+    // Supabase Storage; fast no-op for already-permanent URLs and falls back
+    // to the original on any failure, so saving can never break over images.
+    //
+    // Done in ONE parallel pass BEFORE the sequential insert loop below so the
+    // added wall-time is bounded by the slowest single image fetch (~8s cap),
+    // not fetches × rows — this route must stay inside Vercel's function
+    // timeout for large batch saves. Duplicates get re-hosted needlessly, but
+    // the storage path is a deterministic hash (upsert), so no bloat.
+    // =========================================================================
+    const rehostedImages = await Promise.all(
+      affiliates.map(async (a: { thumbnail?: string | null; channelThumbnail?: string | null }) => {
+        const [thumb, chanThumb] = await Promise.all([
+          rehostImageIfNeeded(a.thumbnail),
+          rehostImageIfNeeded(a.channelThumbnail),
+        ]);
+        return { thumb, chanThumb };
+      })
+    );
+
     // Process each affiliate
-    for (const affiliate of affiliates) {
+    for (let affiliateIndex = 0; affiliateIndex < affiliates.length; affiliateIndex++) {
+      const affiliate = affiliates[affiliateIndex];
       const {
         title,
         link,
@@ -70,7 +106,9 @@ export async function POST(request: NextRequest) {
         personName,
         summary,
         email,
-        thumbnail,
+        // 2026-07-27 13:23 IST (Paras): thumbnail + channelThumbnail no longer
+        // destructured here — the re-hosted versions from rehostedImages[] are
+        // used instead (see the parallel pass above the loop).
         views,
         date,
         rank,
@@ -82,7 +120,6 @@ export async function POST(request: NextRequest) {
         isNew,
         channelName,
         channelLink,
-        channelThumbnail,
         channelVerified,
         channelSubscribers,
         duration,
@@ -141,6 +178,10 @@ export async function POST(request: NextRequest) {
         continue; // Skip duplicates
       }
 
+      // 2026-07-27 13:23 IST (Paras): permanent URLs from the parallel
+      // re-host pass above (index-aligned with `affiliates`).
+      const { thumb: permThumbnail, chanThumb: permChannelThumbnail } = rehostedImages[affiliateIndex];
+
       // Insert new affiliate
       const newAffiliates = await sql`
         INSERT INTO crewcast.saved_affiliates (
@@ -165,12 +206,12 @@ export async function POST(request: NextRequest) {
         VALUES (
           ${userId}, ${title}, ${link}, ${domain}, ${snippet || ''}, ${source},
           ${isAffiliate ?? null}, ${personName ?? null}, ${summary ?? null}, 
-          ${email ?? null}, ${thumbnail ?? null}, ${views ?? null}, 
-          ${date ?? null}, ${rank ?? null}, ${keyword ?? null}, 
-          ${highlightedWords ?? null}, ${discoveryMethodType ?? null}, 
-          ${discoveryMethodValue ?? null}, ${isAlreadyAffiliate ?? null}, 
+          ${email ?? null}, ${permThumbnail ?? null}, ${views ?? null},
+          ${date ?? null}, ${rank ?? null}, ${keyword ?? null},
+          ${highlightedWords ?? null}, ${discoveryMethodType ?? null},
+          ${discoveryMethodValue ?? null}, ${isAlreadyAffiliate ?? null},
           ${isNew ?? null}, ${channelName ?? null}, ${channelLink ?? null},
-          ${channelThumbnail ?? null}, ${channelVerified ?? null}, 
+          ${permChannelThumbnail ?? null}, ${channelVerified ?? null},
           ${channelSubscribers ?? null}, ${duration ?? null},
           ${instagramUsername ?? null}, ${instagramFullName ?? null}, ${instagramBio ?? null},
           ${instagramFollowers ?? null}, ${instagramFollowing ?? null}, ${instagramPostsCount ?? null},

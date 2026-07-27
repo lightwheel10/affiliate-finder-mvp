@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbSavedAffiliate } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { checkCredits, consumeCredits } from '@/lib/credits';
+// 2026-07-27 13:23 IST (Paras): defensive image re-hosting on save — see the
+// comment above the rehost call in POST for the full WHY.
+import { rehostImageIfNeeded } from '@/lib/image-storage';
+
+// 2026-07-27 13:23 IST (Paras): image re-hosting can add up to ~8s (one CDN
+// fetch timeout). Pin the function duration instead of relying on Vercel's
+// default.
+export const maxDuration = 60;
 
 // =============================================================================
 // CREDIT ENFORCEMENT CHECK - January 16, 2026
@@ -151,6 +159,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ id: existing[0].id, duplicate: true });
     }
 
+    // =========================================================================
+    // 2026-07-27 13:23 IST (Paras): re-host IG/TikTok images before saving.
+    //
+    // WHY: this endpoint stores whatever thumbnail URL the client sends. For
+    // Instagram/TikTok those are SIGNED CDN URLs that expire after ~3-4 days
+    // and then 403 forever. Verified against the live DB today: ALL 2,313
+    // saved_affiliates rows had raw CDN URLs (zero permanent ones), so every
+    // saved thumbnail broke a few days after saving. rehostImageIfNeeded()
+    // uploads a permanent copy to Supabase Storage; it is a fast no-op for
+    // already-permanent URLs (YouTube, web, Supabase) and falls back to the
+    // original URL on any failure, so saving can never break because of images.
+    // =========================================================================
+    const [permThumbnail, permChannelThumbnail] = await Promise.all([
+      rehostImageIfNeeded(thumbnail),
+      rehostImageIfNeeded(channelThumbnail),
+    ]);
+
     const newAffiliates = await sql`
       INSERT INTO crewcast.saved_affiliates (
         user_id, title, link, domain, snippet, source,
@@ -175,12 +200,12 @@ export async function POST(request: NextRequest) {
       VALUES (
         ${userId}, ${title}, ${link}, ${domain}, ${snippet}, ${source},
         ${isAffiliate ?? null}, ${personName ?? null}, ${summary ?? null}, 
-        ${email ?? null}, ${thumbnail ?? null}, ${views ?? null}, 
-        ${date ?? null}, ${rank ?? null}, ${keyword ?? null}, 
-        ${highlightedWords ?? null}, ${discoveryMethodType ?? null}, 
-        ${discoveryMethodValue ?? null}, ${isAlreadyAffiliate ?? null}, 
+        ${email ?? null}, ${permThumbnail ?? null}, ${views ?? null},
+        ${date ?? null}, ${rank ?? null}, ${keyword ?? null},
+        ${highlightedWords ?? null}, ${discoveryMethodType ?? null},
+        ${discoveryMethodValue ?? null}, ${isAlreadyAffiliate ?? null},
         ${isNew ?? null}, ${channelName ?? null}, ${channelLink ?? null},
-        ${channelThumbnail ?? null}, ${channelVerified ?? null}, 
+        ${permChannelThumbnail ?? null}, ${channelVerified ?? null},
         ${channelSubscribers ?? null}, ${duration ?? null},
         ${youtubeVideoLikes ?? null}, ${youtubeVideoComments ?? null},
         ${instagramUsername ?? null}, ${instagramFullName ?? null}, ${instagramBio ?? null},

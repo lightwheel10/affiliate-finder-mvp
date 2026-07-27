@@ -1052,11 +1052,24 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             // re-host only genuinely-new social rows (this path also relies on
             // ON CONFLICT, so we existence-check first to avoid re-uploading images
             // for rows already saved by the incremental poll). Best-effort fallback.
+            //
+            // 2026-07-27 13:23 IST (Paras): THE SAVE-FLOW LEAK FIX.
+            // The June 15 fix only used the re-hosted URLs for the INSERT below —
+            // the `result` object returned to the browser (resultsForClient, end
+            // of this handler) kept the RAW expiring CDN URL. When the user then
+            // clicked Save on the Find page, that raw URL was written into
+            // saved_affiliates, where it 403s ~3-4 days later. Verified against
+            // the live DB today: saved_affiliates had 0 permanent URLs.
+            // Fix: write the permanent URLs BACK onto `result` (below) so the
+            // client only ever sees permanent URLs. For rows discovered in an
+            // earlier search we now also reuse the thumbnail already stored in
+            // discovered_affiliates (the SELECT now fetches it) instead of
+            // skipping silently and leaking the raw URL.
             let permThumbnail = result.thumbnail;
             let permChannelThumbnail = result.channel?.thumbnail;
             if (needsRehosting(permThumbnail) || needsRehosting(permChannelThumbnail)) {
               const alreadySaved = await sql`
-                SELECT 1 FROM crewcast.discovered_affiliates
+                SELECT thumbnail, channel_thumbnail FROM crewcast.discovered_affiliates
                 WHERE user_id = ${userId} AND link = ${result.link} LIMIT 1
               `;
               if (alreadySaved.length === 0) {
@@ -1064,6 +1077,19 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
                   rehostImageIfNeeded(permThumbnail),
                   rehostImageIfNeeded(permChannelThumbnail),
                 ]);
+              } else {
+                // Row already in discovered_affiliates: reuse its stored URLs
+                // (permanent for post-June-15 rows). Falls back to the scraped
+                // URL if the stored value is null so we never blank an image
+                // the client could still show this session.
+                permThumbnail = alreadySaved[0].thumbnail || permThumbnail;
+                permChannelThumbnail = alreadySaved[0].channel_thumbnail || permChannelThumbnail;
+              }
+              // Write back so resultsForClient (and therefore any subsequent
+              // "Save to pipeline") carries the permanent URL, not the raw one.
+              result.thumbnail = permThumbnail;
+              if (result.channel && permChannelThumbnail) {
+                result.channel.thumbnail = permChannelThumbnail;
               }
             }
 
