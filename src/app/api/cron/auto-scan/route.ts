@@ -118,6 +118,43 @@ export async function GET(request: NextRequest) {
   
   try {
     // ========================================================================
+    // STEP 0: Sweep search jobs frozen at 'enriching' — 2026-07-29 10:33 IST (Paras)
+    //
+    // WHY: a job's status only advances while a browser polls
+    // /api/search/status. If the user walks away before the last enrichment
+    // actor finishes (or the final poll dies at maxDuration mid-save), the job
+    // stays 'enriching' forever even though its results were already saved
+    // incrementally. Verified against Apify on 2026-07-29 for jobs 4/7/14/53:
+    // every actor run SUCCEEDED, only the 'done' stamp was missing.
+    //
+    // SAFETY: Apify actors run minutes, not hours — anything 'enriching' for
+    // >24h is long finished, so stamping it done cannot race a live scan.
+    // results_count mirrors the onboarding fast path in search/status
+    // (count of the user's discovered_affiliates). Failure here must never
+    // block the actual scan below, hence its own try/catch.
+    // ========================================================================
+    try {
+      const sweptJobs = await sql`
+        UPDATE crewcast.search_jobs j
+        SET status = 'done',
+            enrichment_status = 'succeeded',
+            completed_at = NOW(),
+            results_count = COALESCE(j.results_count, (
+              SELECT COUNT(*)::int FROM crewcast.discovered_affiliates d
+              WHERE d.user_id = j.user_id
+            ))
+        WHERE j.status = 'enriching'
+          AND j.created_at < NOW() - INTERVAL '24 hours'
+        RETURNING j.id, j.user_id, j.keyword
+      `;
+      if (sweptJobs.length > 0) {
+        console.log(`[AutoScan] Swept ${sweptJobs.length} stale 'enriching' job(s) to 'done': ${sweptJobs.map((j: { id: number; user_id: number }) => `#${j.id} (user ${j.user_id})`).join(', ')}`);
+      }
+    } catch (sweepError) {
+      console.error('[AutoScan] Stale-job sweep failed (scan continues):', sweepError);
+    }
+
+    // ========================================================================
     // STEP 1: Find users due for auto-scan
     // ========================================================================
     const dueUsers = await sql`
