@@ -1631,6 +1631,45 @@ export async function checkAllEnrichmentStatus(runIds: EnrichmentRunIds): Promis
 }
 
 // =============================================================================
+// FETCH REAL RUN COSTS - 2026-07-29 11:15 IST (Paras)
+//
+// WHY: search_jobs.estimated_cost was NULL on every row, so per-account cost
+// reporting had to guess from the hardcoded API_COSTS price list — and a spot
+// check against Apify's real bills showed that list is badly wrong (SimilarWeb
+// ~200x overestimated, TikTok ~12x underestimated). Apify's API returns the
+// EXACT charged USD per run (usageTotalUsd), so we capture it the moment a
+// job completes and store it on the job row.
+//
+// TIMING MATTERS: Apify deletes run records after its retention window
+// (January 2026 runs are already 404), so the cost must be captured at
+// completion time — it cannot be backfilled later.
+//
+// Best-effort by design: returns null on any failure (missing token, expired
+// runs, network) — callers store NULL and the cost reporting falls back to
+// the usage-based estimate. Never throws, never blocks job completion.
+// =============================================================================
+export async function fetchRunCostsUsd(
+  runIds: Array<string | null | undefined>
+): Promise<number | null> {
+  if (!client) return null;
+  const ids = runIds.filter((id): id is string => !!id);
+  if (ids.length === 0) return null;
+  try {
+    const runs = await Promise.all(
+      ids.map(id => client!.run(id).get().catch(() => null))
+    );
+    const costs = runs
+      .map(run => (run as { usageTotalUsd?: number } | null)?.usageTotalUsd)
+      .filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
+    if (costs.length === 0) return null;
+    return costs.reduce((sum, n) => sum + n, 0);
+  } catch (error) {
+    console.warn('[Apify] fetchRunCostsUsd failed (cost stays NULL):', error);
+    return null;
+  }
+}
+
+// =============================================================================
 // FETCH YOUTUBE ENRICHMENT RESULTS
 // January 30, 2026
 // =============================================================================

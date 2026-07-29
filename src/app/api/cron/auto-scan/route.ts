@@ -56,6 +56,7 @@ import {
   enrichYouTubeByUrls,
   enrichInstagramByUrls,
   enrichTikTokByUrls,
+  fetchRunCostsUsd,
 } from '@/app/services/apify';
 import {
   startGoogleSearchRun,
@@ -145,11 +146,41 @@ export async function GET(request: NextRequest) {
             ))
         WHERE j.status = 'enriching'
           AND j.created_at < NOW() - INTERVAL '24 hours'
-        RETURNING j.id, j.user_id, j.keyword
+        RETURNING j.id, j.user_id, j.keyword, j.apify_run_id, j.enrichment_run_ids
       `;
       if (sweptJobs.length > 0) {
         console.log(`[AutoScan] Swept ${sweptJobs.length} stale 'enriching' job(s) to 'done': ${sweptJobs.map((j: { id: number; user_id: number }) => `#${j.id} (user ${j.user_id})`).join(', ')}`);
+
+        // 2026-07-29 11:15 IST (Paras): swept jobs never reached the normal
+        // done-stamp, so they also never captured their real Apify bill (see
+        // fetchRunCostsUsd in services/apify.ts). Do it here while Apify still
+        // remembers the runs — swept jobs are 1-7 days old, well inside the
+        // retention window. NULL result (expired/failed) just keeps the
+        // estimate-based fallback in cost reporting.
+        for (const j of sweptJobs as Array<{ id: number; apify_run_id: string | null; enrichment_run_ids: unknown }>) {
+          const runIds = typeof j.enrichment_run_ids === 'string'
+            ? JSON.parse(j.enrichment_run_ids)
+            : (j.enrichment_run_ids as Record<string, string> | null);
+          const realCostUsd = await fetchRunCostsUsd([
+            j.apify_run_id,
+            runIds?.youtube, runIds?.instagram, runIds?.tiktok, runIds?.similarweb,
+          ]);
+          if (realCostUsd !== null) {
+            await sql`
+              UPDATE crewcast.search_jobs SET estimated_cost = ${realCostUsd}
+              WHERE id = ${j.id} AND estimated_cost IS NULL
+            `;
+            console.log(`[AutoScan] Job #${j.id}: real Apify cost captured $${realCostUsd.toFixed(4)}`);
+          }
+        }
       }
+
+      // TODO 2026-07-29 (Paras): this cron's OWN scans still record estimated
+      // costs only (via API_COSTS in completeSearch below). Exact capture here
+      // needs enrichYouTubeByUrls/enrichInstagramByUrls/enrichTikTokByUrls to
+      // return their Apify run ids — a signature change touching all callers.
+      // Deferred while auto-scan only serves team accounts (0 paying customers
+      // on 2026-07-29); do it before real customers accumulate cron scans.
     } catch (sweepError) {
       console.error('[AutoScan] Stale-job sweep failed (scan continues):', sweepError);
     }

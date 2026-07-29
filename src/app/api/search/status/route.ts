@@ -72,6 +72,7 @@ import {
   // Non-blocking enrichment functions
   startAllEnrichment,
   checkAllEnrichmentStatus,
+  fetchRunCostsUsd,
   fetchYouTubeEnrichmentResults,
   fetchInstagramEnrichmentResults,
   fetchTikTokEnrichmentResults,
@@ -798,14 +799,27 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         `;
         const totalSaved = parseInt(countResult[0].count as string) || 0;
         
+        // 2026-07-29 11:15 IST (Paras): capture the REAL Apify bill for this
+        // job (usageTotalUsd per run) at the only moment it's reliably
+        // available — Apify deletes run records after its retention window.
+        // Null on any failure; cost reporting then falls back to estimates.
+        const realCostUsd = await fetchRunCostsUsd([
+          apifyRunId,
+          enrichmentRunIds?.youtube,
+          enrichmentRunIds?.instagram,
+          enrichmentRunIds?.tiktok,
+          enrichmentRunIds?.similarweb,
+        ]);
+
         // Update job status to done
         await sql`
-          UPDATE crewcast.search_jobs 
-          SET 
+          UPDATE crewcast.search_jobs
+          SET
             status = 'done',
             enrichment_status = 'succeeded',
             completed_at = NOW(),
-            results_count = ${totalSaved}
+            results_count = ${totalSaved},
+            estimated_cost = ${realCostUsd}
           WHERE id = ${jobIdNum}
         `;
         
@@ -1210,14 +1224,25 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         console.log(`💳 [Search/Status] Credit consumed for user ${userId}`);
       }
       
+      // 2026-07-29 11:15 IST (Paras): capture the real Apify bill — see the
+      // onboarding fast path above for the full rationale.
+      const realCostUsd = await fetchRunCostsUsd([
+        apifyRunId,
+        enrichmentRunIds?.youtube,
+        enrichmentRunIds?.instagram,
+        enrichmentRunIds?.tiktok,
+        enrichmentRunIds?.similarweb,
+      ]);
+
       // Update job status to done
       await sql`
-        UPDATE crewcast.search_jobs 
-        SET 
+        UPDATE crewcast.search_jobs
+        SET
           status = 'done',
           enrichment_status = 'succeeded',
           completed_at = NOW(),
-          results_count = ${allResults.length}
+          results_count = ${allResults.length},
+          estimated_cost = ${realCostUsd}
         WHERE id = ${jobIdNum}
       `;
       
@@ -1523,13 +1548,18 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         }
       }
       
+      // 2026-07-29 11:15 IST (Paras): capture the real Apify bill. This path
+      // has no enrichment runs (no social results) — google run cost only.
+      const realCostUsd = await fetchRunCostsUsd([apifyRunId]);
+
       // Update job status
       await sql`
-        UPDATE crewcast.search_jobs 
-        SET 
+        UPDATE crewcast.search_jobs
+        SET
           status = 'done',
           completed_at = NOW(),
-          results_count = ${allResults.length}
+          results_count = ${allResults.length},
+          estimated_cost = ${realCostUsd}
         WHERE id = ${jobIdNum}
       `;
       
