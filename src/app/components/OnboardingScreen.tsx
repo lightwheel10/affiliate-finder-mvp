@@ -971,20 +971,30 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             
             while (Date.now() - startTime < maxWaitMs) {
               await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
-              
-              const statusRes = await fetch(`/api/search/status?jobId=${jobId}`);
-              const statusData = await statusRes.json();
-              
-              if (statusData.status === 'done') {
-                break;
+
+              // 2026-07-29 10:33 IST (Paras): each poll gets its own try/catch.
+              // Previously a single bad response (e.g. a 504 when one poll hit
+              // maxDuration mid-save) threw out of the WHOLE loop into the outer
+              // catch — polling stopped silently and the job stayed 'enriching'
+              // forever. A transient failure must mean "ask again in 3s", not
+              // "never ask again".
+              try {
+                const statusRes = await fetch(`/api/search/status?jobId=${jobId}`);
+                const statusData = await statusRes.json();
+
+                if (statusData.status === 'done') {
+                  break;
+                }
+
+                if (statusData.status === 'failed' || statusData.status === 'timeout') {
+                  console.error('[Onboarding] Search failed:', statusData.message);
+                  break;
+                }
+
+                // Continue polling for 'running', 'processing', 'enriching'
+              } catch (pollError) {
+                console.warn('[Onboarding] Poll failed, retrying next interval:', pollError);
               }
-              
-              if (statusData.status === 'failed' || statusData.status === 'timeout') {
-                console.error('[Onboarding] Search failed:', statusData.message);
-                break;
-              }
-              
-              // Continue polling for 'running', 'processing', 'enriching'
             }
           }
         } catch (scoutError) {

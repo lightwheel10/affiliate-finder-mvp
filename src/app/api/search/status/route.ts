@@ -406,6 +406,34 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         return false;
       };
       
+      // ========================================================================
+      // 2026-07-29 10:33 IST (Paras): TIME BUDGET FOR THE INCREMENTAL-SAVE PASS
+      //
+      // Root cause of jobs frozen at 'enriching' (e.g. job 53, 25 Jul): the
+      // poll that sees the LAST actor finish may have hundreds of rows to save
+      // — each new social row re-hosts its images (network I/O) — and can blow
+      // past maxDuration (120s). Vercel then kills the function AFTER rows were
+      // saved but BEFORE the 'done' stamp at the bottom of this block, and the
+      // client gets a 504. The stamp stays unreachable on every retry.
+      //
+      // Fix: stop saving when ~80s have elapsed and report 'enriching' instead
+      // of stamping. The next poll (3-5s later) skips already-saved rows fast
+      // (rehost existence check + ON CONFLICT DO NOTHING) and finishes the
+      // remainder, so successive polls always converge on the 'done' stamp.
+      // Do NOT stamp first and save after — a mid-save kill would then leave
+      // rows permanently unsaved because 'done' jobs return early above.
+      // ========================================================================
+      const SAVE_BUDGET_MS = 80_000;
+      const savePassStartedAt = Date.now();
+      let saveBudgetExceeded = false;
+      const overSaveBudget = () => {
+        if (!saveBudgetExceeded && Date.now() - savePassStartedAt > SAVE_BUDGET_MS) {
+          saveBudgetExceeded = true;
+          console.warn(`⏱️ [Search/Status] Save pass hit ${SAVE_BUDGET_MS / 1000}s budget — deferring remaining rows to the next poll`);
+        }
+        return saveBudgetExceeded;
+      };
+
       if (isOnboardingJob && completedActors > 0) {
         // Fetch results from any completed actors (even if not all complete)
         const [youtubeEnrichment, instagramEnrichment, tiktokEnrichment, similarwebEnrichment] = await Promise.all([
@@ -534,6 +562,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         if (statuses.youtube?.status === 'SUCCEEDED') {
           const youtubeResults = rawResults.filter(r => r.source === 'YouTube');
           for (const result of youtubeResults) {
+            if (overSaveBudget()) break; // 2026-07-29 (Paras): defer rest to next poll
             const apifyData = youtubeEnrichment.get(result.link);
             const enriched = apifyData ? {
               ...result,
@@ -570,6 +599,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         if (statuses.instagram?.status === 'SUCCEEDED') {
           const instagramResults = rawResults.filter(r => r.source === 'Instagram');
           for (const result of instagramResults) {
+            if (overSaveBudget()) break; // 2026-07-29 (Paras): defer rest to next poll
             // Extract username from Google search URL and try multiple lookup strategies
             const usernameMatch = result.link.match(/instagram\.com\/([a-zA-Z0-9._]+)\/?(?:\?|$)/);
             const username = usernameMatch && !['p', 'reel', 'reels', 'stories', 'explore', 'accounts'].includes(usernameMatch[1]) 
@@ -649,6 +679,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         if (statuses.tiktok?.status === 'SUCCEEDED') {
           const tiktokResults = rawResults.filter(r => r.source === 'TikTok');
           for (const result of tiktokResults) {
+            if (overSaveBudget()) break; // 2026-07-29 (Paras): defer rest to next poll
             // Extract video ID from the Google search URL and try both ID and full URL lookup
             const videoIdMatch = result.link.match(/\/video\/(\d+)/);
             const videoId = videoIdMatch ? videoIdMatch[1] : null;
@@ -699,6 +730,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         if (statuses.similarweb?.status === 'SUCCEEDED') {
           const webResults = rawResults.filter(r => r.source === 'Web');
           for (const result of webResults) {
+            if (overSaveBudget()) break; // 2026-07-29 (Paras): defer rest to next poll
             // January 30, 2026: Brand filtering - skip if this is user's own brand website
             if (shouldExcludeResult('Web', null, null, result.domain)) {
               console.log(`🚫 [Incremental] Excluded Web (user's brand): ${result.domain}`);
@@ -728,6 +760,16 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         console.log(`💾 [Search/Status] Incremental save: ${savedThisPoll} new results saved (${completedActors}/${totalActors} actors complete)`);
       }
       
+      // 2026-07-29 10:33 IST (Paras): budget hit — some rows are still unsaved,
+      // so do NOT fall through to the 'done' stamp even if all actors finished.
+      // The next poll picks up where this one stopped.
+      if (saveBudgetExceeded) {
+        return NextResponse.json({
+          status: 'enriching',
+          message: `Saving enriched results... (${completedActors}/${totalActors} complete)`,
+        });
+      }
+
       // If not all complete, return enriching status (but results are already saved incrementally!)
       if (!allComplete) {
         return NextResponse.json({
