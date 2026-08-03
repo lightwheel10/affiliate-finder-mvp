@@ -69,7 +69,7 @@ import { FilterPanel } from '../../components/FilterPanel';
 import { affiliateMatchesSearchQuery } from '../../utils/affiliate-search';
 // 2026-06-14 (paras): group postings by domain (web) / creator (social).
 // David's request. See utils/affiliate-grouping.ts.
-import { groupAffiliates, groupCountsBySource } from '../../utils/affiliate-grouping';
+import { groupAffiliates, groupCountsBySource, groupKeyOf } from '../../utils/affiliate-grouping';
 import { useNeonUser } from '../../hooks/useNeonUser';
 // =============================================================================
 // SUBSCRIPTION GATE FOR EXPORT - February 9th, 2026
@@ -493,6 +493,23 @@ export default function SavedPage() {
     return visible;
   }, [selectedLinks, filteredResults]);
 
+  // ==========================================================================
+  // 2026-08-03 (Paras): SELECTED GROUP COUNT (display only)
+  // The bulk bar shows how many GROUPS (creators/domains) are selected, in the
+  // same unit as the visible rows and filter chips. Selection itself stays
+  // link-based (selectedLinks), so every bulk handler is unchanged — this is
+  // purely what the "N selected" label displays. Before: select-all on 61
+  // visible groups read "70 selected" (postings), which the client reported
+  // as a count bug.
+  // ==========================================================================
+  const selectedGroupCount = useMemo(() => {
+    const keys = new Set<string>();
+    filteredResults.forEach(r => {
+      if (visibleSelectedLinks.has(r.link)) keys.add(groupKeyOf(r));
+    });
+    return keys.size;
+  }, [filteredResults, visibleSelectedLinks]);
+
   const [isBulkBlocking, setIsBulkBlocking] = useState(false);
   const handleBulkBlockDomains = async () => {
     if (visibleSelectedLinks.size === 0) return;
@@ -534,7 +551,14 @@ export default function SavedPage() {
 
   // 2026-06-14 (paras): tab badges now count GROUPS (distinct domains/creators),
   // not individual postings — matches the grouped row display.
-  const counts = useMemo(() => groupCountsBySource(savedAffiliates), [savedAffiliates]);
+  // 2026-08-03 (Paras): also exclude blocked domains, matching the row list.
+  // Previously the chips counted blocked-hidden rows too, so David's "Web" chip
+  // showed 1 while the Web tab rendered an empty list (his only Web posting was
+  // on a domain he blocked), and "All" disagreed with select-all by one.
+  const counts = useMemo(
+    () => groupCountsBySource(savedAffiliates.filter(a => !isBlocked(a.domain))),
+    [savedAffiliates, isBlocked]
+  );
 
   // ==========================================================================
   // EMAIL FOUND COUNT - Updated January 24, 2026
@@ -870,7 +894,8 @@ export default function SavedPage() {
                   <Check size={14} className="text-[#0f172a]" strokeWidth={2.5} />
                 </div>
                 <span className="text-sm font-semibold text-[#0f172a] dark:text-white">
-                  {visibleSelectedLinks.size} {t.common.selected}
+                  {/* 2026-08-03 (Paras): group count, not link count — see selectedGroupCount */}
+                  {selectedGroupCount} {t.common.selected}
                 </span>
                 {/* Breakdown: how many already have emails */}
                 {visibleSelectedLinks.size !== selectedNeedingEmailLookup && selectedNeedingEmailLookup > 0 && (
