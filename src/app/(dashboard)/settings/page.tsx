@@ -240,37 +240,39 @@ export default function SettingsPage() {
                 <div className="max-w-2xl">
                   {/* January 13th, 2026: Removed tab title and description as per user request */}
                   {activeTab === 'profile' && (
-                    <ProfileSettings
-                      supabaseUser={supabaseUser}  // January 19th, 2026: Supabase Auth user (for email)
-                      userName={neonUser?.name || supabaseUser?.email?.split('@')[0] || 'User'}  // January 19th, 2026: From database
-                      neonUserId={userId}
-                      currentCountry={neonUser?.target_country}
-                      currentLanguage={neonUser?.target_language}
-                      onProfileUpdated={refetchNeonUser}
-                    />
-                  )}
-                  {activeTab === 'plan' && (
                     <>
-                      <PlanSettings
-                        subscription={subscription}
-                        isLoading={subscriptionLoading}
-                        isTrialing={isTrialing}
-                        isPastDue={isPastDue}
-                        daysLeftInTrial={daysLeftInTrial}
-                        onUpgrade={() => setIsPricingModalOpen(true)}
-                        onAddCard={() => setIsAddCardModalOpen(true)}
-                        onCancelPlan={() => setIsCancelModalOpen(true)}
-                        userId={userId}
+                      <ProfileSettings
+                        supabaseUser={supabaseUser}  // January 19th, 2026: Supabase Auth user (for email)
+                        userName={neonUser?.name || supabaseUser?.email?.split('@')[0] || 'User'}  // January 19th, 2026: From database
+                        neonUserId={userId}
+                        currentCountry={neonUser?.target_country}
+                        currentLanguage={neonUser?.target_language}
+                        onProfileUpdated={refetchNeonUser}
                       />
-                      {/* 2026-08-03 (Paras): weekly auto-scan opt-out — see
-                          AutoScanToggle definition below for the full WHY.
-                          `?? true` matches the DB default (enabled). */}
+                      {/* 2026-08-03 (Paras): weekly auto-scan opt-out — lives on
+                          the Profile tab (first tab users land on; Paras: "no one
+                          will find it in plan and billing"). See AutoScanToggle
+                          definition below for the full WHY. `?? true` matches
+                          the DB default (enabled). */}
                       <AutoScanToggle
                         userId={userId}
                         enabled={neonUser?.auto_scan_enabled ?? true}
                         onChanged={refetchNeonUser}
                       />
                     </>
+                  )}
+                  {activeTab === 'plan' && (
+                    <PlanSettings
+                      subscription={subscription}
+                      isLoading={subscriptionLoading}
+                      isTrialing={isTrialing}
+                      isPastDue={isPastDue}
+                      daysLeftInTrial={daysLeftInTrial}
+                      onUpgrade={() => setIsPricingModalOpen(true)}
+                      onAddCard={() => setIsAddCardModalOpen(true)}
+                      onCancelPlan={() => setIsCancelModalOpen(true)}
+                      userId={userId}
+                    />
                   )}
                   {activeTab === 'buy_credits' && (
                     <BuyCreditsSettings
@@ -946,6 +948,8 @@ interface Invoice {
 // David's request (2026-08-03): the weekly cron scan consumes 1 topic_search
 // credit per run (4-5 of his 10/month) and he was "running out of credit but
 // don't know why". This card lets each user turn the weekly auto-scan off/on.
+// Rendered on the Profile tab (moved from Plan the same day — Paras: "no one
+// will find it in plan and billing").
 //
 // - Persists users.auto_scan_enabled via the same PATCH /api/users the profile
 //   form uses; the auto-scan cron's due-users query filters on that column.

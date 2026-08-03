@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
         AND s.first_payment_at IS NOT NULL
         AND s.next_auto_scan_at IS NOT NULL
         AND s.next_auto_scan_at <= NOW()
-        -- 2026-08-03 (Paras): per-user opt-out (Settings -> Plan -> Weekly
+        -- 2026-08-03 (Paras): per-user opt-out (Settings -> Profile -> Weekly
         -- Auto-Scan). Each scan costs 1 topic_search credit; David asked for a
         -- way to stop it. COALESCE keeps pre-migration rows scanning (NULL =
         -- enabled). Filtering here (in SQL, not by skipping in JS) means a
