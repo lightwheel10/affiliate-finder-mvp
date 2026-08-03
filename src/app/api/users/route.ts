@@ -158,7 +158,7 @@ export async function PATCH(request: NextRequest) {
       appReplies: 'app_replies',
       appReminders: 'app_reminders',
       profileImageUrl: 'profile_image_url', // January 13th, 2026: Added for Vercel Blob storage
-      // 2026-08-03 (Paras): weekly auto-scan opt-out toggle (Settings -> Plan).
+      // 2026-08-03 (Paras): weekly auto-scan opt-out toggle (Settings -> Profile).
       // NOTE: this mapping alone does NOT persist a field — the hardcoded
       // UPDATE below must also list the column (several mapped fields above,
       // e.g. email_matches/profile_image_url, are missing there and silently

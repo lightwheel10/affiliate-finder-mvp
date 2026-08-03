@@ -51,7 +51,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 // =============================================================================
 
 // 2026-08-03 (Paras): added 'disabled' — user turned weekly auto-scan off in
-// Settings -> Plan. Must be checked BEFORE the isPast/'scanning' branch:
+// Settings -> Profile. Must be checked BEFORE the isPast/'scanning' branch:
 // while disabled, next_auto_scan_at freezes in the past (cron skips the user),
 // which would otherwise render "Scanning..." forever — the same stuck-UI
 // symptom as the May 1 queue incident.
