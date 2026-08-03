@@ -111,6 +111,19 @@ export default function SettingsPage() {
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  // ==========================================================================
+  // 2026-08-03 (Paras): optional churn survey in the cancel modal (David's
+  // request). cancelReason holds one of the 4 codes (or null = skipped);
+  // free text only applies to 'other'. Reset whenever the modal closes so a
+  // reopened modal starts clean. Cancellation works with nothing selected.
+  // ==========================================================================
+  const [cancelReason, setCancelReason] = useState<string | null>(null);
+  const [cancelReasonText, setCancelReasonText] = useState('');
+  const closeCancelModal = () => {
+    setIsCancelModalOpen(false);
+    setCancelReason(null);
+    setCancelReasonText('');
+  };
   const [creditPurchaseSuccess, setCreditPurchaseSuccess] = useState(false);
   const [creditPurchaseCancelled, setCreditPurchaseCancelled] = useState(false);
 
@@ -332,7 +345,7 @@ export default function SettingsPage() {
           + no translate-y hover — irreversible action). */}
       <Modal
         isOpen={isCancelModalOpen}
-        onClose={() => setIsCancelModalOpen(false)}
+        onClose={closeCancelModal}
         title={subscription?.cancel_at_period_end ? t.dashboard.settings.plan.cancelModal.resumeTitle : t.dashboard.settings.plan.cancelModal.cancelTitle}
         width="max-w-md"
       >
@@ -344,7 +357,7 @@ export default function SettingsPage() {
               </p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
-                  onClick={() => setIsCancelModalOpen(false)}
+                  onClick={closeCancelModal}
                   className="px-5 py-2 text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white bg-white dark:bg-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-700 border border-[#e6ebf1] dark:border-gray-600 rounded-full transition-all"
                 >
                   {t.dashboard.settings.plan.cancelModal.keepCanceled}
@@ -355,7 +368,7 @@ export default function SettingsPage() {
                     await resumeSubscription();
                     await refetchSubscription();
                     setIsCanceling(false);
-                    setIsCancelModalOpen(false);
+                    closeCancelModal();
                   }}
                   disabled={isCanceling}
                   className="px-5 py-2 bg-[#ffbf23] text-[#1A1D21] text-sm font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-2"
@@ -385,9 +398,50 @@ export default function SettingsPage() {
               <p className="text-xs text-[#8898aa] dark:text-gray-500">
                 {t.dashboard.settings.plan.subscriptionWillRemainActive}
               </p>
+              {/* =============================================================
+                  2026-08-03 (Paras): OPTIONAL CHURN SURVEY — David's request.
+                  4 radio options; 'other' reveals a free-text field. Selecting
+                  nothing is fine — the cancel button works exactly as before.
+                  The choice rides along in the cancelSubscription() call and
+                  is stored in crewcast.cancellation_reasons + Stripe's
+                  cancellation_details. State resets on every close path via
+                  closeCancelModal.
+                  ============================================================= */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-[#425466] dark:text-gray-400">
+                  {t.dashboard.settings.plan.cancelModal.surveyTitle}
+                </p>
+                {[
+                  { code: 'too_expensive', label: t.dashboard.settings.plan.cancelModal.reasonTooExpensive },
+                  { code: 'not_what_looking_for', label: t.dashboard.settings.plan.cancelModal.reasonNotWhatLookingFor },
+                  { code: 'didnt_find_enough', label: t.dashboard.settings.plan.cancelModal.reasonDidntFindEnough },
+                  { code: 'other', label: t.dashboard.settings.plan.cancelModal.reasonOther },
+                ].map(({ code, label }) => (
+                  <label key={code} className="flex items-center gap-2 cursor-pointer text-sm text-[#425466] dark:text-gray-300">
+                    <input
+                      type="radio"
+                      name="cancel-reason"
+                      checked={cancelReason === code}
+                      onChange={() => setCancelReason(code)}
+                      className="accent-[#ffbf23]"
+                    />
+                    {label}
+                  </label>
+                ))}
+                {cancelReason === 'other' && (
+                  <textarea
+                    value={cancelReasonText}
+                    onChange={(e) => setCancelReasonText(e.target.value)}
+                    placeholder={t.dashboard.settings.plan.cancelModal.reasonPlaceholder}
+                    maxLength={1000}
+                    rows={3}
+                    className="w-full mt-1 px-3 py-2 text-sm bg-[#f6f9fc] dark:bg-gray-900 border border-[#e6ebf1] dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ffbf23]/20 focus:border-[#ffbf23] text-[#0f172a] dark:text-white placeholder:text-[#8898aa]"
+                  />
+                )}
+              </div>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
-                  onClick={() => setIsCancelModalOpen(false)}
+                  onClick={closeCancelModal}
                   className="px-5 py-2 text-sm font-semibold text-[#425466] dark:text-gray-400 hover:text-[#0f172a] dark:hover:text-white bg-white dark:bg-gray-800 hover:bg-[#f6f9fc] dark:hover:bg-gray-700 border border-[#e6ebf1] dark:border-gray-600 rounded-full transition-all"
                 >
                   {t.dashboard.settings.plan.cancelModal.keepSubscription}
@@ -395,10 +449,18 @@ export default function SettingsPage() {
                 <button
                   onClick={async () => {
                     setIsCanceling(true);
-                    await cancelSubscription();
+                    // 2026-08-03 (Paras): pass the optional survey answer along
+                    await cancelSubscription(
+                      cancelReason
+                        ? {
+                            reason: cancelReason,
+                            reasonText: cancelReason === 'other' ? cancelReasonText.trim() || undefined : undefined,
+                          }
+                        : undefined
+                    );
                     await refetchSubscription();
                     setIsCanceling(false);
-                    setIsCancelModalOpen(false);
+                    closeCancelModal();
                   }}
                   disabled={isCanceling}
                   className="px-5 py-2 bg-red-500 text-white text-sm font-semibold rounded-full shadow-soft-lg hover:bg-red-600 hover:shadow-soft-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"

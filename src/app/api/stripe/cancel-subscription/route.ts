@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId } = body;
+    const { userId, reason, reasonText } = body;
 
     // ==========================================================================
     // INPUT VALIDATION
@@ -45,6 +45,31 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // ==========================================================================
+    // 2026-08-03 (Paras): OPTIONAL CANCELLATION REASON (David's request)
+    //
+    // The cancel modal offers a 4-option churn survey; selection is optional.
+    // Server-side allowlist — anything else is treated as "not provided" so a
+    // tampered payload can never fail the cancellation or store junk codes.
+    // Free text (only meaningful for 'other') is length-capped at 1000 chars.
+    // Stored in crewcast.cancellation_reasons AND forwarded to Stripe's native
+    // cancellation_details so it shows up in Stripe's churn analytics too.
+    // ==========================================================================
+    const ALLOWED_REASONS = ['too_expensive', 'not_what_looking_for', 'didnt_find_enough', 'other'] as const;
+    const safeReason: string | null =
+      typeof reason === 'string' && (ALLOWED_REASONS as readonly string[]).includes(reason) ? reason : null;
+    const safeReasonText: string | null =
+      safeReason === 'other' && typeof reasonText === 'string' && reasonText.trim()
+        ? reasonText.trim().slice(0, 1000)
+        : null;
+    // Map our codes onto Stripe's fixed feedback enum (SubscriptionUpdateParams.CancellationDetails.Feedback)
+    const STRIPE_FEEDBACK: Record<string, 'too_expensive' | 'missing_features' | 'low_quality' | 'other'> = {
+      too_expensive: 'too_expensive',
+      not_what_looking_for: 'missing_features',
+      didnt_find_enough: 'low_quality',
+      other: 'other',
+    };
 
     // ==========================================================================
     // GET USER AND SUBSCRIPTION FROM DATABASE
@@ -81,7 +106,7 @@ export async function POST(request: NextRequest) {
     // VALIDATE SUBSCRIPTION EXISTS
     // ==========================================================================
     const subscriptions = await sql`
-      SELECT stripe_subscription_id, stripe_customer_id, status
+      SELECT stripe_subscription_id, stripe_customer_id, status, plan
       FROM crewcast.subscriptions
       WHERE user_id = ${userId}
     `;
@@ -114,8 +139,19 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     console.log(`[Stripe] Canceling subscription ${stripe_subscription_id} for user ${userId}`);
 
+    // 2026-08-03 (Paras): forward the survey answer to Stripe's native churn
+    // analytics in the SAME update call — no extra request. Omitted entirely
+    // when the user skipped the survey.
     const subscription = await stripe.subscriptions.update(stripe_subscription_id, {
       cancel_at_period_end: true,
+      ...(safeReason
+        ? {
+            cancellation_details: {
+              feedback: STRIPE_FEEDBACK[safeReason],
+              ...(safeReasonText ? { comment: safeReasonText } : {}),
+            },
+          }
+        : {}),
     });
 
     // Access subscription properties safely with validation
@@ -136,6 +172,29 @@ export async function POST(request: NextRequest) {
     `;
 
     console.log(`[Stripe] Subscription ${stripe_subscription_id} set to cancel at period end`);
+
+    // ==========================================================================
+    // 2026-08-03 (Paras): STORE CANCELLATION REASON (fail-safe)
+    //
+    // Runs AFTER the successful Stripe cancel and MUST NEVER fail the request:
+    // a user cancelling their subscription may not be blocked by a survey
+    // insert (missing table, DB hiccup, etc). Any error is logged loudly and
+    // swallowed. No selection -> no row.
+    // ==========================================================================
+    if (safeReason) {
+      try {
+        await sql`
+          INSERT INTO crewcast.cancellation_reasons (user_id, reason, reason_text, plan, stripe_subscription_id)
+          VALUES (${userId}, ${safeReason}, ${safeReasonText}, ${subscriptions[0].plan ?? null}, ${stripe_subscription_id})
+        `;
+        console.log(`[Stripe] Cancellation reason stored for user ${userId}: ${safeReason}`);
+      } catch (reasonError) {
+        console.error(
+          `[Stripe] FAILED to store cancellation reason for user ${userId} (reason=${safeReason}). Cancellation itself succeeded. Investigate crewcast.cancellation_reasons.`,
+          reasonError
+        );
+      }
+    }
 
     return NextResponse.json({
       success: true,

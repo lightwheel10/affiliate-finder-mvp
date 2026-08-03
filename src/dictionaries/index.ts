@@ -880,6 +880,13 @@ export interface Dictionary {
           keepCanceled: string;
           confirmCancel: string;
           confirmResume: string;
+          // 2026-08-03 (Paras): optional churn survey (David's request)
+          surveyTitle: string;              // "Mind telling us why? (optional)"
+          reasonTooExpensive: string;
+          reasonNotWhatLookingFor: string;
+          reasonDidntFindEnough: string;
+          reasonOther: string;
+          reasonPlaceholder: string;        // textarea placeholder for 'other'
         };
         cancellationPending: {
           title: string;

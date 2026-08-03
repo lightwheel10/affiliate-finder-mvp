@@ -893,6 +893,13 @@ export const de: Dictionary = {
           keepCanceled: 'Gekündigt lassen',
           confirmCancel: 'Abonnement kündigen',
           confirmResume: 'Abonnement fortsetzen',
+          // 2026-08-03 (Paras): optionale Kündigungsumfrage (Davids Wunsch)
+          surveyTitle: 'Magst du uns sagen warum? (optional)',
+          reasonTooExpensive: 'Zu teuer',
+          reasonNotWhatLookingFor: 'Nicht das, wonach du gesucht hast',
+          reasonDidntFindEnough: 'Nicht genug Affiliates gefunden',
+          reasonOther: 'Sonstiges',
+          reasonPlaceholder: 'Grund eingeben...',
         },
         cancellationPending: {
           title: 'Abonnement wird gekündigt',

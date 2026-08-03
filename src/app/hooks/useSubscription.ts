@@ -224,16 +224,20 @@ export function useSubscription(userId: number | null) {
   // Calls the Stripe API to cancel at period end.
   // This ensures Stripe is the source of truth.
   // ==========================================================================
-  const cancelSubscription = useCallback(async () => {
+  // 2026-08-03 (Paras): optional churn-survey payload (David's request). The
+  // cancel modal passes { reason, reasonText } when the user picked one; the
+  // API stores it in crewcast.cancellation_reasons and forwards it to Stripe's
+  // cancellation_details. Omitted -> plain cancel, exactly as before.
+  const cancelSubscription = useCallback(async (opts?: { reason?: string; reasonText?: string }) => {
     if (!userId) return null;
-    
+
     setError(null);
-    
+
     try {
       const res = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, ...(opts ?? {}) }),
       });
       
       const data = await res.json();
