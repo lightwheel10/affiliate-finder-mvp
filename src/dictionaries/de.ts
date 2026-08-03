@@ -1115,6 +1115,7 @@ export const de: Dictionary = {
     error: {
       genericError: 'Etwas ist schief gelaufen. Bitte versuch es erneut.',
       searchFailed: 'Suche fehlgeschlagen. Bitte versuch es erneut.',
+      searchAtCapacity: 'Die Suche ist wegen hoher Auslastung vorübergehend nicht verfügbar. Bitte versuch es später erneut.',  // August 3, 2026 (Paras): shown when the Apify account hits its monthly usage cap
       saveFailed: 'Affiliates konnten nicht gespeichert werden. Bitte versuch es erneut.',
       deleteFailed: 'Affiliates konnten nicht gelöscht werden. Bitte versuch es erneut.',
       emailLookupFailed: 'E-Mail-Suche fehlgeschlagen. Bitte versuch es erneut.',

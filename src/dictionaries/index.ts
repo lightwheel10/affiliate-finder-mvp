@@ -1101,6 +1101,7 @@ export interface Dictionary {
     error: {
       genericError: string;
       searchFailed: string;
+      searchAtCapacity: string;          // August 3, 2026 (Paras): Apify monthly usage cap incident
       saveFailed: string;
       deleteFailed: string;
       emailLookupFailed: string;
