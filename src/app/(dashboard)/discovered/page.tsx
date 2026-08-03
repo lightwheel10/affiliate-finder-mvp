@@ -65,7 +65,7 @@ import { FilterPanel } from '../../components/FilterPanel';
 import { affiliateMatchesSearchQuery } from '../../utils/affiliate-search';
 // 2026-06-14 (paras): group postings by domain (web) / creator (social).
 // David's request. See utils/affiliate-grouping.ts.
-import { groupAffiliates, groupCountsBySource, type AffiliateGroup } from '../../utils/affiliate-grouping';
+import { groupAffiliates, groupCountsBySource, groupKeyOf, type AffiliateGroup } from '../../utils/affiliate-grouping';
 import { useNeonUser } from '../../hooks/useNeonUser';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -472,6 +472,20 @@ export default function DiscoveredPage() {
     return visible;
   }, [selectedLinks, filteredResults]);
 
+  // ==========================================================================
+  // 2026-08-03 (Paras): SELECTED GROUP COUNT (display only)
+  // Same as saved/page.tsx: the bulk bar label shows selected GROUPS
+  // (creators/domains) to match the grouped rows and filter chips. Selection
+  // and all bulk handlers stay link-based and unchanged.
+  // ==========================================================================
+  const selectedGroupCount = useMemo(() => {
+    const keys = new Set<string>();
+    filteredResults.forEach(r => {
+      if (visibleSelectedLinks.has(r.link)) keys.add(groupKeyOf(r));
+    });
+    return keys.size;
+  }, [filteredResults, visibleSelectedLinks]);
+
   const [isBulkBlocking, setIsBulkBlocking] = useState(false);
   const handleBulkBlockDomains = useCallback(async () => {
     if (visibleSelectedLinks.size === 0) return;
@@ -503,7 +517,13 @@ export default function DiscoveredPage() {
 
   // 2026-06-14 (paras): tab badges now count GROUPS (distinct domains/creators),
   // not individual postings — matches the grouped row display.
-  const counts = useMemo(() => groupCountsBySource(discoveredAffiliates), [discoveredAffiliates]);
+  // 2026-08-03 (Paras): also exclude blocked domains, matching the row list —
+  // same fix as saved/page.tsx (chips counted rows the list hides, so badge
+  // numbers could disagree with the visible rows and select-all).
+  const counts = useMemo(
+    () => groupCountsBySource(discoveredAffiliates.filter(a => !isBlocked(a.domain))),
+    [discoveredAffiliates, isBlocked]
+  );
 
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
@@ -727,7 +747,8 @@ export default function DiscoveredPage() {
                   <Check size={14} className="text-[#0f172a]" strokeWidth={2.5} />
                 </div>
                 <span className="text-sm font-semibold text-[#0f172a] dark:text-white">
-                  {visibleSelectedLinks.size} {t.dashboard.find.bulkActions.selected}
+                  {/* 2026-08-03 (Paras): group count, not link count — see selectedGroupCount */}
+                  {selectedGroupCount} {t.dashboard.find.bulkActions.selected}
                 </span>
                 {alreadySavedCount > 0 && (
                   <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">

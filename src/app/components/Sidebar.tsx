@@ -30,7 +30,7 @@
  * =============================================================================
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, 
   Search, 
@@ -56,6 +56,15 @@ import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffilia
 // January 19th, 2026: Migrated from useNeonUser to useSupabaseUser
 import { useSupabaseUser } from '../hooks/useSupabaseUser';
 import { useSubscription } from '../hooks/useSubscription';
+// =============================================================================
+// 2026-08-03 (Paras): GROUP-BASED BADGES
+// Badges now count groups (distinct domains/creators), excluding blocked
+// domains — same unit as the filter chips on Discovered/Saved. Previously the
+// badge counted raw postings, so David saw 71 (badge) vs 61 (chips) vs 70
+// (select-all) for the same list. See utils/affiliate-grouping.ts.
+// =============================================================================
+import { useBlockedDomains } from '../hooks/useBlockedDomains';
+import { groupCountsBySource } from '../utils/affiliate-grouping';
 // =============================================================================
 // LANGUAGE CONTEXT (January 9th, 2026)
 // Added i18n support - see LANGUAGE_MIGRATION.md for documentation
@@ -199,8 +208,23 @@ export const Sidebar: React.FC = () => {
   // to prevent the server/client mismatch on Vercel. SWR handles the cache
   // sharing, the useEffect handles the SSR hydration.
   // ==========================================================================
-  const { count: pipelineCount } = useSavedAffiliates();
-  const { count: discoveredCount } = useDiscoveredAffiliates();
+  // ==========================================================================
+  // 2026-08-03 (Paras): badges show GROUP counts (minus blocked domains) so
+  // the sidebar number always matches the "All" chip and select-all count on
+  // the Discovered/Saved pages. The hooks' `count` (raw posting rows) is no
+  // longer used here.
+  // ==========================================================================
+  const { savedAffiliates } = useSavedAffiliates();
+  const { discoveredAffiliates } = useDiscoveredAffiliates();
+  const { isBlocked } = useBlockedDomains();
+  const pipelineCount = useMemo(
+    () => groupCountsBySource(savedAffiliates.filter(a => !isBlocked(a.domain))).All,
+    [savedAffiliates, isBlocked]
+  );
+  const discoveredCount = useMemo(
+    () => groupCountsBySource(discoveredAffiliates.filter(a => !isBlocked(a.domain))).All,
+    [discoveredAffiliates, isBlocked]
+  );
 
   // ==========================================================================
   // CLIENT-SIDE BADGE RENDERING - January 3rd, 2026
