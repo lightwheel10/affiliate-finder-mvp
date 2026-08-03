@@ -158,6 +158,12 @@ export async function PATCH(request: NextRequest) {
       appReplies: 'app_replies',
       appReminders: 'app_reminders',
       profileImageUrl: 'profile_image_url', // January 13th, 2026: Added for Vercel Blob storage
+      // 2026-08-03 (Paras): weekly auto-scan opt-out toggle (Settings -> Plan).
+      // NOTE: this mapping alone does NOT persist a field — the hardcoded
+      // UPDATE below must also list the column (several mapped fields above,
+      // e.g. email_matches/profile_image_url, are missing there and silently
+      // no-op; discovered while adding this flag).
+      autoScanEnabled: 'auto_scan_enabled',
     };
 
     for (const [jsKey, dbKey] of Object.entries(fieldMapping)) {
@@ -191,6 +197,7 @@ export async function PATCH(request: NextRequest) {
         competitors = COALESCE(${updates.competitors ?? null}, competitors),
         topics = COALESCE(${updates.topics ?? null}, topics),
         affiliate_types = COALESCE(${updates.affiliateTypes ?? null}, affiliate_types),
+        auto_scan_enabled = COALESCE(${updates.autoScanEnabled ?? null}, auto_scan_enabled),
         updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
@@ -198,6 +205,26 @@ export async function PATCH(request: NextRequest) {
 
     if (updatedUsers.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // ==========================================================================
+    // 2026-08-03 (Paras): AUTO-SCAN RE-ENABLE — RESET STALE SCHEDULE
+    //
+    // While auto-scan is disabled the cron filters the user out, so
+    // subscriptions.next_auto_scan_at freezes in the past. Without this reset,
+    // re-enabling would make the user immediately "due" and the next hourly
+    // cron would scan (and charge 1 topic_search credit) within the hour — a
+    // surprise charge right after flipping a switch. Resetting stale schedules
+    // to NOW() + 7 days restarts the weekly cadence predictably. Schedules
+    // still in the future (quick off/on flip) are left untouched.
+    // COALESCE(false, x) = false, so disabling via the UPDATE above works.
+    // ==========================================================================
+    if (updates.autoScanEnabled === true) {
+      await sql`
+        UPDATE crewcast.subscriptions
+        SET next_auto_scan_at = NOW() + interval '7 days'
+        WHERE user_id = ${id} AND next_auto_scan_at < NOW()
+      `;
     }
 
     return NextResponse.json({ user: updatedUsers[0] as DbUser });
