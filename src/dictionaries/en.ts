@@ -1119,6 +1119,7 @@ export const en: Dictionary = {
     error: {
       genericError: 'Something went wrong. Please try again.',
       searchFailed: 'Search failed. Please try again.',
+      searchAtCapacity: 'Search is temporarily unavailable due to high demand. Please try again later.',  // August 3, 2026 (Paras): shown when the Apify account hits its monthly usage cap
       saveFailed: 'Failed to save affiliates. Please try again.',
       deleteFailed: 'Failed to delete affiliates. Please try again.',
       emailLookupFailed: 'Failed to find emails. Please try again.',

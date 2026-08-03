@@ -260,7 +260,25 @@ export async function POST(req: NextRequest): Promise<NextResponse<StartSearchRe
     
   } catch (error: any) {
     console.error('[Search/Start] Error:', error);
-    
+
+    // ==========================================================================
+    // August 3, 2026 (Paras): APIFY MONTHLY USAGE CAP
+    //
+    // Incident: the production Apify account hit its monthly usage hard limit,
+    // so Apify rejected every actor start (403, type 'platform-feature-disabled',
+    // message "Monthly usage hard limit exceeded"). The UI showed the generic
+    // "Search failed. Please try again." toast, and users kept retrying even
+    // though retries cannot succeed until the cap is raised (Apify Console ->
+    // Billing -> Limits) or the billing cycle resets (the 12th of each month).
+    // Return a distinct code so the Find page can show an honest message.
+    // ==========================================================================
+    if (error?.type === 'platform-feature-disabled' || /usage hard limit/i.test(error?.message ?? '')) {
+      return NextResponse.json(
+        { error: 'Search service temporarily at capacity', code: 'SERVICE_AT_CAPACITY' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: error.message || 'Internal server error', code: 'INTERNAL_ERROR' },
       { status: 500 }

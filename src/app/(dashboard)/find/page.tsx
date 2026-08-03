@@ -644,6 +644,11 @@ export default function FindNewPage() {
         toast.warning(t.toasts.warning.insufficientCredits);
       } else if (searchErr.name === 'AbortError' || searchErr.code === 'CANCELLED') {
         // Search cancelled by user - no notification needed
+      } else if (searchErr.code === 'SERVICE_AT_CAPACITY') {
+        // August 3, 2026 (Paras): Apify monthly usage cap reached (see
+        // /api/search/start catch block). Retrying cannot succeed, so show the
+        // dedicated "temporarily unavailable" toast instead of searchFailed.
+        toast.error(t.toasts.error.searchAtCapacity);
       } else {
         // Other errors
         console.error('[handleFindAffiliates] Search error:', searchErr);
