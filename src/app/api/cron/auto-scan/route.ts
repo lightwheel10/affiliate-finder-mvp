@@ -202,11 +202,19 @@ export async function GET(request: NextRequest) {
         u.brand
       FROM crewcast.subscriptions s
       JOIN crewcast.users u ON s.user_id = u.id
-      WHERE 
+      WHERE
         s.status = 'active'
         AND s.first_payment_at IS NOT NULL
         AND s.next_auto_scan_at IS NOT NULL
         AND s.next_auto_scan_at <= NOW()
+        -- 2026-08-03 (Paras): per-user opt-out (Settings -> Plan -> Weekly
+        -- Auto-Scan). Each scan costs 1 topic_search credit; David asked for a
+        -- way to stop it. COALESCE keeps pre-migration rows scanning (NULL =
+        -- enabled). Filtering here (in SQL, not by skipping in JS) means a
+        -- disabled user can never pin the queue head — see the May 1 starvation
+        -- incident comment below. Their next_auto_scan_at freezes while off;
+        -- the PATCH in api/users/route.ts resets stale schedules on re-enable.
+        AND COALESCE(u.auto_scan_enabled, TRUE)
       ORDER BY s.next_auto_scan_at ASC
       LIMIT ${MAX_USERS_PER_RUN}
     `;

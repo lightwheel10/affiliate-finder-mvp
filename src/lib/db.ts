@@ -63,6 +63,10 @@ export interface DbUser {
   email_updates: boolean;
   app_replies: boolean;
   app_reminders: boolean;
+  // 2026-08-03 (Paras): per-user weekly auto-scan opt-out (David's request —
+  // the cron eats 1 topic_search credit per scan and he wanted it stoppable).
+  // DB default is TRUE; migration must run before code that writes this ships.
+  auto_scan_enabled: boolean;
   created_at: string;
   updated_at: string;
 }

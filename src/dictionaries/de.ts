@@ -1535,6 +1535,11 @@ export const de: Dictionary = {
     scanning: 'Scanne...',
     scanningTooltip: 'Auto-Scan läuft...',
     nextScanAt: 'Nächster Scan um',
+    // 2026-08-03 (Paras): auto-scan opt-out
+    disabled: 'Aus',
+    disabledTooltip: 'Der wöchentliche Auto-Scan ist deaktiviert. Du kannst ihn in den Einstellungen wieder aktivieren.',
+    settingsTitle: 'Wöchentlicher Auto-Scan',
+    settingsDescription: 'Findet jede Woche automatisch neue Affiliates zu deinen Themen und Wettbewerbern. Jeder Scan verbraucht 1 Such-Credit.',
   },
 
   // =========================================================================

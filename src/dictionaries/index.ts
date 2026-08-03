@@ -1522,6 +1522,13 @@ export interface Dictionary {
     scanning: string;             // Display text when scan is in progress
     scanningTooltip: string;      // Tooltip for scanning state
     nextScanAt: string;           // Prefix for next scan date tooltip
+    // 2026-08-03 (Paras): auto-scan opt-out (David's request) — countdown
+    // "Off" state + the Settings -> Plan toggle card strings live here so all
+    // auto-scan copy stays in one namespace.
+    disabled: string;             // Display text when user turned auto-scan off
+    disabledTooltip: string;      // Tooltip for the off state
+    settingsTitle: string;        // Settings toggle card title
+    settingsDescription: string;  // Settings toggle card description
   };
 
   // =========================================================================

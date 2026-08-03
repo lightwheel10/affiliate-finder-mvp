@@ -50,7 +50,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 // TYPES
 // =============================================================================
 
-type ScanState = 'loading' | 'locked' | 'no_credits' | 'active' | 'scanning';
+// 2026-08-03 (Paras): added 'disabled' — user turned weekly auto-scan off in
+// Settings -> Plan. Must be checked BEFORE the isPast/'scanning' branch:
+// while disabled, next_auto_scan_at freezes in the past (cron skips the user),
+// which would otherwise render "Scanning..." forever — the same stuck-UI
+// symptom as the May 1 queue incident.
+type ScanState = 'loading' | 'locked' | 'no_credits' | 'active' | 'scanning' | 'disabled';
 
 // =============================================================================
 // COMPONENT
@@ -64,7 +69,8 @@ export function ScanCountdown() {
   // ==========================================================================
   // DATA HOOKS
   // ==========================================================================
-  const { userId } = useNeonUser();
+  // 2026-08-03 (Paras): `user` added for the auto_scan_enabled flag
+  const { userId, user } = useNeonUser();
   const { 
     subscription, 
     refetch: refetchSubscription,
@@ -134,7 +140,14 @@ export function ScanCountdown() {
     if (!hasAutoScanAccess) {
       return 'locked';
     }
-    
+
+    // 2026-08-03 (Paras): user opted out of the weekly scan. Strict === false
+    // so a missing column (pre-migration) keeps today's behavior. Must come
+    // before the isPast check — see the ScanState comment above.
+    if (user?.auto_scan_enabled === false) {
+      return 'disabled';
+    }
+
     // Paid but scan is overdue (cron will pick it up soon)
     if (countdown?.isPast) {
       return 'scanning';
@@ -258,6 +271,19 @@ export function ScanCountdown() {
     );
   }
   
+  // 2026-08-03 (Paras): disabled state — weekly auto-scan turned off by the
+  // user. Muted "Off" text; tooltip points at Settings. No modal, no action.
+  if (scanState === 'disabled') {
+    return (
+      <span
+        className="font-mono text-xs text-neutral-400"
+        title={t.scanCountdown.disabledTooltip}
+      >
+        {t.scanCountdown.disabled}
+      </span>
+    );
+  }
+
   // Scanning state (countdown reached 0, waiting for cron)
   if (scanState === 'scanning') {
     return (

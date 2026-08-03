@@ -250,17 +250,27 @@ export default function SettingsPage() {
                     />
                   )}
                   {activeTab === 'plan' && (
-                    <PlanSettings 
-                      subscription={subscription}
-                      isLoading={subscriptionLoading}
-                      isTrialing={isTrialing}
-                      isPastDue={isPastDue}
-                      daysLeftInTrial={daysLeftInTrial}
-                      onUpgrade={() => setIsPricingModalOpen(true)}
-                      onAddCard={() => setIsAddCardModalOpen(true)}
-                      onCancelPlan={() => setIsCancelModalOpen(true)}
-                      userId={userId}
-                    />
+                    <>
+                      <PlanSettings
+                        subscription={subscription}
+                        isLoading={subscriptionLoading}
+                        isTrialing={isTrialing}
+                        isPastDue={isPastDue}
+                        daysLeftInTrial={daysLeftInTrial}
+                        onUpgrade={() => setIsPricingModalOpen(true)}
+                        onAddCard={() => setIsAddCardModalOpen(true)}
+                        onCancelPlan={() => setIsCancelModalOpen(true)}
+                        userId={userId}
+                      />
+                      {/* 2026-08-03 (Paras): weekly auto-scan opt-out — see
+                          AutoScanToggle definition below for the full WHY.
+                          `?? true` matches the DB default (enabled). */}
+                      <AutoScanToggle
+                        userId={userId}
+                        enabled={neonUser?.auto_scan_enabled ?? true}
+                        onChanged={refetchNeonUser}
+                      />
+                    </>
                   )}
                   {activeTab === 'buy_credits' && (
                     <BuyCreditsSettings
@@ -928,6 +938,83 @@ interface Invoice {
   hosted_invoice_url: string | null;
   invoice_pdf: string | null;
   description: string | null;
+}
+
+// =============================================================================
+// AUTO-SCAN TOGGLE — 2026-08-03 (Paras)
+//
+// David's request (2026-08-03): the weekly cron scan consumes 1 topic_search
+// credit per run (4-5 of his 10/month) and he was "running out of credit but
+// don't know why". This card lets each user turn the weekly auto-scan off/on.
+//
+// - Persists users.auto_scan_enabled via the same PATCH /api/users the profile
+//   form uses; the auto-scan cron's due-users query filters on that column.
+// - Re-enabling resets a stale scan schedule server-side (api/users/route.ts)
+//   so the next scan is 7 days out — never an instant surprise charge.
+// - onChanged -> refetchNeonUser, so the header ScanCountdown "Off" state and
+//   this card update together from the same user row.
+// =============================================================================
+interface AutoScanToggleProps {
+  userId: number | null;
+  enabled: boolean;
+  onChanged: () => void;
+}
+
+function AutoScanToggle({ userId, enabled, onChanged }: AutoScanToggleProps) {
+  const { t } = useLanguage();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+
+  const handleToggle = async () => {
+    if (!userId || isSaving) return;
+    setIsSaving(true);
+    setSaveFailed(false);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, autoScanEnabled: !enabled }),
+      });
+      if (!res.ok) throw new Error(`PATCH /api/users failed: ${res.status}`);
+      onChanged();
+    } catch (err) {
+      console.error('[AutoScanToggle] Failed to save:', err);
+      setSaveFailed(true);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 flex items-center justify-between px-5 py-4 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
+      <div className="pr-4">
+        <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{t.scanCountdown.settingsTitle}</p>
+        <p className="mt-1 text-xs text-[#8898aa] dark:text-gray-400">{t.scanCountdown.settingsDescription}</p>
+        {saveFailed && (
+          <p className="mt-1 text-xs text-red-500">{t.dashboard.settings.profile.failedToSave}</p>
+        )}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        onClick={handleToggle}
+        disabled={isSaving}
+        className={cn(
+          'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
+          enabled ? 'bg-[#ffbf23]' : 'bg-[#e6ebf1] dark:bg-gray-700',
+          isSaving && 'opacity-60 cursor-wait'
+        )}
+      >
+        <span
+          className={cn(
+            'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+            enabled ? 'translate-x-6' : 'translate-x-1'
+          )}
+        />
+      </button>
+    </div>
+  );
 }
 
 function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, daysLeftInTrial, onUpgrade, onAddCard, onCancelPlan, userId }: PlanSettingsProps) {

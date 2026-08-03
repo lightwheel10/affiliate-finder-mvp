@@ -81,6 +81,10 @@ export interface SupabaseUserData {
   topics?: string[];
   affiliate_types?: string[];
   profile_image_url?: string;
+  // 2026-08-03 (Paras): weekly auto-scan opt-out (Settings -> Plan toggle).
+  // Optional: pre-migration API responses won't include it; consumers treat
+  // undefined as enabled (the DB default).
+  auto_scan_enabled?: boolean;
 }
 
 // =============================================================================

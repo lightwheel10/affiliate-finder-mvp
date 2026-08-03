@@ -1543,6 +1543,11 @@ export const en: Dictionary = {
     scanning: 'Scanning...',
     scanningTooltip: 'Auto-scan in progress...',
     nextScanAt: 'Next scan at',
+    // 2026-08-03 (Paras): auto-scan opt-out
+    disabled: 'Off',
+    disabledTooltip: 'Weekly auto-scan is turned off. You can re-enable it in Settings.',
+    settingsTitle: 'Weekly Auto-Scan',
+    settingsDescription: 'Automatically discovers new affiliates for your topics and competitors every week. Each scan uses 1 search credit.',
   },
 
   // =========================================================================
