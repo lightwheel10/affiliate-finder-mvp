@@ -897,6 +897,13 @@ export const en: Dictionary = {
           keepCanceled: 'Keep Canceled',
           confirmCancel: 'Cancel Subscription',
           confirmResume: 'Resume Subscription',
+          // 2026-08-03 (Paras): optional churn survey (David's request)
+          surveyTitle: 'Mind telling us why? (optional)',
+          reasonTooExpensive: 'Too expensive',
+          reasonNotWhatLookingFor: 'Not what you were looking for',
+          reasonDidntFindEnough: "Didn't find enough affiliates",
+          reasonOther: 'Other',
+          reasonPlaceholder: 'Enter the reason...',
         },
         cancellationPending: {
           title: 'Subscription Canceling',
