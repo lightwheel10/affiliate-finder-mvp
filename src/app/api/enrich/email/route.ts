@@ -65,7 +65,7 @@ import {
 // =============================================================================
 import { trackApiCall, API_COSTS, ApiService } from '@/app/services/tracking';
 import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
-import { checkCredits, consumeCredits } from '@/lib/credits';
+import { checkCredits, consumeCredits, refundCredits } from '@/lib/credits';
 
 // Check if credit enforcement is enabled
 function isCreditEnforcementEnabled(): boolean {
@@ -115,7 +115,14 @@ function parseName(fullName: string): { firstName: string; lastName: string } {
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
+  // 2026-08-04 (Paras): hoisted out of the try block so the catch handler can
+  // refund a reserved credit if the lookup throws mid-flight. See the
+  // "RESERVE CREDIT BEFORE THE PAID LOOKUP" block below for the full why.
+  let creditConsumed = false;
+  let refundUserId: number | null = null;
+  let refundAffiliateId = 'unknown';
+
   try {
     // ==========================================================================
     // AUTHENTICATION CHECK (December 2025)
@@ -179,6 +186,10 @@ export async function POST(request: NextRequest) {
     const userId = users[0].id as number;
     const targetLanguage = users[0].target_language as string | null;
 
+    // 2026-08-04 (Paras): captured for the catch-block refund (see above).
+    refundUserId = userId;
+    refundAffiliateId = String(affiliateId);
+
     // ==========================================================================
     // CREDIT CHECK (December 2025)
     // Verify user has email credits before proceeding
@@ -229,6 +240,40 @@ export async function POST(request: NextRequest) {
         { error: `Provider '${forcedProvider}' is not available. Available: ${availableProviders.join(', ')}` },
         { status: 400 }
       );
+    }
+
+    // ==========================================================================
+    // RESERVE CREDIT BEFORE THE PAID LOOKUP (2026-08-04, Paras)
+    //
+    // WHY: This route used to only CHECK credits (above) and consume them at
+    // the very end, after the paid Apollo/Lusha lookup — and only when an
+    // email was found. That gap meant N parallel requests could each pass the
+    // check and each trigger a paid lookup while only 1 credit existed; when
+    // the late consume then failed, the email was still saved and returned
+    // anyway. Security audit finding H3 (SECURITY_AUDIT.md).
+    //
+    // HOW: consumeCredits() is atomic as of PR #78 (availability check inside
+    // the UPDATE's WHERE clause), so this reservation is the real enforcement
+    // point: reserve 1 email credit NOW, run the lookup, refund if no email
+    // is found (or on error/exception — see the refund blocks below). Same
+    // reserve-then-refund pattern as /api/ai/outreach. The checkCredits()
+    // call above stays purely for a friendly early 402.
+    //
+    // Placed after all cheap validations so an invalid request can't consume,
+    // and before the email_status='searching' UPDATE so a rejected request
+    // doesn't leave the affiliate stuck in 'searching'.
+    // ==========================================================================
+    if (enforceCredits) {
+      const reserveResult = await consumeCredits(userId, 'email', 1, affiliateId.toString(), 'affiliate');
+      if (!reserveResult.success) {
+        return NextResponse.json({
+          error: 'Unable to reserve email credit. Please try again.',
+          creditError: true,
+          remaining: 0,
+        }, { status: 402 });
+      }
+      creditConsumed = true;
+      console.log(`💳 [Email Enrich] Reserved 1 email credit for user ${userId}. Balance: ${reserveResult.newBalance}`);
     }
 
     // ==========================================================================
@@ -433,22 +478,22 @@ export async function POST(request: NextRequest) {
     `;
 
     // ==========================================================================
-    // CONSUME CREDIT (December 2025)
-    // Deduct 1 email credit after successful lookup
-    // Only consume if enforcement is enabled AND email was found
+    // REFUND RESERVED CREDIT IF NO EMAIL FOUND (2026-08-04, Paras)
+    //
+    // The credit was already reserved BEFORE the paid lookup (replaces the
+    // old post-lookup consume that lived here since December 2025). Users
+    // only pay for found emails, so refund on 'not_found' / 'error'.
+    //
+    // NOTE: refundCredits() restores to the subscription pool even if the
+    // reserve drew from topup — pre-existing behavior shared with
+    // /api/ai/outreach (audit finding L2, accepted for now).
     // ==========================================================================
-    if (enforceCredits && emailStatus === 'found') {
-      const consumeResult = await consumeCredits(
-        userId, 
-        'email', 
-        1, 
-        affiliateId.toString(), 
-        'affiliate'
-      );
-      if (consumeResult.success) {
-        console.log(`💳 [Email Enrich] Consumed 1 email credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
+    if (creditConsumed && emailStatus !== 'found') {
+      const refundResult = await refundCredits(userId, 'email', 1, affiliateId.toString(), 'enrich_not_found');
+      if (refundResult.success) {
+        console.log(`↩️ [Email Enrich] Refunded 1 email credit for user ${userId} (status: ${emailStatus})`);
       } else {
-        console.error(`❌ [Email Enrich] Failed to consume credit for user ${userId}`);
+        console.error(`❌ [Email Enrich] Failed to refund credit for user ${userId} (status: ${emailStatus})`);
       }
     }
 
@@ -471,6 +516,20 @@ export async function POST(request: NextRequest) {
 
   } catch (error: unknown) {
     console.error('Email enrichment error:', error);
+
+    // 2026-08-04 (Paras): if the lookup threw AFTER the reserve-first block
+    // consumed a credit, give it back — the user got no result.
+    if (creditConsumed && refundUserId !== null) {
+      try {
+        const refundResult = await refundCredits(refundUserId, 'email', 1, refundAffiliateId, 'enrich_error');
+        if (refundResult.success) {
+          console.log(`↩️ [Email Enrich] Refunded 1 email credit for user ${refundUserId} after error`);
+        }
+      } catch (refundError) {
+        console.error('❌ [Email Enrich] Failed to refund credit after error:', refundError);
+      }
+    }
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: 'Failed to find email', details: errorMessage },
