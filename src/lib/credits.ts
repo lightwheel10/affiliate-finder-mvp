@@ -191,7 +191,12 @@ export async function getUserCredits(userId: number): Promise<UserCredits | null
 
 /**
  * Check if a user has enough credits for an action
- * 
+ *
+ * 2026-08-04 (Paras): ADVISORY ONLY. This read is not atomic and can race
+ * with concurrent requests — use it for fast-fail UX (nice 402 messages),
+ * never as a reservation. The atomic enforcement point is consumeCredits()
+ * below, whose UPDATE carries the availability check in its WHERE clause.
+ *
  * @param userId - The user's database ID
  * @param creditType - Type of credit to check
  * @param amount - Amount of credits needed (default: 1)
@@ -314,7 +319,32 @@ export async function checkCredits(
 
 /**
  * Deduct credits after a successful action
- * 
+ *
+ * ===========================================================================
+ * 2026-08-04 (Paras): REWRITTEN TO BE ATOMIC — fixes security audit finding
+ * H3 (credit-consumption TOCTOU race).
+ *
+ * WHY: The old implementation was check-then-act: SELECT the balance, verify
+ * availability in JavaScript, then UPDATE with an unconditional
+ * `used = used + N`. Two concurrent requests (double-click, two open tabs,
+ * parallel API calls — no attacker needed) could both read the same balance,
+ * both pass the JS check, and both increment. Result: more credits consumed
+ * than the user had, and each over-spend was a real paid Apollo/Lusha/Apify
+ * call the business ate.
+ *
+ * HOW: The availability check now lives INSIDE the UPDATE's WHERE clause, so
+ * check + deduct are one indivisible statement. Postgres row-locks the row
+ * during UPDATE: concurrent requests serialize, each re-evaluates the guard
+ * against the committed balance, and a request that no longer fits matches
+ * 0 rows → we return { success: false, newBalance: 0 }. The subscription /
+ * topup split is computed in SQL from that same locked row (SET expressions
+ * always see the PRE-update values), so it can never use a stale read.
+ *
+ * DO NOT "simplify" this back to SELECT → check in JS → UPDATE, and do not
+ * treat a passing checkCredits() as a reservation — checkCredits() is
+ * advisory UX only; THIS function is the enforcement point.
+ * ===========================================================================
+ *
  * @param userId - The user's database ID
  * @param creditType - Type of credit to consume
  * @param amount - Amount to deduct (default: 1)
@@ -335,78 +365,82 @@ export async function consumeCredits(
       return { success: false, newBalance: 0 };
     }
 
-    const rowResult = await sql`
-      SELECT 
-        topic_search_credits_total, topic_search_credits_used, topic_search_credits_topup,
-        email_credits_total, email_credits_used, email_credits_topup,
-        ai_credits_total, ai_credits_used, ai_credits_topup
-      FROM crewcast.user_credits
-      WHERE user_id = ${userId}
-    `;
-    if (rowResult.length === 0) {
-      return { success: false, newBalance: 0 };
-    }
-
-    const r = rowResult[0];
-    let total: number; let used: number; let topup: number;
-    switch (creditType) {
-      case 'topic_search':
-        total = r.topic_search_credits_total; used = r.topic_search_credits_used; topup = r.topic_search_credits_topup ?? 0;
-        break;
-      case 'email':
-        total = r.email_credits_total; used = r.email_credits_used; topup = r.email_credits_topup ?? 0;
-        break;
-      case 'ai':
-        total = r.ai_credits_total; used = r.ai_credits_used; topup = r.ai_credits_topup ?? 0;
-        break;
-      default:
-        return { success: false, newBalance: 0 };
-    }
-
-    const subRem = total === -1 ? Infinity : Math.max(0, total - used);
-    const totalAvailable = (total === -1 ? used + amount : subRem) + topup;
-    if (total === -1) {
-      // unlimited subscription: just add to used (conceptually we have unlimited so no topup needed)
-    } else if (totalAvailable < amount) {
-      console.error('[Credits] Failed to consume credits - insufficient or no record');
-      return { success: false, newBalance: 0 };
-    }
-
-    const fromSub = total === -1 ? amount : Math.min(amount, subRem);
-    const fromTopup = amount - fromSub;
-
+    // 2026-08-04 (Paras): One guarded UPDATE per credit type — the WHERE
+    // clause IS the availability check (atomic; see function doc above).
+    // 0 rows updated = no credit row OR insufficient balance; either way
+    // nothing was deducted.
+    //
+    // The CASE expressions split the charge: subscription pool first
+    // (LEAST(amount, remaining sub)), overflow drains topup. Topup can never
+    // go negative — the WHERE guard proves sub-remaining + topup >= amount
+    // before any write happens. Unlimited plans (total = -1) always pass and
+    // only increment `used`; their topup is left untouched (COALESCE'd to 0,
+    // matching the old behavior for NULL topup columns).
     let updateResult;
     switch (creditType) {
       case 'topic_search':
         updateResult = await sql`
           UPDATE crewcast.user_credits
-          SET 
-            topic_search_credits_used = topic_search_credits_used + ${fromSub},
-            topic_search_credits_topup = GREATEST(0, COALESCE(topic_search_credits_topup, 0) - ${fromTopup}),
+          SET
+            topic_search_credits_used = topic_search_credits_used + (CASE
+              WHEN topic_search_credits_total = -1 THEN ${amount}
+              ELSE LEAST(${amount}, GREATEST(0, topic_search_credits_total - topic_search_credits_used))
+            END),
+            topic_search_credits_topup = (CASE
+              WHEN topic_search_credits_total = -1 THEN COALESCE(topic_search_credits_topup, 0)
+              ELSE COALESCE(topic_search_credits_topup, 0)
+                - (${amount} - LEAST(${amount}, GREATEST(0, topic_search_credits_total - topic_search_credits_used)))
+            END),
             updated_at = NOW()
           WHERE user_id = ${userId}
+            AND (
+              topic_search_credits_total = -1
+              OR GREATEST(0, topic_search_credits_total - topic_search_credits_used) + COALESCE(topic_search_credits_topup, 0) >= ${amount}
+            )
           RETURNING topic_search_credits_total as total, topic_search_credits_used as used, topic_search_credits_topup as topup
         `;
         break;
       case 'email':
         updateResult = await sql`
           UPDATE crewcast.user_credits
-          SET 
-            email_credits_used = email_credits_used + ${fromSub},
-            email_credits_topup = GREATEST(0, COALESCE(email_credits_topup, 0) - ${fromTopup}),
+          SET
+            email_credits_used = email_credits_used + (CASE
+              WHEN email_credits_total = -1 THEN ${amount}
+              ELSE LEAST(${amount}, GREATEST(0, email_credits_total - email_credits_used))
+            END),
+            email_credits_topup = (CASE
+              WHEN email_credits_total = -1 THEN COALESCE(email_credits_topup, 0)
+              ELSE COALESCE(email_credits_topup, 0)
+                - (${amount} - LEAST(${amount}, GREATEST(0, email_credits_total - email_credits_used)))
+            END),
             updated_at = NOW()
           WHERE user_id = ${userId}
+            AND (
+              email_credits_total = -1
+              OR GREATEST(0, email_credits_total - email_credits_used) + COALESCE(email_credits_topup, 0) >= ${amount}
+            )
           RETURNING email_credits_total as total, email_credits_used as used, email_credits_topup as topup
         `;
         break;
       case 'ai':
         updateResult = await sql`
           UPDATE crewcast.user_credits
-          SET 
-            ai_credits_used = ai_credits_used + ${fromSub},
-            ai_credits_topup = GREATEST(0, COALESCE(ai_credits_topup, 0) - ${fromTopup}),
+          SET
+            ai_credits_used = ai_credits_used + (CASE
+              WHEN ai_credits_total = -1 THEN ${amount}
+              ELSE LEAST(${amount}, GREATEST(0, ai_credits_total - ai_credits_used))
+            END),
+            ai_credits_topup = (CASE
+              WHEN ai_credits_total = -1 THEN COALESCE(ai_credits_topup, 0)
+              ELSE COALESCE(ai_credits_topup, 0)
+                - (${amount} - LEAST(${amount}, GREATEST(0, ai_credits_total - ai_credits_used)))
+            END),
             updated_at = NOW()
           WHERE user_id = ${userId}
+            AND (
+              ai_credits_total = -1
+              OR GREATEST(0, ai_credits_total - ai_credits_used) + COALESCE(ai_credits_topup, 0) >= ${amount}
+            )
           RETURNING ai_credits_total as total, ai_credits_used as used, ai_credits_topup as topup
         `;
         break;
@@ -415,6 +449,9 @@ export async function consumeCredits(
     }
 
     if (updateResult.length === 0) {
+      // Atomic guard rejected the deduction: insufficient credits, or the
+      // user has no credit row at all. Nothing was written.
+      console.error(`[Credits] Consume rejected for user ${userId}: insufficient ${creditType} credits or no credit record`);
       return { success: false, newBalance: 0 };
     }
 
