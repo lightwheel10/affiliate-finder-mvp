@@ -391,7 +391,13 @@ export interface DbSearchJob {
   // 2. Status returns 'enriching' while enrichment_status='running'
   // 3. All enrichment actors complete → results fetched, filtered, returned
   // ==========================================================================
-  enrichment_status: 'pending' | 'running' | 'succeeded' | 'failed' | null;
+  // 2026-08-04 (Paras): added 'finalizing' — a poll has atomically claimed the
+  // completion work (compare-and-set in search/status) so concurrent polls
+  // can't double-charge or double-process one job. search_jobs.started_at is
+  // refreshed at claim time and doubles as the claim timestamp for the
+  // 5-minute crash-reclaim window. DB column is varchar(20), no constraint —
+  // verified 2026-08-04, no migration needed.
+  enrichment_status: 'pending' | 'running' | 'succeeded' | 'failed' | 'finalizing' | null;
   enrichment_run_ids: {
     youtube?: string;
     instagram?: string;
