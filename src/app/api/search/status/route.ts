@@ -297,7 +297,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // If enrichment actors are running, check their status.
     // This is the new non-blocking enrichment flow to avoid Vercel timeouts.
     // ==========================================================================
-    if (enrichmentStatus === 'running' && enrichmentRunIds && rawResults) {
+    // 2026-08-04 (Paras): also enter this branch for 'finalizing' so a job
+    // whose claiming poll crashed mid-completion (Vercel kills the invocation
+    // at maxDuration=120s) can be reclaimed by the guarded UPDATE below after
+    // 5 minutes, instead of sitting stuck until the 24h stale-job sweep.
+    if ((enrichmentStatus === 'running' || enrichmentStatus === 'finalizing') && enrichmentRunIds && rawResults) {
       console.log(`🔄 [Search/Status] Checking enrichment status...`);
       
       const { allComplete, statuses } = await checkAllEnrichmentStatus(enrichmentRunIds);
@@ -781,7 +785,47 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       
       // All enrichment actors complete - mark as done
       console.log(`✅ [Search/Status] All enrichment actors complete!`);
-      
+
+      // ==========================================================================
+      // SINGLE-WINNER CLAIM FOR COMPLETION (2026-08-04, Paras)
+      //
+      // WHY: Everything below (onboarding fast path AND the paid path that
+      // consumes a topic_search credit + marks the job done) used to be gated
+      // only by the plain SELECT at the top of this handler. Two concurrent
+      // polls for the same job — e.g. a client retrying 3s after a dropped
+      // connection while the interrupted invocation is still running server-
+      // side, or parallel requests fired on purpose — would BOTH run it:
+      // double credit charge for one search, duplicate processing. Security
+      // audit H3 follow-up; same compare-and-set pattern as PR #78/#79.
+      //
+      // HOW: atomically flip enrichment_status 'running' → 'finalizing'.
+      // Exactly one poll wins and runs the completion work; losers return
+      // 'enriching' and the client simply polls again. started_at is
+      // refreshed here as the claim timestamp: if the winning invocation dies
+      // mid-work (maxDuration=120s kill), the claim is retakeable after
+      // 5 minutes (> any invocation lifetime) — a crash stalls the job for
+      // minutes, not until the 24h stale-job sweep. started_at IS NULL is
+      // admitted defensively (regular jobs never set it before this claim).
+      // ==========================================================================
+      const completionClaim = await sql`
+        UPDATE crewcast.search_jobs
+        SET enrichment_status = 'finalizing', started_at = NOW()
+        WHERE id = ${jobIdNum}
+          AND (
+            enrichment_status = 'running'
+            OR (enrichment_status = 'finalizing' AND (started_at IS NULL OR started_at < NOW() - INTERVAL '5 minutes'))
+          )
+        RETURNING id
+      `;
+
+      if (completionClaim.length === 0) {
+        console.log(`🔒 [Search/Status] Completion already claimed by another poll for job ${jobIdNum}`);
+        return NextResponse.json({
+          status: 'enriching',
+          message: 'Finalizing results...',
+        });
+      }
+
       // ==========================================================================
       // JANUARY 30, 2026: FAST PATH FOR ONBOARDING JOBS
       // 
@@ -1394,11 +1438,41 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     
     console.log(`🔍 [Search/Status] Google Scraper succeeded, starting non-blocking enrichment...`);
     
-    // Update job to processing
-    await sql`
-      UPDATE crewcast.search_jobs SET status = 'processing' WHERE id = ${jobIdNum}
+    // ==========================================================================
+    // SINGLE-WINNER CLAIM FOR PROCESSING (2026-08-04, Paras)
+    //
+    // WHY: This transition was `SET status='processing' WHERE id=...` with no
+    // status guard, so two concurrent polls (dropped-connection retry, or
+    // parallel requests fired on purpose) could both process the SUCCEEDED
+    // run: duplicate enrichment actor fleets (real Apify cost) and, on the
+    // web-only path below, a double topic_search credit charge. Security
+    // audit H3 follow-up; same compare-and-set pattern as PR #78/#79.
+    //
+    // HOW: only claim from 'running'; losers return 'processing' and poll
+    // again. started_at doubles as the claim timestamp — a claim whose
+    // invocation died (maxDuration=120s kill) is retakeable after 5 minutes.
+    // started_at IS NULL admits jobs left in 'processing' by the old
+    // unguarded code at deploy time.
+    // ==========================================================================
+    const processingClaim = await sql`
+      UPDATE crewcast.search_jobs
+      SET status = 'processing', started_at = NOW()
+      WHERE id = ${jobIdNum}
+        AND (
+          status = 'running'
+          OR (status = 'processing' AND (started_at IS NULL OR started_at < NOW() - INTERVAL '5 minutes'))
+        )
+      RETURNING id
     `;
-    
+
+    if (processingClaim.length === 0) {
+      console.log(`🔒 [Search/Status] Processing already claimed by another poll for job ${jobIdNum}`);
+      return NextResponse.json({
+        status: 'processing',
+        message: 'Processing results...',
+      });
+    }
+
     // Fetch raw results from Apify
     let fetchedRawResults: SearchResult[];
     try {

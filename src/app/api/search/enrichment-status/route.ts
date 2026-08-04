@@ -66,7 +66,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       FROM crewcast.search_jobs
       WHERE user_id = ${userId}
         AND (
-          (status = 'enriching' AND enrichment_status = 'running')
+          -- 2026-08-04 (Paras): also report 'finalizing' jobs. search/status now
+          -- claims completion via enrichment_status 'running' -> 'finalizing'
+          -- (single-winner guard, audit H3). If the claiming invocation dies,
+          -- the job sits in 'finalizing' — without this line the Discovered
+          -- page's recovery poller would never see it and it would stay stuck
+          -- until the 24h sweep. Re-polling a 'finalizing' job is safe: the
+          -- claim guard in search/status bounces extra polls until the
+          -- 5-minute reclaim window opens.
+          (status = 'enriching' AND enrichment_status IN ('running', 'finalizing'))
           OR (status = 'running' AND created_at > now() - interval '30 minutes')
         )
       ORDER BY created_at DESC
