@@ -43,6 +43,7 @@
  */
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Check, Zap, Loader2, Star, ShieldCheck, TrendingUp, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from './Modal';
@@ -555,10 +556,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               <ShieldCheck size={16} className="text-[#ffbf23]" />
               <span>{t.pricingModal.securePayment}</span>
             </div>
-            <div className="flex items-center gap-2">
+            {/* 2026-08-20 20:34 IST: Link cancellation copy to Plan & Billing; do not open the cancel modal. */}
+            <Link
+              href="/settings?tab=plan"
+              onClick={onClose}
+              className="flex items-center gap-2 hover:text-[#0f172a] dark:hover:text-white transition-colors"
+            >
               <TrendingUp size={16} className="text-[#0f172a] dark:text-white" />
               <span>{t.pricingModal.cancelAnytime}</span>
-            </div>
+            </Link>
           </div>
 
           {/* Downgrade Info */}
