@@ -131,6 +131,8 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!searchParams) return;
     const tab = searchParams.get('tab');
+    // 2026-08-20 20:34 IST: Pricing modal links here to show Plan & Billing only, without opening cancellation.
+    if (tab === 'plan') setActiveTab('plan');
     if (tab === 'buy_credits') setActiveTab('buy_credits');
     const purchase = searchParams.get('credit_purchase');
     if (purchase === 'success') {
