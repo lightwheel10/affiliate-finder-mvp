@@ -19,8 +19,15 @@ import Script from "next/script";
 
 const PAP_ACCOUNT_ID = "44e6c33b";
 const PAP_TRACKJS_SRC = "https://work.selecdoo.com/scripts/trackjs.js";
+const PAP_TRACKING_ENABLED = process.env.NEXT_PUBLIC_PAP_TRACKING_ENABLED !== "false";
 
 export function PAPTracker() {
+  // Preview/staging deployments must not write visits or attribution cookies
+  // into the production PostAffiliatePro account.
+  if (!PAP_TRACKING_ENABLED) {
+    return null;
+  }
+
   return (
     <Script
       // 2026-05-20 (paras): id MUST be exactly "pap_x2s6df8d" — PAP's trackjs

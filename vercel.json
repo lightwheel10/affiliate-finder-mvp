@@ -1,12 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
 
-  "git": {
-    "deploymentEnabled": {
-      "codex/multi-brand-location-staging": false
-    }
-  },
-
   "crons": [
     {
       "path": "/api/cron/auto-scan",
