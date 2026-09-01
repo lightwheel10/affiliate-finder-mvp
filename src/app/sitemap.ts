@@ -14,12 +14,7 @@
  */
 
 import type { MetadataRoute } from 'next';
-
-/**
- * 2026-05-26 (paras): hardcoded production URL. See robots.ts header
- * comment — same rationale (afforceone.com wasn't real production).
- */
-const BASE_URL = 'https://afforce.revenueworks.ai';
+import { getAppUrl } from '@/lib/app-url';
 
 /**
  * Generates the sitemap for the application
@@ -35,6 +30,8 @@ const BASE_URL = 'https://afforce.revenueworks.ai';
  * @returns {MetadataRoute.Sitemap} Array of sitemap entries
  */
 export default function sitemap(): MetadataRoute.Sitemap {
+  const baseUrl = getAppUrl();
+
   // Current date for lastModified - updates on each build/deployment
   const currentDate = new Date();
 
@@ -44,7 +41,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
    */
   const publicPages: MetadataRoute.Sitemap = [
     {
-      url: BASE_URL,
+      url: baseUrl,
       lastModified: currentDate,
       changeFrequency: 'weekly',
       priority: 1.0, // Homepage - highest priority
@@ -57,25 +54,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
    */
   const legalPages: MetadataRoute.Sitemap = [
     {
-      url: `${BASE_URL}/privacy`,
+      url: `${baseUrl}/privacy`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.3,
     },
     {
-      url: `${BASE_URL}/terms`,
+      url: `${baseUrl}/terms`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.3,
     },
     {
-      url: `${BASE_URL}/cookies`,
+      url: `${baseUrl}/cookies`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.2,
     },
     {
-      url: `${BASE_URL}/security`,
+      url: `${baseUrl}/security`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.3,
@@ -88,13 +85,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
    */
   const authPages: MetadataRoute.Sitemap = [
     {
-      url: `${BASE_URL}/sign-in`,
+      url: `${baseUrl}/sign-in`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.5,
     },
     {
-      url: `${BASE_URL}/sign-up`,
+      url: `${baseUrl}/sign-up`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.6, // Slightly higher - we want signups

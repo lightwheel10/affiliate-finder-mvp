@@ -3,6 +3,7 @@ import { waitUntil } from '@vercel/functions';
 import { sql, DbUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { sendEmail, detectLocale } from '@/lib/email';
+import { getAppUrl } from '@/lib/app-url';
 import { WelcomeEmail, welcomeEmailSubject } from '@/emails/welcome';
 
 // GET /api/users?email=xxx - Get user by email
@@ -85,11 +86,7 @@ export async function POST(request: NextRequest) {
     // Welcome email — fire-and-forget. sendEmail never throws; a send failure
     // is logged but does not break the signup response.
     const locale = detectLocale(request.headers.get('accept-language'));
-    // 2026-05-22 (paras): hardcoded production URL. NEXT_PUBLIC_APP_URL was
-    // missing in Vercel and the fallback "https://afforce.one" went out in
-    // every email CTA. Same hardcode applied at the 4 other appUrl sites
-    // (webhook.ts × 3, auto-scan/route.ts × 1).
-    const appUrl = 'https://afforce.revenueworks.ai';
+    const appUrl = getAppUrl();
     waitUntil(
       sendEmail({
         to: newUser.email,

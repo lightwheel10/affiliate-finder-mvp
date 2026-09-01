@@ -62,6 +62,7 @@ import { getCreditPackDetails, CREDIT_PACK_PRICES } from '@/lib/stripe';
 // credits-added. Welcome lives in src/app/api/users/route.ts. Pending: trial-ending, scan-summary.
 import { waitUntil } from '@vercel/functions';
 import { sendEmail } from '@/lib/email';
+import { getAppUrl } from '@/lib/app-url';
 import { PaymentSuccessEmail, paymentSuccessEmailSubject } from '@/emails/payment-success';
 import { SubscriptionCanceledEmail, subscriptionCanceledEmailSubject } from '@/emails/subscription-canceled';
 import { CreditsAddedEmail, creditsAddedEmailSubject } from '@/emails/credits-added'; // 2026-05-04
@@ -354,8 +355,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
             creditType,
             creditsAmount: amount,
             amountFormatted,
-            // 2026-05-22 (paras): hardcoded — see users/route.ts.
-            appUrl: 'https://afforce.revenueworks.ai',
+            appUrl: getAppUrl(),
           }),
         })
       );
@@ -570,8 +570,7 @@ async function handleSubscriptionUpdate(
             locale: cancelEmailLocale,
             plan: cancelPlanLabel,
             accessUntil: accessUntilIso,
-            // 2026-05-22 (paras): hardcoded — see users/route.ts.
-            appUrl: 'https://afforce.revenueworks.ai',
+            appUrl: getAppUrl(),
           }),
         })
       );
@@ -962,8 +961,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         locale: emailLocale,
         plan: planLabel,
         amountFormatted,
-        // 2026-05-22 (paras): hardcoded — see users/route.ts.
-        appUrl: 'https://afforce.revenueworks.ai',
+        appUrl: getAppUrl(),
       }),
     })
   );
