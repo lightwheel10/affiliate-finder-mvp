@@ -159,7 +159,11 @@ function normalizePlatformUrls(
       }
       case 'instagram': {
         const canonical = canonicalHttpUrl(value, 'instagram.com', (url) =>
-          url.pathname !== '/');
+          // Apify's Instagram actor only accepts the bare and www hosts. Google
+          // sometimes returns www-fallback.instagram.com links; sending even one
+          // of those causes Apify to reject the entire enrichment batch.
+          (url.hostname === 'instagram.com' || url.hostname === 'www.instagram.com')
+          && url.pathname !== '/');
         return canonical ? [canonical] : [];
       }
       case 'tiktok': {

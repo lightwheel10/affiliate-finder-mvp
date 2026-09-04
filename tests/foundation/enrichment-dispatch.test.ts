@@ -136,6 +136,7 @@ test('dispatch inputs use canonical hosts, stable ordering, and reject host spoo
     ],
     instagram: [
       'https://evil.example/instagram.com/profile',
+      'https://www-fallback.instagram.com/reel/not-supported/',
       'https://www.instagram.com/creator/',
     ],
     tiktok: [

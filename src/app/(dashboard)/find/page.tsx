@@ -621,31 +621,15 @@ export default function FindNewPage() {
     if (keywords.length === 0) return;
     
     // ==========================================================================
-    // PERSIST FULL BRAND SETUP BEFORE SEARCH — Option A (single active brand)
+    // PERSIST THE SELECTED LOCATION'S SEARCH DEFAULTS BEFORE SEARCH
     // 2026-07-13 — Paras
     //
-    // WHY: David / the Selecdoo team point the tool at different client brands by
-    // changing the Website field. Before this change, ONLY the website (brand)
-    // was written back to the user row; the keywords (topics) and competitors
-    // lived in temporary UI state and were NEVER saved. So when they switched to
-    // a new domain, the domain stuck but the keywords + competitors were lost —
-    // exactly what the client reported on 2026-07-13.
+    // WHY: each brand location now owns its topics and competitors. Persisting
+    // those values on the immutable selected location keeps DE and GB searches
+    // isolated even when the user switches brands or dashboard location scope.
     //
-    // FIX: When a Selecdoo user runs a search, persist brand + topics +
-    // competitors together, so the current brand's full setup survives reloads
-    // and brand switches. The DB columns and PATCH /api/users already support
-    // topics/competitors — we just weren't sending them.
-    //
-    // TRADE-OFF (intentional): this is "one active brand at a time" — saving a
-    // new brand OVERWRITES the previous brand's saved keywords/competitors. That
-    // is acceptable because already-discovered results stay fully filterable on
-    // the Discovered page: each result row stores the keyword/competitor that
-    // found it, and FilterPanel rebuilds its filter chips from those rows (see
-    // extractFilterOptions() in FilterPanel.tsx), independent of what is
-    // currently saved on the user. If per-brand saved profiles + a brand
-    // switcher are needed later, that is the "A+" follow-up.
-    //
-    // Gated to Selecdoo users because only they can edit the Website field.
+    // The legacy user-row write remains only for deployments where the
+    // brand/location feature is disabled.
     // ==========================================================================
     if (brandLocationsEnabled && targetBrandLocationId) {
       try {
