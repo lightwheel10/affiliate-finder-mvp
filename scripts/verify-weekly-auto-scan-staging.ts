@@ -67,9 +67,11 @@ interface GlobalState {
 }
 
 const fixtureSql = postgres(databaseUrl, {
-  // The staging session pool currently allows 15 clients. Ten still creates
-  // real overlap while leaving headroom for the dashboard and migration checks.
-  max: 10,
+  // The staging session pool currently allows 15 clients. Keep this verifier
+  // below half of that ceiling so a running Preview, dashboard, and the final
+  // cleanup audit cannot collectively exhaust the shared session pool. The
+  // logical contenders still overlap; postgres.js queues them through 6 slots.
+  max: 6,
   prepare: false,
   connect_timeout: 10,
   idle_timeout: 10,
