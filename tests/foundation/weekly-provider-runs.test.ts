@@ -20,6 +20,7 @@ function dependencies<TData>(overrides: Partial<WeeklyProviderExecutionDependenc
   const settlements: WeeklyProviderSettlement[] = [];
   const calls: string[] = [];
   const defaults: WeeklyProviderExecutionDependencies<TData> = {
+    loadExisting: async () => null,
     prepare: async () => { calls.push('prepare'); },
     start: async () => { calls.push('start'); return 'run-1'; },
     recordRun: async () => { calls.push('record'); },
@@ -31,6 +32,8 @@ function dependencies<TData>(overrides: Partial<WeeklyProviderExecutionDependenc
     sleep: async () => {},
     pollIntervalMs: 1,
     maxPollDurationMs: 100,
+    maxProviderAgeMs: 1_000,
+    costStabilizationDelayMs: 10,
   };
   return { value: { ...defaults, ...overrides }, calls, settlements };
 }
@@ -193,14 +196,115 @@ test('Apify aborting and timing-out transition states are polled to a terminal r
   assert.deepEqual(fake.calls, ['prepare', 'start', 'record', 'settle:failed']);
 });
 
-test('status uncertainty is recorded and never fetches provider results', async () => {
+test('temporary status uncertainty defers the known run and never fetches results', async () => {
   let fetched = false;
   const fake = dependencies({
     inspect: async () => { throw new Error('temporary provider status failure'); },
     fetchResults: async () => { fetched = true; return {}; },
   });
   const result = await executeWeeklyProvider(launchInput, fake.value);
-  assert.equal(result.outcome, 'uncertain');
+  assert.equal(result.outcome, 'deferred');
   assert.equal(fetched, false);
-  assert.deepEqual(fake.calls, ['prepare', 'start', 'record', 'settle:uncertain']);
+  assert.deepEqual(fake.calls, ['prepare', 'start', 'record']);
+});
+
+test('a slow known run is deferred without settlement or a second launch', async () => {
+  let time = 0;
+  let costFetched = false;
+  const fake = dependencies({
+    inspect: async () => ({ status: 'RUNNING' }),
+    fetchExactCost: async () => { costFetched = true; return 0.5; },
+    sleep: async (milliseconds) => { time += milliseconds; },
+    now: () => time,
+    maxPollDurationMs: 2,
+    maxProviderAgeMs: 100,
+  });
+  const result = await executeWeeklyProvider(launchInput, fake.value);
+  assert.equal(result.outcome, 'deferred');
+  assert.equal(result.providerRunId, 'run-1');
+  assert.equal(costFetched, false);
+  assert.deepEqual(fake.calls, ['prepare', 'start', 'record']);
+  assert.deepEqual(fake.settlements, []);
+});
+
+test('a later invocation resumes the exact known run and waits before reading final cost', async () => {
+  let slept = 0;
+  const fake = dependencies<{ ok: boolean }>({
+    loadExisting: async () => ({
+      status: 'running',
+      providerRunId: 'run-existing',
+      exactCostUsd: null,
+      dispatchedAt: new Date(0).toISOString(),
+    }),
+    now: () => 5,
+    sleep: async (milliseconds) => { slept += milliseconds; },
+  });
+  const result = await executeWeeklyProvider(launchInput, fake.value);
+  assert.equal(result.outcome, 'succeeded');
+  assert.equal(result.providerRunId, 'run-existing');
+  assert.equal(slept, 10);
+  assert.deepEqual(fake.calls, ['settle:succeeded']);
+});
+
+test('a provider beyond its total continuation age becomes uncertain without a partial cost', async () => {
+  let costFetched = false;
+  const fake = dependencies({
+    loadExisting: async () => ({
+      status: 'running',
+      providerRunId: 'run-old',
+      exactCostUsd: null,
+      dispatchedAt: new Date(0).toISOString(),
+    }),
+    inspect: async () => ({ status: 'RUNNING' }),
+    fetchExactCost: async () => { costFetched = true; return 0.5; },
+    now: () => 2_000,
+    maxPollDurationMs: 100,
+    maxProviderAgeMs: 1_000,
+  });
+  const result = await executeWeeklyProvider(launchInput, fake.value);
+  assert.equal(result.outcome, 'uncertain');
+  assert.equal(result.exactCostUsd, null);
+  assert.equal(costFetched, false);
+  assert.deepEqual(fake.calls, ['settle:uncertain']);
+});
+
+test('an already successful receipt is reused without starting or charging again', async () => {
+  const fake = dependencies<{ ok: boolean }>({
+    loadExisting: async () => ({
+      status: 'succeeded',
+      providerRunId: 'run-complete',
+      exactCostUsd: 0.25,
+      dispatchedAt: new Date(0).toISOString(),
+    }),
+  });
+  const result = await executeWeeklyProvider(launchInput, fake.value);
+  assert.deepEqual(result, {
+    outcome: 'succeeded',
+    launched: true,
+    providerRunId: 'run-complete',
+    exactCostUsd: 0.25,
+    data: { ok: true },
+  });
+  assert.deepEqual(fake.calls, []);
+});
+
+test('a terminal failure before launch is reused without inventing provider spend', async () => {
+  const fake = dependencies({
+    loadExisting: async () => ({
+      status: 'failed',
+      providerRunId: null,
+      exactCostUsd: null,
+      dispatchedAt: null,
+    }),
+  });
+  const result = await executeWeeklyProvider(launchInput, fake.value);
+  assert.deepEqual(result, {
+    outcome: 'failed',
+    launched: false,
+    providerRunId: null,
+    exactCostUsd: null,
+    data: null,
+  });
+  assert.deepEqual(fake.calls, []);
+  assert.deepEqual(fake.settlements, []);
 });

@@ -12,6 +12,7 @@ import {
   WEEKLY_SCAN_PROVIDERS,
   sumExactWeeklyProviderCosts,
   type WeeklyProviderLaunchInput,
+  type WeeklyProviderResumeState,
   type WeeklyProviderSettlement,
   type WeeklyScanProvider,
 } from '@/lib/weekly-scan/provider-runs';
@@ -56,6 +57,8 @@ interface WorkRow {
   brand_location_id: unknown;
   due_at: unknown;
   settings_snapshot: unknown;
+  status: unknown;
+  search_id: unknown;
 }
 
 interface ExpiredWorkRow {
@@ -92,6 +95,9 @@ interface ProviderReceiptRow {
   status: unknown;
   provider_run_id: unknown;
   exact_cost_usd: unknown;
+  dispatched_at: unknown;
+  input_fingerprint: unknown;
+  correlation_id: unknown;
 }
 
 function withTransaction<T>(
@@ -142,6 +148,7 @@ function readTimestamp(value: unknown, field: string): Date {
 function readLocationStatus(value: unknown): WeeklyScanLocationStatus {
   if (
     value !== 'pending'
+    && value !== 'waiting'
     && value !== 'claimed'
     && value !== 'dispatching'
     && value !== 'running'
@@ -155,6 +162,11 @@ function readLocationStatus(value: unknown): WeeklyScanLocationStatus {
   return value;
 }
 
+function readNullablePositiveInteger(value: unknown, field: string): number | null {
+  if (value === null || value === undefined) return null;
+  return readPositiveInteger(value, field);
+}
+
 function readProvider(value: unknown): WeeklyScanProvider {
   if (
     typeof value !== 'string'
@@ -163,6 +175,19 @@ function readProvider(value: unknown): WeeklyScanProvider {
     throw new Error('Weekly scan provider is invalid.');
   }
   return value as WeeklyScanProvider;
+}
+
+function readProviderReceiptStatus(value: unknown): WeeklyProviderResumeState['status'] {
+  if (
+    value !== 'dispatching'
+    && value !== 'running'
+    && value !== 'succeeded'
+    && value !== 'failed'
+    && value !== 'uncertain'
+  ) {
+    throw new Error('Weekly scan provider receipt status is invalid.');
+  }
+  return value;
 }
 
 function readNullableProviderCost(value: unknown): number | null {
@@ -218,6 +243,7 @@ function mapWorkRow(row: WorkRow, claimToken: string): WeeklyScanWorkItem {
     brandId: readBigint(row.brand_id, 'Weekly scan brand ID'),
     brandLocationId: readBigint(row.brand_location_id, 'Weekly scan location ID'),
     claimToken,
+    searchId: readNullablePositiveInteger(row.search_id, 'Weekly scan search ID'),
     dueAt: readTimestamp(row.due_at, 'Weekly scan due time').toISOString(),
     settings: readWeeklyScanSettingsSnapshot(row.settings_snapshot),
   };
@@ -395,6 +421,27 @@ async function recoverExpiredClaims(
     const batchId = readUuid(row.batch_id, 'Expired batch ID');
     const status = readLocationStatus(row.status);
     const safeToRetry = status === 'claimed' && row.launch_attempted_at === null;
+    const providerRows = status === 'running'
+      ? await transaction<ProviderReceiptRow>`
+          SELECT platform, status, provider_run_id, exact_cost_usd, dispatched_at
+          FROM crewcast.weekly_auto_scan_provider_runs
+          WHERE batch_id = ${batchId}::uuid
+            AND user_id = ${readPositiveInteger(row.user_id, 'Expired account ID')}
+            AND brand_id = ${readBigint(row.brand_id, 'Expired brand ID')}::bigint
+            AND brand_location_id = ${readBigint(row.brand_location_id, 'Expired location ID')}::bigint
+          ORDER BY platform
+          FOR UPDATE
+        `
+      : [];
+    const safeToResume = status === 'running'
+      && providerRows.some((receipt) => receipt.platform === 'google')
+      && providerRows.every((receipt) =>
+        (receipt.status === 'running'
+          && receipt.provider_run_id !== null
+          && receipt.dispatched_at !== null
+          && receipt.exact_cost_usd === null)
+        || receipt.status === 'succeeded'
+        || receipt.status === 'failed');
     await clearLocationClaim(transaction, row);
     if (safeToRetry) {
       await transaction`
@@ -409,6 +456,24 @@ async function recoverExpiredClaims(
         WHERE batch_id = ${batchId}::uuid
           AND brand_location_id = ${readBigint(row.brand_location_id, 'Expired location ID')}::bigint
           AND claim_token = ${readUuid(row.claim_token, 'Expired claim token')}::uuid
+      `;
+    } else if (safeToResume) {
+      // The provider identity is durable, so an expired web request is not a
+      // reason to discard paid work. Release only the lease; the next cron
+      // invocation will inspect these exact run IDs and never launch again.
+      await transaction`
+        UPDATE crewcast.weekly_auto_scan_locations
+        SET
+          status = 'waiting',
+          claim_token = NULL,
+          claimed_at = NULL,
+          lease_expires_at = NULL,
+          error_code = 'provider_continuation_pending',
+          error_message = 'Known provider work will continue on the next scheduler invocation.'
+        WHERE batch_id = ${batchId}::uuid
+          AND brand_location_id = ${readBigint(row.brand_location_id, 'Expired location ID')}::bigint
+          AND claim_token = ${readUuid(row.claim_token, 'Expired claim token')}::uuid
+          AND status = 'running'
       `;
     } else {
       // A provider may still be running after the worker disappears. Preserve
@@ -524,12 +589,17 @@ async function claimPendingWork(
       ON locations.id = work.brand_location_id
      AND locations.brand_id = work.brand_id
      AND locations.user_id = work.user_id
-    WHERE work.status = 'pending'
+    WHERE work.status IN ('pending', 'waiting')
       AND batches.status IN ('pending', 'running')
       AND (${accountId}::integer IS NULL OR work.user_id = ${accountId}::integer)
-      AND COALESCE(users.auto_scan_enabled, TRUE)
-      AND brands.archived_at IS NULL
-      AND locations.archived_at IS NULL
+      AND (
+        work.status = 'waiting'
+        OR (
+          COALESCE(users.auto_scan_enabled, TRUE)
+          AND brands.archived_at IS NULL
+          AND locations.archived_at IS NULL
+        )
+      )
       AND (
         locations.scan_claim_token IS NULL
         OR locations.scan_lease_expires_at <= ${now.toISOString()}::timestamptz
@@ -540,7 +610,10 @@ async function claimPendingWork(
         WHERE active_work.batch_id = work.batch_id
           AND active_work.status IN ('claimed', 'dispatching', 'running')
       )
-    ORDER BY batches.created_at, work.position
+    ORDER BY
+      CASE WHEN work.status = 'waiting' THEN 0 ELSE 1 END,
+      batches.created_at,
+      work.position
     LIMIT 1
   `;
   if (candidateBatches.length === 0) return null;
@@ -571,7 +644,9 @@ async function claimPendingWork(
       work.brand_id::text AS brand_id,
       work.brand_location_id::text AS brand_location_id,
       batches.due_at,
-      work.settings_snapshot
+      work.settings_snapshot,
+      work.status,
+      work.search_id
     FROM crewcast.weekly_auto_scan_locations AS work
     JOIN crewcast.weekly_auto_scan_batches AS batches
       ON batches.id = work.batch_id
@@ -584,13 +659,18 @@ async function claimPendingWork(
       ON locations.id = work.brand_location_id
      AND locations.brand_id = work.brand_id
      AND locations.user_id = work.user_id
-    WHERE work.status = 'pending'
+    WHERE work.status IN ('pending', 'waiting')
       AND work.batch_id = ${candidateBatchId}::uuid
       AND batches.status IN ('pending', 'running')
       AND (${accountId}::integer IS NULL OR work.user_id = ${accountId}::integer)
-      AND COALESCE(users.auto_scan_enabled, TRUE)
-      AND brands.archived_at IS NULL
-      AND locations.archived_at IS NULL
+      AND (
+        work.status = 'waiting'
+        OR (
+          COALESCE(users.auto_scan_enabled, TRUE)
+          AND brands.archived_at IS NULL
+          AND locations.archived_at IS NULL
+        )
+      )
       AND (
         locations.scan_claim_token IS NULL
         OR locations.scan_lease_expires_at <= ${now.toISOString()}::timestamptz
@@ -601,20 +681,27 @@ async function claimPendingWork(
         WHERE active_work.batch_id = work.batch_id
           AND active_work.status IN ('claimed', 'dispatching', 'running')
       )
-    ORDER BY batches.created_at, work.position
+    ORDER BY
+      CASE WHEN work.status = 'waiting' THEN 0 ELSE 1 END,
+      batches.created_at,
+      work.position
     LIMIT 1
     FOR UPDATE OF users, work, locations SKIP LOCKED
   `;
   if (candidates.length === 0) return null;
   if (candidates.length !== 1) throw new Error('Weekly scan claim returned multiple rows.');
   const row = candidates[0];
+  const previousStatus = readLocationStatus(row.status);
+  if (previousStatus !== 'pending' && previousStatus !== 'waiting') {
+    throw new Error('Weekly scan claim candidate is not claimable.');
+  }
   const work = mapWorkRow(row, claimToken);
   const leaseExpiresAt = addMinutes(now, WEEKLY_SCAN_LEASE_MINUTES).toISOString();
 
   const claimed = await transaction<{ batch_id: unknown }>`
     UPDATE crewcast.weekly_auto_scan_locations
     SET
-      status = 'claimed',
+      status = CASE WHEN status = 'waiting' THEN 'running' ELSE 'claimed' END,
       claim_token = ${claimToken}::uuid,
       claimed_at = ${now.toISOString()}::timestamptz,
       lease_expires_at = ${leaseExpiresAt}::timestamptz,
@@ -622,7 +709,7 @@ async function claimPendingWork(
       error_message = NULL
     WHERE batch_id = ${work.batchId}::uuid
       AND brand_location_id = ${work.brandLocationId}::bigint
-      AND status = 'pending'
+      AND status IN ('pending', 'waiting')
     RETURNING batch_id
   `;
   if (claimed.length !== 1) throw new Error('Weekly scan child was not claimed exactly once.');
@@ -636,7 +723,7 @@ async function claimPendingWork(
     WHERE id = ${work.brandLocationId}::bigint
       AND brand_id = ${work.brandId}::bigint
       AND user_id = ${work.accountId}
-      AND archived_at IS NULL
+      AND (${previousStatus === 'waiting'} OR archived_at IS NULL)
       AND (
         scan_claim_token IS NULL
         OR scan_lease_expires_at <= ${now.toISOString()}::timestamptz
@@ -1017,6 +1104,55 @@ async function lockClaimedWork(
   }
 }
 
+export async function getWeeklyScanProviderRun(
+  executor: SearchStartSqlExecutor,
+  work: WeeklyScanWorkItem,
+  launch: WeeklyProviderLaunchInput,
+): Promise<WeeklyProviderResumeState | null> {
+  validateProviderLaunchInput(launch);
+  return withTransaction(executor, async (transaction) => {
+    await lockClaimedWork(transaction, work, ['claimed', 'running']);
+    const rows = await transaction<ProviderReceiptRow>`
+      SELECT
+        platform,
+        status,
+        provider_run_id,
+        exact_cost_usd,
+        dispatched_at,
+        input_fingerprint,
+        correlation_id
+      FROM crewcast.weekly_auto_scan_provider_runs
+      WHERE batch_id = ${work.batchId}::uuid
+        AND user_id = ${work.accountId}
+        AND brand_id = ${work.brandId}::bigint
+        AND brand_location_id = ${work.brandLocationId}::bigint
+        AND platform = ${launch.provider}
+      LIMIT 2
+      FOR UPDATE
+    `;
+    if (rows.length === 0) return null;
+    if (rows.length !== 1) throw new Error('Weekly provider receipt is not unique.');
+    const row = rows[0];
+    if (
+      row.input_fingerprint !== launch.inputFingerprint
+      || row.correlation_id !== launch.correlationId
+    ) {
+      throw new Error('Weekly provider receipt does not match the immutable provider input.');
+    }
+    const providerRunId = row.provider_run_id === null
+      ? null
+      : readProviderRunId(String(row.provider_run_id));
+    return {
+      status: readProviderReceiptStatus(row.status),
+      providerRunId,
+      exactCostUsd: readNullableProviderCost(row.exact_cost_usd),
+      dispatchedAt: row.dispatched_at === null
+        ? null
+        : readTimestamp(row.dispatched_at, 'Weekly provider dispatch time').toISOString(),
+    };
+  });
+}
+
 export async function prepareWeeklyScanPrimaryProvider(
   executor: SearchStartSqlExecutor,
   work: WeeklyScanWorkItem,
@@ -1238,6 +1374,69 @@ export async function settleWeeklyScanProviderRun(
     if (rows.length !== 1) {
       throw new Error('Weekly scan provider settlement was not recorded exactly once.');
     }
+  });
+}
+
+export async function deferWeeklyScanLocation(
+  executor: SearchStartSqlExecutor,
+  work: WeeklyScanWorkItem,
+): Promise<void> {
+  await withTransaction(executor, async (transaction) => {
+    await lockClaimedWork(transaction, work, ['running']);
+    const receipts = await transaction<ProviderReceiptRow>`
+      SELECT
+        platform,
+        status,
+        provider_run_id,
+        exact_cost_usd,
+        dispatched_at,
+        input_fingerprint,
+        correlation_id
+      FROM crewcast.weekly_auto_scan_provider_runs
+      WHERE batch_id = ${work.batchId}::uuid
+        AND user_id = ${work.accountId}
+        AND brand_id = ${work.brandId}::bigint
+        AND brand_location_id = ${work.brandLocationId}::bigint
+      ORDER BY platform
+      FOR UPDATE
+    `;
+    const hasKnownRunningProvider = receipts.some((receipt) =>
+      receipt.status === 'running'
+      && receipt.provider_run_id !== null
+      && receipt.dispatched_at !== null);
+    const hasUnsafeReceipt = receipts.some((receipt) =>
+      receipt.status === 'dispatching' || receipt.status === 'uncertain');
+    if (!hasKnownRunningProvider || hasUnsafeReceipt) {
+      throw new Error('Weekly scan continuation requires a known running provider receipt.');
+    }
+
+    const rows = await transaction<{ batch_id: unknown }>`
+      UPDATE crewcast.weekly_auto_scan_locations
+      SET
+        status = 'waiting',
+        claim_token = NULL,
+        claimed_at = NULL,
+        lease_expires_at = NULL,
+        error_code = 'provider_continuation_pending',
+        error_message = 'Known provider work will continue on the next scheduler invocation.'
+      WHERE batch_id = ${work.batchId}::uuid
+        AND brand_location_id = ${work.brandLocationId}::bigint
+        AND claim_token = ${work.claimToken}::uuid
+        AND status = 'running'
+      RETURNING batch_id
+    `;
+    if (rows.length !== 1) throw new Error('Weekly scan continuation was not recorded.');
+    await transaction`
+      UPDATE crewcast.brand_locations
+      SET
+        scan_claim_token = NULL,
+        scan_claimed_at = NULL,
+        scan_lease_expires_at = NULL
+      WHERE id = ${work.brandLocationId}::bigint
+        AND brand_id = ${work.brandId}::bigint
+        AND user_id = ${work.accountId}
+        AND scan_claim_token = ${work.claimToken}::uuid
+    `;
   });
 }
 

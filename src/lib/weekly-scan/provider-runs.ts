@@ -32,8 +32,15 @@ export interface WeeklyProviderSettlement {
   errorMessage?: string;
 }
 
+export interface WeeklyProviderResumeState {
+  status: 'dispatching' | 'running' | WeeklyProviderSettlement['outcome'];
+  providerRunId: string | null;
+  exactCostUsd: number | null;
+  dispatchedAt: string | null;
+}
+
 export interface WeeklyProviderExecution<TData> {
-  outcome: WeeklyProviderSettlement['outcome'];
+  outcome: WeeklyProviderSettlement['outcome'] | 'deferred';
   launched: boolean;
   providerRunId: string | null;
   exactCostUsd: number | null;
@@ -41,6 +48,7 @@ export interface WeeklyProviderExecution<TData> {
 }
 
 export interface WeeklyProviderExecutionDependencies<TData> {
+  loadExisting(input: WeeklyProviderLaunchInput): Promise<WeeklyProviderResumeState | null>;
   prepare(input: WeeklyProviderLaunchInput): Promise<void>;
   start(input: WeeklyProviderLaunchInput): Promise<string>;
   recordRun(input: WeeklyProviderLaunchInput, providerRunId: string): Promise<void>;
@@ -55,6 +63,8 @@ export interface WeeklyProviderExecutionDependencies<TData> {
   sleep(milliseconds: number): Promise<void>;
   pollIntervalMs: number;
   maxPollDurationMs: number;
+  maxProviderAgeMs: number;
+  costStabilizationDelayMs: number;
   now?: () => number;
 }
 
@@ -106,8 +116,57 @@ function assertExecutionConfiguration(
     || dependencies.pollIntervalMs <= 0
     || !Number.isSafeInteger(dependencies.maxPollDurationMs)
     || dependencies.maxPollDurationMs <= 0
+    || !Number.isSafeInteger(dependencies.maxProviderAgeMs)
+    || dependencies.maxProviderAgeMs < dependencies.maxPollDurationMs
+    || !Number.isSafeInteger(dependencies.costStabilizationDelayMs)
+    || dependencies.costStabilizationDelayMs < 0
   ) {
     throw new Error('Weekly provider polling limits are invalid.');
+  }
+}
+
+function readResumeTime(value: string | null): number | null {
+  if (value === null) return null;
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function validateResumeState(state: WeeklyProviderResumeState): void {
+  const hasRun = typeof state.providerRunId === 'string'
+    && state.providerRunId.trim().length > 0;
+  const dispatchedAt = readResumeTime(state.dispatchedAt);
+  if (state.status === 'dispatching') {
+    if (state.providerRunId !== null || state.dispatchedAt !== null || state.exactCostUsd !== null) {
+      throw new Error('Dispatching weekly provider state is invalid.');
+    }
+    return;
+  }
+  const hasDispatchIdentity = hasRun && dispatchedAt !== null;
+  const hasNoDispatchIdentity = state.providerRunId === null && state.dispatchedAt === null;
+  if (
+    (state.status === 'running' || state.status === 'succeeded')
+    && !hasDispatchIdentity
+  ) {
+    throw new Error('Recorded weekly provider state is missing its run identity.');
+  }
+  if (
+    (state.status === 'failed' || state.status === 'uncertain')
+    && !hasDispatchIdentity
+    && !hasNoDispatchIdentity
+  ) {
+    throw new Error('Recorded weekly provider state has an incomplete run identity.');
+  }
+  if (
+    state.exactCostUsd !== null
+    && (!Number.isFinite(state.exactCostUsd) || state.exactCostUsd < 0)
+  ) {
+    throw new Error('Recorded weekly provider cost is invalid.');
+  }
+  if (state.status === 'running' && state.exactCostUsd !== null) {
+    throw new Error('A running weekly provider cannot already have a final cost.');
+  }
+  if (!hasDispatchIdentity && state.exactCostUsd !== null) {
+    throw new Error('A weekly provider cost requires a recorded run identity.');
   }
 }
 
@@ -184,88 +243,145 @@ export async function executeWeeklyProvider<TData>(
   dependencies: WeeklyProviderExecutionDependencies<TData>,
 ): Promise<WeeklyProviderExecution<TData>> {
   assertExecutionConfiguration(input, dependencies);
-  await dependencies.prepare(input);
+  const now = dependencies.now ?? Date.now;
+  const existing = await dependencies.loadExisting(input);
 
-  let providerRunId: string;
-  try {
-    providerRunId = await dependencies.start(input);
-  } catch (error) {
-    const outcome = startMayHaveSucceeded(error) ? 'uncertain' : 'failed';
-    await dependencies.settle(input, {
-      outcome,
-      exactCostUsd: null,
-      errorMessage: boundedError(error),
-    });
-    return { outcome, launched: false, providerRunId: null, exactCostUsd: null, data: null };
-  }
-
-  try {
-    await dependencies.recordRun(input, providerRunId);
-  } catch (recordError) {
-    let abortError: unknown;
-    try {
-      await dependencies.abort(providerRunId);
-    } catch (error) {
-      abortError = error;
-    }
-
-    if (abortError !== undefined) {
-      await dependencies.settle(input, {
-        outcome: 'uncertain',
-        providerRunId,
-        exactCostUsd: null,
-        errorMessage: `${boundedError(recordError)}; abort failed: ${boundedError(abortError)}`,
-      });
+  if (existing !== null) {
+    validateResumeState(existing);
+    if (existing.status === 'dispatching') {
       return {
         outcome: 'uncertain',
-        launched: true,
-        providerRunId,
+        launched: false,
+        providerRunId: null,
         exactCostUsd: null,
         data: null,
       };
     }
-
-    const exactCostUsd = await readExactCost(providerRunId, dependencies.fetchExactCost);
-    await dependencies.settle(input, {
-      outcome: 'failed',
-      providerRunId,
-      exactCostUsd,
-      errorMessage: `Provider run was aborted after receipt persistence failed: ${boundedError(recordError)}`,
-    });
-    return { outcome: 'failed', launched: true, providerRunId, exactCostUsd, data: null };
-  }
-
-  const now = dependencies.now ?? Date.now;
-  const deadline = now() + dependencies.maxPollDurationMs;
-  let status: WeeklyProviderExternalStatus;
-  try {
-    while (true) {
-      status = (await dependencies.inspect(providerRunId)).status;
-      if (TERMINAL_PROVIDER_STATUSES.has(status)) break;
-      if (
-        status !== 'READY'
-        && status !== 'RUNNING'
-        && status !== 'ABORTING'
-        && status !== 'TIMING-OUT'
-      ) {
-        throw new Error(`Provider returned unsupported status ${String(status)}.`);
-      }
-      if (now() >= deadline) {
-        throw new Error('Provider polling exceeded its safe time limit.');
-      }
-      await dependencies.sleep(dependencies.pollIntervalMs);
+    if (existing.status === 'succeeded') {
+      const data = await dependencies.fetchResults(existing.providerRunId as string);
+      return {
+        outcome: 'succeeded',
+        launched: true,
+        providerRunId: existing.providerRunId,
+        exactCostUsd: existing.exactCostUsd,
+        data,
+      };
     }
-  } catch (error) {
-    const exactCostUsd = await readExactCost(providerRunId, dependencies.fetchExactCost);
-    await dependencies.settle(input, {
-      outcome: 'uncertain',
-      providerRunId,
-      exactCostUsd,
-      errorMessage: boundedError(error),
-    });
-    return { outcome: 'uncertain', launched: true, providerRunId, exactCostUsd, data: null };
+    if (existing.status === 'failed' || existing.status === 'uncertain') {
+      return {
+        outcome: existing.status,
+        launched: existing.providerRunId !== null,
+        providerRunId: existing.providerRunId,
+        exactCostUsd: existing.exactCostUsd,
+        data: null,
+      };
+    }
+  } else {
+    await dependencies.prepare(input);
   }
 
+  let providerRunId: string;
+  let providerStartedAt: number;
+  if (existing?.status === 'running') {
+    providerRunId = existing.providerRunId as string;
+    providerStartedAt = readResumeTime(existing.dispatchedAt) as number;
+  } else {
+    try {
+      providerRunId = await dependencies.start(input);
+    } catch (error) {
+      const outcome = startMayHaveSucceeded(error) ? 'uncertain' : 'failed';
+      await dependencies.settle(input, {
+        outcome,
+        exactCostUsd: null,
+        errorMessage: boundedError(error),
+      });
+      return { outcome, launched: false, providerRunId: null, exactCostUsd: null, data: null };
+    }
+
+    try {
+      await dependencies.recordRun(input, providerRunId);
+    } catch (recordError) {
+      let abortError: unknown;
+      try {
+        await dependencies.abort(providerRunId);
+      } catch (error) {
+        abortError = error;
+      }
+
+      if (abortError !== undefined) {
+        await dependencies.settle(input, {
+          outcome: 'uncertain',
+          providerRunId,
+          exactCostUsd: null,
+          errorMessage: `${boundedError(recordError)}; abort failed: ${boundedError(abortError)}`,
+        });
+        return {
+          outcome: 'uncertain',
+          launched: true,
+          providerRunId,
+          exactCostUsd: null,
+          data: null,
+        };
+      }
+
+      await dependencies.sleep(dependencies.costStabilizationDelayMs);
+      const exactCostUsd = await readExactCost(providerRunId, dependencies.fetchExactCost);
+      await dependencies.settle(input, {
+        outcome: 'failed',
+        providerRunId,
+        exactCostUsd,
+        errorMessage: `Provider run was aborted after receipt persistence failed: ${boundedError(recordError)}`,
+      });
+      return { outcome: 'failed', launched: true, providerRunId, exactCostUsd, data: null };
+    }
+    providerStartedAt = now();
+  }
+
+  const requestDeadline = now() + dependencies.maxPollDurationMs;
+  const providerDeadline = providerStartedAt + dependencies.maxProviderAgeMs;
+  let status: WeeklyProviderExternalStatus;
+  while (true) {
+    try {
+      status = (await dependencies.inspect(providerRunId)).status;
+    } catch (error) {
+      if (now() < providerDeadline) {
+        return { outcome: 'deferred', launched: true, providerRunId, exactCostUsd: null, data: null };
+      }
+      await dependencies.settle(input, {
+        outcome: 'uncertain', providerRunId, exactCostUsd: null, errorMessage: boundedError(error),
+      });
+      return { outcome: 'uncertain', launched: true, providerRunId, exactCostUsd: null, data: null };
+    }
+    if (TERMINAL_PROVIDER_STATUSES.has(status)) break;
+    if (
+      status !== 'READY'
+      && status !== 'RUNNING'
+      && status !== 'ABORTING'
+      && status !== 'TIMING-OUT'
+    ) {
+      const error = new Error(`Provider returned unsupported status ${String(status)}.`);
+      await dependencies.settle(input, {
+        outcome: 'uncertain', providerRunId, exactCostUsd: null, errorMessage: boundedError(error),
+      });
+      return { outcome: 'uncertain', launched: true, providerRunId, exactCostUsd: null, data: null };
+    }
+    if (now() >= providerDeadline) {
+      const error = new Error('Provider exceeded its maximum continuation age.');
+      await dependencies.settle(input, {
+        outcome: 'uncertain', providerRunId, exactCostUsd: null, errorMessage: boundedError(error),
+      });
+      return { outcome: 'uncertain', launched: true, providerRunId, exactCostUsd: null, data: null };
+    }
+    if (now() >= requestDeadline) {
+      return { outcome: 'deferred', launched: true, providerRunId, exactCostUsd: null, data: null };
+    }
+    await dependencies.sleep(dependencies.pollIntervalMs);
+  }
+
+  // Apify documents that the first completed response can still contain
+  // preliminary usage totals. Delay the billing read rather than labelling a
+  // still-settling value as exact customer/provider cost.
+  await dependencies.sleep(dependencies.costStabilizationDelayMs);
   const exactCostUsd = await readExactCost(providerRunId, dependencies.fetchExactCost);
   if (status !== 'SUCCEEDED') {
     await dependencies.settle(input, {

@@ -10,6 +10,7 @@ export const WEEKLY_SCAN_TERMINAL_LOCATION_STATUSES = [
 
 export type WeeklyScanLocationStatus =
   | 'pending'
+  | 'waiting'
   | 'claimed'
   | 'dispatching'
   | 'running'
@@ -52,8 +53,16 @@ export interface WeeklyScanWorkItem {
   brandId: string;
   brandLocationId: string;
   claimToken: string;
+  searchId: number | null;
   dueAt: string;
   settings: WeeklyScanSettingsSnapshot;
+}
+
+export class WeeklyScanDeferredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WeeklyScanDeferredError';
+  }
 }
 
 export interface WeeklyScanBatchResolution {

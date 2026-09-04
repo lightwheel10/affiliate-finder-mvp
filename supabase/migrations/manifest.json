@@ -184,6 +184,14 @@
       "down": "0022_weekly_provider_receipts.down.sql",
       "upSha256": "2989845f337b2004f69dab1dfb7cf0a84ffd723114c9a2999bf3315c1e3db8ab",
       "downSha256": "b5829a69f7e9aad2fc1fcc32416981ac4f157d5c20ecc9d7ec321c752ef3710c"
+    },
+    {
+      "version": "0023",
+      "name": "weekly_provider_continuation",
+      "up": "0023_weekly_provider_continuation.up.sql",
+      "down": "0023_weekly_provider_continuation.down.sql",
+      "upSha256": "89dbb9f6bffcf8e6a036906fb40583e5a96be4db71f80b4bc809d245986308d4",
+      "downSha256": "1a5a82472260bb144709325696f5cd5031b175de1216944763690efc7a4b5ee1"
     }
   ]
 }

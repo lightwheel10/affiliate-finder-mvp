@@ -8,7 +8,9 @@ import postgres from 'postgres';
 import {
   claimNextWeeklyScanWork,
   completeWeeklyScanLocation,
+  deferWeeklyScanLocation,
   failWeeklyScanLocation,
+  getWeeklyScanProviderRun,
   prepareWeeklyScanEnrichmentProvider,
   prepareWeeklyScanPrimaryProvider,
   recordWeeklyScanProviderRun,
@@ -103,6 +105,10 @@ async function assertMigrations(): Promise<void> {
     process.cwd(),
     'supabase/migrations/0022_weekly_provider_receipts.up.sql',
   );
+  const continuationMigrationPath = path.resolve(
+    process.cwd(),
+    'supabase/migrations/0023_weekly_provider_continuation.up.sql',
+  );
   const expectedBatchChecksum = createHash('sha256')
     .update(readFileSync(batchMigrationPath))
     .digest('hex');
@@ -111,6 +117,9 @@ async function assertMigrations(): Promise<void> {
     .digest('hex');
   const expectedProviderChecksum = createHash('sha256')
     .update(readFileSync(providerMigrationPath))
+    .digest('hex');
+  const expectedContinuationChecksum = createHash('sha256')
+    .update(readFileSync(continuationMigrationPath))
     .digest('hex');
   const rows = await fixtureSql<{
     version: string;
@@ -159,10 +168,10 @@ async function assertMigrations(): Promise<void> {
           AND NOT tgisinternal
       )::integer AS "providerReceiptTriggers"
     FROM crewcast.schema_migrations AS migrations
-    WHERE migrations.version IN ('0013', '0021', '0022')
+    WHERE migrations.version IN ('0013', '0021', '0022', '0023')
     ORDER BY migrations.version
   `;
-  assert.equal(rows.length, 3, 'Migrations 0013, 0021 and 0022 must each be applied once.');
+  assert.equal(rows.length, 4, 'Migrations 0013, 0021, 0022 and 0023 must each be applied once.');
   assert.equal(rows[0].version, '0013');
   assert.equal(rows[0].checksum, expectedBatchChecksum, 'Migration 0013 checksum drifted.');
   assert.equal(rows[0].tables, 2);
@@ -174,6 +183,12 @@ async function assertMigrations(): Promise<void> {
   assert.equal(rows[2].checksum, expectedProviderChecksum, 'Migration 0022 checksum drifted.');
   assert.equal(rows[2].providerReceiptTables, 1);
   assert.equal(rows[2].providerReceiptTriggers, 2);
+  assert.equal(rows[3].version, '0023');
+  assert.equal(
+    rows[3].checksum,
+    expectedContinuationChecksum,
+    'Migration 0023 checksum drifted.',
+  );
 }
 
 async function assertNoRealWeeklyWorkInProgress(): Promise<void> {
@@ -595,6 +610,110 @@ async function verifyLeaseRecovery(fixture: Fixture): Promise<void> {
   assert.equal(after[0].used, 0, JSON.stringify(after[0]));
 }
 
+async function verifyKnownProviderContinuation(
+  fixture: Fixture,
+  mode: 'explicit' | 'expired',
+): Promise<void> {
+  const first = claimed(await claimConcurrently(fixture.accountId, new Date(), 1))[0].work;
+  const launch = providerLaunch(first, 'google');
+  const searchId = mode === 'explicit' ? 100004 : 100005;
+  await prepareWeeklyScanPrimaryProvider(fixtureSql, first, {
+    now: new Date(), searchId, launch,
+  });
+  const providerRunId = `run-${randomUUID()}`;
+  await recordWeeklyScanProviderRun(fixtureSql, first, launch, providerRunId);
+
+  if (mode === 'explicit') {
+    await deferWeeklyScanLocation(fixtureSql, first);
+  } else {
+    await expireLease(fixture, first.claimToken);
+  }
+
+  const resumedRace = await claimConcurrently(fixture.accountId, new Date(), 20);
+  const resumedClaims = claimed(resumedRace);
+  assert.equal(resumedClaims.length, 1, 'Known provider work must have one continuation owner.');
+  const resumed = resumedClaims[0].work;
+  assert.equal(resumed.batchId, first.batchId);
+  assert.equal(resumed.brandLocationId, first.brandLocationId);
+  assert.equal(resumed.searchId, searchId, 'Continuation must reuse the original search row.');
+  assert.notEqual(resumed.claimToken, first.claimToken);
+
+  const stored = await getWeeklyScanProviderRun(fixtureSql, resumed, launch);
+  assert.deepEqual(stored, {
+    status: 'running',
+    providerRunId,
+    exactCostUsd: null,
+    dispatchedAt: stored?.dispatchedAt ?? null,
+  });
+  assert.ok(stored?.dispatchedAt, 'Continuation requires a durable provider dispatch time.');
+
+  const counts = await fixtureSql<{ receipts: number; used: number }[]>`
+    SELECT
+      (SELECT count(*) FROM crewcast.weekly_auto_scan_provider_runs
+        WHERE batch_id = ${first.batchId}::uuid)::integer AS receipts,
+      topic_search_credits_used::integer AS used
+    FROM crewcast.user_credits
+    WHERE user_id = ${fixture.accountId}
+  `;
+  assert.deepEqual(counts[0], { receipts: 1, used: 1 });
+
+  await settleWeeklyScanProviderRun(fixtureSql, resumed, launch, {
+    outcome: 'succeeded', providerRunId, exactCostUsd: 0.123,
+  });
+  const completion = await completeWeeklyScanLocation(fixtureSql, resumed, {
+    resultsCount: 0,
+    sourceCounts: { youtube: 0, instagram: 0, tiktok: 0, web: 0 },
+  });
+  assert.equal(completion.batchFinished, true);
+  assert.equal(completion.batchStatus, 'completed');
+}
+
+async function verifyPreLaunchFailureSurvivesContinuation(fixture: Fixture): Promise<void> {
+  const first = claimed(await claimConcurrently(fixture.accountId, new Date(), 1))[0].work;
+  const google = providerLaunch(first, 'google');
+  const youtube = providerLaunch(first, 'youtube');
+  const searchId = 100006;
+  await prepareWeeklyScanPrimaryProvider(fixtureSql, first, {
+    now: new Date(), searchId, launch: google,
+  });
+  const googleRunId = `run-${randomUUID()}`;
+  await recordWeeklyScanProviderRun(fixtureSql, first, google, googleRunId);
+  await settleWeeklyScanProviderRun(fixtureSql, first, google, {
+    outcome: 'succeeded', providerRunId: googleRunId, exactCostUsd: 0.101,
+  });
+  await prepareWeeklyScanEnrichmentProvider(fixtureSql, first, {
+    now: new Date(), launch: youtube,
+  });
+  await settleWeeklyScanProviderRun(fixtureSql, first, youtube, {
+    outcome: 'failed', exactCostUsd: null,
+    errorMessage: 'Synthetic provider rejection before launch.',
+  });
+
+  await expireLease(fixture, first.claimToken);
+  const resumedRace = await claimConcurrently(fixture.accountId, new Date(), 20);
+  const resumedClaims = claimed(resumedRace);
+  assert.equal(
+    resumedClaims.length,
+    1,
+    'A terminal pre-launch provider failure must not block known-work continuation.',
+  );
+  const resumed = resumedClaims[0].work;
+  assert.equal(resumed.searchId, searchId);
+  assert.deepEqual(await getWeeklyScanProviderRun(fixtureSql, resumed, youtube), {
+    status: 'failed',
+    providerRunId: null,
+    exactCostUsd: null,
+    dispatchedAt: null,
+  });
+
+  const completion = await completeWeeklyScanLocation(fixtureSql, resumed, {
+    resultsCount: 0,
+    sourceCounts: { youtube: 0, instagram: 0, tiktok: 0, web: 0 },
+  });
+  assert.equal(completion.batchFinished, true);
+  assert.equal(completion.batchStatus, 'completed');
+}
+
 async function verifyExpiredPostDispatchFailsClosed(fixture: Fixture): Promise<void> {
   const first = claimed(await claimConcurrently(fixture.accountId, new Date(), 1))[0].work;
   const launch = providerLaunch(first, 'google');
@@ -710,6 +829,24 @@ async function main(): Promise<void> {
     });
     fixtures.push(retry);
     await verifyLeaseRecovery(retry);
+
+    const continuation = await createFixture({
+      label: 'continuation', searchableLocations: 1, totalCredits: 1,
+    });
+    fixtures.push(continuation);
+    await verifyKnownProviderContinuation(continuation, 'explicit');
+
+    const expiredContinuation = await createFixture({
+      label: 'expired-continuation', searchableLocations: 1, totalCredits: 1,
+    });
+    fixtures.push(expiredContinuation);
+    await verifyKnownProviderContinuation(expiredContinuation, 'expired');
+
+    const preLaunchFailureContinuation = await createFixture({
+      label: 'prelaunch-cont', searchableLocations: 1, totalCredits: 1,
+    });
+    fixtures.push(preLaunchFailureContinuation);
+    await verifyPreLaunchFailureSurvivesContinuation(preLaunchFailureContinuation);
 
     const uncertain = await createFixture({
       label: 'uncertain', searchableLocations: 1, totalCredits: 1,

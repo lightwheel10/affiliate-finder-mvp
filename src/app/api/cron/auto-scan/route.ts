@@ -83,7 +83,9 @@ import type { SearchStartSqlExecutor } from '@/lib/search/start-postgres';
 import {
   claimNextWeeklyScanWork,
   completeWeeklyScanLocation,
+  deferWeeklyScanLocation,
   failWeeklyScanLocation,
+  getWeeklyScanProviderRun,
   prepareWeeklyScanEnrichmentProvider,
   prepareWeeklyScanPrimaryProvider,
   recordWeeklyScanProviderRun,
@@ -92,6 +94,7 @@ import {
 } from '@/lib/weekly-scan/weekly-scan-postgres';
 import {
   classifyWeeklyScanWorkerFailure,
+  WeeklyScanDeferredError,
   WeeklyScanExecutionError,
 } from '@/lib/weekly-scan/weekly-scan';
 import { saveWeeklyDiscoveredAffiliates } from '@/lib/weekly-scan/affiliate-persistence';
@@ -108,9 +111,13 @@ import {
   weeklyProviderInputFingerprint,
   type WeeklyProviderExecution,
   type WeeklyProviderLaunchInput,
+  type WeeklyProviderResumeState,
   type WeeklyProviderSettlement,
   type WeeklyScanProvider,
 } from '@/lib/weekly-scan/provider-runs';
+
+const WEEKLY_PROVIDER_MAX_AGE_MS = 30 * 60 * 1_000;
+const WEEKLY_PROVIDER_COST_STABILIZATION_MS = 10_000;
 
 // =============================================================================
 // VERCEL FUNCTION CONFIGURATION
@@ -609,11 +616,17 @@ async function processWeeklyBatchCron(startTime: number) {
       work.settings.countryCode,
       work.settings.languageCode,
       {
+        existingSearchId: work.searchId,
         providerCorrelationId: (provider) => weeklyProviderCorrelationId({
           batchId: work.batchId,
           brandLocationId: work.brandLocationId,
           provider,
         }),
+        loadProviderState: async (launch) => {
+          const state = await getWeeklyScanProviderRun(executor, work, launch);
+          if (state?.providerRunId) providerRunRecorded = true;
+          return state;
+        },
         prepareProviderLaunch: (launch, searchId) => launch.provider === 'google'
           ? prepareWeeklyScanPrimaryProvider(executor, work, {
             now: new Date(),
@@ -650,6 +663,20 @@ async function processWeeklyBatchCron(startTime: number) {
       duration: Date.now() - startTime,
     });
   } catch (error) {
+    if (error instanceof WeeklyScanDeferredError) {
+      await deferWeeklyScanLocation(executor, work);
+      return NextResponse.json({
+        success: true,
+        outcome: 'location_deferred',
+        accountId: work.accountId,
+        batchId: work.batchId,
+        brandLocationId: work.brandLocationId,
+        batchFinished: false,
+        batchStatus: null,
+        workProcessed: 1,
+        duration: Date.now() - startTime,
+      });
+    }
     const failure = classifyWeeklyScanWorkerFailure(error, providerRunRecorded);
     const completion = await failWeeklyScanLocation(executor, work, failure);
     await queueWeeklyBatchSummary(work.accountId, completion);
@@ -894,7 +921,11 @@ async function enrichTikTokResults(
 // January 29th, 2026 - Added userBrand for social filtering
 // =============================================================================
 interface AutoScanLifecycleCallbacks {
+  existingSearchId: number | null;
   providerCorrelationId: (provider: WeeklyScanProvider) => string;
+  loadProviderState: (
+    launch: WeeklyProviderLaunchInput,
+  ) => Promise<WeeklyProviderResumeState | null>;
   prepareProviderLaunch: (
     launch: WeeklyProviderLaunchInput,
     searchId: number | null,
@@ -925,6 +956,7 @@ async function executeWeeklyEnrichmentProvider<TData>(
     correlationId: lifecycle.providerCorrelationId(input.platform),
   };
   return executeWeeklyProvider(launch, {
+    loadExisting: lifecycle.loadProviderState,
     prepare: (prepared) => lifecycle.prepareProviderLaunch(prepared, null),
     start: (prepared) => startEnrichmentPlatform(
       input.platform,
@@ -941,6 +973,8 @@ async function executeWeeklyEnrichmentProvider<TData>(
     sleep,
     pollIntervalMs: 2_500,
     maxPollDurationMs: 90_000,
+    maxProviderAgeMs: WEEKLY_PROVIDER_MAX_AGE_MS,
+    costStabilizationDelayMs: WEEKLY_PROVIDER_COST_STABILIZATION_MS,
   });
 }
 
@@ -970,13 +1004,13 @@ async function runAutoScan(
   
   // Track the search with descriptive label
   const searchLabel = `[AUTO-SCAN] topics=${topics.join(',')} competitors=${competitors.join(',')}`;
-  const searchId = await trackSearch({
-    userId,
-    keyword: searchLabel.substring(0, 200), // Limit length for DB
-    sources,
-    brandId,
-    brandLocationId,
-  });
+  const searchId = lifecycle?.existingSearchId ?? await trackSearch({
+      userId,
+      keyword: searchLabel.substring(0, 200), // Limit length for DB
+      sources,
+      brandId,
+      brandLocationId,
+    });
   
   console.log(`[AutoScan] Starting Apify run:`);
   console.log(`[AutoScan]   Topics (${topics.length}): ${topics.join(', ')}`);
@@ -1008,6 +1042,7 @@ async function runAutoScan(
         ),
       };
       const googleExecution = await executeWeeklyProvider(launch, {
+        loadExisting: lifecycle.loadProviderState,
         prepare: async (prepared) => {
           await lifecycle.prepareProviderLaunch(prepared, searchId);
           providerDispatchPrepared = true;
@@ -1029,8 +1064,13 @@ async function runAutoScan(
         sleep,
         pollIntervalMs: 5_000,
         maxPollDurationMs: 180_000,
+        maxProviderAgeMs: WEEKLY_PROVIDER_MAX_AGE_MS,
+        costStabilizationDelayMs: WEEKLY_PROVIDER_COST_STABILIZATION_MS,
       });
       providerExecutions.push(googleExecution);
+      if (googleExecution.outcome === 'deferred') {
+        throw new WeeklyScanDeferredError('Google provider work is still running.');
+      }
       if (googleExecution.outcome !== 'succeeded' || googleExecution.data === null) {
         throw new WeeklyScanExecutionError(
           googleExecution.outcome === 'failed' ? 'failed' : 'uncertain',
@@ -1129,6 +1169,9 @@ async function runAutoScan(
           'enrichment_provider_uncertain',
           'At least one enrichment provider could not be verified safely.',
         );
+      }
+      if (socialExecutions.some(({ outcome }) => outcome === 'deferred')) {
+        throw new WeeklyScanDeferredError('Enrichment provider work is still running.');
       }
       const youtubeMap = (youtubeExecution?.data ?? new Map()) as YouTubeEnrichmentMap;
       const instagramMap = (instagramExecution?.data ?? new Map()) as InstagramEnrichmentMap;
