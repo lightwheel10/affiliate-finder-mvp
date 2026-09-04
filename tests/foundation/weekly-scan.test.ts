@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   classifyWeeklyScanWorkerFailure,
+  normalizeWeeklyScanRunError,
   readWeeklyScanSettingsSnapshot,
   resolveWeeklyScanBatch,
+  WeeklyScanDeferredError,
   WeeklyScanExecutionError,
 } from '../../src/lib/weekly-scan/weekly-scan';
 
@@ -90,4 +92,18 @@ test('weekly worker failures never replay or refund ambiguous provider work', ()
       message: 'Lease setup failed.',
     },
   );
+});
+
+test('weekly continuation survives the auto-scan error boundary', () => {
+  const deferred = new WeeklyScanDeferredError('Provider work is still running.');
+  assert.equal(normalizeWeeklyScanRunError(deferred, true, 'known-run'), deferred);
+
+  const ambiguous = normalizeWeeklyScanRunError(
+    new Error('Connection ended after provider dispatch.'),
+    true,
+    'known-run',
+  );
+  assert.ok(ambiguous instanceof WeeklyScanExecutionError);
+  assert.equal(ambiguous.outcome, 'uncertain');
+  assert.equal(ambiguous.code, 'provider_processing_uncertain');
 });

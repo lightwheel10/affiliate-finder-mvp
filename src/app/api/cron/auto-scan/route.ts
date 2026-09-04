@@ -94,6 +94,7 @@ import {
 } from '@/lib/weekly-scan/weekly-scan-postgres';
 import {
   classifyWeeklyScanWorkerFailure,
+  normalizeWeeklyScanRunError,
   WeeklyScanDeferredError,
   WeeklyScanExecutionError,
 } from '@/lib/weekly-scan/weekly-scan';
@@ -1270,17 +1271,11 @@ async function runAutoScan(
     
   } catch (error) {
     console.error(`[AutoScan] Run failed:`, error);
-    if (error instanceof WeeklyScanExecutionError) throw error;
-    if (lifecycle && providerDispatchPrepared) {
-      throw new WeeklyScanExecutionError(
-        'uncertain',
-        providerRunId
-          ? 'provider_processing_uncertain'
-          : 'provider_launch_uncertain',
-        error instanceof Error ? error.message : 'The provider outcome is uncertain.',
-      );
-    }
-    throw error;
+    throw normalizeWeeklyScanRunError(
+      error,
+      Boolean(lifecycle && providerDispatchPrepared),
+      providerRunId,
+    );
   }
   
   // Complete the search tracking

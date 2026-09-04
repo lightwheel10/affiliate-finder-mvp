@@ -87,6 +87,34 @@ export class WeeklyScanExecutionError extends Error {
   }
 }
 
+/**
+ * Preserve the scheduler's explicit continuation signal across the older
+ * auto-scan error boundary. Once a paid provider run is known, ordinary
+ * unexpected failures must fail closed as uncertain, but a deferred run is
+ * neither a failure nor ambiguous: a later cron invocation must resume it.
+ */
+export function normalizeWeeklyScanRunError(
+  error: unknown,
+  providerDispatchPrepared: boolean,
+  providerRunId: string | null,
+): unknown {
+  if (
+    error instanceof WeeklyScanDeferredError
+    || error instanceof WeeklyScanExecutionError
+  ) {
+    return error;
+  }
+  if (!providerDispatchPrepared) return error;
+
+  return new WeeklyScanExecutionError(
+    'uncertain',
+    providerRunId
+      ? 'provider_processing_uncertain'
+      : 'provider_launch_uncertain',
+    error instanceof Error ? error.message : 'The provider outcome is uncertain.',
+  );
+}
+
 export function classifyWeeklyScanWorkerFailure(
   error: unknown,
   providerRunRecorded: boolean,
