@@ -101,7 +101,15 @@ export interface GoogleScraperStatus {
   // before they start RUNNING. Previously omitted from the type, which caused the
   // auto-scan cron's polling loop to silently exit without polling. See incident
   // notes in src/app/api/cron/auto-scan/route.ts (Step 2 polling block).
-  status: 'READY' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'ABORTED' | 'TIMED-OUT';
+  status:
+    | 'READY'
+    | 'RUNNING'
+    | 'ABORTING'
+    | 'TIMING-OUT'
+    | 'SUCCEEDED'
+    | 'FAILED'
+    | 'ABORTED'
+    | 'TIMED-OUT';
   progress?: {
     percent: number;
   };

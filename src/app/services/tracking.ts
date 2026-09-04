@@ -65,7 +65,7 @@ export async function trackSearch(log: SearchLog): Promise<number | null> {
 export async function completeSearch(
   searchId: number, 
   resultsCount: number, 
-  totalCost: number
+  totalCost: number | null,
 ): Promise<void> {
   try {
     await sql`

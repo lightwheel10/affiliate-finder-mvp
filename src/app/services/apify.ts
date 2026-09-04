@@ -36,6 +36,7 @@ import { trackApiCall, API_COSTS } from './tracking';
 import { APIFY_ACTOR_IDS } from '@/lib/search/apify-actors';
 import {
   EnrichmentProviderStartError,
+  isProviderSupportedEnrichmentUrl,
   type EnrichmentPlatform,
 } from '@/lib/search/enrichment-dispatch';
 import { buildEnrichmentProviderInput } from '@/lib/search/provider-input';
@@ -273,9 +274,8 @@ export async function enrichYouTubeByUrls(
 
   // Filter to valid YouTube video URLs only
   // Accepts both youtube.com/watch?v=ID and m.youtube.com/watch?v=ID
-  const validUrls = videoUrls.filter(url => 
-    url && (url.includes('youtube.com/watch') || url.includes('youtu.be/'))
-  );
+  const validUrls = videoUrls.filter((url) =>
+    isProviderSupportedEnrichmentUrl('youtube', url));
 
   if (validUrls.length === 0) {
     console.log('⚠️ [YouTube Enrichment] No valid YouTube video URLs found');
@@ -442,9 +442,11 @@ export async function enrichInstagramByUrls(
 
   // Filter to valid Instagram URLs only
   // Accepts: posts (/p/), reels (/reel/), and profile URLs
-  const filteredUrls = instagramUrls.filter(url => 
-    url && url.includes('instagram.com')
-  );
+  // Use the same strict host/path boundary as durable manual-search dispatch.
+  // A single Google-produced www-fallback.instagram.com URL makes Apify reject
+  // the complete batch, so permissive substring checks are not safe here.
+  const filteredUrls = instagramUrls.filter((url) =>
+    isProviderSupportedEnrichmentUrl('instagram', url));
 
   // IMPORTANT: Deduplicate URLs - Apify rejects duplicate items
   // Serper can return the same URL multiple times across pages
@@ -758,9 +760,8 @@ export async function enrichTikTokByUrls(
   }
 
   // Filter to valid TikTok video URLs only
-  const validUrls = videoUrls.filter(url => 
-    url && url.includes('tiktok.com') && url.includes('/video/')
-  );
+  const validUrls = videoUrls.filter((url) =>
+    isProviderSupportedEnrichmentUrl('tiktok', url));
 
   if (validUrls.length === 0) {
     console.log('⚠️ [TikTok Enrichment] No valid TikTok video URLs found');
@@ -1311,7 +1312,15 @@ export async function enrichDomainsBatch(
  * Enrichment run status returned by Apify
  * January 30, 2026
  */
-export type EnrichmentRunStatus = 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'ABORTED' | 'TIMED-OUT';
+export type EnrichmentRunStatus =
+  | 'READY'
+  | 'RUNNING'
+  | 'ABORTING'
+  | 'TIMING-OUT'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'ABORTED'
+  | 'TIMED-OUT';
 
 /**
  * Response from getEnrichmentRunStatus()
@@ -1346,6 +1355,10 @@ export interface EnrichmentRunIds {
   instagram?: string;
   tiktok?: string;
   similarweb?: string;
+}
+
+export interface EnrichmentResultFetchOptions {
+  throwOnError?: boolean;
 }
 
 /**
@@ -1607,25 +1620,24 @@ export async function startSimilarWebEnrichment(domains: string[]): Promise<stri
  * @param runId - The run ID returned by startXxxEnrichment()
  * @returns Status object with run state and dataset ID (when complete)
  */
-export async function getEnrichmentRunStatus(runId: string): Promise<EnrichmentStatusResult> {
+export async function getEnrichmentRunStatusStrict(runId: string): Promise<EnrichmentStatusResult> {
   if (!client) {
-    return { status: 'FAILED' };
+    throw new Error('Apify client is not configured for enrichment status checks.');
   }
 
-  try {
-    const run = await client.run(runId).get();
-    
-    if (!run) {
-      console.error(`❌ [Enrichment Status] Run not found: ${runId}`);
-      return { status: 'FAILED' };
-    }
+  const run = await client.run(runId).get();
+  if (!run) throw new Error(`Enrichment run not found: ${runId}`);
+  return {
+    status: run.status as EnrichmentRunStatus,
+    datasetId: run.defaultDatasetId,
+    startedAt: run.startedAt?.toISOString(),
+    finishedAt: run.finishedAt?.toISOString(),
+  };
+}
 
-    return {
-      status: run.status as EnrichmentRunStatus,
-      datasetId: run.defaultDatasetId,
-      startedAt: run.startedAt?.toISOString(),
-      finishedAt: run.finishedAt?.toISOString(),
-    };
+export async function getEnrichmentRunStatus(runId: string): Promise<EnrichmentStatusResult> {
+  try {
+    return await getEnrichmentRunStatusStrict(runId);
   } catch (error: any) {
     console.error(`❌ [Enrichment Status] Error checking run ${runId}:`, error.message);
     return { status: 'FAILED' };
@@ -1708,9 +1720,13 @@ export async function checkAllEnrichmentStatus(runIds: EnrichmentRunIds): Promis
 
   await Promise.all(checks);
 
-  // Check if all runs are complete (not RUNNING)
+  // READY is queued work, not completion. Only explicit provider terminal
+  // states may move a search to result fetching.
+  const terminalStatuses = new Set<EnrichmentRunStatus>([
+    'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT',
+  ]);
   const allComplete = Object.values(statuses).every(
-    s => s.status !== 'RUNNING'
+    s => terminalStatuses.has(s.status)
   );
 
   return { allComplete, statuses };
@@ -1734,25 +1750,33 @@ export async function checkAllEnrichmentStatus(runIds: EnrichmentRunIds): Promis
 // runs, network) — callers store NULL and the cost reporting falls back to
 // the usage-based estimate. Never throws, never blocks job completion.
 // =============================================================================
+export async function fetchRunCostUsd(
+  runId: string | null | undefined,
+): Promise<number | null> {
+  if (!client || !runId) return null;
+  try {
+    const run = await client.run(runId).get();
+    const cost = (run as { usageTotalUsd?: number } | null)?.usageTotalUsd;
+    return typeof cost === 'number' && Number.isFinite(cost) && cost >= 0
+      ? Number(cost.toFixed(6))
+      : null;
+  } catch (error) {
+    console.warn(`[Apify] Exact cost unavailable for run ${runId}:`, error);
+    return null;
+  }
+}
+
 export async function fetchRunCostsUsd(
   runIds: Array<string | null | undefined>
 ): Promise<number | null> {
   if (!client) return null;
-  const ids = runIds.filter((id): id is string => !!id);
+  const ids = [...new Set(runIds.filter((id): id is string => Boolean(id)))];
   if (ids.length === 0) return null;
-  try {
-    const runs = await Promise.all(
-      ids.map(id => client!.run(id).get().catch(() => null))
-    );
-    const costs = runs
-      .map(run => (run as { usageTotalUsd?: number } | null)?.usageTotalUsd)
-      .filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
-    if (costs.length === 0) return null;
-    return costs.reduce((sum, n) => sum + n, 0);
-  } catch (error) {
-    console.warn('[Apify] fetchRunCostsUsd failed (cost stays NULL):', error);
-    return null;
-  }
+  const costs = await Promise.all(ids.map((id) => fetchRunCostUsd(id)));
+  // A partial sum is not an exact bill. Return NULL so callers use their
+  // explicit fallback instead of presenting an understated total as real.
+  if (costs.some((cost) => cost === null)) return null;
+  return Number((costs as number[]).reduce((sum, cost) => sum + cost, 0).toFixed(6));
 }
 
 // =============================================================================
@@ -1767,19 +1791,24 @@ export async function fetchRunCostsUsd(
  * @returns Map of video URL to enriched data
  */
 export async function fetchYouTubeEnrichmentResults(
-  runId: string
+  runId: string,
+  options: EnrichmentResultFetchOptions = {},
 ): Promise<Map<string, ApifyYouTubeResult>> {
   const results = new Map<string, ApifyYouTubeResult>();
 
   if (!client) {
-    console.error('❌ [YouTube Enrichment Fetch] Apify client not initialized');
+    const error = new Error('Apify client not initialized for YouTube result fetching.');
+    if (options.throwOnError) throw error;
+    console.error('❌ [YouTube Enrichment Fetch]', error.message);
     return results;
   }
 
   try {
     const run = await client.run(runId).get();
     if (!run?.defaultDatasetId) {
-      console.error('❌ [YouTube Enrichment Fetch] No dataset found for run:', runId);
+      const error = new Error(`No YouTube dataset found for run ${runId}.`);
+      if (options.throwOnError) throw error;
+      console.error('❌ [YouTube Enrichment Fetch]', error.message);
       return results;
     }
 
@@ -1798,6 +1827,7 @@ export async function fetchYouTubeEnrichmentResults(
     return results;
   } catch (error: any) {
     console.error('❌ [YouTube Enrichment Fetch] Error:', error.message);
+    if (options.throwOnError) throw error;
     return results;
   }
 }
@@ -1825,19 +1855,24 @@ function extractInstagramUsername(url: string): string | null {
 }
 
 export async function fetchInstagramEnrichmentResults(
-  runId: string
+  runId: string,
+  options: EnrichmentResultFetchOptions = {},
 ): Promise<Map<string, ApifyInstagramProfileResult>> {
   const results = new Map<string, ApifyInstagramProfileResult>();
 
   if (!client) {
-    console.error('❌ [Instagram Enrichment Fetch] Apify client not initialized');
+    const error = new Error('Apify client not initialized for Instagram result fetching.');
+    if (options.throwOnError) throw error;
+    console.error('❌ [Instagram Enrichment Fetch]', error.message);
     return results;
   }
 
   try {
     const run = await client.run(runId).get();
     if (!run?.defaultDatasetId) {
-      console.error('❌ [Instagram Enrichment Fetch] No dataset found for run:', runId);
+      const error = new Error(`No Instagram dataset found for run ${runId}.`);
+      if (options.throwOnError) throw error;
+      console.error('❌ [Instagram Enrichment Fetch]', error.message);
       return results;
     }
 
@@ -1867,6 +1902,7 @@ export async function fetchInstagramEnrichmentResults(
     return results;
   } catch (error: any) {
     console.error('❌ [Instagram Enrichment Fetch] Error:', error.message);
+    if (options.throwOnError) throw error;
     return results;
   }
 }
@@ -1891,19 +1927,24 @@ function extractTikTokVideoId(url: string): string | null {
 }
 
 export async function fetchTikTokEnrichmentResults(
-  runId: string
+  runId: string,
+  options: EnrichmentResultFetchOptions = {},
 ): Promise<Map<string, ApifyTikTokResult>> {
   const results = new Map<string, ApifyTikTokResult>();
 
   if (!client) {
-    console.error('❌ [TikTok Enrichment Fetch] Apify client not initialized');
+    const error = new Error('Apify client not initialized for TikTok result fetching.');
+    if (options.throwOnError) throw error;
+    console.error('❌ [TikTok Enrichment Fetch]', error.message);
     return results;
   }
 
   try {
     const run = await client.run(runId).get();
     if (!run?.defaultDatasetId) {
-      console.error('❌ [TikTok Enrichment Fetch] No dataset found for run:', runId);
+      const error = new Error(`No TikTok dataset found for run ${runId}.`);
+      if (options.throwOnError) throw error;
+      console.error('❌ [TikTok Enrichment Fetch]', error.message);
       return results;
     }
 
@@ -1932,6 +1973,7 @@ export async function fetchTikTokEnrichmentResults(
     return results;
   } catch (error: any) {
     console.error('❌ [TikTok Enrichment Fetch] Error:', error.message);
+    if (options.throwOnError) throw error;
     return results;
   }
 }

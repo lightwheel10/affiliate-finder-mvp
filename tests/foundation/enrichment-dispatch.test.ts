@@ -4,6 +4,7 @@ import {
   buildEnrichmentDispatchInputs,
   dispatchEnrichmentActors,
   EnrichmentProviderStartError,
+  isProviderSupportedEnrichmentUrl,
   type EnrichmentDispatchContext,
   type EnrichmentDispatchDependencies,
   type EnrichmentDispatchInput,
@@ -165,6 +166,31 @@ test('dispatch inputs use canonical hosts, stable ordering, and reject host spoo
   assert.deepEqual(
     first.map((input) => input.inputFingerprint),
     second.map((input) => input.inputFingerprint),
+  );
+});
+
+test('direct enrichment callers share the strict provider URL boundary', () => {
+  assert.equal(
+    isProviderSupportedEnrichmentUrl('instagram', 'https://www.instagram.com/creator/'),
+    true,
+  );
+  assert.equal(
+    isProviderSupportedEnrichmentUrl(
+      'instagram',
+      'https://www-fallback.instagram.com/creator/',
+    ),
+    false,
+  );
+  assert.equal(
+    isProviderSupportedEnrichmentUrl(
+      'youtube',
+      'https://evil.example/?next=youtube.com/watch?v=stolen',
+    ),
+    false,
+  );
+  assert.equal(
+    isProviderSupportedEnrichmentUrl('tiktok', 'https://www.tiktok.com/@creator'),
+    false,
   );
 });
 

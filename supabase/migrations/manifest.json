@@ -168,6 +168,22 @@
       "down": "0020_downgrade_capacity_selection.down.sql",
       "upSha256": "0c106217c3974258d62f45f05e056efadd74559d8efe1f988c86d5b05ae2b5e9",
       "downSha256": "9d8908af8143c9fed385d604a24c46311534fd713ce015c44a1863819da051ce"
+    },
+    {
+      "version": "0021",
+      "name": "weekly_scan_single_active_location",
+      "up": "0021_weekly_scan_single_active_location.up.sql",
+      "down": "0021_weekly_scan_single_active_location.down.sql",
+      "upSha256": "23905ab84da01bdec2015d38442f0a684adc424fd732008f63ec0f18212fa9a3",
+      "downSha256": "8ce8741e68220ce6ab814d3227a328ba91d4b7c92138fa9d8ba5ea37be0dc05c"
+    },
+    {
+      "version": "0022",
+      "name": "weekly_provider_receipts",
+      "up": "0022_weekly_provider_receipts.up.sql",
+      "down": "0022_weekly_provider_receipts.down.sql",
+      "upSha256": "2989845f337b2004f69dab1dfb7cf0a84ffd723114c9a2999bf3315c1e3db8ab",
+      "downSha256": "b5829a69f7e9aad2fc1fcc32416981ac4f157d5c20ecc9d7ec321c752ef3710c"
     }
   ]
 }

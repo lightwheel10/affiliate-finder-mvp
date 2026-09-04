@@ -42,7 +42,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { sql } from '@/lib/db';
-import { rehostImageIfNeeded } from '@/lib/image-storage';
 import { checkCredits, consumeCredits } from '@/lib/credits';
 import { 
   SearchResult,
@@ -54,9 +53,17 @@ import {
   enrichYouTubeByUrls,
   enrichInstagramByUrls,
   enrichTikTokByUrls,
+  abortEnrichmentRun,
+  fetchInstagramEnrichmentResults,
+  fetchRunCostUsd,
   fetchRunCostsUsd,
+  fetchTikTokEnrichmentResults,
+  fetchYouTubeEnrichmentResults,
+  getEnrichmentRunStatusStrict,
+  startEnrichmentPlatform,
 } from '@/app/services/apify';
 import {
+  abortGoogleSearchRun,
   startGoogleSearchRun,
   getRunStatus,
   fetchAndProcessResults,
@@ -77,15 +84,33 @@ import {
   claimNextWeeklyScanWork,
   completeWeeklyScanLocation,
   failWeeklyScanLocation,
-  markWeeklyScanDispatching,
+  prepareWeeklyScanEnrichmentProvider,
+  prepareWeeklyScanPrimaryProvider,
   recordWeeklyScanProviderRun,
+  settleWeeklyScanProviderRun,
   type WeeklyScanCompletion,
 } from '@/lib/weekly-scan/weekly-scan-postgres';
 import {
   classifyWeeklyScanWorkerFailure,
   WeeklyScanExecutionError,
 } from '@/lib/weekly-scan/weekly-scan';
+import { saveWeeklyDiscoveredAffiliates } from '@/lib/weekly-scan/affiliate-persistence';
 import { truncateProviderText } from '@/lib/search/status';
+import {
+  buildEnrichmentDispatchInputs,
+  type EnrichmentDispatchInput,
+} from '@/lib/search/enrichment-dispatch';
+import { buildGoogleProviderInput } from '@/lib/search/provider-input';
+import {
+  executeWeeklyProvider,
+  sumExactWeeklyProviderCosts,
+  weeklyProviderCorrelationId,
+  weeklyProviderInputFingerprint,
+  type WeeklyProviderExecution,
+  type WeeklyProviderLaunchInput,
+  type WeeklyProviderSettlement,
+  type WeeklyScanProvider,
+} from '@/lib/weekly-scan/provider-runs';
 
 // =============================================================================
 // VERCEL FUNCTION CONFIGURATION
@@ -584,18 +609,32 @@ async function processWeeklyBatchCron(startTime: number) {
       work.settings.countryCode,
       work.settings.languageCode,
       {
-        beforeProviderLaunch: (searchId) =>
-          markWeeklyScanDispatching(executor, work, new Date(), searchId),
-        providerStarted: async (providerRunId) => {
-          await recordWeeklyScanProviderRun(executor, work, providerRunId);
+        providerCorrelationId: (provider) => weeklyProviderCorrelationId({
+          batchId: work.batchId,
+          brandLocationId: work.brandLocationId,
+          provider,
+        }),
+        prepareProviderLaunch: (launch, searchId) => launch.provider === 'google'
+          ? prepareWeeklyScanPrimaryProvider(executor, work, {
+            now: new Date(),
+            searchId,
+            launch,
+          })
+          : prepareWeeklyScanEnrichmentProvider(executor, work, {
+            now: new Date(),
+            launch,
+          }),
+        providerStarted: async (launch, providerRunId) => {
+          await recordWeeklyScanProviderRun(executor, work, launch, providerRunId);
           providerRunRecorded = true;
         },
+        providerFinished: (launch, settlement) =>
+          settleWeeklyScanProviderRun(executor, work, launch, settlement),
       },
     );
     const completion = await completeWeeklyScanLocation(executor, work, {
       resultsCount: scanResult.totalResults,
       sourceCounts: scanResult.sourceCounts,
-      estimatedCost: scanResult.totalCost,
     });
     await queueWeeklyBatchSummary(work.accountId, completion);
     return NextResponse.json({
@@ -680,14 +719,17 @@ function errorMessage(error: unknown): string {
 // HELPER: Enrich YouTube results with Apify metadata
 // January 29th, 2026
 // =============================================================================
-async function enrichYouTubeResults(results: SearchResult[]): Promise<SearchResult[]> {
+async function enrichYouTubeResults(
+  results: SearchResult[],
+  providedEnrichment?: YouTubeEnrichmentMap,
+): Promise<SearchResult[]> {
   if (results.length === 0) return results;
   
   try {
     const urls = results.map(r => r.link).filter(Boolean);
     console.log(`[AutoScan] Enriching ${urls.length} YouTube URLs...`);
     
-    const enrichmentMap = await enrichYouTubeByUrls(urls);
+    const enrichmentMap = providedEnrichment ?? await enrichYouTubeByUrls(urls);
     
     return results.map(result => {
       const apifyData = enrichmentMap.get(result.link);
@@ -722,14 +764,17 @@ async function enrichYouTubeResults(results: SearchResult[]): Promise<SearchResu
 // HELPER: Enrich Instagram results with Apify metadata
 // January 29th, 2026
 // =============================================================================
-async function enrichInstagramResults(results: SearchResult[]): Promise<SearchResult[]> {
+async function enrichInstagramResults(
+  results: SearchResult[],
+  providedEnrichment?: InstagramEnrichmentMap,
+): Promise<SearchResult[]> {
   if (results.length === 0) return results;
   
   try {
     const urls = results.map(r => r.link).filter(Boolean);
     console.log(`[AutoScan] Enriching ${urls.length} Instagram URLs...`);
     
-    const enrichmentMap = await enrichInstagramByUrls(urls);
+    const enrichmentMap = providedEnrichment ?? await enrichInstagramByUrls(urls);
     
     return results.map(result => {
       const apifyData = enrichmentMap.get(result.link);
@@ -793,14 +838,17 @@ async function enrichInstagramResults(results: SearchResult[]): Promise<SearchRe
 // HELPER: Enrich TikTok results with Apify metadata
 // January 29th, 2026
 // =============================================================================
-async function enrichTikTokResults(results: SearchResult[]): Promise<SearchResult[]> {
+async function enrichTikTokResults(
+  results: SearchResult[],
+  providedEnrichment?: TikTokEnrichmentMap,
+): Promise<SearchResult[]> {
   if (results.length === 0) return results;
   
   try {
     const urls = results.map(r => r.link).filter(Boolean);
     console.log(`[AutoScan] Enriching ${urls.length} TikTok URLs...`);
     
-    const enrichmentMap = await enrichTikTokByUrls(urls);
+    const enrichmentMap = providedEnrichment ?? await enrichTikTokByUrls(urls);
     
     return results.map(result => {
       const apifyData = enrichmentMap.get(result.link);
@@ -846,8 +894,54 @@ async function enrichTikTokResults(results: SearchResult[]): Promise<SearchResul
 // January 29th, 2026 - Added userBrand for social filtering
 // =============================================================================
 interface AutoScanLifecycleCallbacks {
-  beforeProviderLaunch: (searchId: number | null) => Promise<void>;
-  providerStarted: (providerRunId: string) => Promise<void>;
+  providerCorrelationId: (provider: WeeklyScanProvider) => string;
+  prepareProviderLaunch: (
+    launch: WeeklyProviderLaunchInput,
+    searchId: number | null,
+  ) => Promise<void>;
+  providerStarted: (
+    launch: WeeklyProviderLaunchInput,
+    providerRunId: string,
+  ) => Promise<void>;
+  providerFinished: (
+    launch: WeeklyProviderLaunchInput,
+    settlement: WeeklyProviderSettlement,
+  ) => Promise<void>;
+}
+
+type YouTubeEnrichmentMap = Awaited<ReturnType<typeof fetchYouTubeEnrichmentResults>>;
+type InstagramEnrichmentMap = Awaited<ReturnType<typeof fetchInstagramEnrichmentResults>>;
+type TikTokEnrichmentMap = Awaited<ReturnType<typeof fetchTikTokEnrichmentResults>>;
+
+async function executeWeeklyEnrichmentProvider<TData>(
+  input: EnrichmentDispatchInput | undefined,
+  lifecycle: AutoScanLifecycleCallbacks,
+  fetchResults: (providerRunId: string) => Promise<TData>,
+): Promise<WeeklyProviderExecution<TData> | null> {
+  if (!input || input.platform === 'similarweb') return null;
+  const launch: WeeklyProviderLaunchInput = {
+    provider: input.platform,
+    inputFingerprint: input.inputFingerprint,
+    correlationId: lifecycle.providerCorrelationId(input.platform),
+  };
+  return executeWeeklyProvider(launch, {
+    prepare: (prepared) => lifecycle.prepareProviderLaunch(prepared, null),
+    start: (prepared) => startEnrichmentPlatform(
+      input.platform,
+      input.urls,
+      prepared.correlationId,
+    ),
+    recordRun: (prepared, providerRunId) =>
+      lifecycle.providerStarted(prepared, providerRunId),
+    inspect: (providerRunId) => getEnrichmentRunStatusStrict(providerRunId),
+    fetchExactCost: fetchRunCostUsd,
+    settle: (prepared, settlement) => lifecycle.providerFinished(prepared, settlement),
+    fetchResults,
+    abort: abortEnrichmentRun,
+    sleep,
+    pollIntervalMs: 2_500,
+    maxPollDurationMs: 90_000,
+  });
 }
 
 async function runAutoScan(
@@ -863,11 +957,11 @@ async function runAutoScan(
   lifecycle?: AutoScanLifecycleCallbacks,
 ): Promise<{
   totalResults: number;
-  totalCost: number;
+  totalCost: number | null;
   sourceCounts: { youtube: number; instagram: number; tiktok: number; web: number }; // 2026-05-04: scan-summary email (renamed to avoid clash with existing `sources` Platform[] below)
 }> {
   let totalResults = 0;
-  let totalCost = 0;
+  let totalCost: number | null = lifecycle ? null : 0;
   // 2026-05-04: per-platform breakdown for the scan-summary email.
   // Counters increment INSIDE the save try block below, so the sum equals totalResults exactly.
   const sourceCounts = { youtube: 0, instagram: 0, tiktok: 0, web: 0 };
@@ -891,105 +985,90 @@ async function runAutoScan(
   
   let providerDispatchPrepared = false;
   let providerRunId: string | null = null;
+  const providerExecutions: WeeklyProviderExecution<unknown>[] = [];
   try {
-    // The durable worker commits both its one-credit reservation and launch
-    // intent before this function crosses the paid provider boundary.
-    if (lifecycle) {
-      await lifecycle.beforeProviderLaunch(searchId);
-      providerDispatchPrepared = true;
-    }
-    // =========================================================================
-    // STEP 1: START APIFY RUN (NON-BLOCKING)
-    // 
-    // January 29, 2026 FIX:
-    // - Pass topics as keywords[] and competitors as competitors[]
-    // - Service will build fully localized queries for each
-    // - Brand names are extracted automatically from competitor domains
-    // =========================================================================
-    const { runId } = await startGoogleSearchRun({
+    const googleCorrelationId = lifecycle?.providerCorrelationId('google');
+    const googleOptions = {
       keywords: topics,
       competitors: competitors,
       sources,
       targetCountry,
       targetLanguage,
-    });
-    providerRunId = runId;
-    if (lifecycle) await lifecycle.providerStarted(runId);
-    
-    console.log(`[AutoScan] Apify run started: ${runId}`);
-    
-    // =========================================================================
-    // STEP 2: POLL UNTIL COMPLETE
-    // =========================================================================
-    const POLL_INTERVAL_MS = 5000;
-    const MAX_POLL_TIME_MS = 180000; // 180 seconds max (leaves buffer for enrichment)
-    const pollStartTime = Date.now();
-    
-    let status = await getRunStatus(runId);
-    let pollCount = 0;
+      ...(googleCorrelationId ? { correlationId: googleCorrelationId } : {}),
+    };
+    let rawResults: SearchResult[];
 
-    // ===========================================================================
-    // POLLING LOOP — May 1, 2026 (incident fix)
-    //
-    // Previous condition was `while (status.status === 'RUNNING')`, which
-    // silently exited if the very first status check returned `'READY'`
-    // (Apify's "queued, not started yet" state). Apify reaches READY within
-    // milliseconds of submission and only transitions to RUNNING once it
-    // actually picks the job up. Because our first getRunStatus() call
-    // commonly landed during the READY window, the loop never entered, the
-    // code fell through to the post-loop FAILED/ABORTED check (which doesn't
-    // catch READY either), and we logged "SUCCEEDED" + fetched an empty
-    // dataset. Result: every paying customer's auto-scan was silently
-    // returning 0 affiliates while still consuming a credit. Verified via
-    // production logs on 2026-05-01: David's run uiY0iUaE0d1rIP9iK was logged
-    // as "SUCCEEDED" 32ms after start with 0 dataset items, while Apify's
-    // own records showed it ran for 65s and produced 318 results.
-    //
-    // Fix: poll until status reaches a TERMINAL state. Any non-terminal state
-    // (READY, RUNNING, future states Apify might add) keeps us looping. After
-    // the loop, we also throw on TIMED-OUT (Apify's own actor-side timeout),
-    // which the previous post-loop check missed.
-    // ===========================================================================
-    const TERMINAL_STATES = new Set<GoogleScraperStatus['status']>([
-      'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT',
-    ]);
-
-    while (!TERMINAL_STATES.has(status.status)) {
-      const elapsed = Date.now() - pollStartTime;
-
-      if (elapsed > MAX_POLL_TIME_MS) {
-        throw new Error(`Apify run timed out after ${elapsed/1000}s`);
+    if (lifecycle && googleCorrelationId) {
+      const launch: WeeklyProviderLaunchInput = {
+        provider: 'google',
+        correlationId: googleCorrelationId,
+        inputFingerprint: weeklyProviderInputFingerprint(
+          'google',
+          buildGoogleProviderInput(googleOptions),
+        ),
+      };
+      const googleExecution = await executeWeeklyProvider(launch, {
+        prepare: async (prepared) => {
+          await lifecycle.prepareProviderLaunch(prepared, searchId);
+          providerDispatchPrepared = true;
+        },
+        start: async () => {
+          const started = await startGoogleSearchRun(googleOptions);
+          providerRunId = started.runId;
+          return started.runId;
+        },
+        recordRun: (prepared, runId) => lifecycle.providerStarted(prepared, runId),
+        inspect: (runId) => getRunStatus(runId),
+        fetchExactCost: fetchRunCostUsd,
+        settle: (prepared, settlement) => lifecycle.providerFinished(prepared, settlement),
+        fetchResults: (runId) => fetchAndProcessResults(runId, {
+          targetCountry,
+          targetLanguage,
+        }),
+        abort: abortGoogleSearchRun,
+        sleep,
+        pollIntervalMs: 5_000,
+        maxPollDurationMs: 180_000,
+      });
+      providerExecutions.push(googleExecution);
+      if (googleExecution.outcome !== 'succeeded' || googleExecution.data === null) {
+        throw new WeeklyScanExecutionError(
+          googleExecution.outcome === 'failed' ? 'failed' : 'uncertain',
+          googleExecution.outcome === 'failed'
+            ? 'provider_terminal_failure'
+            : 'provider_processing_uncertain',
+          `Google provider outcome was ${googleExecution.outcome}.`,
+        );
       }
-
-      await sleep(POLL_INTERVAL_MS);
-      pollCount++;
-      status = await getRunStatus(runId);
-
-      console.log(`[AutoScan] Poll #${pollCount}: ${status.status} (${Math.round(elapsed/1000)}s elapsed)`);
+      rawResults = googleExecution.data;
+    } else {
+      // The feature-off path is intentionally unchanged until the scheduler
+      // cutover. It retains the legacy single-location provider behavior.
+      const { runId } = await startGoogleSearchRun(googleOptions);
+      providerRunId = runId;
+      const terminalStates = new Set<GoogleScraperStatus['status']>([
+        'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT',
+      ]);
+      const pollStartTime = Date.now();
+      let status = await getRunStatus(runId);
+      while (!terminalStates.has(status.status)) {
+        const elapsed = Date.now() - pollStartTime;
+        if (elapsed > 180_000) throw new Error(`Apify run timed out after ${elapsed / 1000}s`);
+        await sleep(5_000);
+        status = await getRunStatus(runId);
+      }
+      if (status.status !== 'SUCCEEDED') {
+        throw new WeeklyScanExecutionError(
+          'failed',
+          'provider_terminal_failure',
+          `Apify run ${status.status}`,
+        );
+      }
+      rawResults = await fetchAndProcessResults(runId, { targetCountry, targetLanguage });
+      totalCost = (totalCost ?? 0) + (API_COSTS.apify_google_scraper || 0.02);
     }
-
-    if (status.status === 'FAILED' || status.status === 'ABORTED' || status.status === 'TIMED-OUT') {
-      throw new WeeklyScanExecutionError(
-        'failed',
-        'provider_terminal_failure',
-        `Apify run ${status.status}`,
-      );
-    }
-
-    console.log(`[AutoScan] Apify run SUCCEEDED`);
-    
-    // =========================================================================
-    // STEP 3: FETCH RAW RESULTS
-    // =========================================================================
-    const rawResults = await fetchAndProcessResults(runId, {
-      targetCountry,
-      targetLanguage,
-    });
     
     console.log(`[AutoScan] Fetched ${rawResults.length} raw results`);
-    
-    // Calculate Apify cost
-    totalCost += API_COSTS.apify_google_scraper || 0.02;
     
     // =========================================================================
     // STEP 4: CATEGORIZE BY PLATFORM
@@ -1004,16 +1083,72 @@ async function runAutoScan(
     // =========================================================================
     // STEP 5: ENRICH SOCIAL RESULTS (PARALLEL)
     // =========================================================================
-    const [enrichedYouTube, enrichedInstagram, enrichedTikTok] = await Promise.all([
-      enrichYouTubeResults(youtubeResults),
-      enrichInstagramResults(instagramResults),
-      enrichTikTokResults(tiktokResults),
-    ]);
-    
-    // Add enrichment costs
-    if (youtubeResults.length > 0) totalCost += API_COSTS.apify_youtube || 0.01;
-    if (instagramResults.length > 0) totalCost += API_COSTS.apify_instagram || 0.01;
-    if (tiktokResults.length > 0) totalCost += API_COSTS.apify_tiktok || 0.01;
+    let enrichedYouTube: SearchResult[];
+    let enrichedInstagram: SearchResult[];
+    let enrichedTikTok: SearchResult[];
+    if (lifecycle) {
+      const inputs = buildEnrichmentDispatchInputs({
+        youtube: youtubeResults.map(({ link }) => link),
+        instagram: instagramResults.map(({ link }) => link),
+        tiktok: tiktokResults.map(({ link }) => link),
+        similarweb: [],
+      });
+      const byPlatform = new Map(inputs.map((input) => [input.platform, input]));
+      // Wait for every started platform even when one fails. Returning early
+      // would let background callbacks mutate a child after it was finalized.
+      const settled = await Promise.allSettled([
+        executeWeeklyEnrichmentProvider(
+          byPlatform.get('youtube'),
+          lifecycle,
+          (runId) => fetchYouTubeEnrichmentResults(runId, { throwOnError: true }),
+        ),
+        executeWeeklyEnrichmentProvider(
+          byPlatform.get('instagram'),
+          lifecycle,
+          (runId) => fetchInstagramEnrichmentResults(runId, { throwOnError: true }),
+        ),
+        executeWeeklyEnrichmentProvider(
+          byPlatform.get('tiktok'),
+          lifecycle,
+          (runId) => fetchTikTokEnrichmentResults(runId, { throwOnError: true }),
+        ),
+      ]);
+      const rejected = settled.find(
+        (result): result is PromiseRejectedResult => result.status === 'rejected',
+      );
+      if (rejected) throw rejected.reason;
+      const [youtubeExecution, instagramExecution, tiktokExecution] = settled.map(
+        (result) => (result as PromiseFulfilledResult<WeeklyProviderExecution<unknown> | null>).value,
+      );
+      const socialExecutions = [youtubeExecution, instagramExecution, tiktokExecution]
+        .filter((execution): execution is WeeklyProviderExecution<unknown> => execution !== null);
+      providerExecutions.push(...socialExecutions);
+      if (socialExecutions.some(({ outcome }) => outcome === 'uncertain')) {
+        throw new WeeklyScanExecutionError(
+          'uncertain',
+          'enrichment_provider_uncertain',
+          'At least one enrichment provider could not be verified safely.',
+        );
+      }
+      const youtubeMap = (youtubeExecution?.data ?? new Map()) as YouTubeEnrichmentMap;
+      const instagramMap = (instagramExecution?.data ?? new Map()) as InstagramEnrichmentMap;
+      const tiktokMap = (tiktokExecution?.data ?? new Map()) as TikTokEnrichmentMap;
+      [enrichedYouTube, enrichedInstagram, enrichedTikTok] = await Promise.all([
+        enrichYouTubeResults(youtubeResults, youtubeMap),
+        enrichInstagramResults(instagramResults, instagramMap),
+        enrichTikTokResults(tiktokResults, tiktokMap),
+      ]);
+      totalCost = sumExactWeeklyProviderCosts(providerExecutions);
+    } else {
+      [enrichedYouTube, enrichedInstagram, enrichedTikTok] = await Promise.all([
+        enrichYouTubeResults(youtubeResults),
+        enrichInstagramResults(instagramResults),
+        enrichTikTokResults(tiktokResults),
+      ]);
+      if (youtubeResults.length > 0) totalCost = (totalCost ?? 0) + (API_COSTS.apify_youtube || 0.01);
+      if (instagramResults.length > 0) totalCost = (totalCost ?? 0) + (API_COSTS.apify_instagram || 0.01);
+      if (tiktokResults.length > 0) totalCost = (totalCost ?? 0) + (API_COSTS.apify_tiktok || 0.01);
+    }
     
     // =========================================================================
     // STEP 6: APPLY FILTERING
@@ -1072,34 +1207,22 @@ async function runAutoScan(
     // Use first topic as primary keyword for DB, or 'auto-scan' if none
     const primaryKeyword = topics[0] || 'auto-scan';
     
-    for (const result of allFilteredResults) {
-      try {
-        // 2026-05-09 (paras): saveDiscoveredAffiliate now returns true only
-        // when a new row was inserted. We gate the counters on that boolean
-        // so the scan-summary email reflects genuinely-new affiliates only.
-        // Before this fix, duplicates from prior weeks inflated `totalResults`
-        // and the email said "we found N new" when N was wrong.
-        const inserted = await saveDiscoveredAffiliate(
-          userId,
-          brandId,
-          brandLocationId,
-          primaryKeyword,
-          result,
-        );
-        if (inserted) {
-          totalResults++;
-          if (result.source === 'YouTube') sourceCounts.youtube++;
-          else if (result.source === 'Instagram') sourceCounts.instagram++;
-          else if (result.source === 'TikTok') sourceCounts.tiktok++;
-          else if (result.source === 'Web') sourceCounts.web++;
-        }
-      } catch (saveError) {
-        // Real DB errors only (constraint violations beyond the dup pre-check,
-        // connection drops, etc). The helper handles duplicates internally now,
-        // so the historical "Ignore duplicate errors" branch is no longer needed.
-        const errorMsg = saveError instanceof Error ? saveError.message : '';
-        console.error(`[AutoScan] Failed to save affiliate: ${errorMsg}`);
-      }
+    const savedSources = await saveWeeklyDiscoveredAffiliates(
+      sql,
+      {
+        userId,
+        brandId,
+        brandLocationId,
+        searchKeyword: primaryKeyword,
+        results: allFilteredResults,
+      },
+    );
+    for (const source of savedSources) {
+      totalResults += 1;
+      if (source === 'YouTube') sourceCounts.youtube += 1;
+      else if (source === 'Instagram') sourceCounts.instagram += 1;
+      else if (source === 'TikTok') sourceCounts.tiktok += 1;
+      else if (source === 'Web') sourceCounts.web += 1;
     }
     
   } catch (error) {
@@ -1126,147 +1249,15 @@ async function runAutoScan(
 }
 
 // =============================================================================
-// HELPER: Save discovered affiliate to database
+// HELPER: Save discovered affiliates to database
 // January 29th, 2026 - Updated for Apify enrichment fields
 //
-// 2026-05-09 (paras): Return type changed Promise<void> → Promise<boolean>.
-//   - true  = a new row was inserted (genuinely new affiliate)
-//   - false = the affiliate already exists for this user (skipped, no insert)
-//
-//   The scan-summary email's "we found N new affiliates" headline relies on
-//   this signal — without it the count includes duplicates from prior weeks
-//   and the email becomes a false-flag.
-// =============================================================================
-async function saveDiscoveredAffiliate(
-  userId: number,
-  brandId: string,
-  brandLocationId: string,
-  searchKeyword: string,
-  result: {
-    title: string;
-    link: string;
-    domain: string;
-    snippet?: string;
-    source: string;
-    thumbnail?: string;
-    views?: string;
-    date?: string;
-    rank?: number;
-    keyword?: string;
-    discoveryMethod?: { type: string; value: string };
-    channel?: {
-      name?: string;
-      link?: string;
-      thumbnail?: string;
-      verified?: boolean;
-      subscribers?: string;
-    };
-    duration?: string;
-    // YouTube fields
-    youtubeVideoLikes?: number;
-    youtubeVideoComments?: number;
-    // Instagram fields
-    instagramUsername?: string;
-    instagramFullName?: string;
-    instagramBio?: string;
-    instagramFollowers?: number;
-    instagramFollowing?: number;
-    instagramPostsCount?: number;
-    instagramIsBusiness?: boolean;
-    instagramIsVerified?: boolean;
-    instagramPostLikes?: number;
-    instagramPostComments?: number;
-    instagramPostViews?: number;
-    // TikTok fields
-    tiktokUsername?: string;
-    tiktokDisplayName?: string;
-    tiktokBio?: string;
-    tiktokFollowers?: number;
-    tiktokFollowing?: number;
-    tiktokLikes?: number;
-    tiktokVideosCount?: number;
-    tiktokIsVerified?: boolean;
-    tiktokVideoPlays?: number;
-    tiktokVideoLikes?: number;
-    tiktokVideoComments?: number;
-    tiktokVideoShares?: number;
-  }
-): Promise<boolean> {
-  // Check for existing (duplicate detection by link)
-  const existing = await sql`
-    SELECT id FROM crewcast.discovered_affiliates
-    WHERE user_id = ${userId}
-      AND brand_id = ${brandId}::bigint
-      AND brand_location_id = ${brandLocationId}::bigint
-      AND link = ${result.link}
-  `;
-
-  if (existing.length > 0) {
-    // 2026-05-09 (paras): return false (not void) so the scan-summary email
-    // counter can skip duplicates instead of double-counting them.
-    return false;
-  }
-
-  // 2026-06-15 (paras): re-host Instagram/TikTok avatar + thumbnail to Supabase
-  // Storage before saving. WHY: the scrapers give us signed CDN URLs that expire
-  // in ~3-4 days, after which the images 404 and render black. Storing a permanent
-  // Supabase URL fixes this for good. Best-effort (see lib/image-storage.ts): it
-  // no-ops for YouTube/web URLs and falls back to the original URL on any failure,
-  // so the scan is never blocked. Runs only here (after the dup check) = once per
-  // genuinely-new row. Both images re-host in parallel to halve the added latency.
-  const [permThumbnail, permChannelThumbnail] = await Promise.all([
-    rehostImageIfNeeded(result.thumbnail),
-    rehostImageIfNeeded(result.channel?.thumbnail),
-  ]);
-
-  // Insert new affiliate
-  const inserted = await sql`
-    INSERT INTO crewcast.discovered_affiliates (
-      user_id, brand_id, brand_location_id,
-      search_keyword, title, link, domain, snippet, source,
-      thumbnail, views, date, rank, keyword,
-      discovery_method_type, discovery_method_value,
-      is_new, channel_name, channel_link, channel_thumbnail, 
-      channel_verified, channel_subscribers, duration,
-      youtube_video_likes, youtube_video_comments,
-      instagram_username, instagram_full_name, instagram_bio,
-      instagram_followers, instagram_following, instagram_posts_count,
-      instagram_is_business, instagram_is_verified,
-      instagram_post_likes, instagram_post_comments, instagram_post_views,
-      tiktok_username, tiktok_display_name, tiktok_bio,
-      tiktok_followers, tiktok_following, tiktok_likes,
-      tiktok_videos_count, tiktok_is_verified,
-      tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares
-    ) VALUES (
-      ${userId}, ${brandId}::bigint, ${brandLocationId}::bigint,
-      ${searchKeyword}, ${result.title}, ${result.link}, ${result.domain},
-      ${result.snippet || ''}, ${result.source},
-      ${permThumbnail || null}, ${result.views || null}, ${result.date || null},
-      ${result.rank || null}, ${result.keyword || null},
-      ${result.discoveryMethod?.type || 'auto_scan'}, ${result.discoveryMethod?.value || 'auto'},
-      true, ${result.channel?.name || null}, ${result.channel?.link || null},
-      ${permChannelThumbnail || null}, ${result.channel?.verified || null},
-      ${result.channel?.subscribers || null}, ${result.duration || null},
-      ${result.youtubeVideoLikes || null}, ${result.youtubeVideoComments || null},
-      ${result.instagramUsername || null}, ${result.instagramFullName || null}, ${result.instagramBio || null},
-      ${result.instagramFollowers || null}, ${result.instagramFollowing || null}, ${result.instagramPostsCount || null},
-      ${result.instagramIsBusiness || null}, ${result.instagramIsVerified || null},
-      ${result.instagramPostLikes || null}, ${result.instagramPostComments || null}, ${result.instagramPostViews || null},
-      ${result.tiktokUsername || null}, ${result.tiktokDisplayName || null}, ${result.tiktokBio || null},
-      ${result.tiktokFollowers || null}, ${result.tiktokFollowing || null}, ${result.tiktokLikes || null},
-      ${result.tiktokVideosCount || null}, ${result.tiktokIsVerified || null},
-      ${result.tiktokVideoPlays || null}, ${result.tiktokVideoLikes || null},
-      ${result.tiktokVideoComments || null}, ${result.tiktokVideoShares || null}
-    )
-    ON CONFLICT (brand_location_id, link) DO NOTHING
-    RETURNING id
-  `;
-  // 2026-05-09 (paras): true = genuinely new row inserted. See header comment.
-  return inserted.length === 1;
-}
-
-// =============================================================================
-// HELPER: Update scan schedule for next run
+// A real 141-result weekly child spent ~85 seconds on persistence because the
+// previous helper made a duplicate SELECT and INSERT for every row through a
+// serverless database client limited to one connection. This implementation
+// keeps the same database-owned uniqueness rule but uses one duplicate query
+// and bounded bulk inserts. Social image rehosting remains best-effort and is
+// bounded separately so a provider cannot create an unbounded network burst.
 // =============================================================================
 async function updateScanSchedule(
   userId: number,

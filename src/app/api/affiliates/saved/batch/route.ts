@@ -72,11 +72,11 @@ export async function POST(request: NextRequest) {
     // Supabase Storage; fast no-op for already-permanent URLs and falls back
     // to the original on any failure, so saving can never break over images.
     //
-    // Done in ONE parallel pass BEFORE the sequential insert loop below so the
-    // added wall-time is bounded by the slowest single image fetch (~8s cap),
-    // not fetches × rows — this route must stay inside Vercel's function
-    // timeout for large batch saves. Duplicates get re-hosted needlessly, but
-    // the storage path is a deterministic hash (upsert), so no bloat.
+    // Prepared before the sequential insert loop below. The shared rehoster
+    // bounds active network/storage work across this request and every other
+    // caller; a large client batch can queue work but cannot create one remote
+    // download per row at the same time. Duplicates may still be re-hosted, but
+    // the storage path is a deterministic hash (upsert), so no storage bloat.
     // =========================================================================
     const rehostedImages = await Promise.all(
       affiliates.map(async (a: { thumbnail?: string | null; channelThumbnail?: string | null }) => {

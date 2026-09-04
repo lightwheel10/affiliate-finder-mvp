@@ -1,0 +1,1 @@
+DROP INDEX crewcast.weekly_auto_scan_locations_one_active_per_batch_key;

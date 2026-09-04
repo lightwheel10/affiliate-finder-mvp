@@ -186,6 +186,13 @@ function normalizePlatformUrls(
   return unique;
 }
 
+export function isProviderSupportedEnrichmentUrl(
+  platform: Exclude<EnrichmentPlatform, 'similarweb'>,
+  value: string,
+): boolean {
+  return normalizePlatformUrls(platform, [value]).length === 1;
+}
+
 function fingerprint(platform: EnrichmentPlatform, urls: readonly string[]): string {
   return createHash('sha256')
     .update(JSON.stringify({ platform, urls }))

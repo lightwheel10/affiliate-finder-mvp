@@ -9,10 +9,17 @@ import {
   claimNextWeeklyScanWork,
   completeWeeklyScanLocation,
   failWeeklyScanLocation,
-  markWeeklyScanDispatching,
+  prepareWeeklyScanEnrichmentProvider,
+  prepareWeeklyScanPrimaryProvider,
   recordWeeklyScanProviderRun,
+  settleWeeklyScanProviderRun,
   type WeeklyScanClaimResult,
 } from '../src/lib/weekly-scan/weekly-scan-postgres';
+import {
+  weeklyProviderCorrelationId,
+  type WeeklyProviderLaunchInput,
+  type WeeklyScanProvider,
+} from '../src/lib/weekly-scan/provider-runs';
 
 const STAGING_PROJECT_REF = 'jxerxreqezhdsisdwddw';
 const SYNTHETIC_EMAIL_PATTERN = 'codex-weekly-scan-%@example.invalid';
@@ -53,6 +60,7 @@ interface GlobalState {
   users: number;
   batches: number;
   batchLocations: number;
+  providerRuns: number;
   syntheticUsers: number;
 }
 
@@ -71,6 +79,7 @@ async function globalState(): Promise<GlobalState> {
       (SELECT count(*) FROM crewcast.users)::integer AS users,
       (SELECT count(*) FROM crewcast.weekly_auto_scan_batches)::integer AS batches,
       (SELECT count(*) FROM crewcast.weekly_auto_scan_locations)::integer AS "batchLocations",
+      (SELECT count(*) FROM crewcast.weekly_auto_scan_provider_runs)::integer AS "providerRuns",
       (
         SELECT count(*)
         FROM crewcast.users
@@ -81,20 +90,39 @@ async function globalState(): Promise<GlobalState> {
   return rows[0];
 }
 
-async function assertMigration(): Promise<void> {
-  const migrationPath = path.resolve(
+async function assertMigrations(): Promise<void> {
+  const batchMigrationPath = path.resolve(
     process.cwd(),
     'supabase/migrations/0013_weekly_auto_scan_batches.up.sql',
   );
-  const expectedChecksum = createHash('sha256')
-    .update(readFileSync(migrationPath))
+  const claimMigrationPath = path.resolve(
+    process.cwd(),
+    'supabase/migrations/0021_weekly_scan_single_active_location.up.sql',
+  );
+  const providerMigrationPath = path.resolve(
+    process.cwd(),
+    'supabase/migrations/0022_weekly_provider_receipts.up.sql',
+  );
+  const expectedBatchChecksum = createHash('sha256')
+    .update(readFileSync(batchMigrationPath))
+    .digest('hex');
+  const expectedClaimChecksum = createHash('sha256')
+    .update(readFileSync(claimMigrationPath))
+    .digest('hex');
+  const expectedProviderChecksum = createHash('sha256')
+    .update(readFileSync(providerMigrationPath))
     .digest('hex');
   const rows = await fixtureSql<{
+    version: string;
     checksum: string;
     tables: number;
     triggers: number;
+    singleActiveIndexes: number;
+    providerReceiptTables: number;
+    providerReceiptTriggers: number;
   }[]>`
     SELECT
+      migrations.version,
       migrations.checksum_sha256 AS checksum,
       (
         SELECT count(*)
@@ -112,14 +140,56 @@ async function assertMigration(): Promise<void> {
           'crewcast.weekly_auto_scan_locations'::regclass
         ])
           AND NOT tgisinternal
-      )::integer AS triggers
+      )::integer AS triggers,
+      (
+        SELECT count(*)
+        FROM pg_indexes
+        WHERE schemaname = 'crewcast'
+          AND indexname = 'weekly_auto_scan_locations_one_active_per_batch_key'
+      )::integer AS "singleActiveIndexes"
+      ,(
+        SELECT count(*)
+        FROM pg_class
+        WHERE oid = 'crewcast.weekly_auto_scan_provider_runs'::regclass
+      )::integer AS "providerReceiptTables"
+      ,(
+        SELECT count(*)
+        FROM pg_trigger
+        WHERE tgrelid = 'crewcast.weekly_auto_scan_provider_runs'::regclass
+          AND NOT tgisinternal
+      )::integer AS "providerReceiptTriggers"
     FROM crewcast.schema_migrations AS migrations
-    WHERE migrations.version = '0013'
+    WHERE migrations.version IN ('0013', '0021', '0022')
+    ORDER BY migrations.version
   `;
-  assert.equal(rows.length, 1, 'Migration 0013 must be applied exactly once.');
-  assert.equal(rows[0].checksum, expectedChecksum, 'Migration 0013 checksum drifted.');
+  assert.equal(rows.length, 3, 'Migrations 0013, 0021 and 0022 must each be applied once.');
+  assert.equal(rows[0].version, '0013');
+  assert.equal(rows[0].checksum, expectedBatchChecksum, 'Migration 0013 checksum drifted.');
   assert.equal(rows[0].tables, 2);
   assert.equal(rows[0].triggers, 4);
+  assert.equal(rows[1].version, '0021');
+  assert.equal(rows[1].checksum, expectedClaimChecksum, 'Migration 0021 checksum drifted.');
+  assert.equal(rows[1].singleActiveIndexes, 1);
+  assert.equal(rows[2].version, '0022');
+  assert.equal(rows[2].checksum, expectedProviderChecksum, 'Migration 0022 checksum drifted.');
+  assert.equal(rows[2].providerReceiptTables, 1);
+  assert.equal(rows[2].providerReceiptTriggers, 2);
+}
+
+async function assertNoRealWeeklyWorkInProgress(): Promise<void> {
+  const rows = await fixtureSql<{ count: number }[]>`
+    SELECT count(*)::integer AS count
+    FROM crewcast.weekly_auto_scan_batches AS batches
+    JOIN crewcast.users AS users ON users.id = batches.user_id
+    WHERE batches.status IN ('pending', 'running')
+      AND users.email NOT LIKE ${SYNTHETIC_EMAIL_PATTERN}
+  `;
+  assert.equal(rows.length, 1);
+  assert.equal(
+    rows[0].count,
+    0,
+    'Refusing synthetic verification while a real weekly batch is active.',
+  );
 }
 
 async function createFixture(input: {
@@ -227,16 +297,33 @@ function claimed(results: readonly WeeklyScanClaimResult[]) {
   );
 }
 
-async function claimConcurrently(now: Date, count = 20) {
+function providerLaunch(
+  work: { batchId: string; brandLocationId: string },
+  provider: WeeklyScanProvider,
+): WeeklyProviderLaunchInput {
+  return {
+    provider,
+    inputFingerprint: createHash('sha256')
+      .update(`${work.batchId}:${work.brandLocationId}:${provider}`)
+      .digest('hex'),
+    correlationId: weeklyProviderCorrelationId({
+      batchId: work.batchId,
+      brandLocationId: work.brandLocationId,
+      provider,
+    }),
+  };
+}
+
+async function claimConcurrently(accountId: number, now: Date, count = 20) {
   return Promise.all(Array.from({ length: count }, () => claimNextWeeklyScanWork(
     fixtureSql,
-    { now, batchId: randomUUID(), claimToken: randomUUID() },
+    { now, batchId: randomUUID(), claimToken: randomUUID(), accountId },
   )));
 }
 
 async function verifyOneCreditMultiLocationBatch(fixture: Fixture): Promise<void> {
   const now = new Date();
-  const firstRace = await claimConcurrently(now);
+  const firstRace = await claimConcurrently(fixture.accountId, now);
   const firstClaims = claimed(firstRace);
   assert.equal(firstClaims.length, 1, 'Concurrent cron calls must claim one child only.');
   assert.equal(
@@ -274,24 +361,70 @@ async function verifyOneCreditMultiLocationBatch(fixture: Fixture): Promise<void
     used: 1,
   });
 
-  await markWeeklyScanDispatching(fixtureSql, first, new Date(), 100001);
-  await recordWeeklyScanProviderRun(fixtureSql, first, `run-${randomUUID()}`);
+  const firstGoogle = providerLaunch(first, 'google');
+  await prepareWeeklyScanPrimaryProvider(fixtureSql, first, {
+    now: new Date(), searchId: 100001, launch: firstGoogle,
+  });
+  const firstGoogleRun = `run-${randomUUID()}`;
+  await recordWeeklyScanProviderRun(fixtureSql, first, firstGoogle, firstGoogleRun);
+  await settleWeeklyScanProviderRun(fixtureSql, first, firstGoogle, {
+    outcome: 'succeeded', providerRunId: firstGoogleRun, exactCostUsd: 0.101,
+  });
+  const firstYoutube = providerLaunch(first, 'youtube');
+  await prepareWeeklyScanEnrichmentProvider(fixtureSql, first, {
+    now: new Date(), launch: firstYoutube,
+  });
+  const firstYoutubeRun = `run-${randomUUID()}`;
+  await recordWeeklyScanProviderRun(fixtureSql, first, firstYoutube, firstYoutubeRun);
+  await settleWeeklyScanProviderRun(fixtureSql, first, firstYoutube, {
+    outcome: 'succeeded', providerRunId: firstYoutubeRun, exactCostUsd: 0.177,
+  });
   const firstCompletion = await completeWeeklyScanLocation(fixtureSql, first, {
     resultsCount: 7,
     sourceCounts: { youtube: 1, instagram: 2, tiktok: 1, web: 3 },
-    estimatedCost: 0.02,
   });
   assert.equal(firstCompletion.batchFinished, false);
+  const firstReceipts = await fixtureSql<{
+    provider_runs: number;
+    exact_cost: number;
+    stored_total: number;
+  }[]>`
+    SELECT
+      count(*)::integer AS provider_runs,
+      sum(receipts.exact_cost_usd)::float AS exact_cost,
+      max(work.estimated_cost)::float AS stored_total
+    FROM crewcast.weekly_auto_scan_provider_runs AS receipts
+    JOIN crewcast.weekly_auto_scan_locations AS work
+      ON work.batch_id = receipts.batch_id
+     AND work.brand_location_id = receipts.brand_location_id
+    WHERE receipts.batch_id = ${first.batchId}::uuid
+      AND receipts.brand_location_id = ${first.brandLocationId}::bigint
+  `;
+  assert.deepEqual(firstReceipts[0], {
+    provider_runs: 2,
+    exact_cost: 0.278,
+    stored_total: 0.278,
+  });
 
-  const secondRace = await claimConcurrently(new Date());
+  const secondRace = await claimConcurrently(fixture.accountId, new Date());
   const secondClaims = claimed(secondRace);
   assert.equal(secondClaims.length, 1, 'The second location must also have one worker.');
   const second = secondClaims[0].work;
   assert.equal(second.batchId, first.batchId, 'Every location belongs to the same weekly batch.');
   assert.notEqual(second.brandLocationId, first.brandLocationId);
 
-  await markWeeklyScanDispatching(fixtureSql, second, new Date(), 100002);
-  await recordWeeklyScanProviderRun(fixtureSql, second, `run-${randomUUID()}`);
+  const secondGoogle = providerLaunch(second, 'google');
+  await prepareWeeklyScanPrimaryProvider(fixtureSql, second, {
+    now: new Date(), searchId: 100002, launch: secondGoogle,
+  });
+  const secondGoogleRun = `run-${randomUUID()}`;
+  await recordWeeklyScanProviderRun(fixtureSql, second, secondGoogle, secondGoogleRun);
+  await settleWeeklyScanProviderRun(fixtureSql, second, secondGoogle, {
+    outcome: 'failed',
+    providerRunId: secondGoogleRun,
+    exactCostUsd: 0.05,
+    errorMessage: 'Synthetic provider terminal failure.',
+  });
   const final = await failWeeklyScanLocation(fixtureSql, second, {
     outcome: 'failed',
     code: 'provider_terminal_failure',
@@ -331,14 +464,13 @@ async function verifyOneCreditMultiLocationBatch(fixture: Fixture): Promise<void
     () => completeWeeklyScanLocation(fixtureSql, first, {
       resultsCount: 7,
       sourceCounts: { youtube: 1, instagram: 2, tiktok: 1, web: 3 },
-      estimatedCost: 0.02,
     }),
     /lease is missing|unexpected state/,
   );
 }
 
 async function verifyInsufficientCreditSwitchOff(fixture: Fixture): Promise<void> {
-  const results = await claimConcurrently(new Date());
+  const results = await claimConcurrently(fixture.accountId, new Date());
   assert.equal(
     results.filter(({ outcome }) => outcome === 'disabled_insufficient').length,
     1,
@@ -372,7 +504,7 @@ async function verifyInsufficientCreditSwitchOff(fixture: Fixture): Promise<void
 }
 
 async function verifyNoWorkNoCharge(fixture: Fixture): Promise<void> {
-  const results = await claimConcurrently(new Date());
+  const results = await claimConcurrently(fixture.accountId, new Date());
   assert.equal(results.filter(({ outcome }) => outcome === 'no_work').length, 1);
   assert.equal(claimed(results).length, 0);
   const rows = await fixtureSql<{
@@ -424,9 +556,9 @@ async function expireLease(fixture: Fixture, claimToken: string): Promise<void> 
 }
 
 async function verifyLeaseRecovery(fixture: Fixture): Promise<void> {
-  const first = claimed(await claimConcurrently(new Date(), 1))[0].work;
+  const first = claimed(await claimConcurrently(fixture.accountId, new Date(), 1))[0].work;
   await expireLease(fixture, first.claimToken);
-  const second = claimed(await claimConcurrently(new Date(), 1))[0].work;
+  const second = claimed(await claimConcurrently(fixture.accountId, new Date(), 1))[0].work;
   assert.equal(second.batchId, first.batchId);
   assert.equal(second.brandLocationId, first.brandLocationId);
   assert.notEqual(second.claimToken, first.claimToken);
@@ -464,10 +596,13 @@ async function verifyLeaseRecovery(fixture: Fixture): Promise<void> {
 }
 
 async function verifyExpiredPostDispatchFailsClosed(fixture: Fixture): Promise<void> {
-  const first = claimed(await claimConcurrently(new Date(), 1))[0].work;
-  await markWeeklyScanDispatching(fixtureSql, first, new Date(), 100003);
+  const first = claimed(await claimConcurrently(fixture.accountId, new Date(), 1))[0].work;
+  const launch = providerLaunch(first, 'google');
+  await prepareWeeklyScanPrimaryProvider(fixtureSql, first, {
+    now: new Date(), searchId: 100003, launch,
+  });
   await expireLease(fixture, first.claimToken);
-  const next = await claimConcurrently(new Date(), 1);
+  const next = await claimConcurrently(fixture.accountId, new Date(), 1);
   assert.equal(claimed(next).length, 0, 'Ambiguous provider work must never be replayed.');
   const rows = await fixtureSql<{
     batch_status: string;
@@ -497,6 +632,14 @@ async function cleanup(fixtures: readonly Fixture[]): Promise<void> {
   const accountIds = fixtures.map(({ accountId }) => accountId);
   if (accountIds.length === 0) return;
   await fixtureSql.begin(async (transaction) => {
+    // Delete the synthetic child rows explicitly before their referenced
+    // locations. The production foreign key intentionally protects location
+    // history, so test cleanup must not depend on an indirect cascade being
+    // observed before the next statement on pooled staging connections.
+    await transaction`
+      DELETE FROM crewcast.weekly_auto_scan_locations
+      WHERE user_id = ANY(${accountIds}::integer[])
+    `;
     await transaction`
       DELETE FROM crewcast.weekly_auto_scan_batches
       WHERE user_id = ANY(${accountIds}::integer[])
@@ -532,10 +675,13 @@ async function cleanupSyntheticResidue(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await assertMigration();
+  await assertMigrations();
   // Failed test processes may be interrupted before finally runs. The pattern
   // uses the non-routable example.invalid domain and is exclusive to this file.
   await cleanupSyntheticResidue();
+  // This remains a useful operator warning, while every synthetic claim is also
+  // hard-scoped to its own fixture account inside the scheduler transaction.
+  await assertNoRealWeeklyWorkInProgress();
   const before = await globalState();
   assert.equal(before.syntheticUsers, 0, 'A previous weekly scan test left synthetic users.');
   const fixtures: Fixture[] = [];
@@ -585,6 +731,7 @@ async function main(): Promise<void> {
           (SELECT count(*) FROM crewcast.users)::integer AS users,
           (SELECT count(*) FROM crewcast.weekly_auto_scan_batches)::integer AS batches,
           (SELECT count(*) FROM crewcast.weekly_auto_scan_locations)::integer AS "batchLocations",
+          (SELECT count(*) FROM crewcast.weekly_auto_scan_provider_runs)::integer AS "providerRuns",
           (
             SELECT count(*) FROM crewcast.users
             WHERE email LIKE ${SYNTHETIC_EMAIL_PATTERN}

@@ -20,6 +20,7 @@
     "test:staging:stripe-plan-changes": "node --conditions=react-server --import tsx scripts/verify-deferred-plan-changes-staging.ts",
     "test:staging:downgrade-capacity": "node --conditions=react-server --import tsx scripts/verify-downgrade-capacity-staging.ts",
     "test:staging:weekly-auto-scan": "node --import tsx scripts/verify-weekly-auto-scan-staging.ts",
+    "test:staging:weekly-persistence": "node --conditions=react-server --import tsx scripts/verify-weekly-affiliate-persistence-staging.ts",
     "test:staging:reconciliation": "node --conditions=react-server --import tsx scripts/verify-search-reconciliation-staging.ts",
     "test:staging:search-credits": "node --conditions=react-server --import tsx scripts/verify-search-credit-reservations-staging.ts",
     "test:staging:paid-search-migration": "node --import tsx scripts/verify-paid-search-migration-staging.ts",
