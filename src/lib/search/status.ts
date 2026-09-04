@@ -273,17 +273,18 @@ function replaceUnpairedSurrogates(value: string): string {
 }
 
 export function truncateProviderText(
-  value: string | undefined,
+  value: unknown,
   maxCodePoints: number,
 ): string | undefined {
-  if (value === undefined) return undefined;
   if (!Number.isSafeInteger(maxCodePoints) || maxCodePoints < 0) {
     throw new SearchStatusIntegrityError('Provider text limit must be a non-negative integer.');
   }
+  if (typeof value !== 'string') return undefined;
 
   // String#substring counts UTF-16 code units and can cut an emoji in half.
-  // PostgreSQL correctly rejects that malformed value. Iterate by Unicode code
-  // point instead, and repair malformed input before applying the length limit.
+  // PostgreSQL correctly rejects that malformed value. Provider payloads also
+  // return null despite declaring optional strings. Reject every non-string,
+  // iterate by Unicode code point, and repair malformed text before limiting it.
   let truncated = '';
   let count = 0;
   for (const character of replaceUnpairedSurrogates(value)) {

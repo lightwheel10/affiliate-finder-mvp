@@ -129,6 +129,8 @@ test('provider text truncation never cuts an emoji in half', () => {
   assert.equal(truncateProviderText(`1234\ud83e\uddf5rest`, 5), `1234\ud83e\uddf5`);
   assert.equal(truncateProviderText(`1234\ud83e\uddf5rest`, 4), '1234');
   assert.equal(truncateProviderText(`broken \ud83e`, 20), 'broken \ufffd');
+  assert.equal(truncateProviderText(null, 20), undefined);
+  assert.equal(truncateProviderText(123, 20), undefined);
   assert.throws(
     () => truncateProviderText('text', -1),
     SearchStatusIntegrityError,
