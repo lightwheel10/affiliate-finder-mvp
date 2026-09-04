@@ -22,6 +22,7 @@ import {
   type LanguageFilterConfig,
   type TLDFilterConfig
 } from './location';
+import { getMarketLanguage } from '@/lib/markets/catalog';
 
 // =============================================================================
 // E-COMMERCE DOMAIN BLOCKLIST - January 16, 2026
@@ -921,8 +922,7 @@ export function filterSocialResults(
   
   // Step 3: Language filtering
   if (targetLanguage && filtered.length > 0) {
-    // Get language code from LANGUAGE_TO_CODE
-    const languageCode = LANGUAGE_TO_CODE[targetLanguage];
+    const languageCode = getMarketLanguage(targetLanguage)?.isoCode;
     
     if (languageCode) {
       const languageFilterConfig: LanguageFilterConfig = {
@@ -977,30 +977,3 @@ function extractBrandNameForFilter(domain: string): string {
   
   return cleaned;
 }
-
-// =============================================================================
-// LANGUAGE_TO_CODE MAPPING (for filterSocialResults)
-// January 29, 2026
-// 
-// Maps language names to ISO 639-1 codes.
-// Needed because filterResultsByLanguage uses ISO codes, not language names.
-// =============================================================================
-const LANGUAGE_TO_CODE: Record<string, string> = {
-  'English': 'en',
-  'Spanish': 'es',
-  'German': 'de',
-  'French': 'fr',
-  'Portuguese': 'pt',
-  'Italian': 'it',
-  'Dutch': 'nl',
-  'Swedish': 'sv',
-  'Danish': 'da',
-  'Norwegian': 'no',
-  'Finnish': 'fi',
-  'Polish': 'pl',
-  'Czech': 'cs',
-  'Japanese': 'ja',
-  'Korean': 'ko',
-  'Arabic': 'ar',
-  'Hebrew': 'he',
-};

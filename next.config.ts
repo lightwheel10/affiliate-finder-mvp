@@ -22,6 +22,16 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /**
+   * Pages Router API routes are server-only, but Next.js 16 Turbopack otherwise
+   * leaves the `server-only` marker as an external runtime dependency. Its
+   * default entry intentionally throws, which prevents the Stripe webhook from
+   * loading on Vercel before our handler can verify the signature. Bundling the
+   * marker lets Next apply its server compiler alias while preserving the
+   * compile-time client-import guard everywhere else.
+   */
+  transpilePackages: ['server-only'],
+
+  /**
    * Environment variables available on the client side
    * NEXT_PUBLIC_SITE_URL is used by sitemap.ts and robots.ts
    * 

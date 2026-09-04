@@ -441,6 +441,78 @@ export interface Dictionary {
       pro: string;
       findAffiliates: string;
     };
+    brandLocations: {
+      activeBrand: string;
+      activeLocation: string;
+      activeLocations: string;
+      switchBrand: string;
+      switchLocation: string;
+      switchLocations: string;
+      allLocations: string;
+      locationsSelected: string;
+      done: string;
+      loadingPortfolio: string;
+      portfolioUnavailable: string;
+      portfolioUnavailableDescription: string;
+      unknownMarket: string;
+      pageTitle: string;
+      pageSubtitle: string;
+      addBrand: string;
+      addLocation: string;
+      editBrand: string;
+      editLocation: string;
+      createBrandTitle: string;
+      createLocationTitle: string;
+      brandName: string;
+      brandDomain: string;
+      brandBio: string;
+      affiliateTypes: string;
+      affiliateTypesHint: string;
+      country: string;
+      language: string;
+      topics: string;
+      competitors: string;
+      onePerLine: string;
+      active: string;
+      archived: string;
+      defaultBadge: string;
+      archive: string;
+      restore: string;
+      archiving: string;
+      restoring: string;
+      saving: string;
+      brandsUsed: string;
+      locationsUsed: string;
+      unlimited: string;
+      planCapacity: string;
+      noBrands: string;
+      noBrandsDescription: string;
+      noLocations: string;
+      noLocationsDescription: string;
+      showArchived: string;
+      hideArchived: string;
+      searchDefaults: string;
+      topicCount: string;
+      competitorCount: string;
+      autoScanOn: string;
+      autoScanOff: string;
+      archiveBrandTitle: string;
+      archiveBrandMessage: string;
+      archiveLocationTitle: string;
+      archiveLocationMessage: string;
+      archiveSafetyNote: string;
+      errors: {
+        generic: string;
+        planLimit: string;
+        subscriptionRequired: string;
+        activeSearch: string;
+        lastContext: string;
+        duplicateBrand: string;
+        duplicateLocation: string;
+        tooManyValues: string;
+        refreshFailed: string;
+      };
+    };
     credits: {
       topicSearches: string;      // Full label: "Topic Searches"
       topicSearchesShort: string; // Short label: "Search" (January 9th, 2026)
@@ -553,6 +625,15 @@ export interface Dictionary {
         keywordsPlaceholder: string;
         addButton: string;
         websiteLabel: string;
+        targetMarket: string;
+        targetMarketHint: string;
+        savedLocation: string;
+        newLocation: string;
+        locationRequired: string;
+        confirmLocationTitle: string;
+        confirmLocationMessage: string;
+        addLocationAndSearch: string;
+        addingLocation: string;
         competitorsLabel: string;
         competitorsInputLabel: string;
         competitorsPlaceholder: string;
@@ -733,6 +814,10 @@ export interface Dictionary {
       pageTitle: string;
       tabs: {
         profile: {
+          label: string;
+          description: string;
+        };
+        brandsLocations: {
           label: string;
           description: string;
         };
@@ -1216,6 +1301,10 @@ export interface Dictionary {
     steps: string[];
     complete: string;
     elapsed: string;
+    errorTitle: string;
+    errorMessage: string;
+    retry: string;
+    continueToDashboard: string;
     estimatedTime: string;
     // Legacy fields kept for backwards compatibility
     thankYou: string;
@@ -1373,6 +1462,7 @@ export interface Dictionary {
   // Added: January 10th, 2026 - Priority 5: Shared Components
   // =========================================================================
   affiliateRow: {
+    searchLocation: string;
     // Status badges
     badges: {
       new: string;
@@ -1580,6 +1670,20 @@ export interface Dictionary {
     cancelAnytime: string;
     upgradeDowngradeNote: string;
     signInRequired: string;
+    downgradeChoiceTitle: string;
+    downgradeChoiceMessage: string;
+    brandsKept: string;
+    locationsKept: string;
+    keepBrand: string;
+    keepLocation: string;
+    noActiveLocations: string;
+    downgradeArchiveNote: string;
+    backToPlans: string;
+    confirmDowngrade: string;
+    confirmingDowngrade: string;
+    downgradePortfolioError: string;
+    upgradeRestorationComplete: string;
+    upgradeRestorationNeedsChoice: string;
   };
 }
 

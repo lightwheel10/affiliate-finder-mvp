@@ -64,8 +64,11 @@ import {
 // This ensures type safety when tracking API calls.
 // =============================================================================
 import { trackApiCall, API_COSTS, ApiService } from '@/app/services/tracking';
-import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 import { checkCredits, consumeCredits, refundCredits } from '@/lib/credits';
+import {
+  affiliateRequestErrorResponse,
+  resolveAffiliateRequestContext,
+} from '@/lib/affiliates/server';
 
 // Check if credit enforcement is enabled
 function isCreditEnforcementEnabled(): boolean {
@@ -124,23 +127,11 @@ export async function POST(request: NextRequest) {
   let refundAffiliateId = 'unknown';
 
   try {
-    // ==========================================================================
-    // AUTHENTICATION CHECK (December 2025)
-    // Verify user is authenticated via Stack Auth
-    // ==========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      console.error('[Email Enrich] Unauthorized: No authenticated user');
-      return NextResponse.json(
-        { error: 'Unauthorized. Please sign in.' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     const { 
       affiliateId, 
+      userId: legacyUserId,
+      brandLocationId,
       domain,
       originalDomain,
       personName,
@@ -164,27 +155,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ==========================================================================
-    // GET USER FROM DATABASE (December 2025)
-    // Use authenticated email to get userId - never trust client-provided userId
-    // 
-    // Updated January 16, 2026: Also fetch target_language for website scraper
-    // The scraper uses this to prioritize language-specific contact page paths
-    // ==========================================================================
-    const users = await sql`
-      SELECT id, target_language FROM crewcast.users WHERE email = ${authUser.email}
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: legacyUserId,
+      requestedBrandLocationId: brandLocationId,
+    });
+    const userId = context.accountId;
+    const targetLanguage = context.location.languageCode;
+
+    // Prove ownership before reserving a credit or calling a paid provider.
+    const ownedAffiliates = await sql`
+      SELECT id
+      FROM crewcast.saved_affiliates
+      WHERE id = ${affiliateId}
+        AND user_id = ${userId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+      LIMIT 1
     `;
-
-    if (users.length === 0) {
-      console.error(`[Email Enrich] User not found in database: ${authUser.email}`);
-      return NextResponse.json(
-        { error: 'User account not found. Please complete onboarding.' },
-        { status: 404 }
-      );
+    if (ownedAffiliates.length !== 1) {
+      return NextResponse.json({ error: 'Affiliate not found' }, { status: 404 });
     }
-
-    const userId = users[0].id as number;
-    const targetLanguage = users[0].target_language as string | null;
 
     // 2026-08-04 (Paras): captured for the catch-block refund (see above).
     refundUserId = userId;
@@ -283,7 +273,10 @@ export async function POST(request: NextRequest) {
     await sql`
       UPDATE crewcast.saved_affiliates 
       SET email_status = 'searching'
-      WHERE id = ${affiliateId} AND user_id = ${userId}
+      WHERE id = ${affiliateId}
+        AND user_id = ${userId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
     `;
 
     // ==========================================================================
@@ -291,7 +284,7 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     
     // Clean and validate domain
-    let searchDomain = cleanDomain(domain);
+    const searchDomain = cleanDomain(domain);
     const isFromSocialPlatform = isSocialPlatformDomain(searchDomain);
     
     // Log what we're working with
@@ -419,6 +412,8 @@ export async function POST(request: NextRequest) {
       errorMessage: result.error,
       estimatedCost: result.costEstimate || API_COSTS[serviceName],
       durationMs: Date.now() - startTime,
+      brandId: context.brandId,
+      brandLocationId: context.brandLocationId,
     });
 
     // ==========================================================================
@@ -474,7 +469,10 @@ export async function POST(request: NextRequest) {
         email_searched_at = NOW(),
         email_provider = ${result.provider},
         email_results = ${emailResultsData ? JSON.stringify(emailResultsData) : null}
-      WHERE id = ${affiliateId} AND user_id = ${userId}
+      WHERE id = ${affiliateId}
+        AND user_id = ${userId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
     `;
 
     // ==========================================================================
@@ -515,6 +513,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Email enrichment error:', error);
 
     // 2026-08-04 (Paras): if the lookup threw AFTER the reserve-first block

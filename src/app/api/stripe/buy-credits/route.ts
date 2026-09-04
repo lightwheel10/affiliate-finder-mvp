@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, getCreditPackDetails, isValidCreditPackId } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
 
 // =============================================================================
 // POST /api/stripe/buy-credits
@@ -25,17 +29,16 @@ interface BuyCreditsBody {
 
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const body: BuyCreditsBody = await request.json();
-    const { userId, packId } = body;
+    const { userId: legacyUserId, packId } = body;
 
-    if (!userId || typeof userId !== 'number') {
+    if (!legacyUserId || typeof legacyUserId !== 'number') {
       return NextResponse.json({ error: 'Valid user ID is required' }, { status: 400 });
     }
+    assertLegacyAccountId(legacyUserId, authenticated.account.id);
+    const userId = authenticated.account.id;
     if (!packId || typeof packId !== 'string' || !isValidCreditPackId(packId)) {
       return NextResponse.json({ error: 'Valid credit pack is required' }, { status: 400 });
     }
@@ -57,9 +60,6 @@ export async function POST(request: NextRequest) {
     }
 
     const row = userAndSub[0];
-    if (authUser.email !== row.email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
 
     const status = row.status?.toLowerCase();
     if (!row.stripe_customer_id || status !== 'active') {
@@ -134,6 +134,9 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     });
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('[Stripe Buy Credits] Error:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred. Please try again.' },

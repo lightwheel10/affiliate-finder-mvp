@@ -54,6 +54,8 @@ export interface SimilarWebData {
 
 export interface ResultItem {
   id?: number;  // Database ID (for saved/discovered affiliates)
+  brandId?: string;
+  brandLocationId?: string;
   title: string;
   link: string;
   domain: string;

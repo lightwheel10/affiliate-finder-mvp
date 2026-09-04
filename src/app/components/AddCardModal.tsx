@@ -119,7 +119,7 @@ const CardForm: React.FC<{
         throw new Error(errorData.error || 'Failed to initialize card setup');
       }
 
-      const { clientSecret, customerId } = await setupRes.json();
+      const { clientSecret } = await setupRes.json();
 
       // Step 2: Confirm card setup with Stripe (handles 3D Secure)
       const setupResult = await confirmSetup(clientSecret, cardholderName);
@@ -137,7 +137,6 @@ const CardForm: React.FC<{
         body: JSON.stringify({
           userId,
           paymentMethodId: setupResult.paymentMethodId,
-          customerId,
         }),
       });
 

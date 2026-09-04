@@ -21,6 +21,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { useNeonUser } from './useNeonUser';
 import { ResultItem, SimilarWebData } from '../types';
+import { affiliateIdentityKey } from '../utils/affiliate-grouping';
 
 // =============================================================================
 // SHARED BIO-EMAIL EXTRACTOR — 2026-06-15 (paras)
@@ -68,6 +69,67 @@ const fetcher = async (url: string) => {
   }
   return res.json();
 };
+
+type AffiliateLocationScope = readonly string[] | undefined;
+
+function buildLocationScopeQuery(locationIds: AffiliateLocationScope): string {
+  return (locationIds ?? [])
+    .map((locationId) => `&brandLocationId=${encodeURIComponent(locationId)}`)
+    .join('');
+}
+
+function getSingleLocationId(locationIds: AffiliateLocationScope): string | undefined {
+  return locationIds?.length === 1 ? locationIds[0] : undefined;
+}
+
+function getAffiliateLocationId(
+  affiliate: Pick<ResultItem, 'brandLocationId'>,
+  locationIds: AffiliateLocationScope,
+): string | undefined {
+  return affiliate.brandLocationId ?? getSingleLocationId(locationIds);
+}
+
+function resolveAffiliateMutationLocationId(
+  affiliate: Pick<ResultItem, 'brandLocationId'>,
+  locationIds: AffiliateLocationScope,
+): string | undefined {
+  const locationId = getAffiliateLocationId(affiliate, locationIds);
+  // undefined means the legacy feature-disabled path, where the server safely
+  // resolves the account's one default location. An explicit aggregate scope
+  // must never fall back because that could mutate the wrong location.
+  if (!locationId && locationIds !== undefined) {
+    throw new Error('A specific brand location is required for this action.');
+  }
+  return locationId;
+}
+
+/**
+ * Aggregate views can contain rows from several locations. Mutating endpoints
+ * intentionally accept exactly one location, so batches are split here and
+ * every request remains protected by the server's account/location checks.
+ */
+function groupAffiliatesByLocation(
+  affiliates: readonly ResultItem[],
+  locationIds: AffiliateLocationScope,
+): Map<string | undefined, ResultItem[]> {
+  const grouped = new Map<string | undefined, ResultItem[]>();
+  for (const affiliate of affiliates) {
+    const locationId = resolveAffiliateMutationLocationId(affiliate, locationIds);
+    const existing = grouped.get(locationId);
+    if (existing) existing.push(affiliate);
+    else grouped.set(locationId, [affiliate]);
+  }
+  return grouped;
+}
+
+function rawAffiliateIdentityKey(affiliate: {
+  brandLocationId?: string | number | null;
+  brand_location_id?: string | number | null;
+  link: string;
+}): string {
+  const locationId = affiliate.brandLocationId ?? affiliate.brand_location_id;
+  return `${locationId?.toString() ?? 'legacy'}::${affiliate.link}`;
+}
 
 // Transform database affiliate to ResultItem format
 // This function maps database columns (snake_case) to ResultItem fields (camelCase)
@@ -135,6 +197,8 @@ function transformAffiliate(dbAffiliate: any): ResultItem {
 
   return {
     id: dbAffiliate.id,
+    brandId: dbAffiliate.brand_id?.toString(),
+    brandLocationId: dbAffiliate.brand_location_id?.toString(),
     title: dbAffiliate.title,
     link: dbAffiliate.link,
     domain: dbAffiliate.domain,
@@ -388,8 +452,9 @@ function buildAffiliatePayload(userId: number, a: ResultItem) {
 // 
 // KEY BENEFIT: Sidebar count updates immediately when Page saves/removes affiliate
 // =============================================================================
-export function useSavedAffiliates() {
+export function useSavedAffiliates(locationIds?: AffiliateLocationScope, enabled = true) {
   const { userId, isLoading: userLoading } = useNeonUser();
+  const locationScopeQuery = buildLocationScopeQuery(locationIds);
   
   // ===========================================================================
   // SWR DATA FETCHING - January 3rd, 2026
@@ -400,7 +465,9 @@ export function useSavedAffiliates() {
   // 
   // Pass null as key when userId is not available to skip fetching.
   // ===========================================================================
-  const swrKey = userId ? `/api/affiliates/saved?userId=${userId}` : null;
+  const swrKey = userId && enabled
+    ? `/api/affiliates/saved?userId=${userId}${locationScopeQuery}`
+    : null;
   const { data, error, isLoading: swrLoading, mutate } = useSWR(swrKey, fetcher);
   
   // ===========================================================================
@@ -447,18 +514,27 @@ export function useSavedAffiliates() {
     if (!userId) return;
 
     try {
-      await fetch('/api/affiliates/saved', {
+      const targetBrandLocationId = resolveAffiliateMutationLocationId(affiliate, locationIds);
+      const response = await fetch('/api/affiliates/saved', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildAffiliatePayload(userId, affiliate)),
+        body: JSON.stringify({
+          ...buildAffiliatePayload(userId, affiliate),
+          brandLocationId: targetBrandLocationId,
+        }),
       });
+      if (!response.ok) throw new Error('Failed to save affiliate');
 
       // Optimistic update + revalidate: Updates ALL components instantly
       mutate(
         (currentData: any) => ({
           ...currentData,
           affiliates: [
-            { ...affiliate, saved_at: new Date().toISOString() },
+            {
+              ...affiliate,
+              ...(targetBrandLocationId ? { brand_location_id: targetBrandLocationId } : {}),
+              saved_at: new Date().toISOString(),
+            },
             ...(currentData?.affiliates || [])
           ]
         }),
@@ -467,38 +543,47 @@ export function useSavedAffiliates() {
     } catch (err) {
       console.error('Error saving affiliate:', err);
     }
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // ===========================================================================
   // REMOVE AFFILIATE - January 3rd, 2026
   // 
   // After removing, mutate() updates all components using this cache key.
   // ===========================================================================
-  const removeAffiliate = useCallback(async (link: string) => {
+  const removeAffiliate = useCallback(async (affiliate: Pick<ResultItem, 'link' | 'brandLocationId'>) => {
     if (!userId) return;
 
     try {
-      await fetch(`/api/affiliates/saved?userId=${userId}&link=${encodeURIComponent(link)}`, {
+      const targetBrandLocationId = resolveAffiliateMutationLocationId(affiliate, locationIds);
+      const response = await fetch(`/api/affiliates/saved?userId=${userId}&link=${encodeURIComponent(affiliate.link)}${targetBrandLocationId ? `&brandLocationId=${encodeURIComponent(targetBrandLocationId)}` : ''}`, {
         method: 'DELETE',
       });
+      if (!response.ok) throw new Error('Failed to remove affiliate');
 
       // Optimistic update + revalidate: Updates ALL components instantly
+      const targetKey = affiliateIdentityKey({ ...affiliate, brandLocationId: targetBrandLocationId });
       mutate(
         (currentData: any) => ({
           ...currentData,
-          affiliates: (currentData?.affiliates || []).filter((a: any) => a.link !== link)
+          affiliates: (currentData?.affiliates || []).filter(
+            (item: any) => rawAffiliateIdentityKey(item) !== targetKey,
+          )
         }),
         { revalidate: true }
       );
     } catch (err) {
       console.error('Error removing affiliate:', err);
     }
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // Check if an affiliate is saved
-  const isAffiliateSaved = useCallback((link: string) => {
-    return savedAffiliates.some(a => a.link === link);
-  }, [savedAffiliates]);
+  const isAffiliateSaved = useCallback((affiliate: Pick<ResultItem, 'link' | 'brandLocationId'>) => {
+    const targetLocationId = getAffiliateLocationId(affiliate, locationIds);
+    return savedAffiliates.some((savedAffiliate) =>
+      savedAffiliate.link === affiliate.link
+      && (!targetLocationId || savedAffiliate.brandLocationId === targetLocationId)
+    );
+  }, [locationIds, savedAffiliates]);
 
   /**
    * Find email for an affiliate using the enrichment service
@@ -526,6 +611,7 @@ export function useSavedAffiliates() {
     if (!userId || !affiliate.id) return null;
 
     const affiliateId = affiliate.id;
+    const targetBrandLocationId = resolveAffiliateMutationLocationId(affiliate, locationIds);
 
     // ==========================================================================
     // IN-FLIGHT DUPLICATE PREVENTION - January 24, 2026
@@ -623,6 +709,7 @@ export function useSavedAffiliates() {
           body: JSON.stringify({
             affiliateId,
             userId,
+            brandLocationId: targetBrandLocationId,
             emailStatus,
             email: bioEmail,
             provider: 'bio_extraction',
@@ -840,6 +927,7 @@ export function useSavedAffiliates() {
       const payload = {
         affiliateId,
         userId,
+        brandLocationId: targetBrandLocationId,
         // Domain info
         domain: searchDomain,
         originalDomain: affiliate.domain, // Keep original for reference
@@ -949,7 +1037,7 @@ export function useSavedAffiliates() {
       // ========================================================================
       inFlightEmailLookups.current.delete(affiliateId);
     }
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // ============================================================================
   // BULK SAVE AFFILIATES (Added Dec 2025, Updated January 3rd, 2026 for SWR)
@@ -971,32 +1059,42 @@ export function useSavedAffiliates() {
   }> => {
     if (!userId || affiliates.length === 0) return { savedCount: 0, duplicateCount: 0 };
 
+    let savedCount = 0;
+    let duplicateCount = 0;
+    let firstError: unknown;
+
     try {
-      const res = await fetch('/api/affiliates/saved/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          affiliates: affiliates.map(a => buildAffiliatePayloadWithoutUserId(a)),
-        }),
-      });
-
-      const data = await res.json();
-      const savedCount = data.count || 0;
-      const duplicateCount = data.duplicateCount || 0;
-
-      // Revalidate cache to get fresh data from server
-      // This updates ALL components using this cache key (including Sidebar)
-      if (savedCount > 0) {
-        mutate();
+      const batches = groupAffiliatesByLocation(affiliates, locationIds);
+      for (const [targetBrandLocationId, locationAffiliates] of batches) {
+        try {
+          const response = await fetch('/api/affiliates/saved/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              brandLocationId: targetBrandLocationId,
+              affiliates: locationAffiliates.map(buildAffiliatePayloadWithoutUserId),
+            }),
+          });
+          const data = await response.json();
+          if (!response.ok || data.error) {
+            throw new Error(data.error || 'Failed to bulk save affiliates');
+          }
+          savedCount += data.count || 0;
+          duplicateCount += data.duplicateCount || 0;
+        } catch (error) {
+          firstError ??= error;
+          console.error('Error bulk saving affiliates for location:', targetBrandLocationId, error);
+        }
       }
-
-      return { savedCount, duplicateCount };
-    } catch (err) {
-      console.error('Error bulk saving affiliates:', err);
-      return { savedCount: 0, duplicateCount: 0, error: err };
+    } catch (error) {
+      firstError = error;
+      console.error('Error preparing bulk saved-affiliate request:', error);
     }
-  }, [userId, mutate]);
+
+    if (savedCount > 0) mutate();
+    return { savedCount, duplicateCount, ...(firstError ? { error: firstError } : {}) };
+  }, [userId, locationIds, mutate]);
 
   // ============================================================================
   // BULK FIND EMAILS (Added Dec 2025, Updated January 3rd, 2026 for SWR)
@@ -1074,6 +1172,7 @@ export function useSavedAffiliates() {
       });
 
       try {
+        const targetBrandLocationId = resolveAffiliateMutationLocationId(affiliate, locationIds);
         // ========================================================================
         // SOCIAL MEDIA BIO EMAIL CHECK - January 14, 2026
         // 
@@ -1114,6 +1213,7 @@ export function useSavedAffiliates() {
             body: JSON.stringify({
               affiliateId: affiliate.id,
               userId,
+              brandLocationId: targetBrandLocationId,
               emailStatus,
               email: bioEmail,
               provider: 'bio_extraction',
@@ -1240,6 +1340,7 @@ export function useSavedAffiliates() {
         const payload = {
           affiliateId: affiliate.id,
           userId,
+          brandLocationId: targetBrandLocationId,
           domain: searchDomain,
           originalDomain: affiliate.domain,
           personName,
@@ -1376,7 +1477,7 @@ export function useSavedAffiliates() {
     }
 
     return { foundCount, notFoundCount, errorCount, skippedCount };
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // Helper function to extract the best search domain from an affiliate
   function extractSearchDomain(affiliate: ResultItem): string {
@@ -1411,40 +1512,43 @@ export function useSavedAffiliates() {
   // Used by Saved page for "Delete Selected" bulk action.
   // January 3rd, 2026: Now uses SWR mutate() to update all components instantly.
   // ============================================================================
-  const removeAffiliatesBulk = useCallback(async (links: string[]) => {
-    if (!userId || links.length === 0) return { removedCount: 0 };
+  const removeAffiliatesBulk = useCallback(async (affiliates: ResultItem[]) => {
+    if (!userId || affiliates.length === 0) return { removedCount: 0 };
 
+    let removedCount = 0;
+    let firstError: unknown;
     try {
-      const res = await fetch('/api/affiliates/saved/batch', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, links }),
-      });
-
-      const data = await res.json();
-
-      // Check if API returned an error
-      if (!res.ok || data.error) {
-        console.error('API error during bulk remove:', data.error);
-        return { removedCount: 0, error: data.error };
+      const batches = groupAffiliatesByLocation(affiliates, locationIds);
+      for (const [targetBrandLocationId, locationAffiliates] of batches) {
+        try {
+          const response = await fetch('/api/affiliates/saved/batch', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              brandLocationId: targetBrandLocationId,
+              links: locationAffiliates.map((affiliate) => affiliate.link),
+            }),
+          });
+          const data = await response.json();
+          if (!response.ok || data.error) {
+            throw new Error(data.error || 'Failed to bulk remove affiliates');
+          }
+          removedCount += data.count || 0;
+        } catch (error) {
+          firstError ??= error;
+          console.error('Error bulk removing affiliates for location:', targetBrandLocationId, error);
+        }
       }
-
-      // Update cache after confirmed server success (updates ALL components)
-      const linksSet = new Set(links);
-      mutate(
-        (currentData: any) => ({
-          ...currentData,
-          affiliates: (currentData?.affiliates || []).filter((a: any) => !linksSet.has(a.link))
-        }),
-        { revalidate: true }
-      );
-
-      return { removedCount: data.count || 0 };
-    } catch (err) {
-      console.error('Error bulk removing affiliates:', err);
-      return { removedCount: 0, error: err };
+    } catch (error) {
+      firstError = error;
+      console.error('Error preparing bulk saved-affiliate removal:', error);
     }
-  }, [userId, mutate]);
+
+    // Revalidate instead of guessing which partial batches succeeded.
+    await mutate();
+    return { removedCount, ...(firstError ? { error: firstError } : {}) };
+  }, [userId, locationIds, mutate]);
 
   // ===========================================================================
   // RETURN VALUES - January 3rd, 2026
@@ -1478,8 +1582,9 @@ export function useSavedAffiliates() {
 // 
 // KEY BENEFIT: Sidebar count updates immediately when affiliates are discovered
 // =============================================================================
-export function useDiscoveredAffiliates() {
+export function useDiscoveredAffiliates(locationIds?: AffiliateLocationScope, enabled = true) {
   const { userId, isLoading: userLoading } = useNeonUser();
+  const locationScopeQuery = buildLocationScopeQuery(locationIds);
   
   // ===========================================================================
   // SWR DATA FETCHING - January 3rd, 2026
@@ -1490,7 +1595,9 @@ export function useDiscoveredAffiliates() {
   // 
   // Pass null as key when userId is not available to skip fetching.
   // ===========================================================================
-  const swrKey = userId ? `/api/affiliates/discovered?userId=${userId}` : null;
+  const swrKey = userId && enabled
+    ? `/api/affiliates/discovered?userId=${userId}${locationScopeQuery}`
+    : null;
   const { data, error, isLoading: swrLoading, mutate } = useSWR(swrKey, fetcher);
   
   // ===========================================================================
@@ -1540,21 +1647,29 @@ export function useDiscoveredAffiliates() {
     if (!userId) return;
 
     try {
-      await fetch('/api/affiliates/discovered', {
+      const targetBrandLocationId = resolveAffiliateMutationLocationId(affiliate, locationIds);
+      const response = await fetch('/api/affiliates/discovered', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...buildAffiliatePayload(userId, affiliate),
+          brandLocationId: targetBrandLocationId,
           searchKeyword,
         }),
       });
+      if (!response.ok) throw new Error('Failed to save discovered affiliate');
 
       // Optimistic update + revalidate: Updates ALL components instantly
       mutate(
         (currentData: any) => ({
           ...currentData,
           affiliates: [
-            { ...affiliate, discovered_at: new Date().toISOString(), search_keyword: searchKeyword },
+            {
+              ...affiliate,
+              ...(targetBrandLocationId ? { brand_location_id: targetBrandLocationId } : {}),
+              discovered_at: new Date().toISOString(),
+              search_keyword: searchKeyword,
+            },
             ...(currentData?.affiliates || [])
           ]
         }),
@@ -1563,7 +1678,7 @@ export function useDiscoveredAffiliates() {
     } catch (err) {
       console.error('Error saving discovered affiliate:', err);
     }
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // ===========================================================================
   // BATCH SAVE DISCOVERED AFFILIATES - January 3rd, 2026
@@ -1574,48 +1689,58 @@ export function useDiscoveredAffiliates() {
     if (!userId || affiliates.length === 0) return;
 
     try {
-      await fetch('/api/affiliates/discovered/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          searchKeyword,
-          affiliates: affiliates.map(a => buildAffiliatePayloadWithoutUserId(a)),
-        }),
-      });
+      const batches = groupAffiliatesByLocation(affiliates, locationIds);
+      for (const [targetBrandLocationId, locationAffiliates] of batches) {
+        const response = await fetch('/api/affiliates/discovered/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            brandLocationId: targetBrandLocationId,
+            searchKeyword,
+            affiliates: locationAffiliates.map(buildAffiliatePayloadWithoutUserId),
+          }),
+        });
+        if (!response.ok) throw new Error('Failed to batch save discovered affiliates');
+      }
 
       // Revalidate cache to get fresh data (updates ALL components)
       mutate();
     } catch (err) {
       console.error('Error batch saving discovered affiliates:', err);
     }
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // ===========================================================================
   // REMOVE DISCOVERED AFFILIATE - January 3rd, 2026
   // 
   // After removing, mutate() updates all components using this cache key.
   // ===========================================================================
-  const removeDiscoveredAffiliate = useCallback(async (link: string) => {
+  const removeDiscoveredAffiliate = useCallback(async (affiliate: Pick<ResultItem, 'link' | 'brandLocationId'>) => {
     if (!userId) return;
 
     try {
-      await fetch(`/api/affiliates/discovered?userId=${userId}&link=${encodeURIComponent(link)}`, {
+      const targetBrandLocationId = resolveAffiliateMutationLocationId(affiliate, locationIds);
+      const response = await fetch(`/api/affiliates/discovered?userId=${userId}&link=${encodeURIComponent(affiliate.link)}${targetBrandLocationId ? `&brandLocationId=${encodeURIComponent(targetBrandLocationId)}` : ''}`, {
         method: 'DELETE',
       });
+      if (!response.ok) throw new Error('Failed to remove discovered affiliate');
 
       // Optimistic update + revalidate: Updates ALL components instantly
+      const targetKey = affiliateIdentityKey({ ...affiliate, brandLocationId: targetBrandLocationId });
       mutate(
         (currentData: any) => ({
           ...currentData,
-          affiliates: (currentData?.affiliates || []).filter((a: any) => a.link !== link)
+          affiliates: (currentData?.affiliates || []).filter(
+            (item: any) => rawAffiliateIdentityKey(item) !== targetKey,
+          )
         }),
         { revalidate: true }
       );
     } catch (err) {
       console.error('Error removing discovered affiliate:', err);
     }
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // ===========================================================================
   // CLEAR ALL DISCOVERED - January 3rd, 2026
@@ -1623,19 +1748,22 @@ export function useDiscoveredAffiliates() {
   // After clearing, mutate() updates all components using this cache key.
   // ===========================================================================
   const clearAllDiscovered = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || (locationIds !== undefined && locationIds.length === 0)) return;
 
     try {
-      await fetch(`/api/affiliates/discovered?userId=${userId}&clearAll=true`, {
-        method: 'DELETE',
-      });
+      for (const targetBrandLocationId of locationIds ?? [undefined]) {
+        const response = await fetch(`/api/affiliates/discovered?userId=${userId}&clearAll=true${targetBrandLocationId ? `&brandLocationId=${encodeURIComponent(targetBrandLocationId)}` : ''}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to clear discovered affiliates');
+      }
 
       // Optimistic update: Set to empty array, then revalidate
       mutate({ affiliates: [] }, { revalidate: true });
     } catch (err) {
       console.error('Error clearing discovered affiliates:', err);
     }
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // ============================================================================
   // BULK REMOVE DISCOVERED AFFILIATES (Added Dec 2025, Updated January 3rd, 2026)
@@ -1643,40 +1771,43 @@ export function useDiscoveredAffiliates() {
   // Used by Discovered and Find New pages for "Delete Selected" bulk action.
   // January 3rd, 2026: Now uses SWR mutate() to update all components instantly.
   // ============================================================================
-  const removeDiscoveredAffiliatesBulk = useCallback(async (links: string[]) => {
-    if (!userId || links.length === 0) return { removedCount: 0 };
+  const removeDiscoveredAffiliatesBulk = useCallback(async (affiliates: ResultItem[]) => {
+    if (!userId || affiliates.length === 0) return { removedCount: 0 };
 
+    let removedCount = 0;
+    let firstError: unknown;
     try {
-      const res = await fetch('/api/affiliates/discovered/batch', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, links }),
-      });
-
-      const data = await res.json();
-
-      // Check if API returned an error
-      if (!res.ok || data.error) {
-        console.error('API error during bulk remove:', data.error);
-        return { removedCount: 0, error: data.error };
+      const batches = groupAffiliatesByLocation(affiliates, locationIds);
+      for (const [targetBrandLocationId, locationAffiliates] of batches) {
+        try {
+          const response = await fetch('/api/affiliates/discovered/batch', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              brandLocationId: targetBrandLocationId,
+              links: locationAffiliates.map((affiliate) => affiliate.link),
+            }),
+          });
+          const data = await response.json();
+          if (!response.ok || data.error) {
+            throw new Error(data.error || 'Failed to bulk remove discovered affiliates');
+          }
+          removedCount += data.count || 0;
+        } catch (error) {
+          firstError ??= error;
+          console.error('Error bulk removing discovered affiliates for location:', targetBrandLocationId, error);
+        }
       }
-
-      // Update cache after confirmed server success (updates ALL components)
-      const linksSet = new Set(links);
-      mutate(
-        (currentData: any) => ({
-          ...currentData,
-          affiliates: (currentData?.affiliates || []).filter((a: any) => !linksSet.has(a.link))
-        }),
-        { revalidate: true }
-      );
-
-      return { removedCount: data.count || 0 };
-    } catch (err) {
-      console.error('Error bulk removing discovered affiliates:', err);
-      return { removedCount: 0, error: err };
+    } catch (error) {
+      firstError = error;
+      console.error('Error preparing bulk discovered-affiliate removal:', error);
     }
-  }, [userId, mutate]);
+
+    // Revalidate instead of guessing which partial batches succeeded.
+    await mutate();
+    return { removedCount, ...(firstError ? { error: firstError } : {}) };
+  }, [userId, locationIds, mutate]);
 
   // ============================================================================
   // UPDATE SIMILARWEB DATA (Added December 16, 2025, Updated January 3rd, 2026)
@@ -1691,16 +1822,22 @@ export function useDiscoveredAffiliates() {
   // ============================================================================
   const updateDiscoveredAffiliateSimilarWeb = useCallback(async (
     domain: string, 
-    similarWeb: SimilarWebData
+    similarWeb: SimilarWebData,
+    requestedBrandLocationId?: string,
   ) => {
     if (!userId) return;
 
     try {
+      const targetBrandLocationId = requestedBrandLocationId ?? getSingleLocationId(locationIds);
+      if (!targetBrandLocationId) {
+        throw new Error('A specific brand location is required to update SimilarWeb data.');
+      }
       const response = await fetch('/api/affiliates/discovered', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
+          brandLocationId: targetBrandLocationId,
           domain,
           similarWeb,
         }),
@@ -1715,7 +1852,13 @@ export function useDiscoveredAffiliates() {
         (currentData: any) => ({
           ...currentData,
           affiliates: (currentData?.affiliates || []).map((affiliate: any) => {
-            if (affiliate.domain === domain && affiliate.source === 'Web') {
+            const affiliateLocationId = affiliate.brand_location_id?.toString()
+              ?? affiliate.brandLocationId?.toString();
+            if (
+              affiliate.domain === domain
+              && affiliate.source === 'Web'
+              && affiliateLocationId === targetBrandLocationId
+            ) {
               return {
                 ...affiliate,
                 similarweb_monthly_visits: similarWeb.monthlyVisits,
@@ -1739,7 +1882,7 @@ export function useDiscoveredAffiliates() {
     } catch (err) {
       console.error('Error updating SimilarWeb data:', err);
     }
-  }, [userId, mutate]);
+  }, [userId, locationIds, mutate]);
 
   // ===========================================================================
   // RETURN VALUES - January 3rd, 2026

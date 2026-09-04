@@ -46,8 +46,13 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import {
+  MARKET_COUNTRIES as COUNTRIES,
+  MARKET_LANGUAGES as LANGUAGES,
+} from '@/lib/markets/catalog';
 // January 19th, 2026: Removed Stack Auth import
 // import { useUser } from '@stackframe/stack';
 // Now using useSupabaseUser hook which provides supabaseUser
@@ -83,16 +88,43 @@ import {
   Sparkles,     // February 2026: Added for AI credits
   Search,       // February 2026: Added for search credits
   ShoppingCart, // February 2026: Added for buy credits
-  Ban           // February 2026: Added for Blocked Domains tab
+  Ban,          // February 2026: Added for Blocked Domains tab
+  Building2,
 } from 'lucide-react';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useBrandLocation } from '@/contexts/BrandLocationContext';
 import { useBlockedDomains } from '../../hooks/useBlockedDomains';
 
-type SettingsTab = 'profile' | 'plan' | 'buy_credits' | 'security' | 'blocked_domains';
+// Keep the ordinary Profile/Billing Settings path light. The larger portfolio
+// editor is downloaded only after the user opens its dedicated tab.
+const BrandLocationSettingsPanel = dynamic(
+  () => import('../../components/brand-locations/BrandLocationSettingsPanel')
+    .then((module) => module.BrandLocationSettingsPanel),
+  {
+    loading: () => (
+      <div className="h-64 animate-pulse rounded-2xl bg-[#f6f9fc] dark:bg-gray-900" aria-hidden="true" />
+    ),
+  },
+);
+
+type SettingsTab = 'profile' | 'brands' | 'plan' | 'buy_credits' | 'security' | 'blocked_domains';
+
+const SETTINGS_TABS = new Set<SettingsTab>([
+  'profile',
+  'brands',
+  'plan',
+  'buy_credits',
+  'security',
+  'blocked_domains',
+]);
+
+function isSettingsTab(value: string | null): value is SettingsTab {
+  return value !== null && SETTINGS_TABS.has(value as SettingsTab);
+}
 
 // =============================================================================
 // SETTINGS PAGE - January 3rd, 2026
@@ -101,10 +133,11 @@ type SettingsTab = 'profile' | 'plan' | 'buy_credits' | 'security' | 'blocked_do
 // This component only renders the header and main content area.
 // =============================================================================
 export default function SettingsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
+  const { featureEnabled: brandLocationsEnabled } = useBrandLocation();
   
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const { userId, user: neonUser, refetch: refetchNeonUser, supabaseUser } = useSupabaseUser();
   const { subscription, isLoading: subscriptionLoading, isTrialing, isPastDue, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
@@ -130,15 +163,10 @@ export default function SettingsPage() {
   // Sync tab from URL and handle credit_purchase=success | cancelled
   useEffect(() => {
     if (!searchParams) return;
-    const tab = searchParams.get('tab');
-    // 2026-08-20 20:34 IST: Pricing modal links here to show Plan & Billing only, without opening cancellation.
-    if (tab === 'plan') setActiveTab('plan');
-    if (tab === 'buy_credits') setActiveTab('buy_credits');
     const purchase = searchParams.get('credit_purchase');
     if (purchase === 'success') {
       setCreditPurchaseSuccess(true);
       setCreditPurchaseCancelled(false);
-      setActiveTab('buy_credits');
       // February 2026: Fallback fulfillment -- call /api/credits/fulfill to process
       // any pending purchases in case the Stripe webhook hasn't fired yet.
       // This is safe because addTopupCredits is idempotent (won't double-add).
@@ -168,17 +196,46 @@ export default function SettingsPage() {
     } else if (purchase === 'cancelled') {
       setCreditPurchaseCancelled(true);
       setCreditPurchaseSuccess(false);
-      setActiveTab('buy_credits');
       const url = new URL(window.location.href);
       url.searchParams.delete('credit_purchase');
       window.history.replaceState({}, '', url.toString());
     }
-  }, [searchParams]);
+  }, [searchParams, userId]);
+
+  const requestedTab = searchParams?.get('tab') ?? null;
+  const purchaseStatus = searchParams?.get('credit_purchase') ?? null;
+  const activeTab: SettingsTab = purchaseStatus === 'success' || purchaseStatus === 'cancelled'
+    ? 'buy_credits'
+    : isSettingsTab(requestedTab) && (requestedTab !== 'brands' || brandLocationsEnabled)
+      ? requestedTab
+      : 'profile';
+
+  const changeTab = useCallback((tab: SettingsTab) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (tab === 'profile') {
+      params.delete('tab');
+    } else {
+      params.set('tab', tab);
+    }
+    const query = params.toString();
+    router.replace(query ? `/settings?${query}` : '/settings', { scroll: false });
+  }, [router, searchParams]);
 
   // Tabs - Translated (January 9th, 2026)
   // February 2, 2026: Removed notifications tab - was non-functional placeholder UI
-  const tabs = [
+  const tabs: Array<{
+    id: SettingsTab;
+    label: string;
+    icon: React.ReactNode;
+    description: string;
+  }> = [
     { id: 'profile', label: t.dashboard.settings.tabs.profile.label, icon: <User size={16} />, description: t.dashboard.settings.tabs.profile.description },
+    ...(brandLocationsEnabled ? [{
+      id: 'brands' as const,
+      label: t.dashboard.settings.tabs.brandsLocations.label,
+      icon: <Building2 size={16} />,
+      description: t.dashboard.settings.tabs.brandsLocations.description,
+    }] : []),
     { id: 'plan', label: t.dashboard.settings.tabs.plan.label, icon: <CreditCard size={16} />, description: t.dashboard.settings.tabs.plan.description },
     { id: 'buy_credits', label: t.dashboard.settings.tabs.buyCredits.label, icon: <Coins size={16} />, description: t.dashboard.settings.tabs.buyCredits.description },
     { id: 'blocked_domains', label: t.dashboard.settings.tabs.blockedDomains.label, icon: <Ban size={16} />, description: t.dashboard.settings.tabs.blockedDomains.description },
@@ -229,7 +286,7 @@ export default function SettingsPage() {
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as SettingsTab)}
+                    onClick={() => changeTab(tab.id)}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200",
                       activeTab === tab.id
@@ -252,7 +309,7 @@ export default function SettingsPage() {
             {/* Right Panel — smoover refresh (April 25th, 2026). Hairline #e6ebf1 border + rounded-2xl + shadow-soft-sm (matches onboarding card shell + Message Viewer modal). */}
             <div className="flex-1 min-w-0 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm overflow-hidden">
               <div className="h-full overflow-y-auto p-6 lg:p-8">
-                <div className="max-w-2xl">
+                <div className={activeTab === 'brands' ? 'max-w-none' : 'max-w-2xl'}>
                   {/* January 13th, 2026: Removed tab title and description as per user request */}
                   {activeTab === 'profile' && (
                     <>
@@ -262,6 +319,7 @@ export default function SettingsPage() {
                         neonUserId={userId}
                         currentCountry={neonUser?.target_country}
                         currentLanguage={neonUser?.target_language}
+                        manageTargetMarketInBrands={brandLocationsEnabled}
                         onProfileUpdated={refetchNeonUser}
                       />
                       {/* 2026-08-03 (Paras): weekly auto-scan opt-out — lives on
@@ -275,6 +333,9 @@ export default function SettingsPage() {
                         onChanged={refetchNeonUser}
                       />
                     </>
+                  )}
+                  {activeTab === 'brands' && brandLocationsEnabled && (
+                    <BrandLocationSettingsPanel />
                   )}
                   {activeTab === 'plan' && (
                     <PlanSettings
@@ -300,7 +361,7 @@ export default function SettingsPage() {
                     />
                   )}
                   {activeTab === 'blocked_domains' && <BlockedDomainsSettings />}
-                  {activeTab === 'security' && <SecuritySettings user={supabaseUser} neonUserId={userId} />}  {/* January 19th, 2026: Changed from Stack user */}
+                  {activeTab === 'security' && <SecuritySettings user={supabaseUser} />}
                 </div>
               </div>
             </div>
@@ -516,67 +577,11 @@ interface ProfileSettingsProps {
   neonUserId: number | null;
   currentCountry?: string | null;   // January 13th, 2026: From Neon DB
   currentLanguage?: string | null;  // January 13th, 2026: From Neon DB
+  manageTargetMarketInBrands: boolean;
   onProfileUpdated?: () => void;
 }
 
-// =============================================================================
-// COUNTRIES LIST - January 13th, 2026
-// Same list as onboarding for consistency
-// =============================================================================
-const COUNTRIES = [
-  { name: 'United States', code: 'us' },
-  { name: 'United Kingdom', code: 'gb' },
-  { name: 'Germany', code: 'de' },
-  { name: 'Canada', code: 'ca' },
-  { name: 'Australia', code: 'au' },
-  { name: 'France', code: 'fr' },
-  { name: 'Spain', code: 'es' },
-  { name: 'Italy', code: 'it' },
-  { name: 'Netherlands', code: 'nl' },
-  { name: 'Switzerland', code: 'ch' },
-  { name: 'Austria', code: 'at' },
-  { name: 'Sweden', code: 'se' },
-  { name: 'Norway', code: 'no' },
-  { name: 'Denmark', code: 'dk' },
-  { name: 'Poland', code: 'pl' },
-  { name: 'Japan', code: 'jp' },
-  { name: 'Singapore', code: 'sg' },
-  { name: 'United Arab Emirates', code: 'ae' },
-];
-
-// =============================================================================
-// LANGUAGES LIST - January 13th, 2026
-// February 2, 2026: Updated to use flags instead of symbols (matching onboarding)
-// - Replaced 'symbol' with 'code' for flag country codes
-// - Added 'nameDE' for German translations
-// - Uses flagcdn.com for flag images (same as countries dropdown)
-// =============================================================================
-const LANGUAGES = [
-  // Major Western Languages
-  { name: 'English', nameDE: 'Englisch', code: 'gb' },
-  { name: 'Spanish', nameDE: 'Spanisch', code: 'es' },
-  { name: 'German', nameDE: 'Deutsch', code: 'de' },
-  { name: 'French', nameDE: 'Französisch', code: 'fr' },
-  { name: 'Portuguese', nameDE: 'Portugiesisch', code: 'pt' },
-  { name: 'Italian', nameDE: 'Italienisch', code: 'it' },
-  { name: 'Dutch', nameDE: 'Niederländisch', code: 'nl' },
-  // Nordic Languages
-  { name: 'Swedish', nameDE: 'Schwedisch', code: 'se' },
-  { name: 'Danish', nameDE: 'Dänisch', code: 'dk' },
-  { name: 'Norwegian', nameDE: 'Norwegisch', code: 'no' },
-  { name: 'Finnish', nameDE: 'Finnisch', code: 'fi' },
-  // Central/Eastern European
-  { name: 'Polish', nameDE: 'Polnisch', code: 'pl' },
-  { name: 'Czech', nameDE: 'Tschechisch', code: 'cz' },
-  // Asian Languages
-  { name: 'Japanese', nameDE: 'Japanisch', code: 'jp' },
-  { name: 'Korean', nameDE: 'Koreanisch', code: 'kr' },
-  // Middle Eastern
-  { name: 'Arabic', nameDE: 'Arabisch', code: 'sa' },
-  { name: 'Hebrew', nameDE: 'Hebräisch', code: 'il' },
-];
-
-function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, currentLanguage, onProfileUpdated }: ProfileSettingsProps) {
+function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, currentLanguage, manageTargetMarketInBrands, onProfileUpdated }: ProfileSettingsProps) {
   // January 17, 2026: Added i18n support
   const { t } = useLanguage();
   
@@ -641,10 +646,11 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: neonUserId,
             name: editName.trim(),
-            targetCountry: editCountry || null,
-            targetLanguage: editLanguage || null,
+            ...(manageTargetMarketInBrands ? {} : {
+              targetCountry: editCountry || null,
+              targetLanguage: editLanguage || null,
+            }),
           }),
         });
 
@@ -677,12 +683,12 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
 
   // Get country code for flag (January 13th, 2026)
   const getCountryCode = (countryName: string) => {
-    return COUNTRIES.find(c => c.name === countryName)?.code || '';
+    return COUNTRIES.find(c => c.name === countryName)?.isoCode || '';
   };
 
   // February 2, 2026: Updated to use flag codes instead of symbols (matching onboarding)
   const getLanguageCode = (langName: string) => {
-    return LANGUAGES.find(l => l.name === langName)?.code || '';
+    return LANGUAGES.find(l => l.name === langName)?.flagCountryCode || '';
   };
   
   // Flag URL helper - same pattern as onboarding and countries dropdown
@@ -729,7 +735,8 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
         </div>
       </div>
 
-      {/* Country & Language Section — smoover refresh (April 25th, 2026) */}
+      {!manageTargetMarketInBrands && (
+      /* Country & Language Section — smoover refresh (April 25th, 2026) */
       <div className="pt-4 border-t border-[#e6ebf1] dark:border-gray-700">
         <div className="flex items-center gap-2 mb-4">
           <Globe size={16} className="text-[#8898aa]" />
@@ -771,7 +778,7 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-700 rounded-xl shadow-soft-lg z-50 max-h-48 overflow-y-auto">
                     {COUNTRIES.map((country) => (
                       <button
-                        key={country.code}
+                        key={country.isoCode}
                         type="button"
                         onClick={() => {
                           setEditCountry(country.name);
@@ -783,7 +790,7 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                         )}
                       >
                         <img
-                          src={`https://flagcdn.com/w20/${country.code}.png`}
+                          src={`https://flagcdn.com/w20/${country.isoCode}.png`}
                           alt={country.name}
                           className="w-5 h-4 object-cover border border-[#e6ebf1]"
                         />
@@ -859,7 +866,7 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
                         )}
                       >
                         <img
-                          src={getFlagUrl(lang.code)}
+                          src={getFlagUrl(lang.flagCountryCode)}
                           alt={lang.name}
                           className="w-5 h-4 object-cover border border-[#e6ebf1]"
                         />
@@ -890,6 +897,7 @@ function ProfileSettings({ supabaseUser, userName, neonUserId, currentCountry, c
           </div>
         </div>
       </div>
+      )}
 
       {/* Action Buttons — smoover refresh (April 24th, 2026)
           Divider: hairline border-t border-[#e6ebf1].
@@ -1041,7 +1049,7 @@ function AutoScanToggle({ userId, enabled, onChanged }: AutoScanToggleProps) {
       const res = await fetch('/api/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: userId, autoScanEnabled: !enabled }),
+        body: JSON.stringify({ autoScanEnabled: !enabled }),
       });
       if (!res.ok) throw new Error(`PATCH /api/users failed: ${res.status}`);
       onChanged();
@@ -2028,14 +2036,13 @@ function BlockedDomainsSettings() {
 // - Simple modal with current/new/confirm password fields
 // - Added Delete Account functionality with confirmation modal
 // - User must type "DELETE" to confirm account deletion
-// - Deletes: Stripe subscription, all user data, Stack Auth account
+// - Deletes: Stripe subscription, application data and Supabase Auth account
 // =============================================================================
 interface SecuritySettingsProps {
   user: any;
-  neonUserId: number | null;
 }
 
-function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
+function SecuritySettings({ user }: SecuritySettingsProps) {
   // January 17, 2026: Added i18n support
   const { t } = useLanguage();
   
@@ -2155,19 +2162,14 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
   // 
   // This is an IRREVERSIBLE action that:
   // 1. Cancels Stripe subscription immediately
-  // 2. Deletes all user data from Neon DB
-  // 3. Deletes user from Stack Auth
+  // 2. Deletes application data from Supabase PostgreSQL
+  // 3. Deletes the user from Supabase Auth
   // 4. Signs out and redirects to home
   // ==========================================================================
   // January 17, 2026: Updated with i18n translations
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') {
       setDeleteError(t.dashboard.settings.security.deleteModal.confirmError);
-      return;
-    }
-
-    if (!neonUserId) {
-      setDeleteError(t.dashboard.settings.security.deleteModal.userIdError);
       return;
     }
 
@@ -2179,7 +2181,6 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: neonUserId,
           confirmText: deleteConfirmText,
         }),
       });
@@ -2191,7 +2192,7 @@ function SecuritySettings({ user, neonUserId }: SecuritySettingsProps) {
       }
 
       // Success - redirect to home page
-      // The user is already signed out by the API (Stack Auth deletion)
+      // The Supabase Auth identity has been deleted by the API.
       window.location.href = '/';
     } catch (err: any) {
       console.error('Error deleting account:', err);

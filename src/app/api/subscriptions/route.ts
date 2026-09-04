@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbSubscription } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
+import {
+  readPendingSubscriptionPlanChange,
+  type SubscriptionPlanChangeSql,
+} from '@/lib/stripe/subscription-plan-changes-postgres';
 
 // =============================================================================
 // GET /api/subscriptions?userId=xxx
@@ -24,14 +32,7 @@ export async function GET(request: NextRequest) {
     // ==========================================================================
     // AUTHENTICATION CHECK
     // ==========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -40,29 +41,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const userIdNum = parseInt(userId);
-    if (isNaN(userIdNum)) {
-      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
-    }
+    assertLegacyAccountId(userId, authenticated.account.id);
+    const userIdNum = authenticated.account.id;
 
     // ==========================================================================
     // AUTHORIZATION CHECK
     // Verify the authenticated user matches the requested user
     // ==========================================================================
     const users = await sql`
-      SELECT email FROM crewcast.users WHERE id = ${userIdNum}
+      SELECT id FROM crewcast.users WHERE id = ${userIdNum}
     `;
 
     if (users.length === 0) {
       return NextResponse.json({ subscription: null });
-    }
-
-    if (authUser.email !== users[0].email) {
-      console.error(`[Subscriptions] Authorization failed: ${authUser.email} tried to access subscription for user ${userIdNum}`);
-      return NextResponse.json(
-        { error: 'Not authorized to access this resource' },
-        { status: 403 }
-      );
     }
 
     // ==========================================================================
@@ -90,8 +81,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ subscription: null });
     }
 
-    return NextResponse.json({ subscription: subscriptions[0] as DbSubscription });
+    const pending = await readPendingSubscriptionPlanChange(
+      sql as unknown as SubscriptionPlanChangeSql,
+      userIdNum,
+    );
+    return NextResponse.json({
+      subscription: subscriptions[0] as DbSubscription,
+      pendingPlanChange: pending
+        ? {
+            plan: pending.toPlan,
+            billingInterval: pending.toBillingInterval,
+            effectiveAt: pending.effectiveAt,
+            retainedBrandIds: pending.retainedBrandIds,
+            retainedLocationIds: pending.retainedLocationIds,
+          }
+        : null,
+    });
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching subscription:', error);
     return NextResponse.json({ error: 'Failed to fetch subscription' }, { status: 500 });
   }

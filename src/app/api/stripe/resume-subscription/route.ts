@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
 
 // =============================================================================
 // POST /api/stripe/resume-subscription
@@ -10,7 +14,7 @@ import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2
 // This removes the cancellation and the subscription continues normally.
 //
 // SECURITY:
-// - Requires authenticated Stack Auth session
+// - Requires an authenticated Supabase application account
 // - Verifies authenticated user matches the requested userId
 // - Validates userId exists
 // - Verifies user owns the subscription
@@ -23,59 +27,22 @@ export async function POST(request: NextRequest) {
     // AUTHENTICATION CHECK
     // Verify the user is authenticated via Stack Auth
     // ==========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      console.error('[Stripe] Unauthorized: No authenticated user');
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const body = await request.json();
-    const { userId } = body;
+    const { userId: legacyUserId } = body;
 
     // ==========================================================================
     // INPUT VALIDATION
     // ==========================================================================
-    if (!userId || typeof userId !== 'number') {
+    if (!legacyUserId || typeof legacyUserId !== 'number') {
       return NextResponse.json(
         { error: 'Valid user ID is required' },
         { status: 400 }
       );
     }
-
-    // ==========================================================================
-    // GET USER AND SUBSCRIPTION FROM DATABASE
-    // ==========================================================================
-    const userAndSub = await sql`
-      SELECT u.email, s.stripe_subscription_id, s.stripe_customer_id, s.status, s.cancel_at_period_end
-      FROM crewcast.users u
-      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
-      WHERE u.id = ${userId}
-    `;
-
-    if (userAndSub.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const userData = userAndSub[0];
-
-    // ==========================================================================
-    // AUTHORIZATION CHECK
-    // Verify the authenticated user matches the requested user
-    // ==========================================================================
-    if (authUser.email !== userData.email) {
-      console.error(`[Stripe] Authorization failed: ${authUser.email} tried to resume subscription for user ${userId}`);
-      return NextResponse.json(
-        { error: 'Not authorized to access this resource' },
-        { status: 403 }
-      );
-    }
+    assertLegacyAccountId(legacyUserId, authenticated.account.id);
+    const userId = authenticated.account.id;
 
     // ==========================================================================
     // GET SUBSCRIPTION FROM DATABASE
@@ -148,6 +115,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('[Stripe] Error resuming subscription:', error);
     
     if (error instanceof Error && 'type' in error) {

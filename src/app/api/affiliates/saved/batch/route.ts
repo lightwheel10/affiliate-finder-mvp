@@ -14,7 +14,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  affiliateRequestErrorResponse,
+  resolveAffiliateRequestContext,
+} from '@/lib/affiliates/server';
 // 2026-07-27 13:23 IST (Paras): defensive image re-hosting on save — see the
 // comment above the rehost block in POST for the full WHY.
 import { rehostImageIfNeeded } from '@/lib/image-storage';
@@ -43,25 +46,17 @@ export const maxDuration = 60;
  */
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { userId, affiliates } = body;
+    const { userId, brandLocationId, affiliates } = body;
 
     if (!userId || !affiliates || !Array.isArray(affiliates)) {
       return NextResponse.json({ error: 'Missing required fields: userId and affiliates array' }, { status: 400 });
     }
 
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: userId,
+      requestedBrandLocationId: brandLocationId,
+    });
 
     const insertedIds: number[] = [];
     let duplicateCount = 0;
@@ -170,7 +165,10 @@ export async function POST(request: NextRequest) {
       // Check for duplicate (same user + same link)
       const existing = await sql`
         SELECT id FROM crewcast.saved_affiliates 
-        WHERE user_id = ${userId} AND link = ${link}
+        WHERE user_id = ${context.accountId}
+          AND brand_id = ${context.brandId}::bigint
+          AND brand_location_id = ${context.brandLocationId}::bigint
+          AND link = ${link}
       `;
 
       if (existing.length > 0) {
@@ -185,7 +183,8 @@ export async function POST(request: NextRequest) {
       // Insert new affiliate
       const newAffiliates = await sql`
         INSERT INTO crewcast.saved_affiliates (
-          user_id, title, link, domain, snippet, source,
+          user_id, brand_id, brand_location_id,
+          title, link, domain, snippet, source,
           is_affiliate, person_name, summary, email, thumbnail,
           views, date, rank, keyword, highlighted_words,
           discovery_method_type, discovery_method_value,
@@ -204,7 +203,8 @@ export async function POST(request: NextRequest) {
           similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries
         )
         VALUES (
-          ${userId}, ${title}, ${link}, ${domain}, ${snippet || ''}, ${source},
+          ${context.accountId}, ${context.brandId}::bigint, ${context.brandLocationId}::bigint,
+          ${title}, ${link}, ${domain}, ${snippet || ''}, ${source},
           ${isAffiliate ?? null}, ${personName ?? null}, ${summary ?? null}, 
           ${email ?? null}, ${permThumbnail ?? null}, ${views ?? null},
           ${date ?? null}, ${rank ?? null}, ${keyword ?? null},
@@ -227,9 +227,16 @@ export async function POST(request: NextRequest) {
           ${similarwebTrafficSources ? JSON.stringify(similarwebTrafficSources) : null}, 
           ${similarwebTopCountries ? JSON.stringify(similarwebTopCountries) : null}
         )
+        ON CONFLICT (brand_location_id, link) DO NOTHING
         RETURNING id
       `;
-      insertedIds.push(newAffiliates[0].id as number);
+      if (newAffiliates.length === 1) {
+        insertedIds.push(newAffiliates[0].id as number);
+      } else {
+        // A concurrent request inserted the same location/link after the
+        // optimization check above. The unique key is authoritative.
+        duplicateCount++;
+      }
     }
 
     return NextResponse.json({ 
@@ -238,6 +245,10 @@ export async function POST(request: NextRequest) {
       duplicateCount 
     });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error batch saving affiliates to pipeline:', error);
     return NextResponse.json({ error: 'Failed to batch save affiliates' }, { status: 500 });
   }
@@ -261,31 +272,26 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { userId, links } = body;
+    const { userId, brandLocationId, links } = body;
 
     if (!userId || !links || !Array.isArray(links) || links.length === 0) {
       return NextResponse.json({ error: 'Missing required fields: userId and links array' }, { status: 400 });
     }
 
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: userId,
+      requestedBrandLocationId: brandLocationId,
+    });
 
     // Delete all matching affiliates in one query using ANY
     // RETURNING * gives us the actual deleted rows so we can count them accurately
     const deletedRows = await sql`
       DELETE FROM crewcast.saved_affiliates 
-      WHERE user_id = ${userId} AND link = ANY(${links})
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+        AND link = ANY(${links})
       RETURNING id
     `;
 
@@ -294,6 +300,10 @@ export async function DELETE(request: NextRequest) {
       count: deletedRows.length  // Actual count of deleted rows
     });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error batch removing saved affiliates:', error);
     return NextResponse.json({ error: 'Failed to batch remove affiliates' }, { status: 500 });
   }

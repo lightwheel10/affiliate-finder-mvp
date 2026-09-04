@@ -49,28 +49,22 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import { resolveAuthenticatedAccount } from '@/lib/auth/account';
 import { sql } from '@/lib/db';
 import { needsRehosting, rehostImageIfNeeded } from '@/lib/image-storage';
-import { consumeCredits } from '@/lib/credits';
 import { 
   getRunStatus, 
   fetchAndProcessResults,
   GoogleScraperStatus,
 } from '@/app/services/apify-google-scraper';
 import { 
-  Platform, 
   SearchResult,
   filterWebResults,
   filterSocialResults,
 } from '@/app/services/search';
 // January 30, 2026: Import both blocking (legacy) and non-blocking enrichment functions
 import {
-  enrichYouTubeByUrls,
-  enrichInstagramByUrls,
-  enrichTikTokByUrls,
   // Non-blocking enrichment functions
-  startAllEnrichment,
   checkAllEnrichmentStatus,
   fetchRunCostsUsd,
   fetchYouTubeEnrichmentResults,
@@ -80,9 +74,41 @@ import {
   EnrichmentRunIds,
   SimilarWebData,
 } from '@/app/services/apify';
-import { trackApiCall } from '@/app/services/tracking';
 // January 30, 2026: Import discovery method extraction for correct topic/competitor attribution
 import { extractDiscoveryMethod } from '@/app/utils/localized-search';
+import {
+  failSearchJob,
+  finalizeSearchJob,
+  loadCompletedSearchResults,
+  loadOwnedSearchJob,
+  persistSearchResultBatch,
+} from '@/lib/search/status-postgres';
+import {
+  countResultSources,
+  type SearchResultSnapshot,
+} from '@/lib/search/status';
+import {
+  buildEnrichmentDispatchInputs,
+  type EnrichmentDispatchContext,
+} from '@/lib/search/enrichment-dispatch';
+import {
+  dispatchServerEnrichmentActors,
+  initializeServerEnrichmentDispatches,
+} from '@/lib/search/enrichment-dispatch-server';
+
+type InstagramEnrichmentResult = Awaited<
+  ReturnType<typeof fetchInstagramEnrichmentResults>
+> extends Map<string, infer TResult> ? TResult : never;
+
+type InstagramPostResult = InstagramEnrichmentResult & {
+  displayUrl?: string;
+  caption?: string;
+  likesCount?: number;
+  commentsCount?: number;
+  videoViewCount?: number;
+  ownerFullName?: string;
+  ownerUsername?: string;
+};
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -156,31 +182,23 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // AUTHENTICATION CHECK
     // January 29, 2026
     // ==========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
+    const authenticated = await resolveAuthenticatedAccount();
+
+    if (!authenticated) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in.', code: 'UNAUTHORIZED' },
         { status: 401 }
       );
     }
-    
-    // ==========================================================================
-    // GET USER FROM DATABASE
-    // January 29, 2026
-    // ==========================================================================
-    const users = await sql`
-      SELECT id FROM crewcast.users WHERE email = ${authUser.email}
-    `;
-    
-    if (users.length === 0) {
+
+    if (!authenticated.account) {
       return NextResponse.json(
         { error: 'User account not found.', code: 'USER_NOT_FOUND' },
         { status: 404 }
       );
     }
-    
-    const userId = users[0].id as number;
+
+    const userId = authenticated.account.id;
     
     // ==========================================================================
     // GET JOB FROM DATABASE
@@ -189,86 +207,32 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // 
     // Verify user owns this job to prevent unauthorized access.
     // ==========================================================================
-    const jobs = await sql`
-      SELECT id, user_id, keyword, sources, apify_run_id, status, 
-             created_at, user_settings, results_count,
-             enrichment_status, enrichment_run_ids, raw_results
-      FROM crewcast.search_jobs 
-      WHERE id = ${jobIdNum} AND user_id = ${userId}
-    `;
-    
-    if (jobs.length === 0) {
+    const jobContext = await loadOwnedSearchJob(userId, jobIdNum);
+
+    if (!jobContext) {
       return NextResponse.json(
         { error: 'Job not found or access denied.', code: 'JOB_NOT_FOUND' },
         { status: 404 }
       );
     }
-    
-    const job = jobs[0];
-    const apifyRunId = job.apify_run_id as string;
-    const jobStatus = job.status as string;
-    
-    // January 30, 2026: DEFENSIVE PARSING for user_settings JSONB
-    // JSONB fields can come back as strings from postgres in some cases.
-    // Parse if needed to ensure isOnboarding, topics, etc. are accessible.
-    let userSettings: {
-      targetCountry?: string | null;
-      targetLanguage?: string | null;
-      userBrand?: string | null;
-      isOnboarding?: boolean;
-      topics?: string[];
-      competitors?: string[];
-    } | null = null;
-    
-    if (job.user_settings) {
-      if (typeof job.user_settings === 'string') {
-        try {
-          userSettings = JSON.parse(job.user_settings);
-          console.log(`🔍 [Search/Status] Parsed user_settings from string, isOnboarding=${userSettings?.isOnboarding}`);
-        } catch (e) {
-          console.error(`[Search/Status] Failed to parse user_settings:`, e);
-        }
-      } else if (typeof job.user_settings === 'object') {
-        userSettings = job.user_settings as typeof userSettings;
-      }
-    }
-    
-    console.log(`🔍 [Search/Status] userSettings: isOnboarding=${userSettings?.isOnboarding}, topics=${userSettings?.topics?.join(',')}`);
-    
-    // January 30, 2026: Non-blocking enrichment state
-    const enrichmentStatus = job.enrichment_status as string | null;
-    
-    // Parse enrichment_run_ids (JSONB may come back as string from database)
-    let enrichmentRunIds: EnrichmentRunIds | null = null;
-    if (job.enrichment_run_ids) {
-      if (typeof job.enrichment_run_ids === 'string') {
-        try {
-          enrichmentRunIds = JSON.parse(job.enrichment_run_ids);
-          console.log(`🔍 [Search/Status] Parsed enrichment_run_ids from string:`, enrichmentRunIds);
-        } catch (e) {
-          console.error(`[Search/Status] Failed to parse enrichment_run_ids:`, e);
-        }
-      } else if (typeof job.enrichment_run_ids === 'object') {
-        enrichmentRunIds = job.enrichment_run_ids as EnrichmentRunIds;
-      }
-    }
-    
-    // Ensure rawResults is an array (JSONB may come back in unexpected formats)
-    let rawResults: SearchResult[] | null = null;
-    if (job.raw_results) {
-      if (Array.isArray(job.raw_results)) {
-        rawResults = job.raw_results as SearchResult[];
-      } else if (typeof job.raw_results === 'string') {
-        try {
-          const parsed = JSON.parse(job.raw_results);
-          rawResults = Array.isArray(parsed) ? parsed : null;
-        } catch (e) {
-          console.error(`[Search/Status] Failed to parse raw_results:`, e);
-        }
-      } else {
-        console.error(`[Search/Status] raw_results is not an array, type: ${typeof job.raw_results}`);
-      }
-    }
+    const job = {
+      keyword: jobContext.keyword,
+      results_count: jobContext.resultsCount,
+    };
+    const apifyRunId = jobContext.apifyRunId;
+    const jobStatus = jobContext.status;
+    const userSettings = jobContext.settings;
+    const enrichmentStatus = jobContext.enrichmentStatus;
+    const enrichmentRunIds = jobContext.enrichmentRunIds as EnrichmentRunIds | null;
+    const rawResults = jobContext.rawResults;
+    const dispatchContext: EnrichmentDispatchContext = {
+      accountId: userId,
+      jobId: jobIdNum,
+      brandId: jobContext.brandId,
+      brandLocationId: jobContext.brandLocationId,
+    };
+
+    console.log(`🔍 [Search/Status] immutable settings: isOnboarding=${userSettings.isOnboarding}, topics=${userSettings.topics.join(',')}`);
     
     // ==========================================================================
     // CHECK IF ALREADY COMPLETE
@@ -277,10 +241,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // If job is already done/failed, return immediately without checking Apify.
     // ==========================================================================
     if (jobStatus === 'done') {
+      const completedResults = await loadCompletedSearchResults(userId, jobIdNum);
       return NextResponse.json({
         status: 'done',
         message: 'Search completed previously.',
-        resultsCount: job.results_count as number,
+        results: completedResults,
+        resultsCount: completedResults.length || jobContext.resultsCount || 0,
+        breakdown: countResultSources(completedResults),
       });
     }
     
@@ -288,6 +255,33 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       return NextResponse.json({
         status: jobStatus as 'failed' | 'timeout',
         message: 'Search failed. Please try again.',
+      });
+    }
+
+    if (!jobContext.isActive) {
+      const realCostUsd = await fetchRunCostsUsd([apifyRunId]);
+      await failSearchJob(jobContext, {
+        terminalStatus: 'failed',
+        errorMessage: 'Brand location archived while search was running',
+        estimatedCostUsd: realCostUsd,
+        durationMs: Date.now() - startTime,
+      });
+      return NextResponse.json({
+        status: 'failed',
+        message: 'The brand location was archived while this search was running.',
+      });
+    }
+
+    if (
+      (enrichmentStatus === 'dispatching' || enrichmentStatus === 'dispatch_blocked')
+      && rawResults
+    ) {
+      const dispatch = await dispatchServerEnrichmentActors(dispatchContext);
+      return NextResponse.json({
+        status: 'enriching',
+        message: dispatch.outcome === 'blocked'
+          ? 'Enrichment launch is safely paused for reconciliation.'
+          : 'Enriching results with social media data...',
       });
     }
     
@@ -463,6 +457,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         
         // Process and save completed platforms' results
         let savedThisPoll = 0;
+        const preparedThisPoll: SearchResultSnapshot[] = [];
         
         // Helper to save enriched results (ON CONFLICT DO NOTHING handles duplicates)
         // January 30, 2026: Added ALL missing columns for TikTok, Instagram, YouTube
@@ -479,14 +474,6 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               onboardingCompetitors
             );
             
-            // February 4, 2026: Serialize JSON fields for SimilarWeb traffic data
-            const swTrafficSources = (result as any).similarwebTrafficSources 
-              ? JSON.stringify((result as any).similarwebTrafficSources) 
-              : null;
-            const swTopCountries = (result as any).similarwebTopCountries 
-              ? JSON.stringify((result as any).similarwebTopCountries) 
-              : null;
-            
             // 2026-06-15 (paras): permanent IG/TikTok image hosting — see
             // lib/image-storage.ts. Only social rows have expiring CDN images, and
             // this helper runs on every 3s status poll, so we re-host an image only
@@ -498,7 +485,11 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             if (needsRehosting(permThumbnail) || needsRehosting(permChannelThumbnail)) {
               const alreadySaved = await sql`
                 SELECT 1 FROM crewcast.discovered_affiliates
-                WHERE user_id = ${userId} AND link = ${result.link} LIMIT 1
+                WHERE user_id = ${userId}
+                  AND brand_id = ${jobContext.brandId}::bigint
+                  AND brand_location_id = ${jobContext.brandLocationId}::bigint
+                  AND link = ${result.link}
+                LIMIT 1
               `;
               if (alreadySaved.length === 0) {
                 [permThumbnail, permChannelThumbnail] = await Promise.all([
@@ -508,57 +499,20 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               }
             }
 
-            await sql`
-              INSERT INTO crewcast.discovered_affiliates (
-                user_id, search_keyword, title, link, domain, snippet, source,
-                is_affiliate, summary, thumbnail, date, views, highlighted_words,
-                discovery_method_type, discovery_method_value,
-                channel_name, channel_link, channel_thumbnail, channel_verified, channel_subscribers,
-                duration, email,
-                youtube_video_likes, youtube_video_comments,
-                instagram_username, instagram_full_name, instagram_bio, instagram_followers,
-                instagram_following, instagram_posts_count, instagram_is_business, instagram_is_verified,
-                instagram_post_likes, instagram_post_comments, instagram_post_views,
-                tiktok_username, tiktok_display_name, tiktok_bio, tiktok_followers,
-                tiktok_following, tiktok_likes, tiktok_videos_count, tiktok_is_verified,
-                tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares,
-                similarweb_monthly_visits, similarweb_global_rank, similarweb_country_rank,
-                similarweb_country_code, similarweb_bounce_rate, similarweb_pages_per_visit,
-                similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries
-              )
-              VALUES (
-                ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
-                ${result.snippet || 'No description available'}, ${result.source},
-                ${true}, ${'Found via onboarding search'}, ${permThumbnail || null},
-                ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
-                ${discovery.type}, ${discovery.value},
-                ${result.channel?.name || null}, ${result.channel?.link || null},
-                ${permChannelThumbnail || null}, ${result.channel?.verified || null},
-                ${result.channel?.subscribers || null}, ${result.duration || null},
-                ${result.email || null},
-                ${(result as any).youtubeVideoLikes || null}, ${(result as any).youtubeVideoComments || null},
-                ${(result as any).instagramUsername || null}, ${(result as any).instagramFullName || null},
-                ${(result as any).instagramBio || null}, ${(result as any).instagramFollowers || null},
-                ${(result as any).instagramFollowing || null}, ${(result as any).instagramPostsCount || null},
-                ${(result as any).instagramIsBusiness || null}, ${(result as any).instagramIsVerified || null},
-                ${(result as any).instagramPostLikes || null}, ${(result as any).instagramPostComments || null},
-                ${(result as any).instagramPostViews || null},
-                ${(result as any).tiktokUsername || null}, ${(result as any).tiktokDisplayName || null},
-                ${(result as any).tiktokBio || null}, ${(result as any).tiktokFollowers || null},
-                ${(result as any).tiktokFollowing || null}, ${(result as any).tiktokLikes || null},
-                ${(result as any).tiktokVideosCount || null}, ${(result as any).tiktokIsVerified || null},
-                ${(result as any).tiktokVideoPlays || null}, ${(result as any).tiktokVideoLikes || null},
-                ${(result as any).tiktokVideoComments || null}, ${(result as any).tiktokVideoShares || null},
-                ${(result as any).similarwebMonthlyVisits || null}, ${(result as any).similarwebGlobalRank || null},
-                ${(result as any).similarwebCountryRank || null}, ${(result as any).similarwebCountryCode || null},
-                ${(result as any).similarwebBounceRate || null}, ${(result as any).similarwebPagesPerVisit || null},
-                ${(result as any).similarwebTimeOnSite || null}, ${(result as any).similarwebCategory || null},
-                ${swTrafficSources}, ${swTopCountries}
-              )
-              ON CONFLICT (user_id, link) DO NOTHING
-            `;
+            const snapshot: SearchResultSnapshot = {
+              ...result,
+              thumbnail: permThumbnail,
+              channel: result.channel
+                ? { ...result.channel, thumbnail: permChannelThumbnail }
+                : result.channel,
+              discoveryMethod: {
+                type: discovery.type === 'competitor' ? 'competitor' : 'topic',
+                value: discovery.value,
+              },
+            };
+            preparedThisPoll.push(snapshot);
             return true;
-          } catch (e) {
+          } catch {
             return false;
           }
         };
@@ -610,42 +564,43 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             const username = usernameMatch && !['p', 'reel', 'reels', 'stories', 'explore', 'accounts'].includes(usernameMatch[1]) 
               ? usernameMatch[1].toLowerCase() 
               : null;
-            const apifyData = username 
+            const apifyData = username
               ? instagramEnrichment.get(username) || instagramEnrichment.get(result.link)
               : instagramEnrichment.get(result.link);
             // January 30, 2026: Fixed field mapping for both POST URLs and PROFILE URLs
             // POST URLs: displayUrl, caption, likesCount at root level (owner* fields for author)
             // PROFILE URLs: profilePicUrl at root, post data in latestPosts[0]
-            const isPostUrl = !!(apifyData as any).displayUrl && !apifyData.latestPosts;
-            const firstPost = apifyData.latestPosts?.[0];
-            
+            const instagramData = apifyData as InstagramPostResult | undefined;
+            const isPostUrl = Boolean(instagramData?.displayUrl && !instagramData.latestPosts);
+            const firstPost = instagramData?.latestPosts?.[0];
+
             // For RELEVANT CONTENT: Use post data (from root for POST URLs, from latestPosts[0] for PROFILE URLs)
-            const postThumbnail = isPostUrl 
-              ? (apifyData as any).displayUrl 
+            const postThumbnail = isPostUrl
+              ? instagramData?.displayUrl
               : firstPost?.displayUrl;
-            const postCaption = isPostUrl 
-              ? (apifyData as any).caption 
+            const postCaption = isPostUrl
+              ? instagramData?.caption
               : firstPost?.caption;
-            const postLikes = isPostUrl 
-              ? (apifyData as any).likesCount 
+            const postLikes = isPostUrl
+              ? instagramData?.likesCount
               : firstPost?.likesCount;
-            const postComments = isPostUrl 
-              ? (apifyData as any).commentsCount 
+            const postComments = isPostUrl
+              ? instagramData?.commentsCount
               : firstPost?.commentsCount;
-            const postViews = isPostUrl 
-              ? (apifyData as any).videoViewCount 
+            const postViews = isPostUrl
+              ? instagramData?.videoViewCount
               : firstPost?.videoViewCount;
-            
+
             // For AFFILIATE column: Use profile pic (from profilePicUrl for PROFILE URLs, not available for POST URLs)
-            const profilePic = apifyData.profilePicUrlHD || apifyData.profilePicUrl;
+            const profilePic = instagramData?.profilePicUrlHD || instagramData?.profilePicUrl;
             
-            const enriched = apifyData ? {
+            const enriched = instagramData ? {
               ...result,
-              channel: { 
-                name: (apifyData as any).ownerFullName || (apifyData as any).ownerUsername || apifyData.fullName || apifyData.username, 
-                link: `https://www.instagram.com/${(apifyData as any).ownerUsername || apifyData.username}/`,
-                verified: (apifyData as any).verified || apifyData.verified, 
-                subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
+              channel: {
+                name: instagramData.ownerFullName || instagramData.ownerUsername || instagramData.fullName || instagramData.username,
+                link: `https://www.instagram.com/${instagramData.ownerUsername || instagramData.username}/`,
+                verified: instagramData.verified,
+                subscribers: instagramData.followersCount ? formatNumber(instagramData.followersCount) : undefined,
                 // AFFILIATE column thumbnail: profile pic (for PROFILE URLs) or null (for POST URLs)
                 thumbnail: profilePic,
               },
@@ -653,14 +608,14 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               thumbnail: postThumbnail || profilePic,
               // RELEVANT CONTENT title: post caption
               title: postCaption?.substring(0, 100) || result.title,
-              instagramUsername: (apifyData as any).ownerUsername || apifyData.username, 
-              instagramFullName: (apifyData as any).ownerFullName || apifyData.fullName, 
-              instagramBio: apifyData.biography,
-              instagramFollowers: apifyData.followersCount, 
-              instagramFollowing: apifyData.followsCount,
-              instagramPostsCount: apifyData.postsCount, 
-              instagramIsBusiness: apifyData.isBusinessAccount, 
-              instagramIsVerified: (apifyData as any).verified || apifyData.verified,
+              instagramUsername: instagramData.ownerUsername || instagramData.username,
+              instagramFullName: instagramData.ownerFullName || instagramData.fullName,
+              instagramBio: instagramData.biography,
+              instagramFollowers: instagramData.followersCount,
+              instagramFollowing: instagramData.followsCount,
+              instagramPostsCount: instagramData.postsCount,
+              instagramIsBusiness: instagramData.isBusinessAccount,
+              instagramIsVerified: instagramData.verified,
               // Post engagement stats
               instagramPostLikes: postLikes,
               instagramPostComments: postComments,
@@ -669,7 +624,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             
             // January 30, 2026: Brand filtering - skip if this is user's own brand account
             const igChannelName = enriched.channel?.name;
-            const igUsername = (enriched as any).instagramUsername;
+            const igUsername = enriched.instagramUsername;
             if (shouldExcludeResult('Instagram', igChannelName, igUsername, null)) {
               console.log(`🚫 [Incremental] Excluded Instagram (user's brand): @${igUsername || igChannelName}`);
               continue;
@@ -719,8 +674,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             
             // January 30, 2026: Brand filtering - skip if this is user's own brand account
             const ttChannelName = enriched.channel?.name;
-            const ttUsername = (enriched as any).tiktokUsername;
-            const ttDisplayName = (enriched as any).tiktokDisplayName;
+            const ttUsername = enriched.tiktokUsername;
+            const ttDisplayName = enriched.tiktokDisplayName;
             if (shouldExcludeResult('TikTok', ttChannelName, ttUsername, null) ||
                 shouldExcludeResult('TikTok', ttDisplayName, null, null)) {
               console.log(`🚫 [Incremental] Excluded TikTok (user's brand): @${ttUsername || ttChannelName}`);
@@ -762,7 +717,30 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
           }
         }
         
-        console.log(`💾 [Search/Status] Incremental save: ${savedThisPoll} new results saved (${completedActors}/${totalActors} actors complete)`);
+        if (preparedThisPoll.length > 0) {
+          const persisted = await persistSearchResultBatch(jobContext, preparedThisPoll);
+          if (persisted.outcome === 'inactive_location') {
+            const realCostUsd = await fetchRunCostsUsd([
+              apifyRunId,
+              enrichmentRunIds?.youtube,
+              enrichmentRunIds?.instagram,
+              enrichmentRunIds?.tiktok,
+              enrichmentRunIds?.similarweb,
+            ]);
+            await failSearchJob(jobContext, {
+              terminalStatus: 'failed',
+              errorMessage: 'Brand location archived while search was running',
+              estimatedCostUsd: realCostUsd,
+              durationMs: Date.now() - startTime,
+            });
+            return NextResponse.json({
+              status: 'failed',
+              message: 'The brand location was archived while this search was running.',
+            });
+          }
+          savedThisPoll = persisted.occurrenceCount;
+        }
+        console.log(`💾 [Search/Status] Incremental save: ${savedThisPoll} job occurrences persisted (${completedActors}/${totalActors} actors complete)`);
       }
       
       // 2026-07-29 10:33 IST (Paras): budget hit — some rows are still unsaved,
@@ -811,6 +789,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         UPDATE crewcast.search_jobs
         SET enrichment_status = 'finalizing', started_at = NOW()
         WHERE id = ${jobIdNum}
+          AND user_id = ${userId}
+          AND brand_id = ${jobContext.brandId}::bigint
+          AND brand_location_id = ${jobContext.brandLocationId}::bigint
           AND (
             enrichment_status = 'running'
             OR (enrichment_status = 'finalizing' AND (started_at IS NULL OR started_at < NOW() - INTERVAL '5 minutes'))
@@ -835,14 +816,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       // ==========================================================================
       if (isOnboardingJob) {
         console.log(`🚀 [Search/Status] Onboarding fast path - results already saved incrementally`);
-        
-        // Count actual results in DB for this user
-        const countResult = await sql`
-          SELECT COUNT(*) as count FROM crewcast.discovered_affiliates 
-          WHERE user_id = ${userId}
-        `;
-        const totalSaved = parseInt(countResult[0].count as string) || 0;
-        
+
         // 2026-07-29 11:15 IST (Paras): capture the REAL Apify bill for this
         // job (usageTotalUsd per run) at the only moment it's reliably
         // available — Apify deletes run records after its retention window.
@@ -855,24 +829,25 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
           enrichmentRunIds?.similarweb,
         ]);
 
-        // Update job status to done
-        await sql`
-          UPDATE crewcast.search_jobs
-          SET
-            status = 'done',
-            enrichment_status = 'succeeded',
-            completed_at = NOW(),
-            results_count = ${totalSaved},
-            estimated_cost = ${realCostUsd}
-          WHERE id = ${jobIdNum}
-        `;
-        
-        console.log(`✅ [Search/Status] Onboarding complete! Total affiliates: ${totalSaved}`);
-        
+        const finalized = await finalizeSearchJob(jobContext, {
+          results: [],
+          enrichmentSucceeded: true,
+          estimatedCostUsd: realCostUsd,
+          durationMs: Date.now() - startTime,
+        });
+        if (finalized.outcome === 'inactive_location') {
+          return NextResponse.json({
+            status: 'failed',
+            message: 'The brand location was archived while this search was running.',
+          });
+        }
+
+        console.log(`✅ [Search/Status] Onboarding complete! Job results: ${finalized.resultsCount}`);
+
         return NextResponse.json({
           status: 'done',
           message: 'Onboarding complete!',
-          resultsCount: totalSaved,
+          resultsCount: finalized.resultsCount,
         });
       }
       
@@ -949,36 +924,37 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
           ? instagramEnrichment.get(username) || instagramEnrichment.get(result.link)
           : instagramEnrichment.get(result.link);
         // Check for either profile data (username) or post data (ownerUsername)
-        const ownerUsername = (apifyData as any)?.ownerUsername || apifyData?.username;
-        const ownerFullName = (apifyData as any)?.ownerFullName || apifyData?.fullName;
-        if (apifyData && ownerUsername) {
+        const instagramData = apifyData as InstagramPostResult | undefined;
+        const ownerUsername = instagramData?.ownerUsername || instagramData?.username;
+        const ownerFullName = instagramData?.ownerFullName || instagramData?.fullName;
+        if (instagramData && ownerUsername) {
           return {
             ...result,
             channel: {
               name: ownerFullName || ownerUsername,
               link: `https://www.instagram.com/${ownerUsername}/`,
-              thumbnail: apifyData.profilePicUrlHD || apifyData.profilePicUrl,
-              verified: (apifyData as any).verified || apifyData.verified,
-              subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
+              thumbnail: instagramData.profilePicUrlHD || instagramData.profilePicUrl,
+              verified: instagramData.verified,
+              subscribers: instagramData.followersCount ? formatNumber(instagramData.followersCount) : undefined,
             },
             instagramUsername: ownerUsername,
             instagramFullName: ownerFullName,
-            instagramBio: apifyData.biography || (apifyData as any).caption,
-            instagramFollowers: apifyData.followersCount,
-            instagramFollowing: apifyData.followsCount,
-            instagramPostsCount: apifyData.postsCount,
-            instagramIsBusiness: apifyData.isBusinessAccount,
-            instagramIsVerified: (apifyData as any).verified || apifyData.verified,
+            instagramBio: instagramData.biography || instagramData.caption,
+            instagramFollowers: instagramData.followersCount,
+            instagramFollowing: instagramData.followsCount,
+            instagramPostsCount: instagramData.postsCount,
+            instagramIsBusiness: instagramData.isBusinessAccount,
+            instagramIsVerified: instagramData.verified,
             // Post stats - directly from apifyData (the data IS the post)
-            instagramPostLikes: (apifyData as any).likesCount,
-            instagramPostComments: (apifyData as any).commentsCount,
-            instagramPostViews: (apifyData as any).videoViewCount,
+            instagramPostLikes: instagramData.likesCount,
+            instagramPostComments: instagramData.commentsCount,
+            instagramPostViews: instagramData.videoViewCount,
             // Use post displayUrl as thumbnail
-            thumbnail: (apifyData as any).displayUrl || apifyData.profilePicUrlHD || apifyData.profilePicUrl,
+            thumbnail: instagramData.displayUrl || instagramData.profilePicUrlHD || instagramData.profilePicUrl,
             personName: ownerFullName || ownerUsername,
             // Use post caption for title/snippet
-            title: (apifyData as any).caption?.substring(0, 100) || ownerFullName || `@${ownerUsername}` || result.title,
-            snippet: (apifyData as any).caption?.substring(0, 300) || apifyData.biography?.substring(0, 300) || result.snippet,
+            title: instagramData.caption?.substring(0, 100) || ownerFullName || `@${ownerUsername}` || result.title,
+            snippet: instagramData.caption?.substring(0, 300) || instagramData.biography?.substring(0, 300) || result.snippet,
           };
         }
         return result;
@@ -1080,15 +1056,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         ...filteredWeb,
       ];
       
-      const breakdown = {
-        YouTube: filteredYouTube.length,
-        Instagram: filteredInstagram.length,
-        TikTok: filteredTikTok.length,
-        Web: filteredWeb.length,
-      };
-      
       console.log(`🔍 [Search/Status] Final results: ${allResults.length}`);
-      console.log(`🔍 [Search/Status] Breakdown: ${JSON.stringify(breakdown)}`);
+      console.log(`🔍 [Search/Status] Breakdown: ${JSON.stringify(countResultSources(allResults))}`);
       
       // ==========================================================================
       // January 30, 2026: Check if this is an onboarding job
@@ -1113,159 +1082,57 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         ? (onboardingTopics || [])
         : ((job.keyword as string)?.split(' | ').filter(Boolean) ?? []);
       const saveCompetitors = userSettings?.competitors || [];
-
-      if (allResults.length > 0) {
-        console.log(`💾 [Search/Status] Saving ${allResults.length} results to discovered_affiliates (server-side)...`);
-        
-        let savedCount = 0;
-        let errorCount = 0;
-        
-        // Helper to save a single result
-        // January 30, 2026: Now extracts correct discovery method from result.searchQuery
-        // February 2, 2026: Added SimilarWeb fields - were missing, causing traffic sources to show 0% in UI
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const saveResult = async (result: SearchResult & Record<string, any>) => {
-          try {
-            // Extract the actual topic/competitor that found this result
-            const discovery = extractDiscoveryMethod(
-              result.searchQuery,
-              saveTopics,
-              saveCompetitors
-            );
-
-            // SimilarWeb fields are added dynamically during enrichment (line ~880)
-            const sw = {
-              monthlyVisits: result.similarwebMonthlyVisits || null,
-              globalRank: result.similarwebGlobalRank || null,
-              countryRank: result.similarwebCountryRank || null,
-              countryCode: result.similarwebCountryCode || null,
-              bounceRate: result.similarwebBounceRate || null,
-              pagesPerVisit: result.similarwebPagesPerVisit || null,
-              timeOnSite: result.similarwebTimeOnSite || null,
-              category: result.similarwebCategory || null,
-              trafficSources: result.similarwebTrafficSources ? JSON.stringify(result.similarwebTrafficSources) : null,
-              topCountries: result.similarwebTopCountries ? JSON.stringify(result.similarwebTopCountries) : null,
-            };
-            
-            // 2026-06-15 (paras): permanent IG/TikTok image hosting — see
-            // lib/image-storage.ts. Same approach as the incremental save above:
-            // re-host only genuinely-new social rows (this path also relies on
-            // ON CONFLICT, so we existence-check first to avoid re-uploading images
-            // for rows already saved by the incremental poll). Best-effort fallback.
-            //
-            // 2026-07-27 13:23 IST (Paras): THE SAVE-FLOW LEAK FIX.
-            // The June 15 fix only used the re-hosted URLs for the INSERT below —
-            // the `result` object returned to the browser (resultsForClient, end
-            // of this handler) kept the RAW expiring CDN URL. When the user then
-            // clicked Save on the Find page, that raw URL was written into
-            // saved_affiliates, where it 403s ~3-4 days later. Verified against
-            // the live DB today: saved_affiliates had 0 permanent URLs.
-            // Fix: write the permanent URLs BACK onto `result` (below) so the
-            // client only ever sees permanent URLs. For rows discovered in an
-            // earlier search we now also reuse the thumbnail already stored in
-            // discovered_affiliates (the SELECT now fetches it) instead of
-            // skipping silently and leaking the raw URL.
-            let permThumbnail = result.thumbnail;
-            let permChannelThumbnail = result.channel?.thumbnail;
-            if (needsRehosting(permThumbnail) || needsRehosting(permChannelThumbnail)) {
-              const alreadySaved = await sql`
-                SELECT thumbnail, channel_thumbnail FROM crewcast.discovered_affiliates
-                WHERE user_id = ${userId} AND link = ${result.link} LIMIT 1
-              `;
-              if (alreadySaved.length === 0) {
-                [permThumbnail, permChannelThumbnail] = await Promise.all([
-                  rehostImageIfNeeded(permThumbnail),
-                  rehostImageIfNeeded(permChannelThumbnail),
-                ]);
-              } else {
-                // Row already in discovered_affiliates: reuse its stored URLs
-                // (permanent for post-June-15 rows). Falls back to the scraped
-                // URL if the stored value is null so we never blank an image
-                // the client could still show this session.
-                permThumbnail = alreadySaved[0].thumbnail || permThumbnail;
-                permChannelThumbnail = alreadySaved[0].channel_thumbnail || permChannelThumbnail;
-              }
-              // Write back so resultsForClient (and therefore any subsequent
-              // "Save to pipeline") carries the permanent URL, not the raw one.
-              result.thumbnail = permThumbnail;
-              if (result.channel && permChannelThumbnail) {
-                result.channel.thumbnail = permChannelThumbnail;
-              }
-            }
-
-            await sql`
-              INSERT INTO crewcast.discovered_affiliates (
-                user_id, search_keyword, title, link, domain, snippet, source,
-                is_affiliate, summary, thumbnail, date, views, highlighted_words,
-                discovery_method_type, discovery_method_value,
-                channel_name, channel_link, channel_thumbnail, channel_verified, channel_subscribers,
-                duration, email,
-                instagram_username, instagram_full_name, instagram_bio, instagram_followers,
-                instagram_following, instagram_posts_count, instagram_is_business, instagram_is_verified,
-                tiktok_username, tiktok_display_name, tiktok_bio, tiktok_followers,
-                tiktok_following, tiktok_likes, tiktok_videos_count, tiktok_is_verified,
-                tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares,
-                youtube_video_likes, youtube_video_comments,
-                similarweb_monthly_visits, similarweb_global_rank, similarweb_country_rank,
-                similarweb_country_code, similarweb_bounce_rate, similarweb_pages_per_visit,
-                similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries
-              )
-              VALUES (
-                ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
-                ${result.snippet || 'No description available'}, ${result.source},
-                ${true}, ${'Found via onboarding search'}, ${permThumbnail || null},
-                ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
-                ${discovery.type}, ${discovery.value},
-                ${result.channel?.name || null}, ${result.channel?.link || null},
-                ${permChannelThumbnail || null}, ${result.channel?.verified || null},
-                ${result.channel?.subscribers || null}, ${result.duration || null},
-                ${result.email || null},
-                ${result.instagramUsername || null}, ${result.instagramFullName || null},
-                ${result.instagramBio || null}, ${result.instagramFollowers || null},
-                ${result.instagramFollowing || null}, ${result.instagramPostsCount || null},
-                ${result.instagramIsBusiness || null}, ${result.instagramIsVerified || null},
-                ${result.tiktokUsername || null}, ${result.tiktokDisplayName || null},
-                ${result.tiktokBio || null}, ${result.tiktokFollowers || null},
-                ${result.tiktokFollowing || null}, ${result.tiktokLikes || null},
-                ${result.tiktokVideosCount || null}, ${result.tiktokIsVerified || null},
-                ${result.tiktokVideoPlays || null}, ${result.tiktokVideoLikes || null},
-                ${result.tiktokVideoComments || null}, ${result.tiktokVideoShares || null},
-                ${result.youtubeVideoLikes || null}, ${result.youtubeVideoComments || null},
-                ${sw.monthlyVisits}, ${sw.globalRank}, ${sw.countryRank}, ${sw.countryCode},
-                ${sw.bounceRate}, ${sw.pagesPerVisit}, ${sw.timeOnSite}, ${sw.category},
-                ${sw.trafficSources}, ${sw.topCountries}
-              )
-              ON CONFLICT (user_id, link) DO NOTHING
-            `;
-            return true;
-          } catch (e) {
-            return false;
-          }
-        };
-        
-        // Process in parallel batches with concurrency limit
-        // 20 concurrent inserts balances speed vs DB connection limits
-        const CONCURRENCY = 20;
-        for (let i = 0; i < allResults.length; i += CONCURRENCY) {
-          const chunk = allResults.slice(i, i + CONCURRENCY);
-          const results = await Promise.all(chunk.map(saveResult));
-          const chunkSaved = results.filter(Boolean).length;
-          savedCount += chunkSaved;
-          errorCount += results.length - chunkSaved;
-          
-          // Log progress every 100 results
-          if ((i + CONCURRENCY) % 100 < CONCURRENCY) {
-            console.log(`🎓 [Search/Status] Progress: ${savedCount}/${allResults.length} saved`);
+      const preparedResults: SearchResultSnapshot[] = [];
+      const prepareResult = async (result: SearchResultSnapshot) => {
+        const discovery = extractDiscoveryMethod(
+          result.searchQuery,
+          saveTopics,
+          saveCompetitors,
+        );
+        let permThumbnail = result.thumbnail;
+        let permChannelThumbnail = result.channel?.thumbnail;
+        if (needsRehosting(permThumbnail) || needsRehosting(permChannelThumbnail)) {
+          const alreadySaved = await sql`
+            SELECT thumbnail, channel_thumbnail
+            FROM crewcast.discovered_affiliates
+            WHERE user_id = ${userId}
+              AND brand_id = ${jobContext.brandId}::bigint
+              AND brand_location_id = ${jobContext.brandLocationId}::bigint
+              AND link = ${result.link}
+            LIMIT 1
+          `;
+          if (alreadySaved.length === 0) {
+            [permThumbnail, permChannelThumbnail] = await Promise.all([
+              rehostImageIfNeeded(permThumbnail),
+              rehostImageIfNeeded(permChannelThumbnail),
+            ]);
+          } else {
+            permThumbnail = alreadySaved[0].thumbnail || permThumbnail;
+            permChannelThumbnail = alreadySaved[0].channel_thumbnail || permChannelThumbnail;
           }
         }
-        
-        console.log(`💾 [Search/Status] Saved ${savedCount} results (${errorCount} duplicates/errors) to discovered_affiliates`);
-      }
+        preparedResults.push({
+          ...result,
+          thumbnail: permThumbnail,
+          channel: result.channel
+            ? { ...result.channel, thumbnail: permChannelThumbnail }
+            : result.channel,
+          discoveryMethod: {
+            type: discovery.type === 'competitor'
+              ? 'competitor'
+              : isOnboarding ? 'topic' : 'keyword',
+            value: discovery.value,
+          },
+        });
+      };
 
-      // Non-onboarding (Find) searches consume a topic_search credit; onboarding is free.
-      if (!isOnboarding && allResults.length > 0) {
-        await consumeCredits(userId, 'topic_search', 1);
-        console.log(`💳 [Search/Status] Credit consumed for user ${userId}`);
+      const PREPARE_CONCURRENCY = 20;
+      for (let i = 0; i < allResults.length; i += PREPARE_CONCURRENCY) {
+        await Promise.all(
+          allResults
+            .slice(i, i + PREPARE_CONCURRENCY)
+            .map((result) => prepareResult(result as SearchResultSnapshot)),
+        );
       }
       
       // 2026-07-29 11:15 IST (Paras): capture the real Apify bill — see the
@@ -1278,49 +1145,30 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
         enrichmentRunIds?.similarweb,
       ]);
 
-      // Update job status to done
-      await sql`
-        UPDATE crewcast.search_jobs
-        SET
-          status = 'done',
-          enrichment_status = 'succeeded',
-          completed_at = NOW(),
-          results_count = ${allResults.length},
-          estimated_cost = ${realCostUsd}
-        WHERE id = ${jobIdNum}
-      `;
-      
-      // Track API call
-      await trackApiCall({
-        userId,
-        service: 'apify_google_scraper',
-        endpoint: 'status',
-        keyword: job.keyword as string,
-        status: 'success',
-        resultsCount: allResults.length,
-        apifyRunId,
+      const finalized = await finalizeSearchJob(jobContext, {
+        results: preparedResults,
+        enrichmentSucceeded: true,
+        estimatedCostUsd: realCostUsd,
         durationMs: Date.now() - startTime,
       });
-      
-      // For Find (non-onboarding): tag each result with discovery method for client
-      const findTopics = (job.keyword as string)?.split(' | ').filter(Boolean) ?? [];
-      const findCompetitors = userSettings?.competitors ?? [];
-      const resultsForClient = allResults.map((r: SearchResult & { searchQuery?: string }) => {
-        const discovery = extractDiscoveryMethod(r.searchQuery, findTopics, findCompetitors);
-        return {
-          ...r,
-          discoveryMethod: {
-            type: discovery.type === 'competitor' ? 'competitor' : 'keyword',
-            value: discovery.value,
-          },
-        };
-      });
+      if (finalized.outcome === 'inactive_location') {
+        return NextResponse.json({
+          status: 'failed',
+          message: 'The brand location was archived while this search was running.',
+        });
+      }
+      if (finalized.outcome === 'insufficient_credit') {
+        return NextResponse.json({
+          status: 'failed',
+          message: 'No topic-search credit remained when this search completed.',
+        });
+      }
       
       return NextResponse.json({
         status: 'done',
-        results: resultsForClient,
-        resultsCount: resultsForClient.length,
-        breakdown,
+        results: finalized.results,
+        resultsCount: finalized.resultsCount,
+        breakdown: countResultSources(finalized.results),
       });
     }
     
@@ -1333,15 +1181,16 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     let runStatus: GoogleScraperStatus;
     try {
       runStatus = await getRunStatus(apifyRunId);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`[Search/Status] Error checking run status:`, error);
-      
-      // Update job as failed
-      await sql`
-        UPDATE crewcast.search_jobs 
-        SET status = 'failed', error_message = ${error.message}
-        WHERE id = ${jobIdNum}
-      `;
+      const errorMessage = error instanceof Error ? error.message : 'Unable to check provider status';
+      const realCostUsd = await fetchRunCostsUsd([apifyRunId]);
+      await failSearchJob(jobContext, {
+        terminalStatus: 'failed',
+        errorMessage,
+        estimatedCostUsd: realCostUsd,
+        durationMs: Date.now() - startTime,
+      });
       
       return NextResponse.json({
         status: 'failed',
@@ -1372,11 +1221,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // January 29, 2026
     // ==========================================================================
     if (runStatus.status === 'FAILED' || runStatus.status === 'ABORTED') {
-      await sql`
-        UPDATE crewcast.search_jobs 
-        SET status = 'failed', error_message = ${'Apify run ' + runStatus.status}
-        WHERE id = ${jobIdNum}
-      `;
+      const realCostUsd = await fetchRunCostsUsd([apifyRunId]);
+      await failSearchJob(jobContext, {
+        terminalStatus: 'failed',
+        errorMessage: `Apify run ${runStatus.status}`,
+        estimatedCostUsd: realCostUsd,
+        durationMs: Date.now() - startTime,
+      });
       
       return NextResponse.json({
         status: 'failed',
@@ -1389,11 +1240,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // January 29, 2026
     // ==========================================================================
     if (runStatus.status === 'TIMED-OUT') {
-      await sql`
-        UPDATE crewcast.search_jobs 
-        SET status = 'timeout', error_message = 'Apify run timed out'
-        WHERE id = ${jobIdNum}
-      `;
+      const realCostUsd = await fetchRunCostsUsd([apifyRunId]);
+      await failSearchJob(jobContext, {
+        terminalStatus: 'timeout',
+        errorMessage: 'Apify run timed out',
+        estimatedCostUsd: realCostUsd,
+        durationMs: Date.now() - startTime,
+      });
       
       return NextResponse.json({
         status: 'timeout',
@@ -1418,14 +1271,17 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     // ==========================================================================
     // SAFETY GUARD: Prevent actor-spawning loop (January 30, 2026)
     // 
-    // If we already have raw_results or enrichment_run_ids, we've already
-    // processed this SUCCEEDED state. This can happen if:
+    // If we already have enrichment_run_ids, we've already processed this
+    // SUCCEEDED state. raw_results alone is intentionally not a guard: the
+    // durable dispatcher saves that snapshot before any external launch and
+    // can safely resume from it after a pre-launch process interruption.
+    // This can happen if:
     // - Previous UPDATE failed (e.g., constraint violation)
     // - Race condition with multiple concurrent polls
     // 
     // Without this guard, each poll would start NEW enrichment actors!
     // ==========================================================================
-    if (rawResults || enrichmentRunIds) {
+    if (enrichmentRunIds && Object.keys(enrichmentRunIds).length > 0) {
       console.warn(`⚠️ [Search/Status] GUARD: Already processed SUCCEEDED state, skipping actor start`);
       console.warn(`⚠️ [Search/Status] rawResults: ${rawResults ? 'exists' : 'null'}, enrichmentRunIds: ${enrichmentRunIds ? JSON.stringify(enrichmentRunIds) : 'null'}`);
       
@@ -1458,6 +1314,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       UPDATE crewcast.search_jobs
       SET status = 'processing', started_at = NOW()
       WHERE id = ${jobIdNum}
+        AND user_id = ${userId}
+        AND brand_id = ${jobContext.brandId}::bigint
+        AND brand_location_id = ${jobContext.brandLocationId}::bigint
         AND (
           status = 'running'
           OR (status = 'processing' AND (started_at IS NULL OR started_at < NOW() - INTERVAL '5 minutes'))
@@ -1473,26 +1332,33 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       });
     }
 
-    // Fetch raw results from Apify
+    // Fetch raw results from Apify, or reuse the durable snapshot left by a
+    // pre-dispatch invocation that ended before any actor launch.
     let fetchedRawResults: SearchResult[];
-    try {
-      fetchedRawResults = await fetchAndProcessResults(apifyRunId, {
-        targetCountry: userSettings?.targetCountry,
-        targetLanguage: userSettings?.targetLanguage,
-      });
-    } catch (error: any) {
-      console.error(`[Search/Status] Error fetching results:`, error);
-      
-      await sql`
-        UPDATE crewcast.search_jobs 
-        SET status = 'failed', error_message = ${error.message}
-        WHERE id = ${jobIdNum}
-      `;
-      
-      return NextResponse.json({
-        status: 'failed',
-        message: 'Failed to fetch search results.',
-      });
+    if (rawResults) {
+      fetchedRawResults = rawResults as SearchResult[];
+    } else {
+      try {
+        fetchedRawResults = await fetchAndProcessResults(apifyRunId, {
+          targetCountry: userSettings?.targetCountry,
+          targetLanguage: userSettings?.targetLanguage,
+        });
+      } catch (error: unknown) {
+        console.error(`[Search/Status] Error fetching results:`, error);
+        const errorMessage = error instanceof Error ? error.message : 'Unable to fetch provider results';
+        const realCostUsd = await fetchRunCostsUsd([apifyRunId]);
+        await failSearchJob(jobContext, {
+          terminalStatus: 'failed',
+          errorMessage,
+          estimatedCostUsd: realCostUsd,
+          durationMs: Date.now() - startTime,
+        });
+
+        return NextResponse.json({
+          status: 'failed',
+          message: 'Failed to fetch search results.',
+        });
+      }
     }
     
     console.log(`🔍 [Search/Status] Raw results: ${fetchedRawResults.length}`);
@@ -1523,11 +1389,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
     };
     
     // Check if there are any results to enrich (social or web)
-    const hasResultsToEnrich = 
-      enrichmentUrls.youtube.length > 0 || 
-      enrichmentUrls.instagram.length > 0 || 
-      enrichmentUrls.tiktok.length > 0 ||
-      enrichmentUrls.similarweb.length > 0;
+    const dispatchInputs = buildEnrichmentDispatchInputs(enrichmentUrls);
+    const hasResultsToEnrich = dispatchInputs.length > 0;
     
     if (!hasResultsToEnrich) {
       // No results to enrich - return done immediately
@@ -1544,135 +1407,99 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
       });
       
       const allResults = filteredWeb;
-      const breakdown = {
-        YouTube: 0,
-        Instagram: 0,
-        TikTok: 0,
-        Web: filteredWeb.length,
-      };
-      
-      // ==========================================================================
-      // January 30, 2026: Check if this is an onboarding job (SAME AS ENRICHMENT PATH)
-      // If so, save results to discovered_affiliates and skip credit consumption
-      // ==========================================================================
-      const isOnboarding = userSettings?.isOnboarding === true;
-      const onboardingTopics = userSettings?.topics;
-      
-      console.log(`🎓 [Search/Status] Checking onboarding (no social path): isOnboarding=${isOnboarding}, topics=${onboardingTopics?.join(',')}`);
-      
-      if (isOnboarding && onboardingTopics && onboardingTopics.length > 0) {
-        console.log(`🎓 [Search/Status] Onboarding job (no social), saving ${allResults.length} web results...`);
-        
-        // January 30, 2026: Get competitors for discovery method extraction
-        const onboardingCompetitors = userSettings?.competitors || [];
-        let savedCount = 0;
-        
-        // Helper to save a single result
-        // January 30, 2026: Now extracts correct discovery method from result.searchQuery
-        const saveResult = async (result: SearchResult) => {
-          try {
-            // Extract the actual topic/competitor that found this result
-            const discovery = extractDiscoveryMethod(
-              result.searchQuery,
-              onboardingTopics,
-              onboardingCompetitors
-            );
-            
-            await sql`
-              INSERT INTO crewcast.discovered_affiliates (
-                user_id, search_keyword, title, link, domain, snippet, source,
-                is_affiliate, summary, thumbnail, date, views, highlighted_words,
-                discovery_method_type, discovery_method_value,
-                channel_name, channel_link, channel_thumbnail, channel_verified, channel_subscribers,
-                duration, email
-              )
-              VALUES (
-                ${userId}, ${discovery.value}, ${result.title}, ${result.link}, ${result.domain},
-                ${result.snippet || 'No description available'}, ${result.source},
-                ${true}, ${'Found via onboarding search'}, ${result.thumbnail || null},
-                ${result.date || null}, ${result.views || null}, ${result.highlightedWords || null},
-                ${discovery.type}, ${discovery.value},
-                ${result.channel?.name || null}, ${result.channel?.link || null},
-                ${result.channel?.thumbnail || null}, ${result.channel?.verified || null},
-                ${result.channel?.subscribers || null}, ${result.duration || null},
-                ${result.email || null}
-              )
-              ON CONFLICT (user_id, link) DO NOTHING
-            `;
-            return true;
-          } catch (e) {
-            return false;
-          }
+      const isOnboarding = userSettings.isOnboarding;
+      const topics = userSettings.topics.length > 0
+        ? userSettings.topics
+        : jobContext.keyword.split(' | ').filter(Boolean);
+      const preparedResults = allResults.map((result) => {
+        const discovery = extractDiscoveryMethod(
+          result.searchQuery,
+          topics,
+          userSettings.competitors,
+        );
+        return {
+          ...result,
+          discoveryMethod: {
+            type: discovery.type === 'competitor'
+              ? 'competitor' as const
+              : isOnboarding ? 'topic' as const : 'keyword' as const,
+            value: discovery.value,
+          },
         };
-        
-        // Parallel inserts with concurrency limit
-        const CONCURRENCY = 20;
-        for (let i = 0; i < allResults.length; i += CONCURRENCY) {
-          const chunk = allResults.slice(i, i + CONCURRENCY);
-          const results = await Promise.all(chunk.map(saveResult));
-          savedCount += results.filter(Boolean).length;
-        }
-        
-        console.log(`🎓 [Search/Status] Saved ${savedCount} web results to discovered_affiliates`);
-      } else {
-        // Not onboarding - consume credit
-        if (allResults.length > 0) {
-          await consumeCredits(userId, 'topic_search', 1);
-          console.log(`💳 [Search/Status] Credit consumed for user ${userId}`);
-        }
-      }
+      });
       
       // 2026-07-29 11:15 IST (Paras): capture the real Apify bill. This path
       // has no enrichment runs (no social results) — google run cost only.
       const realCostUsd = await fetchRunCostsUsd([apifyRunId]);
 
-      // Update job status
-      await sql`
-        UPDATE crewcast.search_jobs
-        SET
-          status = 'done',
-          completed_at = NOW(),
-          results_count = ${allResults.length},
-          estimated_cost = ${realCostUsd}
-        WHERE id = ${jobIdNum}
-      `;
+      const finalized = await finalizeSearchJob(jobContext, {
+        results: preparedResults,
+        enrichmentSucceeded: false,
+        estimatedCostUsd: realCostUsd,
+        durationMs: Date.now() - startTime,
+      });
+      if (finalized.outcome === 'inactive_location') {
+        return NextResponse.json({
+          status: 'failed',
+          message: 'The brand location was archived while this search was running.',
+        });
+      }
+      if (finalized.outcome === 'insufficient_credit') {
+        return NextResponse.json({
+          status: 'failed',
+          message: 'No topic-search credit remained when this search completed.',
+        });
+      }
       
       return NextResponse.json({
         status: 'done',
-        results: allResults,
-        resultsCount: allResults.length,
-        breakdown,
+        results: finalized.results,
+        resultsCount: finalized.resultsCount,
+        breakdown: countResultSources(finalized.results),
       });
     }
     
-    // Start enrichment actors (non-blocking)
-    console.log(`🚀 [Search/Status] Starting non-blocking enrichment actors...`);
-    const newEnrichmentRunIds = await startAllEnrichment(enrichmentUrls);
-    
-    // Save raw_results and enrichment_run_ids to database
-    await sql`
-      UPDATE crewcast.search_jobs 
-      SET 
-        status = 'enriching',
-        enrichment_status = 'running',
-        enrichment_run_ids = ${JSON.stringify(newEnrichmentRunIds)}::jsonb,
-        raw_results = ${JSON.stringify(fetchedRawResults)}::jsonb
-      WHERE id = ${jobIdNum}
-    `;
-    
-    console.log(`🔍 [Search/Status] Enrichment actors started, returning 'enriching' status`);
+    const initialized = await initializeServerEnrichmentDispatches(
+      dispatchContext,
+      dispatchInputs,
+      fetchedRawResults,
+    );
+    if (initialized.outcome === 'inactive_location') {
+      await failSearchJob(jobContext, {
+        terminalStatus: 'failed',
+        errorMessage: 'Brand location archived before enrichment dispatch',
+        estimatedCostUsd: await fetchRunCostsUsd([apifyRunId]),
+        durationMs: Date.now() - startTime,
+      });
+      return NextResponse.json({
+        status: 'failed',
+        message: 'The brand location was archived while this search was running.',
+      });
+    }
+    if (initialized.outcome === 'missing_job') {
+      return NextResponse.json(
+        { error: 'Search job disappeared during enrichment setup.', code: 'JOB_NOT_FOUND' },
+        { status: 404 },
+      );
+    }
+
+    const dispatch = await dispatchServerEnrichmentActors(dispatchContext);
+    console.log(`🔍 [Search/Status] Durable enrichment dispatch outcome: ${dispatch.outcome}`);
     
     // Return enriching status - client will poll again
     return NextResponse.json({
       status: 'enriching',
-      message: 'Enriching results with social media data...',
+      message: dispatch.outcome === 'blocked'
+        ? 'Enrichment launch is safely paused for reconciliation.'
+        : 'Enriching results with social media data...',
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Search/Status] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     
     return NextResponse.json(
-      { error: error.message || 'Internal server error', code: 'INTERNAL_ERROR' },
+      { error: errorMessage, code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }

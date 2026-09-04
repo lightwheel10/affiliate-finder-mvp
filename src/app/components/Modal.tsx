@@ -45,7 +45,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -67,6 +67,13 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
+  const titleId = useId();
+  const modalRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -82,14 +89,61 @@ export const Modal: React.FC<ModalProps> = ({
     }
   }, [isOpen]);
 
-  // Handle escape key
+  // Keep keyboard focus inside the dialog and return it to the control that
+  // opened the dialog after closing. This makes every shared modal usable
+  // without a mouse, including the new brand/location forms.
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+    if (!isOpen) return;
+
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const focusableSelector = [
+      'button:not([disabled])',
+      'a[href]',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+    const focusTimer = window.setTimeout(() => {
+      const firstFocusable = modalRef.current?.querySelector<HTMLElement>(focusableSelector);
+      (firstFocusable ?? modalRef.current)?.focus();
+    }, 20);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !modalRef.current) return;
+
+      const focusable = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>(focusableSelector),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        modalRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    if (isOpen) window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [isOpen]);
 
   // Lock body scroll
   useEffect(() => {
@@ -109,6 +163,7 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       {/* Backdrop — unchanged (already soft). */}
       <div
+        aria-hidden="true"
         className={cn(
           "absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300",
           isVisible ? "opacity-100" : "opacity-0"
@@ -124,6 +179,12 @@ export const Modal: React.FC<ModalProps> = ({
       /*  rounded corners. Scroll still lives on the body (overflow-y-auto).   */
       /*  =================================================================== */}
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={title ? undefined : 'Dialog'}
+        tabIndex={-1}
         className={cn(
           "relative bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl overflow-hidden w-full transform transition-all duration-300 scale-95 opacity-0 max-h-[90vh] flex flex-col shadow-soft-xl",
           width,
@@ -142,7 +203,7 @@ export const Modal: React.FC<ModalProps> = ({
         /*  =============================================================== */}
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#e6ebf1] dark:border-gray-800 shrink-0 bg-white dark:bg-[#0f0f0f]">
-            <h3 className="font-display text-lg font-bold text-[#0f172a] dark:text-white">
+            <h3 id={titleId} className="font-display text-lg font-bold text-[#0f172a] dark:text-white">
               {title}
             </h3>
             <button

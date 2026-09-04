@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
 import { addTopupCredits } from '@/lib/credits';
 import { stripe } from '@/lib/stripe';
 import type Stripe from 'stripe';
@@ -30,10 +34,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const body = await request.json();
     const { userId } = body;
@@ -41,20 +42,14 @@ export async function POST(request: NextRequest) {
     if (!userId || typeof userId !== 'number') {
       return NextResponse.json({ error: 'Valid user ID is required' }, { status: 400 });
     }
-
-    // Authorization check
-    const users = await sql`
-      SELECT email FROM crewcast.users WHERE id = ${userId}
-    `;
-    if (users.length === 0 || authUser.email !== users[0].email) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-    }
+    assertLegacyAccountId(userId, authenticated.account.id);
+    const accountId = authenticated.account.id;
 
     // Find all pending credit purchases for this user
     const pendingPurchases = await sql`
       SELECT id, stripe_checkout_session_id, credit_type, credits_amount, status
       FROM crewcast.credit_purchases
-      WHERE user_id = ${userId} AND status = 'pending'
+      WHERE user_id = ${accountId} AND status = 'pending'
       ORDER BY created_at DESC
     `;
 
@@ -65,7 +60,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`[Credits Fulfill] Found ${pendingPurchases.length} pending purchase(s) for user ${userId}`);
+    console.log(`[Credits Fulfill] Found ${pendingPurchases.length} pending purchase(s) for user ${accountId}`);
 
     let fulfilled = 0;
     const results = [];
@@ -102,7 +97,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const ok = await addTopupCredits(userId, creditType, amount, sessionId);
+      const ok = await addTopupCredits(accountId, creditType, amount, sessionId);
       if (ok) {
         fulfilled++;
         results.push({ id: purchase.id, status: 'fulfilled', creditType, amount });
@@ -123,6 +118,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('[Credits Fulfill] Error:', error);
     return NextResponse.json(
       { error: 'Failed to fulfill pending purchases' },

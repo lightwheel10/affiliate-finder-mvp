@@ -31,7 +31,7 @@
  * Translation hook usage: const { t } = useLanguage();
  * =============================================================================
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User, BarChart2, TrendingUp, MapPin, Clock, MousePointer, FileText, ArrowUpRight, Info } from 'lucide-react';
 import { Modal } from './Modal';
@@ -41,6 +41,7 @@ import type { SupabaseUserData } from '../hooks/useSupabaseUser';
 import { getDiscoveryReasons } from '../utils/discovery';
 // April 28, 2026: Subtle in-row highlighting for the dashboard search-box query.
 import { HighlightMatch } from './HighlightMatch';
+import { AffiliateLocationBadge } from './AffiliateLocationBadge';
 
 // TikTok icon component
 const TikTokIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
@@ -215,17 +216,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   
   // Fixed January 16, 2026: Portal state for View Modal to escape parent stacking context
   // The View Modal was being cut off because fixed positioning was contained by scrollable parent
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setPortalTarget(document.body);
-  }, []);
-
-  // Reset match reasons panel when modal closes
-  useEffect(() => {
-    if (!isViewModalOpen) {
-      setShowMatchReasons(false);
-    }
-  }, [isViewModalOpen]);
+  const portalTarget = typeof document === 'undefined' ? null : document.body;
+  const closeViewModal = () => {
+    setShowMatchReasons(false);
+    setIsViewModalOpen(false);
+  };
 
   // ============================================================================
   // MATCH REASONS DATA (View Modal) - January 22, 2026
@@ -1321,6 +1316,11 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 </span>
               </div>
             ) : null)}
+
+            <AffiliateLocationBadge
+              brandLocationId={affiliateData?.brandLocationId}
+              className="mt-1"
+            />
           </div>
         </div>
       </div>
@@ -2288,7 +2288,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       {isViewModalOpen && portalTarget && createPortal(
         <div 
           className="fixed inset-0 bg-[#0f172a]/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
-          onClick={() => setIsViewModalOpen(false)}
+          onClick={closeViewModal}
         >
           <div 
             className="bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
@@ -2300,7 +2300,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 {t.affiliateRow.viewModal.title}
               </h3>
               <button
-                onClick={() => setIsViewModalOpen(false)}
+                onClick={closeViewModal}
                 aria-label="Close view details"
                 className="w-8 h-8 rounded-full flex items-center justify-center text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white hover:bg-[#f6f9fc] dark:hover:bg-gray-800 transition-colors"
               >
@@ -2310,6 +2310,10 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+              <AffiliateLocationBadge
+                brandLocationId={affiliateData?.brandLocationId}
+                variant="detail"
+              />
               {/* ===============================================================
                   MATCH REASONS PANEL - January 22, 2026
                   Shows why the result matched (keyword/competitor/terms).
@@ -2379,7 +2383,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 <button
                   onClick={() => {
                     onSave();
-                    setIsViewModalOpen(false);
+                    closeViewModal();
                   }}
                   className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full transition-all ${
                     isSaved
@@ -2396,7 +2400,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
                 </button>
                 <button
                   onClick={() => {
-                    setIsViewModalOpen(false);
+                    closeViewModal();
                     setTimeout(() => handleDeleteClick(), 100);
                   }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-full shadow-soft-sm transition-colors"

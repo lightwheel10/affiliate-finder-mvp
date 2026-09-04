@@ -33,7 +33,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, CheckCircle2, Circle, ArrowRight } from 'lucide-react';
+import { Loader2, CheckCircle2, Circle, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +44,10 @@ import { cn } from '@/lib/utils';
 interface FindingAffiliatesScreenProps {
   /** When true, API has completed and we should show 100% + completion message */
   isComplete: boolean;
+  error?: boolean;
+  isRetrying?: boolean;
+  onRetry?: () => void;
+  onContinue?: () => void;
 }
 
 // =============================================================================
@@ -79,7 +83,13 @@ const STEP_ADVANCE_INTERVAL = 90;
 // COMPONENT - January 21st, 2026 (Enhanced with Checklist)
 // =============================================================================
 
-export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenProps) {
+export function FindingAffiliatesScreen({
+  isComplete,
+  error = false,
+  isRetrying = false,
+  onRetry,
+  onContinue,
+}: FindingAffiliatesScreenProps) {
   const { t } = useLanguage();
   
   // Progress state: 0-100
@@ -92,11 +102,8 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   
   // Track when we started for accurate timing
-  const startTimeRef = useRef(Date.now());
+  const startTimeRef = useRef<number | null>(null);
   
-  // Track if we've already completed (to prevent re-animation)
-  const hasCompletedRef = useRef(false);
-
   // Step messages from translations (excluding "Complete!" which is last)
   const allSteps = t.findingAffiliates.steps;
   const workingSteps = allSteps.slice(0, -1); // All except "Complete!"
@@ -106,48 +113,30 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
   // PROGRESS ANIMATION EFFECT
   // ===========================================================================
   useEffect(() => {
-    // If already completed, don't restart animation
-    if (hasCompletedRef.current) return;
+    if (isComplete) return;
     
     const interval = setInterval(() => {
       const now = Date.now();
+      if (startTimeRef.current === null) startTimeRef.current = now;
       const elapsedMs = now - startTimeRef.current;
       const elapsed = Math.floor(elapsedMs / 1000);
       
       setElapsedSeconds(elapsed);
       
-      // Calculate progress based on elapsed time
-      if (!isComplete) {
-        const progressPercent = Math.min(
-          (elapsedMs / (ESTIMATED_TOTAL_SECONDS * 1000)) * MAX_PROGRESS_BEFORE_COMPLETE,
-          MAX_PROGRESS_BEFORE_COMPLETE
-        );
-        setProgress(progressPercent);
-        
-        // Calculate which step we should be on based on elapsed time
-        // Each step takes ~20 seconds, so step = floor(elapsed / 20)
-        const stepIndex = Math.min(
-          Math.floor(elapsed / STEP_ADVANCE_INTERVAL),
-          totalWorkingSteps - 1
-        );
-        setCurrentStep(stepIndex);
-      }
+      const progressPercent = Math.min(
+        (elapsedMs / (ESTIMATED_TOTAL_SECONDS * 1000)) * MAX_PROGRESS_BEFORE_COMPLETE,
+        MAX_PROGRESS_BEFORE_COMPLETE
+      );
+      setProgress(progressPercent);
+
+      const stepIndex = Math.min(
+        Math.floor(elapsed / STEP_ADVANCE_INTERVAL),
+        totalWorkingSteps - 1
+      );
+      setCurrentStep(stepIndex);
     }, PROGRESS_UPDATE_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [isComplete, totalWorkingSteps]);
-
-  // ===========================================================================
-  // COMPLETION EFFECT
-  // ===========================================================================
-  useEffect(() => {
-    if (isComplete && !hasCompletedRef.current) {
-      hasCompletedRef.current = true;
-      
-      // Jump to 100% and mark all steps complete
-      setProgress(100);
-      setCurrentStep(totalWorkingSteps); // Past all working steps = all complete
-    }
   }, [isComplete, totalWorkingSteps]);
 
   // ===========================================================================
@@ -158,6 +147,46 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const displayedProgress = isComplete ? 100 : progress;
+  const displayedStep = isComplete ? totalWorkingSteps : currentStep;
+
+  if (error) {
+    return (
+      <div className="animate-in fade-in duration-500 text-center py-6">
+        <div className="flex justify-center mb-5">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-950/40 rounded-2xl flex items-center justify-center">
+            <AlertCircle size={32} className="text-amber-600 dark:text-amber-400" strokeWidth={2.5} />
+          </div>
+        </div>
+        <h2 className="text-lg font-display font-bold text-[#0f172a] dark:text-white mb-2 tracking-tight">
+          {t.findingAffiliates.errorTitle}
+        </h2>
+        <p className="max-w-sm mx-auto text-sm leading-6 text-[#425466] dark:text-gray-300 mb-5">
+          {t.findingAffiliates.errorMessage}
+        </p>
+        <div className="flex flex-col sm:flex-row justify-center gap-2">
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={isRetrying || !onRetry}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ffbf23] px-5 py-2.5 text-sm font-semibold text-[#1A1D21] shadow-yellow-glow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isRetrying ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            {t.findingAffiliates.retry}
+          </button>
+          <button
+            type="button"
+            onClick={onContinue}
+            disabled={isRetrying || !onContinue}
+            className="inline-flex items-center justify-center rounded-full border border-[#e6ebf1] dark:border-gray-700 px-5 py-2.5 text-sm font-semibold text-[#425466] dark:text-gray-200 transition hover:bg-[#f6f9fc] dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {t.findingAffiliates.continueToDashboard}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ===========================================================================
   // RENDER
@@ -214,9 +243,9 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
         ================================================================= */}
       <div className="max-w-xs mx-auto mb-5 text-left space-y-1.5">
         {workingSteps.map((stepText, index) => {
-          const isCompleted = index < currentStep || isComplete;
-          const isCurrent = index === currentStep && !isComplete;
-          const isPending = index > currentStep && !isComplete;
+          const isCompleted = index < displayedStep || isComplete;
+          const isCurrent = index === displayedStep && !isComplete;
+          const isPending = index > displayedStep && !isComplete;
 
           return (
             <div
@@ -261,13 +290,13 @@ export function FindingAffiliatesScreen({ isComplete }: FindingAffiliatesScreenP
                 ? "bg-green-500"
                 : "bg-[#ffbf23]"
             )}
-            style={{ width: `${progress}%` }}
+            style={{ width: `${displayedProgress}%` }}
           />
 
           {/* Percentage text overlay */}
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-[10px] font-semibold text-[#1A1D21] dark:text-white mix-blend-difference">
-              {Math.round(progress)}%
+              {Math.round(displayedProgress)}%
             </span>
           </div>
         </div>

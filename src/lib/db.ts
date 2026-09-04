@@ -37,6 +37,7 @@ export { sql } from './supabase/sql';
 // Type definitions for database tables
 export interface DbUser {
   id: number;
+  auth_user_id: string;
   email: string;
   name: string;
   is_onboarded: boolean;
@@ -81,6 +82,8 @@ export interface DbUserBlockedDomain {
 export interface DbSavedAffiliate {
   id: number;
   user_id: number;
+  brand_id: string;
+  brand_location_id: string;
   title: string;
   link: string;
   domain: string;
@@ -241,6 +244,8 @@ export interface DbSavedAffiliate {
 export interface DbDiscoveredAffiliate {
   id: number;
   user_id: number;
+  brand_id: string;
+  brand_location_id: string;
   title: string;
   link: string;
   domain: string;
@@ -340,6 +345,8 @@ export interface DbApiCall {
   estimated_cost: number;
   apify_run_id: string | null;
   duration_ms: number | null;
+  brand_id: string | null;
+  brand_location_id: string | null;
   created_at: string;
 }
 
@@ -403,7 +410,11 @@ export interface DbSearchJob {
     instagram?: string;
     tiktok?: string;
   } | null;
-  raw_results: any[] | null; // Raw SearchResult[] from Google Scraper
+  raw_results: unknown[] | null; // Raw SearchResult[] from Google Scraper
+  brand_id: string | null;
+  brand_location_id: string | null;
+  settings_snapshot: Record<string, unknown> | null;
+  request_id: string | null;
 }
 
 export interface DbSubscription {

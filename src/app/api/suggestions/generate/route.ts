@@ -67,10 +67,34 @@
  * - Store raw AI response for analytics/debugging
  */
 
+import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveAuthenticatedAccount } from '@/lib/auth/account';
+import { normalizeBrandDomain } from '@/lib/brands/domain';
+import { probePublicWebsite } from '@/lib/network/public-website';
+import {
+  runOnboardingSuggestionAnalysis,
+  SuggestionAnalysisError,
+  type SuggestionAnalysisInput,
+  type SuggestionProviderOutcome,
+} from '@/lib/suggestions/analysis';
+import {
+  claimOnboardingSuggestionAnalysis,
+  completeOnboardingSuggestionAnalysis,
+  failOnboardingSuggestionAnalysis,
+  markOnboardingSuggestionProvidersStarted,
+} from '@/lib/suggestions/analysis-postgres';
+import { suggestionRequestInputSchema } from '@/lib/suggestions/input';
+import {
+  suggestionAnalysisResultSchema,
+  type SuggestionAnalysisResult,
+} from '@/lib/suggestions/result';
+import {
+  assertSafeSuggestionRequest,
+  readSuggestionJson,
+  SuggestionRequestError,
+} from '@/lib/suggestions/request';
 import Anthropic from '@anthropic-ai/sdk';
-import { z } from 'zod';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
 
 // =============================================================================
 // CONFIGURATION
@@ -81,6 +105,8 @@ const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001'; // Claude Haiku 4.5 - cost-
 const MAX_CONTENT_LENGTH = 8000; // Truncate content to stay within token limits
 const DOMAIN_VALIDATION_TIMEOUT = 5000; // 5 seconds per domain
 
+export const runtime = 'nodejs';
+
 // =============================================================================
 // ZOD SCHEMA FOR STRUCTURED AI OUTPUT (January 3rd, 2026)
 // 
@@ -88,22 +114,8 @@ const DOMAIN_VALIDATION_TIMEOUT = 5000; // 5 seconds per domain
 // Using Zod with Anthropic's tool use for type-safe responses.
 // =============================================================================
 // January 28th, 2026 (v2): Updated schema descriptions - translation is mandatory
-const SuggestionsSchema = z.object({
-  competitors: z.array(z.object({
-    name: z.string().describe('Company or product name'),
-    domain: z.string().describe('Website domain without http/https (e.g., competitor.com)'),
-  })).describe('12 direct competitors to this business'),
-  
-  topics: z.array(z.object({
-    keyword: z.string().describe('Short keyword (1-3 words) TRANSLATED to the target language. If website has English/French terms, translate them. Example: "Bee Cream" → "Bienencreme" for German.'),
-  })).describe('10 specific keywords TRANSLATED to target language - based on website products/ingredients but OUTPUT IN TARGET LANGUAGE ONLY'),
-  
-  industry: z.string().describe('The primary industry/category of this business'),
-  
-  targetAudience: z.string().describe('Brief description of target customers'),
-});
-
-type SuggestionsResponse = z.infer<typeof SuggestionsSchema>;
+const SuggestionsSchema = suggestionAnalysisResultSchema;
+type SuggestionsResponse = SuggestionAnalysisResult;
 
 // =============================================================================
 // RESPONSE TYPES
@@ -124,6 +136,7 @@ interface SuccessResponse {
   topics: Topic[];
   industry: string;
   targetAudience: string;
+  cached?: boolean;
 }
 
 interface ErrorResponse {
@@ -140,37 +153,25 @@ interface ErrorResponse {
 // Uses HEAD request for efficiency (no body download).
 // =============================================================================
 async function validateDomain(domain: string): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DOMAIN_VALIDATION_TIMEOUT);
-    
-    // Try with https first
-    const response = await fetch(`https://${domain}`, {
-      method: 'HEAD',
-      signal: controller.signal,
-      redirect: 'follow',
-    });
-    
-    clearTimeout(timeoutId);
-    return response.status < 500; // Accept any non-5xx response
-  } catch {
-    // Try with www prefix
+  const normalizedDomain = normalizeBrandDomain(domain);
+  if (!normalizedDomain) return false;
+
+  // Model output is untrusted. Both the original hostname and every redirect
+  // are resolved, checked, and pinned before the server opens a connection.
+  for (const candidate of [normalizedDomain, `www.${normalizedDomain}`]) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), DOMAIN_VALIDATION_TIMEOUT);
-      
-      const response = await fetch(`https://www.${domain}`, {
+      const response = await probePublicWebsite(`https://${candidate}`, {
         method: 'HEAD',
-        signal: controller.signal,
-        redirect: 'follow',
+        timeoutMs: DOMAIN_VALIDATION_TIMEOUT,
       });
-      
-      clearTimeout(timeoutId);
       return response.status < 500;
     } catch {
-      return false;
+      // Preserve the existing fallback behavior without exposing validation
+      // details to the model or client.
     }
   }
+
+  return false;
 }
 
 // =============================================================================
@@ -473,15 +474,10 @@ Use the extract_suggestions tool to provide your structured response.`;
       
       if (parseResult.success) {
         return parseResult.data;
-      } else {
-        console.error('[suggestions/generate] Zod validation failed:', parseResult.error);
-        // Try to return the raw input if it has the basic structure
-        const rawInput = toolUseBlock.input as SuggestionsResponse;
-        if (rawInput.competitors && rawInput.topics) {
-          return rawInput;
-        }
-        return null;
       }
+
+      console.error('[suggestions/generate] Zod validation failed:', parseResult.error);
+      return null;
     }
     
     console.error('[suggestions/generate] No tool use block found in response');
@@ -502,98 +498,166 @@ Use the extract_suggestions tool to provide your structured response.`;
 //   language-specific topics/keywords
 // - Previously, topics were always in English regardless of user's market
 // =============================================================================
+async function runSuggestionProviders(
+  input: SuggestionAnalysisInput,
+): Promise<SuggestionProviderOutcome> {
+  const { normalizedDomain, targetCountry, targetLanguage } = input;
+
+  console.log(`[suggestions/generate] Analyzing: ${normalizedDomain}`);
+  console.log(`[suggestions/generate] Target market: ${targetCountry || 'not specified'}, Language: ${targetLanguage || 'not specified'}`);
+
+  console.log('[suggestions/generate] Step 1: Scraping website...');
+  const scrapeResult = await scrapeWebsite(normalizedDomain);
+  if (!scrapeResult) {
+    return {
+      success: false,
+      error: 'Failed to scrape website',
+      userMessage: "We couldn't access your website. Please check the URL and try again, or enter your details manually.",
+    };
+  }
+
+  console.log(`[suggestions/generate] Scraped ${scrapeResult.content.length} characters`);
+  console.log('[suggestions/generate] Step 2: Generating AI suggestions...');
+  const aiSuggestions = await generateWithAI(
+    scrapeResult.content,
+    normalizedDomain,
+    targetCountry,
+    targetLanguage,
+  );
+  if (!aiSuggestions) {
+    return {
+      success: false,
+      error: 'Failed to generate suggestions',
+      userMessage: "We couldn't analyze your website at this time. Please enter your competitors and topics manually.",
+    };
+  }
+
+  console.log(`[suggestions/generate] AI returned ${aiSuggestions.competitors.length} competitors, ${aiSuggestions.topics.length} topics`);
+  console.log('[suggestions/generate] Step 3: Validating competitor domains...');
+  const validatedCompetitors = await validateCompetitors(aiSuggestions.competitors);
+  console.log(`[suggestions/generate] ${validatedCompetitors.length}/${aiSuggestions.competitors.length} competitors validated`);
+
+  return {
+    success: true,
+    result: SuggestionsSchema.parse({
+      competitors: validatedCompetitors,
+      topics: aiSuggestions.topics,
+      industry: aiSuggestions.industry,
+      targetAudience: aiSuggestions.targetAudience,
+    }),
+  };
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
   console.log('[suggestions/generate] Request received');
   
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
+    const authentication = await resolveAuthenticatedAccount();
+    if (!authentication) {
       return NextResponse.json({
         success: false,
         error: 'Unauthorized',
         userMessage: 'Please sign in to use this feature.',
       }, { status: 401 });
     }
-
-    const body = await request.json();
-    // January 17th, 2026: Now accepting targetCountry and targetLanguage
-    const { brandUrl, targetCountry, targetLanguage } = body;
-    
-    // Validate input
-    if (!brandUrl || typeof brandUrl !== 'string') {
+    if (!authentication.account) {
       return NextResponse.json({
         success: false,
-        error: 'brandUrl is required',
-        userMessage: 'Please provide your brand website URL.',
+        error: 'Application account not found',
+        userMessage: 'Please finish creating your account before continuing.',
+      }, { status: 404 });
+    }
+
+    assertSafeSuggestionRequest(request);
+
+    const body = await readSuggestionJson(request);
+
+    const parsedInput = suggestionRequestInputSchema.safeParse(body);
+    if (!parsedInput.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid suggestion request',
+        userMessage: 'Please provide a valid brand, country, and language.',
       }, { status: 400 });
     }
-    
-    // Normalize the URL
-    const normalizedUrl = brandUrl
-      .trim()
-      .toLowerCase()
-      .replace(/^https?:\/\//, '')
-      .replace(/^www\./, '')
-      .split('/')[0];
-    
-    // Log with country/language context (January 17th, 2026)
-    console.log(`[suggestions/generate] Analyzing: ${normalizedUrl}`);
-    console.log(`[suggestions/generate] Target market: ${targetCountry || 'not specified'}, Language: ${targetLanguage || 'not specified'}`);
-    
-    // Step 1: Scrape the website
-    console.log('[suggestions/generate] Step 1: Scraping website...');
-    const scrapeResult = await scrapeWebsite(normalizedUrl);
-    
-    if (!scrapeResult) {
+
+    const { brandUrl, targetCountry, targetLanguage } = parsedInput.data;
+    const normalizedDomain = normalizeBrandDomain(brandUrl);
+    if (!normalizedDomain) {
       return NextResponse.json({
         success: false,
-        error: 'Failed to scrape website',
-        userMessage: "We couldn't access your website. Please check the URL and try again, or enter your details manually.",
-      });
+        error: 'Invalid suggestion request',
+        userMessage: 'Please provide a valid brand, country, and language.',
+      }, { status: 400 });
     }
-    
-    console.log(`[suggestions/generate] Scraped ${scrapeResult.content.length} characters`);
-    
-    // Step 2: Generate suggestions with AI
-    // January 17th, 2026: Now passing country and language for localized suggestions
-    console.log('[suggestions/generate] Step 2: Generating AI suggestions...');
-    const aiSuggestions = await generateWithAI(
-      scrapeResult.content, 
-      normalizedUrl,
-      targetCountry || null,
-      targetLanguage || null
-    );
-    
-    if (!aiSuggestions) {
+
+    // Missing server configuration is a definitely pre-provider failure. Do
+    // not consume the account's one analysis before both paid adapters can run.
+    if (!process.env.FIRECRAWL_API_KEY || !process.env.ANTHROPIC_API_KEY) {
+      console.error('[suggestions/generate] Provider configuration is incomplete');
       return NextResponse.json({
         success: false,
-        error: 'Failed to generate suggestions',
+        error: 'Suggestion service unavailable',
         userMessage: "We couldn't analyze your website at this time. Please enter your competitors and topics manually.",
+      }, { status: 503 });
+    }
+
+    const outcome = await runOnboardingSuggestionAnalysis({
+      accountId: authentication.account.id,
+      authUserId: authentication.authUser.id,
+      requestId: randomUUID(),
+      input: {
+        normalizedDomain,
+        targetCountry: targetCountry ?? null,
+        targetLanguage: targetLanguage ?? null,
+      },
+    }, {
+      claim: claimOnboardingSuggestionAnalysis,
+      markProvidersStarted: markOnboardingSuggestionProvidersStarted,
+      runProviders: runSuggestionProviders,
+      complete: completeOnboardingSuggestionAnalysis,
+      fail: failOnboardingSuggestionAnalysis,
+    });
+
+    if (!outcome.success) {
+      return NextResponse.json({
+        success: false,
+        error: outcome.error,
+        userMessage: outcome.userMessage,
       });
     }
-    
-    console.log(`[suggestions/generate] AI returned ${aiSuggestions.competitors.length} competitors, ${aiSuggestions.topics.length} topics`);
-    
-    // Step 3: Validate competitor domains
-    console.log('[suggestions/generate] Step 3: Validating competitor domains...');
-    const validatedCompetitors = await validateCompetitors(aiSuggestions.competitors);
-    
-    console.log(`[suggestions/generate] ${validatedCompetitors.length}/${aiSuggestions.competitors.length} competitors validated`);
-    
-    // Return successful response
+
     return NextResponse.json({
       success: true,
-      competitors: validatedCompetitors,
-      topics: aiSuggestions.topics,
-      industry: aiSuggestions.industry,
-      targetAudience: aiSuggestions.targetAudience,
+      ...outcome.result,
+      cached: outcome.cached,
     });
-    
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid JSON body',
+        userMessage: 'Please check your input and try again.',
+      }, { status: 400 });
+    }
+    if (error instanceof SuggestionRequestError) {
+      return NextResponse.json({
+        success: false,
+        error: error.code,
+        userMessage: error.message,
+      }, { status: error.status });
+    }
+    if (error instanceof SuggestionAnalysisError) {
+      return NextResponse.json({
+        success: false,
+        error: error.code,
+        userMessage: error.userMessage,
+      }, { status: error.status });
+    }
     console.error('[suggestions/generate] Unexpected error:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Internal analysis error',
       userMessage: "Something went wrong. Please enter your competitors and topics manually.",
     }, { status: 500 });
   }

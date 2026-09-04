@@ -106,6 +106,10 @@ import { PricingModal } from '../../components/PricingModal';
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useBrandLocation } from '@/contexts/BrandLocationContext';
+import { buildLocationScopeExportSlug } from '@/lib/brand-locations/export';
+import { resolveBrandLocationPresentation } from '@/lib/brand-locations/presentation';
+import { AffiliateLocationBadge } from '../../components/AffiliateLocationBadge';
 
 // Multi-channel message data returned by the AI outreach API (March 2026)
 interface ChannelMessagesData {
@@ -177,8 +181,21 @@ interface ContactPickerState {
 // This component only renders the header and main content area.
 // =============================================================================
 export default function OutreachPage() {
+  const {
+    activeBrand,
+    activeLocations,
+    selectedLocations,
+    featureEnabled,
+    locationScopeIds,
+  } = useBrandLocation();
+  const activeBrandLocationCount = activeBrand?.locations.filter(
+    (location) => location.archivedAt === null,
+  ).length ?? 0;
+  const exportScope = featureEnabled && activeBrand && selectedLocations.length > 0
+    ? `-${buildLocationScopeExportSlug(activeBrand.name, selectedLocations, activeBrandLocationCount)}`
+    : '';
   // Translation hook (January 9th, 2026)
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // ==========================================================================
   // SUBSCRIPTION CHECK FOR EXPORT GATE - February 9th, 2026
@@ -355,7 +372,7 @@ export default function OutreachPage() {
   // =========================================================================
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const { savedAffiliates, isLoading: loading } = useSavedAffiliates();
+  const { savedAffiliates, isLoading: loading } = useSavedAffiliates(locationScopeIds);
   
   // =========================================================================
   // LOAD SAVED AI-GENERATED MESSAGES ON MOUNT (Updated January 22, 2026)
@@ -925,6 +942,7 @@ export default function OutreachPage() {
       const requestBody: Record<string, unknown> = {
         affiliateId: affiliate.id,
         affiliate: affiliate,
+        brandLocationId: affiliate.brandLocationId,
       };
       
       // If a specific contact was provided, include it
@@ -1171,6 +1189,7 @@ export default function OutreachPage() {
           body: JSON.stringify({
             affiliateId: id,
             affiliate: affiliate,
+            brandLocationId: affiliate.brandLocationId,
           }),
         });
 
@@ -1349,6 +1368,7 @@ export default function OutreachPage() {
         affiliateId,
         contactEmail: contactEmail || 'primary',
         message: editedMessageText,
+        brandLocationId: savedAffiliates.find((affiliate) => affiliate.id === affiliateId)?.brandLocationId,
       };
       if (channelOverride) {
         patchBody.channel = channelOverride;
@@ -1482,6 +1502,9 @@ export default function OutreachPage() {
   const generateOutreachCSV = (contacts: typeof filteredResults): string => {
     const headers = [
       'Name',
+      'Brand',
+      'Search Country',
+      'Search Language',
       'Email',
       'Platform',
       'Domain',
@@ -1498,10 +1521,18 @@ export default function OutreachPage() {
     
     const rows = contacts.map(item => {
       const aiContent = getAIMessage(item);
+      const location = resolveBrandLocationPresentation(
+        activeLocations,
+        item.brandLocationId,
+        language,
+      );
       return [
         escapeCSVValue(item.personName || item.emailResults?.firstName 
           ? `${item.emailResults?.firstName || ''} ${item.emailResults?.lastName || ''}`.trim() || item.personName 
           : item.title),
+        escapeCSVValue(location?.brandName ?? ''),
+        escapeCSVValue(location ? `${location.countryName} (${location.countryCode})` : ''),
+        escapeCSVValue(location ? `${location.languageName} (${location.languageCode})` : ''),
         escapeCSVValue(item.email),
         escapeCSVValue(item.source),
         escapeCSVValue(item.domain),
@@ -1548,7 +1579,7 @@ export default function OutreachPage() {
     
     const csv = generateOutreachCSV(filteredResults);
     const date = new Date().toISOString().split('T')[0];
-    downloadCSV(csv, `outreach-contacts-${date}.csv`);
+    downloadCSV(csv, `outreach-contacts${exportScope}-${date}.csv`);
     
     showToast('success', `Exported ${filteredResults.length} contacts`);
     setIsExportModalOpen(false);
@@ -1571,7 +1602,7 @@ export default function OutreachPage() {
     
     const csv = generateOutreachCSV(selectedContacts);
     const date = new Date().toISOString().split('T')[0];
-    downloadCSV(csv, `outreach-contacts-selected-${date}.csv`);
+    downloadCSV(csv, `outreach-contacts-selected${exportScope}-${date}.csv`);
     
     showToast('success', `Exported ${selectedContacts.length} contacts`);
     setIsExportModalOpen(false);
@@ -2019,6 +2050,10 @@ export default function OutreachPage() {
                         <Globe size={10} className="shrink-0" />
                         <span className="truncate">{item.domain}</span>
                       </p>
+                      <AffiliateLocationBadge
+                        brandLocationId={item.brandLocationId}
+                        className="mt-1"
+                      />
                     </div>
                   </div>
 

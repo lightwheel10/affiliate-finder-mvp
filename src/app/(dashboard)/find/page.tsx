@@ -71,17 +71,58 @@ import { cn } from '@/lib/utils';
 import { ResultItem, FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../../hooks/useAffiliates';
 import { useBlockedDomains } from '../../hooks/useBlockedDomains';
-import { usePollingSearch, SearchProgress } from '../../hooks/usePollingSearch';
+import { usePollingSearch, type SearchError } from '../../hooks/usePollingSearch';
 import { FilterPanel } from '../../components/FilterPanel';
-import { Platform } from '../../services/search';
+import { Platform, type SearchResult } from '../../services/search';
 import { extractDiscoveryMethod } from '@/app/utils/localized-search';
 // April 28, 2026: Unified search predicate (Find/Discovered/Saved) — see utils/affiliate-search.ts
 import { affiliateMatchesSearchQuery } from '@/app/utils/affiliate-search';
+import { SEARCH_INPUT_LIMITS } from '@/lib/plans/catalog';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useBrandLocation } from '@/contexts/BrandLocationContext';
+import {
+  BrandLocationApiError,
+  requestBrandLocationApi,
+} from '@/app/hooks/useBrandPortfolio';
+import { affiliateIdentityKey } from '@/app/utils/affiliate-grouping';
+import {
+  getMarketCountryByIsoCode,
+  getMarketLanguageByIsoCode,
+  MARKET_COUNTRIES,
+  MARKET_LANGUAGES,
+} from '@/lib/markets/catalog';
+import {
+  findActiveBrandMarketLocation,
+  type ManagedLocation,
+} from '@/lib/brand-locations/portfolio';
+
+type PollingResult = SearchResult & Partial<ResultItem> & {
+  similarwebMonthlyVisits?: number;
+  similarwebGlobalRank?: number;
+  similarwebCountryRank?: number;
+  similarwebCountryCode?: string;
+  similarwebBounceRate?: number;
+  similarwebPagesPerVisit?: number;
+  similarwebTimeOnSite?: number;
+  similarwebTrafficSources?: ResultItem['similarWeb'] extends infer T
+    ? T extends { trafficSources: infer TSources } ? TSources : never
+    : never;
+  similarwebTopCountries?: ResultItem['similarWeb'] extends infer T
+    ? T extends { topCountries: infer TCountries } ? TCountries : never
+    : never;
+  similarwebCategory?: string;
+  similarwebSiteTitle?: string;
+  similarwebSiteDescription?: string;
+  similarwebScreenshot?: string;
+  similarwebCategoryRank?: number;
+  similarwebMonthlyVisitsHistory?: Record<string, number>;
+  similarwebTopKeywords?: Array<{ name: string; estimatedValue: number; cpc: number | null }>;
+  similarwebSnapshotDate?: string;
+};
 
 // Helper to format traffic numbers (e.g., 1234567 → "1.2M")
 function formatTraffic(num: number): string {
@@ -91,12 +132,12 @@ function formatTraffic(num: number): string {
   return num.toString();
 }
 
-const MAX_KEYWORDS = 5;
-const MAX_COMPETITORS = 5;
+const MAX_KEYWORDS = SEARCH_INPUT_LIMITS.maxKeywords;
+const MAX_COMPETITORS = SEARCH_INPUT_LIMITS.maxCompetitors;
 
 export default function FindNewPage() {
   // Translation hook (January 9th, 2026)
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   // ==========================================================================
   // AUTO-OPEN MODAL FROM URL PARAM - January 17th, 2026
@@ -129,6 +170,17 @@ export default function FindNewPage() {
   // Supabase auth user (supabaseUser) is used for secure feature gating.
   // ==========================================================================
   const { userId, user, supabaseUser, refetch } = useNeonUser();
+  const {
+    activeBrand,
+    activeLocation,
+    featureEnabled: brandLocationsEnabled,
+    locationScopeIds,
+    selectLocation,
+    refreshPortfolio,
+  } = useBrandLocation();
+  const displayedBrandDomain = brandLocationsEnabled
+    ? activeBrand?.normalizedDomain ?? ''
+    : user?.brand ?? '';
   
   // Hooks for data management
   const { 
@@ -138,16 +190,14 @@ export default function FindNewPage() {
     isAffiliateSaved,
     saveAffiliatesBulk,
     isLoading: savedLoading 
-  } = useSavedAffiliates();
+  } = useSavedAffiliates(locationScopeIds);
   
   const { 
     discoveredAffiliates, 
-    saveDiscoveredAffiliate,
-    saveDiscoveredAffiliates,
     removeDiscoveredAffiliate,
     removeDiscoveredAffiliatesBulk,
     isLoading: discoveredLoading
-  } = useDiscoveredAffiliates();
+  } = useDiscoveredAffiliates(locationScopeIds);
 
   const { blockedDomains, blockDomain, isBlocked, isAtLimit: isBlockLimitReached } = useBlockedDomains();
 
@@ -172,11 +222,12 @@ export default function FindNewPage() {
   // Editable competitors (pre-filled from onboarding, add/remove per run)
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState('');
-  const [editBrand, setEditBrand] = useState(user?.brand || '');
+  const [editBrand, setEditBrand] = useState(displayedBrandDomain);
   const [isEditingBrand, setIsEditingBrand] = useState(false);
   const [isSavingBrand, setIsSavingBrand] = useState(false);
   const isSelecdooUser = !!supabaseUser?.email?.toLowerCase().endsWith('@selecdoo.com');
-  const normalizedUserBrand = (user?.brand || '').trim();
+  const canEditBrandInline = isSelecdooUser && !brandLocationsEnabled;
+  const normalizedUserBrand = displayedBrandDomain.trim();
   const hasBrandChange = !!editBrand.trim() && editBrand.trim() !== normalizedUserBrand;
   
   const [results, setResults] = useState<ResultItem[]>([]);
@@ -185,18 +236,54 @@ export default function FindNewPage() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFindModalOpen, setIsFindModalOpen] = useState(false);
+  const [searchCountryCode, setSearchCountryCode] = useState('');
+  const [searchLanguageCode, setSearchLanguageCode] = useState('');
+  const [isConfirmingNewLocation, setIsConfirmingNewLocation] = useState(false);
+  const [isCreatingSearchLocation, setIsCreatingSearchLocation] = useState(false);
+  const [searchLocationError, setSearchLocationError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [showWarning, setShowWarning] = useState(false);
   const [animationKey, setAnimationKey] = useState(0);
   const [groupByDomain, setGroupByDomain] = useState(false);
 
+  const matchingSearchLocation = useMemo(
+    () => findActiveBrandMarketLocation(
+      activeBrand,
+      searchCountryCode,
+      searchLanguageCode,
+    ),
+    [activeBrand, searchCountryCode, searchLanguageCode],
+  );
+  const selectedSearchCountry = getMarketCountryByIsoCode(searchCountryCode);
+  const selectedSearchLanguage = getMarketLanguageByIsoCode(searchLanguageCode);
+  const selectedSearchMarketLabel = [
+    language === 'de' ? selectedSearchCountry?.nameDE : selectedSearchCountry?.name,
+    language === 'de' ? selectedSearchLanguage?.nameDE : selectedSearchLanguage?.name,
+  ].filter(Boolean).join(' · ');
+
+  const formatSearchLocationError = (error: unknown): string => {
+    if (!(error instanceof BrandLocationApiError)) {
+      return t.dashboard.brandLocations.errors.generic;
+    }
+    switch (error.code) {
+      case 'PLAN_LIMIT_REACHED':
+        return t.dashboard.brandLocations.errors.planLimit;
+      case 'SUBSCRIPTION_REQUIRED':
+        return t.dashboard.brandLocations.errors.subscriptionRequired;
+      case 'DUPLICATE_LOCATION_MARKET':
+        return t.dashboard.brandLocations.errors.duplicateLocation;
+      default:
+        return t.dashboard.brandLocations.errors.generic;
+    }
+  };
+
   // ============================================================================
   // BULK SELECTION STATE (Added Dec 2025)
   // Tracks which affiliates are selected for bulk operations (save/delete)
-  // Uses Set<string> with link as unique identifier for O(1) lookups
+  // Uses location + link as the unique identifier for O(1) lookups.
   // ============================================================================
-  const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
+  const [selectedAffiliateKeys, setSelectedAffiliateKeys] = useState<Set<string>>(new Set());
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   
@@ -269,6 +356,28 @@ export default function FindNewPage() {
     }
   }, [searchParams]);
 
+  // A search always runs in one concrete market. If the dashboard is showing
+  // several locations, activeLocation is the brand's deterministic default.
+  useEffect(() => {
+    if (!isFindModalOpen || !brandLocationsEnabled) return;
+    setSearchCountryCode(
+      activeLocation?.countryCode ?? MARKET_COUNTRIES[0].isoCode,
+    );
+    setSearchLanguageCode(
+      activeLocation?.languageCode ?? MARKET_LANGUAGES[0].isoCode,
+    );
+    setSearchLocationError(null);
+    setIsConfirmingNewLocation(false);
+    setIsCreatingSearchLocation(false);
+  }, [
+    activeBrand?.id,
+    activeLocation?.countryCode,
+    activeLocation?.id,
+    activeLocation?.languageCode,
+    brandLocationsEnabled,
+    isFindModalOpen,
+  ]);
+
   // Add keyword to list
   const addKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -336,13 +445,64 @@ export default function FindNewPage() {
   // ==========================================================================
   const keywordsInitRef = useRef<'pending' | 'topics' | 'restored' | 'none'>('pending');
   const competitorsInitRef = useRef<'pending' | 'done'>('pending');
+  const previousLocationScopeRef = useRef<string | undefined>(undefined);
+  const locationScopeKey = brandLocationsEnabled && activeBrand && locationScopeIds?.length
+    ? `${activeBrand.id}:${locationScopeIds.join(',')}`
+    : undefined;
   const [hasPrePopulated, setHasPrePopulated] = useState(false);
+  const savedTopics = brandLocationsEnabled ? activeLocation?.topics : user?.topics;
+  const savedCompetitors = brandLocationsEnabled ? activeLocation?.competitors : user?.competitors;
 
   useEffect(() => {
-    const userDataReady = user !== undefined && user !== null;
-    if (userDataReady && competitorsInitRef.current === 'pending') {
-      if (user?.competitors && user.competitors.length > 0) {
-        setCompetitors(user.competitors.slice(0, MAX_COMPETITORS));
+    if (!brandLocationsEnabled) {
+      previousLocationScopeRef.current = undefined;
+      return;
+    }
+    if (!locationScopeKey) return;
+    if (previousLocationScopeRef.current === undefined) {
+      previousLocationScopeRef.current = locationScopeKey;
+      return;
+    }
+    if (previousLocationScopeRef.current === locationScopeKey) return;
+
+    previousLocationScopeRef.current = locationScopeKey;
+    // Abort only this browser's old-location poll. The server job remains
+    // attached to its immutable location and can finish safely in the
+    // background; its result cannot populate the newly selected workspace.
+    cancelSearch();
+    keywordsInitRef.current = 'pending';
+    competitorsInitRef.current = 'pending';
+    setKeywords([]);
+    setKeywordInput('');
+    setCompetitors([]);
+    setCompetitorInput('');
+    setResults([]);
+    setLoading(false);
+    setHasSearched(false);
+    setHasPrePopulated(false);
+    setActiveFilter('All');
+    setSearchQuery('');
+    setCurrentPage(1);
+    setShowWarning(false);
+    setGroupByDomain(false);
+    setSelectedAffiliateKeys(new Set());
+    setSavingLinks(new Set());
+    setIsBulkSaving(false);
+    setIsBulkDeleting(false);
+    setIsDeleteModalOpen(false);
+    setBulkSaveResult(null);
+    setDeleteResult(null);
+    setCreditError(null);
+    setAdvancedFilters(DEFAULT_FILTER_STATE);
+    setIsFilterPanelOpen(false);
+    setAnimationKey((current) => current + 1);
+  }, [brandLocationsEnabled, cancelSearch, locationScopeKey]);
+
+  useEffect(() => {
+    const setupDataReady = brandLocationsEnabled ? activeLocation !== null : user != null;
+    if (setupDataReady && competitorsInitRef.current === 'pending') {
+      if (savedCompetitors && savedCompetitors.length > 0) {
+        setCompetitors(savedCompetitors.slice(0, MAX_COMPETITORS));
       }
       competitorsInitRef.current = 'done';
     }
@@ -357,14 +517,14 @@ export default function FindNewPage() {
     const discoveredDataReady = !discoveredLoading;
 
     // If user data isn't ready yet, wait (don't let restore effect win by default)
-    if (!userDataReady) {
+    if (!setupDataReady) {
       return;
     }
 
     // PRIORITY 1: Pre-populate from onboarding topics
     // If user has topics from onboarding, use those as the starting keywords
-    if (user?.topics && user.topics.length > 0) {
-      const topicsToAdd = user.topics.slice(0, MAX_KEYWORDS);
+    if (savedTopics && savedTopics.length > 0) {
+      const topicsToAdd = savedTopics.slice(0, MAX_KEYWORDS);
       setKeywords(topicsToAdd);
       setHasPrePopulated(true);
       keywordsInitRef.current = 'topics';
@@ -422,15 +582,22 @@ export default function FindNewPage() {
       keywordsInitRef.current = 'none';
     }
   // Including all relevant dependencies for proper re-runs
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, discoveredLoading, discoveredAffiliates]);
+  }, [
+    activeLocation,
+    brandLocationsEnabled,
+    discoveredLoading,
+    discoveredAffiliates,
+    savedCompetitors,
+    savedTopics,
+    user,
+  ]);
 
-  // Keep editable brand in sync with latest user brand from database
+  // Keep editable brand in sync with the active portfolio context.
   useEffect(() => {
-    setEditBrand(user?.brand || '');
+    setEditBrand(displayedBrandDomain);
     setIsEditingBrand(false);
     setIsSavingBrand(false);
-  }, [user?.brand]);
+  }, [displayedBrandDomain]);
 
   // ==========================================================================
   // HANDLE FIND AFFILIATES - Updated January 29, 2026
@@ -448,9 +615,9 @@ export default function FindNewPage() {
   // 1. Send ALL keywords in single API call → poll until done → process results
   // 2. Results are enriched server-side (YouTube, Instagram, TikTok metadata)
   // 3. Filtering is applied server-side (language, TLD, e-commerce block)
-  // 4. Final results saved to discovered_affiliates via existing hooks
+  // 4. Final results and search occurrences are committed atomically by the server
   // ==========================================================================
-  const handleFindAffiliates = async () => {
+  const runFindAffiliates = async (targetBrandLocationId?: string) => {
     if (keywords.length === 0) return;
     
     // ==========================================================================
@@ -480,11 +647,23 @@ export default function FindNewPage() {
     //
     // Gated to Selecdoo users because only they can edit the Website field.
     // ==========================================================================
-    if (isSelecdooUser && userId) {
+    if (brandLocationsEnabled && targetBrandLocationId) {
+      try {
+        await requestBrandLocationApi(`/api/brand-locations/${targetBrandLocationId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ topics: keywords, competitors }),
+        });
+        await refreshPortfolio();
+      } catch (error) {
+        // Saving reusable defaults must never launch a search in the wrong
+        // location. The immutable location ID is still sent below; this warning
+        // only means the edited defaults could not be persisted for next time.
+        console.error('[FindNewPage] Failed to persist location search defaults:', error);
+      }
+    } else if (isSelecdooUser && userId) {
       try {
         const brandToSave = editBrand.trim() || (user?.brand || '');
         const setupUpdate: Record<string, unknown> = {
-          id: userId,
           topics: keywords,          // keywords[] is guaranteed non-empty (early return above)
           competitors: competitors,  // may be empty — saving reflects the current setup
         };
@@ -533,6 +712,7 @@ export default function FindNewPage() {
         onProgress: (progress) => {
         },
         competitors: competitors.length > 0 ? competitors : undefined,
+        brandLocationId: targetBrandLocationId,
       });
       
       // ==================================================================
@@ -548,8 +728,7 @@ export default function FindNewPage() {
       const allResults: ResultItem[] = [];
       
       for (let i = 0; i < searchResults.length; i++) {
-        // Cast to any to access additional fields from status endpoint
-        const result = searchResults[i] as any;
+        const result = searchResults[i] as PollingResult;
         
         // Use server's discoveryMethod if present; else derive from searchQuery (competitor vs keyword)
         let discoveryMethod = result.discoveryMethod;
@@ -592,6 +771,8 @@ export default function FindNewPage() {
         
         const enhancedResult: ResultItem = {
           ...result,
+          brandId: result.brandId ?? activeBrand?.id,
+          brandLocationId: result.brandLocationId ?? targetBrandLocationId,
           rank: result.rank || i + 1,
           keyword: result.keyword || combinedKeyword,
           discoveryMethod,
@@ -605,21 +786,6 @@ export default function FindNewPage() {
       // Update UI with all results
       setResults(allResults);
       
-      // Batch save all results
-      if (allResults.length > 0) {
-        try {
-          const resultsToSave = allResults.map((result, i) => ({
-            ...result,
-            rank: result.rank || i + 1,
-            keyword: result.keyword || combinedKeyword,
-            discoveryMethod: result.discoveryMethod || { type: 'keyword' as const, value: keywords[0] || '' },
-          } as ResultItem));
-          await saveDiscoveredAffiliates(resultsToSave, combinedKeyword);
-        } catch (saveErr) {
-          console.error('Failed to save discovered affiliates:', saveErr);
-        }
-      }
-
       // ==========================================================================
       // CREDITS REFRESH
       // 
@@ -630,21 +796,22 @@ export default function FindNewPage() {
         window.dispatchEvent(new CustomEvent('credits-updated'));
       }
       
-    } catch (searchErr: any) {
+    } catch (searchErr: unknown) {
       // ====================================================================
       // ERROR HANDLING
       // ====================================================================
       
       // Credit error
-      if (searchErr.creditError) {
+      const typedError = searchErr as Partial<SearchError> & { name?: string };
+      if (typedError.creditError) {
         setCreditError({
-          message: searchErr.message || 'Insufficient topic search credits',
-          remaining: searchErr.remaining ?? 0,
+          message: typedError.message || 'Insufficient topic search credits',
+          remaining: typedError.remaining ?? 0,
         });
         toast.warning(t.toasts.warning.insufficientCredits);
-      } else if (searchErr.name === 'AbortError' || searchErr.code === 'CANCELLED') {
+      } else if (typedError.name === 'AbortError' || typedError.code === 'CANCELLED') {
         // Search cancelled by user - no notification needed
-      } else if (searchErr.code === 'SERVICE_AT_CAPACITY') {
+      } else if (typedError.code === 'SERVICE_AT_CAPACITY') {
         // August 3, 2026 (Paras): Apify monthly usage cap reached (see
         // /api/search/start catch block). Retrying cannot succeed, so show the
         // dedicated "temporarily unavailable" toast instead of searchFailed.
@@ -659,9 +826,77 @@ export default function FindNewPage() {
     }
   };
 
+  const handleFindAffiliates = async () => {
+    if (keywords.length === 0) return;
+    setSearchLocationError(null);
+
+    if (!brandLocationsEnabled) {
+      await runFindAffiliates();
+      return;
+    }
+
+    if (!activeBrand || !searchCountryCode || !searchLanguageCode) {
+      setSearchLocationError(t.dashboard.find.modal.locationRequired);
+      return;
+    }
+
+    if (!matchingSearchLocation) {
+      setIsConfirmingNewLocation(true);
+      return;
+    }
+
+    // A search is a single-location operation. Make that location the visible
+    // dashboard scope too, while suppressing the ordinary workspace-change
+    // reset that would otherwise cancel the poll we are about to start.
+    previousLocationScopeRef.current = `${activeBrand.id}:${matchingSearchLocation.id}`;
+    selectLocation(matchingSearchLocation.id);
+    await runFindAffiliates(matchingSearchLocation.id);
+  };
+
+  const confirmNewSearchLocation = async () => {
+    if (
+      !activeBrand
+      || !searchCountryCode
+      || !searchLanguageCode
+      || keywords.length === 0
+      || isCreatingSearchLocation
+    ) {
+      return;
+    }
+
+    setIsCreatingSearchLocation(true);
+    setSearchLocationError(null);
+    try {
+      const { location } = await requestBrandLocationApi<{ location: ManagedLocation }>(
+        `/api/brands/${activeBrand.id}/locations`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            countryCode: searchCountryCode,
+            languageCode: searchLanguageCode,
+            topics: keywords,
+            competitors,
+          }),
+        },
+      );
+
+      // Refresh first so the queued selection can be verified against the
+      // authenticated portfolio as soon as React applies it.
+      await refreshPortfolio();
+      previousLocationScopeRef.current = `${activeBrand.id}:${location.id}`;
+      selectLocation(location.id);
+      setIsConfirmingNewLocation(false);
+      await runFindAffiliates(location.id);
+    } catch (error) {
+      setSearchLocationError(formatSearchLocationError(error));
+    } finally {
+      setIsCreatingSearchLocation(false);
+    }
+  };
+
   const toggleSave = (item: ResultItem) => {
-    if (isAffiliateSaved(item.link)) {
-      removeAffiliate(item.link);
+    if (isAffiliateSaved(item)) {
+      removeAffiliate(item);
     } else {
       saveAffiliate(item);
     }
@@ -916,63 +1151,66 @@ export default function FindNewPage() {
   }, [activeFilter, searchQuery]);
 
   // ============================================================================
-  // VISIBLE SELECTION - Computed from selectedLinks and filteredResults
+  // VISIBLE SELECTION - Location-aware so identical links cannot collide.
   // ============================================================================
-  const visibleSelectedLinks = useMemo(() => {
-    const visibleLinks = new Set(filteredResults.map(r => r.link));
+  const visibleSelectedAffiliateKeys = useMemo(() => {
+    const visibleKeys = new Set(filteredResults.map(affiliateIdentityKey));
     const visible = new Set<string>();
-    selectedLinks.forEach(link => {
-      if (visibleLinks.has(link)) {
-        visible.add(link);
+    selectedAffiliateKeys.forEach((key) => {
+      if (visibleKeys.has(key)) {
+        visible.add(key);
       }
     });
     return visible;
-  }, [selectedLinks, filteredResults]);
+  }, [selectedAffiliateKeys, filteredResults]);
 
   // ============================================================================
   // BULK SELECTION HANDLERS (Added Dec 2025)
   // ============================================================================
   
-  const toggleSelectItem = (link: string) => {
-    setSelectedLinks(prev => {
+  const toggleSelectItem = (item: ResultItem) => {
+    const key = affiliateIdentityKey(item);
+    setSelectedAffiliateKeys(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(link)) {
-        newSet.delete(link);
+      if (newSet.has(key)) {
+        newSet.delete(key);
       } else {
-        newSet.add(link);
+        newSet.add(key);
       }
       return newSet;
     });
   };
 
   const selectAllVisible = () => {
-    setSelectedLinks(prev => {
+    setSelectedAffiliateKeys(prev => {
       const newSet = new Set(prev);
-      filteredResults.forEach(r => newSet.add(r.link));
+      filteredResults.forEach((item) => newSet.add(affiliateIdentityKey(item)));
       return newSet;
     });
   };
 
   const deselectAll = () => {
-    setSelectedLinks(new Set());
+    setSelectedAffiliateKeys(new Set());
   };
   
   const deselectAllVisible = () => {
-    setSelectedLinks(prev => {
+    setSelectedAffiliateKeys(prev => {
       const newSet = new Set(prev);
-      filteredResults.forEach(r => newSet.delete(r.link));
+      filteredResults.forEach((item) => newSet.delete(affiliateIdentityKey(item)));
       return newSet;
     });
   };
 
   const handleBulkSave = async () => {
-    if (visibleSelectedLinks.size === 0) return;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
     
     setIsBulkSaving(true);
-    setSavingLinks(new Set(visibleSelectedLinks));
+    setSavingLinks(new Set(visibleSelectedAffiliateKeys));
     
     try {
-      const affiliatesToSave = results.filter(r => visibleSelectedLinks.has(r.link));
+      const affiliatesToSave = results.filter((item) =>
+        visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
+      );
       const result = await saveAffiliatesBulk(affiliatesToSave);
       
       // =======================================================================
@@ -989,9 +1227,9 @@ export default function FindNewPage() {
         setBulkSaveResult(prev => prev ? { ...prev, show: false } : null);
       }, 4000);
       
-      setSelectedLinks(prev => {
+      setSelectedAffiliateKeys(prev => {
         const newSet = new Set(prev);
-        visibleSelectedLinks.forEach(link => newSet.delete(link));
+        visibleSelectedAffiliateKeys.forEach((key) => newSet.delete(key));
         return newSet;
       });
     } catch (err) {
@@ -1006,24 +1244,28 @@ export default function FindNewPage() {
   };
 
   const handleBulkDelete = () => {
-    if (visibleSelectedLinks.size === 0) return;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
     setIsDeleteModalOpen(true);
   };
 
   const confirmBulkDelete = async () => {
-    if (visibleSelectedLinks.size === 0) return;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
     
-    const deleteCount = visibleSelectedLinks.size;
+    const affiliatesToDelete = results.filter((item) =>
+      visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
+    );
+    const deleteCount = affiliatesToDelete.length;
     setIsBulkDeleting(true);
     try {
-      const linksToDelete = Array.from(visibleSelectedLinks);
-      await removeDiscoveredAffiliatesBulk(linksToDelete);
+      await removeDiscoveredAffiliatesBulk(affiliatesToDelete);
       
-      setResults(prev => prev.filter(r => !visibleSelectedLinks.has(r.link)));
+      setResults(prev => prev.filter((item) =>
+        !visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
+      ));
       
-      setSelectedLinks(prev => {
+      setSelectedAffiliateKeys(prev => {
         const newSet = new Set(prev);
-        visibleSelectedLinks.forEach(link => newSet.delete(link));
+        visibleSelectedAffiliateKeys.forEach((key) => newSet.delete(key));
         return newSet;
       });
       setIsDeleteModalOpen(false);
@@ -1047,18 +1289,19 @@ export default function FindNewPage() {
   // Clear selection when starting a new search
   useEffect(() => {
     if (loading) {
-      setSelectedLinks(new Set());
+      setSelectedAffiliateKeys(new Set());
     }
   }, [loading]);
 
-  const handleSingleDelete = async (link: string) => {
-    setResults(prev => prev.filter(r => r.link !== link));
-    setSelectedLinks(prev => {
+  const handleSingleDelete = async (item: ResultItem) => {
+    const itemKey = affiliateIdentityKey(item);
+    setResults(prev => prev.filter((candidate) => affiliateIdentityKey(candidate) !== itemKey));
+    setSelectedAffiliateKeys(prev => {
       const newSet = new Set(prev);
-      newSet.delete(link);
+      newSet.delete(itemKey);
       return newSet;
     });
-    await removeDiscoveredAffiliate(link);
+    await removeDiscoveredAffiliate(item);
     
     setDeleteResult({ count: 1, show: true });
     setTimeout(() => {
@@ -1069,8 +1312,10 @@ export default function FindNewPage() {
   const normalizeDomainForCompare = (d: string) => (d || '').toLowerCase().replace(/^www\./, '');
   const [isBulkBlocking, setIsBulkBlocking] = useState(false);
   const handleBulkBlockDomains = async () => {
-    if (visibleSelectedLinks.size === 0) return;
-    const selectedItems = filteredResults.filter(r => selectedLinks.has(r.link));
+    if (visibleSelectedAffiliateKeys.size === 0) return;
+    const selectedItems = filteredResults.filter((item) =>
+      selectedAffiliateKeys.has(affiliateIdentityKey(item)),
+    );
     const domainsToBlock = [...new Set(selectedItems.map(r => normalizeDomainForCompare(r.domain)))];
     const canAdd = Math.max(0, 10 - blockedDomains.length);
     const toBlock = domainsToBlock.slice(0, canAdd);
@@ -1085,9 +1330,11 @@ export default function FindNewPage() {
       }
       const blockedSet = new Set(toBlock);
       setResults(prev => prev.filter(r => !blockedSet.has(normalizeDomainForCompare(r.domain))));
-      setSelectedLinks(prev => {
+      setSelectedAffiliateKeys(prev => {
         const next = new Set(prev);
-        selectedItems.filter(r => blockedSet.has(normalizeDomainForCompare(r.domain))).forEach(r => next.delete(r.link));
+        selectedItems
+          .filter(r => blockedSet.has(normalizeDomainForCompare(r.domain)))
+          .forEach(r => next.delete(affiliateIdentityKey(r)));
         return next;
       });
       toast.success(toBlock.length === 1 ? t.dashboard.find.bulkActions.blockDomainDone : `${toBlock.length} ${t.dashboard.find.bulkActions.blockDomainsDone}`);
@@ -1287,8 +1534,8 @@ export default function FindNewPage() {
               isOpen={isFilterPanelOpen}
               onClose={() => setIsFilterPanelOpen(false)}
               onOpen={() => setIsFilterPanelOpen(true)}
-              userCompetitors={user?.competitors || undefined}
-              userTopics={user?.topics || undefined}
+              userCompetitors={activeLocation?.competitors ?? user?.competitors ?? undefined}
+              userTopics={activeLocation?.topics ?? user?.topics ?? undefined}
             />
           </div>
         </div>
@@ -1314,10 +1561,13 @@ export default function FindNewPage() {
                 `hover:-translate-y-0.5` lift.
             Logic / handlers / i18n strings unchanged.
             ============================================================================= */}
-        {visibleSelectedLinks.size > 0 && (() => {
-          const alreadySavedCount = Array.from(visibleSelectedLinks).filter(link => isAffiliateSaved(link)).length;
-          const newToSaveCount = visibleSelectedLinks.size - alreadySavedCount;
-          const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
+        {visibleSelectedAffiliateKeys.size > 0 && (() => {
+          const selectedItems = filteredResults.filter((item) =>
+            visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
+          );
+          const alreadySavedCount = selectedItems.filter(isAffiliateSaved).length;
+          const newToSaveCount = selectedItems.length - alreadySavedCount;
+          const allVisibleSelected = visibleSelectedAffiliateKeys.size === filteredResults.length;
           
           return (
           <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
@@ -1329,7 +1579,7 @@ export default function FindNewPage() {
                   <Check size={14} className="text-[#0f172a]" strokeWidth={2.5} />
                 </div>
                 <span className="text-sm font-semibold text-[#0f172a] dark:text-white">
-                  {visibleSelectedLinks.size} {t.dashboard.find.bulkActions.selected}
+                  {visibleSelectedAffiliateKeys.size} {t.dashboard.find.bulkActions.selected}
                 </span>
                 {alreadySavedCount > 0 && (
                   <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
@@ -1448,8 +1698,8 @@ export default function FindNewPage() {
             <div className="col-span-1 flex justify-center">
               <input
                 type="checkbox"
-                checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
-                onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
+                checked={filteredResults.length > 0 && visibleSelectedAffiliateKeys.size === filteredResults.length}
+                onChange={() => visibleSelectedAffiliateKeys.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
                 className="accent-[#ffbf23]"
               />
             </div>
@@ -1515,7 +1765,7 @@ export default function FindNewPage() {
                         source={group.main.source}
                         rank={group.main.rank}
                         keyword={group.main.keyword}
-                        isSaved={isAffiliateSaved(group.main.link)}
+                        isSaved={isAffiliateSaved(group.main)}
                         onSave={() => toggleSave(group.main)}
                         thumbnail={group.main.thumbnail}
                         views={group.main.views}
@@ -1534,10 +1784,10 @@ export default function FindNewPage() {
                         channel={group.main.channel}
                         duration={group.main.duration}
                         personName={group.main.personName}
-                        isSelected={selectedLinks.has(group.main.link)}
-                        onSelect={toggleSelectItem}
-                        isSaving={savingLinks.has(group.main.link)}
-                        onDelete={() => handleSingleDelete(group.main.link)}
+                        isSelected={selectedAffiliateKeys.has(affiliateIdentityKey(group.main))}
+                        onSelect={() => toggleSelectItem(group.main)}
+                        isSaving={savingLinks.has(affiliateIdentityKey(group.main))}
+                        onDelete={() => handleSingleDelete(group.main)}
                         affiliateData={group.main}
                         currentUser={user}
                         searchQuery={searchQuery}
@@ -1572,7 +1822,7 @@ export default function FindNewPage() {
                       source={group.main.source}
                       rank={group.main.rank}
                       keyword={group.main.keyword}
-                      isSaved={isAffiliateSaved(group.main.link)}
+                      isSaved={isAffiliateSaved(group.main)}
                       onSave={() => toggleSave(group.main)}
                       thumbnail={group.main.thumbnail}
                       views={group.main.views}
@@ -1588,10 +1838,10 @@ export default function FindNewPage() {
                       channel={group.main.channel}
                       duration={group.main.duration}
                       personName={group.main.personName}
-                      isSelected={selectedLinks.has(group.main.link)}
-                      onSelect={toggleSelectItem}
-                      isSaving={savingLinks.has(group.main.link)}
-                      onDelete={() => handleSingleDelete(group.main.link)}
+                      isSelected={selectedAffiliateKeys.has(affiliateIdentityKey(group.main))}
+                      onSelect={() => toggleSelectItem(group.main)}
+                      isSaving={savingLinks.has(affiliateIdentityKey(group.main))}
+                      onDelete={() => handleSingleDelete(group.main)}
                       affiliateData={group.main}
                       currentUser={user}
                       searchQuery={searchQuery}
@@ -1818,7 +2068,7 @@ export default function FindNewPage() {
             <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-400">
               {t.dashboard.find.modal.websiteLabel}:
             </span>
-            {isSelecdooUser ? (
+            {canEditBrandInline ? (
               <div className="flex-1 flex items-center gap-2">
                 {isEditingBrand ? (
                   <>
@@ -1845,7 +2095,6 @@ export default function FindNewPage() {
                               method: 'PATCH',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                id: userId,
                                 brand: editBrand.trim(),
                               }),
                             });
@@ -1871,7 +2120,6 @@ export default function FindNewPage() {
                               method: 'PATCH',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                id: userId,
                                 brand: editBrand.trim(),
                               }),
                             });
@@ -1929,20 +2177,92 @@ export default function FindNewPage() {
                   </>
                 )}
               </div>
-            ) : user?.brand ? (
+            ) : displayedBrandDomain ? (
               <>
                 <img
-                  src={`https://www.google.com/s2/favicons?domain=${user.brand}&sz=16`}
+                  src={`https://www.google.com/s2/favicons?domain=${displayedBrandDomain}&sz=16`}
                   alt=""
                   className="w-4 h-4 shrink-0"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
-                <span className="text-sm font-medium text-[#0f172a] dark:text-gray-300 truncate">{user.brand}</span>
+                <span className="text-sm font-medium text-[#0f172a] dark:text-gray-300 truncate">{displayedBrandDomain}</span>
               </>
             ) : (
               <span className="text-sm italic text-[#8898aa]">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
             )}
           </div>
+
+          {brandLocationsEnabled && (
+            <section className="rounded-xl border border-[#e6ebf1] bg-[#f6f9fc] p-4 dark:border-gray-800 dark:bg-gray-900/70">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white">
+                    {t.dashboard.find.modal.targetMarket}
+                  </h3>
+                  <p className="mt-1 max-w-xl text-xs leading-5 text-[#8898aa] dark:text-gray-400">
+                    {t.dashboard.find.modal.targetMarketHint}
+                  </p>
+                </div>
+                {searchCountryCode && searchLanguageCode && (
+                  <span className={cn(
+                    'rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+                    matchingSearchLocation
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300'
+                      : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300',
+                  )}>
+                    {matchingSearchLocation
+                      ? t.dashboard.find.modal.savedLocation
+                      : t.dashboard.find.modal.newLocation}
+                  </span>
+                )}
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
+                  {t.dashboard.brandLocations.country}
+                  <select
+                    value={searchCountryCode}
+                    onChange={(event) => {
+                      setSearchCountryCode(event.target.value);
+                      setSearchLocationError(null);
+                      setIsConfirmingNewLocation(false);
+                    }}
+                    disabled={loading || isCreatingSearchLocation}
+                    className="w-full rounded-lg border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  >
+                    {MARKET_COUNTRIES.map((country) => (
+                      <option key={country.isoCode} value={country.isoCode}>
+                        {language === 'de' ? country.nameDE : country.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
+                  {t.dashboard.brandLocations.language}
+                  <select
+                    value={searchLanguageCode}
+                    onChange={(event) => {
+                      setSearchLanguageCode(event.target.value);
+                      setSearchLocationError(null);
+                      setIsConfirmingNewLocation(false);
+                    }}
+                    disabled={loading || isCreatingSearchLocation}
+                    className="w-full rounded-lg border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  >
+                    {MARKET_LANGUAGES.map((marketLanguage) => (
+                      <option key={marketLanguage.isoCode} value={marketLanguage.isoCode}>
+                        {language === 'de' ? marketLanguage.nameDE : marketLanguage.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {searchLocationError && (
+                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                  {searchLocationError}
+                </p>
+              )}
+            </section>
+          )}
 
           {/* =====================================================================
               TWO-COLUMN GRID — KEYWORDS | COMPETITORS. Chunk 3/4.
@@ -2162,7 +2482,11 @@ export default function FindNewPage() {
               ===================================================================== */}
           <button
             onClick={handleFindAffiliates}
-            disabled={keywords.length === 0 || loading}
+            disabled={
+              keywords.length === 0
+              || loading
+              || (brandLocationsEnabled && (!searchCountryCode || !searchLanguageCode))
+            }
             className="w-full py-3.5 bg-[#ffbf23] text-[#0f172a] font-semibold rounded-full shadow-yellow-glow hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none disabled:cursor-not-allowed disabled:hover:translate-y-0 dark:disabled:bg-gray-800 transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
@@ -2184,12 +2508,53 @@ export default function FindNewPage() {
         </div>
       </Modal>
 
+      <Modal
+        isOpen={isConfirmingNewLocation}
+        onClose={isCreatingSearchLocation ? () => undefined : () => setIsConfirmingNewLocation(false)}
+        title={t.dashboard.find.modal.confirmLocationTitle}
+        width="max-w-lg"
+      >
+        <div className="space-y-5">
+          <p className="text-sm leading-6 text-[#425466] dark:text-gray-300">
+            {t.dashboard.find.modal.confirmLocationMessage
+              .replace('{market}', selectedSearchMarketLabel)
+              .replace('{brand}', activeBrand?.name ?? '')}
+          </p>
+          {searchLocationError && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+              {searchLocationError}
+            </p>
+          )}
+          <div className="flex flex-col-reverse gap-3 border-t border-[#e6ebf1] pt-4 sm:flex-row sm:justify-end dark:border-gray-800">
+            <button
+              type="button"
+              onClick={() => setIsConfirmingNewLocation(false)}
+              disabled={isCreatingSearchLocation}
+              className="min-h-10 rounded-full border border-[#d8e0e8] bg-white px-5 py-2 text-sm font-medium text-[#425466] transition-[background-color,scale] duration-150 hover:bg-[#f6f9fc] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              {t.common.cancel}
+            </button>
+            <button
+              type="button"
+              onClick={confirmNewSearchLocation}
+              disabled={isCreatingSearchLocation}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#ffbf23] px-5 py-2 text-sm font-semibold text-[#0f172a] shadow-yellow-glow-sm transition-[background-color,scale] duration-150 hover:bg-[#e5ac20] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isCreatingSearchLocation && <Loader2 size={15} className="animate-spin" />}
+              {isCreatingSearchLocation
+                ? t.dashboard.find.modal.addingLocation
+                : t.dashboard.find.modal.addLocationAndSearch}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* DELETE CONFIRMATION MODAL */}
       <ConfirmDeleteModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmBulkDelete}
-        itemCount={visibleSelectedLinks.size}
+        itemCount={visibleSelectedAffiliateKeys.size}
         isDeleting={isBulkDeleting}
         itemType="affiliate"
       />

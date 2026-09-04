@@ -41,13 +41,22 @@ const SOCIAL_SOURCES = ['youtube', 'instagram', 'tiktok'];
  * Web → "web::<domain>", Social → "<source>::<creator-identity>".
  */
 export function groupKeyOf(item: ResultItem): string {
+  // The same creator/domain may legitimately exist in several markets. Keep
+  // those rows separate in an aggregated multi-location view so actions and
+  // counts retain their location meaning.
+  const locationScope = item.brandLocationId ?? 'legacy';
   const source = (item.source || '').toLowerCase();
   if (SOCIAL_SOURCES.includes(source)) {
     const creator = item.channel?.link || item.channel?.name || item.link || '';
-    return `${source}::${creator.toLowerCase()}`;
+    return `${locationScope}::${source}::${creator.toLowerCase()}`;
   }
   const domain = (item.domain || item.link || '').toLowerCase().replace(/^www\./, '');
-  return `web::${domain}`;
+  return `${locationScope}::web::${domain}`;
+}
+
+/** A location-aware key for row selection and optimistic updates. */
+export function affiliateIdentityKey(item: Pick<ResultItem, 'brandLocationId' | 'link'>): string {
+  return `${item.brandLocationId ?? 'legacy'}::${item.link}`;
 }
 
 export interface AffiliateGroup {

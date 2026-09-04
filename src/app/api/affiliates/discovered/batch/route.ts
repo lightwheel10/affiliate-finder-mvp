@@ -14,30 +14,25 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  affiliateRequestErrorResponse,
+  resolveAffiliateRequestContext,
+} from '@/lib/affiliates/server';
 
 // POST /api/affiliates/discovered/batch - Batch save discovered affiliates
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { userId, searchKeyword, affiliates } = body;
+    const { userId, brandLocationId, searchKeyword, affiliates } = body;
 
     if (!userId || !searchKeyword || !affiliates || !Array.isArray(affiliates)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: userId,
+      requestedBrandLocationId: brandLocationId,
+    });
 
     const insertedIds: number[] = [];
 
@@ -106,16 +101,10 @@ export async function POST(request: NextRequest) {
         similarwebTopCountries,
       } = affiliate;
 
-      // Check for duplicate
-      const existing = await sql`
-        SELECT id FROM crewcast.discovered_affiliates 
-        WHERE user_id = ${userId} AND link = ${link}
-      `;
-
-      if (existing.length === 0) {
-        const newAffiliates = await sql`
+      const newAffiliates = await sql`
           INSERT INTO crewcast.discovered_affiliates (
-            user_id, search_keyword, title, link, domain, snippet, source,
+            user_id, brand_id, brand_location_id,
+            search_keyword, title, link, domain, snippet, source,
             is_affiliate, person_name, summary, email, thumbnail,
             views, date, rank, keyword, highlighted_words,
             discovery_method_type, discovery_method_value,
@@ -134,7 +123,8 @@ export async function POST(request: NextRequest) {
             similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries
           )
           VALUES (
-            ${userId}, ${searchKeyword}, ${title}, ${link}, ${domain}, ${snippet}, ${source},
+            ${context.accountId}, ${context.brandId}::bigint, ${context.brandLocationId}::bigint,
+            ${searchKeyword}, ${title}, ${link}, ${domain}, ${snippet}, ${source},
             ${isAffiliate ?? null}, ${personName ?? null}, ${summary ?? null}, 
             ${email ?? null}, ${thumbnail ?? null}, ${views ?? null}, 
             ${date ?? null}, ${rank ?? null}, ${keyword ?? null}, 
@@ -157,14 +147,20 @@ export async function POST(request: NextRequest) {
             ${similarwebTrafficSources ? JSON.stringify(similarwebTrafficSources) : null}, 
             ${similarwebTopCountries ? JSON.stringify(similarwebTopCountries) : null}
           )
+          ON CONFLICT (brand_location_id, link) DO NOTHING
           RETURNING id
         `;
+      if (newAffiliates.length === 1) {
         insertedIds.push(newAffiliates[0].id as number);
       }
     }
 
     return NextResponse.json({ insertedIds, count: insertedIds.length });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error batch saving discovered affiliates:', error);
     return NextResponse.json({ error: 'Failed to batch save affiliates' }, { status: 500 });
   }
@@ -189,31 +185,26 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { userId, links } = body;
+    const { userId, brandLocationId, links } = body;
 
     if (!userId || !links || !Array.isArray(links) || links.length === 0) {
       return NextResponse.json({ error: 'Missing required fields: userId and links array' }, { status: 400 });
     }
 
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: userId,
+      requestedBrandLocationId: brandLocationId,
+    });
 
     // Delete all matching affiliates in one query using ANY
     // RETURNING * gives us the actual deleted rows so we can count them accurately
     const deletedRows = await sql`
       DELETE FROM crewcast.discovered_affiliates 
-      WHERE user_id = ${userId} AND link = ANY(${links})
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+        AND link = ANY(${links})
       RETURNING id
     `;
 
@@ -222,6 +213,10 @@ export async function DELETE(request: NextRequest) {
       count: deletedRows.length  // Actual count of deleted rows
     });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error batch removing discovered affiliates:', error);
     return NextResponse.json({ error: 'Failed to batch remove affiliates' }, { status: 500 });
   }

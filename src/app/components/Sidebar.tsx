@@ -42,7 +42,7 @@ import {
   Zap,
   Clock,
   ChevronRight,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 // January 19th, 2026: Removed Stack Auth import
@@ -75,6 +75,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 // Added dark mode toggle for dashboard - see ThemeContext for implementation
 // =============================================================================
 import { ThemeSwitcher } from './ThemeSwitcher';
+import { BrandLocationSwitcher } from './BrandLocationSwitcher';
+import { useBrandLocation } from '@/contexts/BrandLocationContext';
 
 // =============================================================================
 // SKELETON COMPONENT
@@ -194,6 +196,7 @@ export const Sidebar: React.FC = () => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const pathname = usePathname();
+  const { featureEnabled, isReady, locationScopeIds } = useBrandLocation();
   
   // ==========================================================================
   // REAL-TIME COUNTS WITH SWR - January 3rd, 2026
@@ -214,8 +217,9 @@ export const Sidebar: React.FC = () => {
   // the Discovered/Saved pages. The hooks' `count` (raw posting rows) is no
   // longer used here.
   // ==========================================================================
-  const { savedAffiliates } = useSavedAffiliates();
-  const { discoveredAffiliates } = useDiscoveredAffiliates();
+  const affiliateQueriesEnabled = !featureEnabled || isReady;
+  const { savedAffiliates } = useSavedAffiliates(locationScopeIds, affiliateQueriesEnabled);
+  const { discoveredAffiliates } = useDiscoveredAffiliates(locationScopeIds, affiliateQueriesEnabled);
   const { isBlocked } = useBlockedDomains();
   const pipelineCount = useMemo(
     () => groupCountsBySource(savedAffiliates.filter(a => !isBlocked(a.domain))).All,
@@ -290,6 +294,8 @@ export const Sidebar: React.FC = () => {
           </div>
           {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
         </div>
+
+        <BrandLocationSwitcher />
 
         {/* Main Navigation — SMOOVER (April 23rd, 2026) */}
         <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
@@ -581,7 +587,7 @@ const NavItemNeo = ({ icon, label, active, badge, onClick, href }: NavItemProps)
   );
 
   const className = cn(
-    "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200",
+    "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-[background-color,color,box-shadow] duration-150",
     active 
       ? "bg-[#fff4d1] dark:bg-[#ffbf23]/10 text-[#0f172a] dark:text-[#ffbf23] font-semibold shadow-soft-sm" 
       : "text-[#425466] dark:text-gray-400 hover:bg-[#f6f9fc] dark:hover:bg-gray-900 hover:text-[#0f172a] dark:hover:text-white"

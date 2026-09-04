@@ -28,6 +28,10 @@
 // =============================================================================
 
 import { franc } from 'franc';
+import {
+  getMarketCountry,
+  getMarketLanguage,
+} from '@/lib/markets/catalog';
 
 export interface LocationConfig {
   countryCode: string;  // ISO 3166-1 alpha-2 (for Serper gl param)
@@ -35,165 +39,16 @@ export interface LocationConfig {
   shortName: string;    // For social media queries (e.g., "UK", "Germany")
 }
 
-// =============================================================================
-// COUNTRY MAPPINGS - January 16, 2026
-// 
-// Maps country names (stored in database as target_country) to:
-// - code: Serper gl parameter (geolocation)
-// - short: Appended to social media queries for localized results
-// 
-// Note: UK uses 'uk' for Serper (not 'gb') based on API testing
-// =============================================================================
-const COUNTRY_TO_CODE: Record<string, { code: string; short: string }> = {
-  // North America
-  'United States': { code: 'us', short: 'USA' },
-  'Canada': { code: 'ca', short: 'Canada' },
-  
-  // Europe - Major Markets
-  'United Kingdom': { code: 'uk', short: 'UK' },
-  'Germany': { code: 'de', short: 'Germany' },
-  'France': { code: 'fr', short: 'France' },
-  'Netherlands': { code: 'nl', short: 'Netherlands' },
-  'Belgium': { code: 'be', short: 'Belgium' },
-  'Switzerland': { code: 'ch', short: 'Switzerland' },
-  'Austria': { code: 'at', short: 'Austria' },
-  'Ireland': { code: 'ie', short: 'Ireland' },
-  
-  // Nordics
-  'Denmark': { code: 'dk', short: 'Denmark' },
-  'Sweden': { code: 'se', short: 'Sweden' },
-  'Norway': { code: 'no', short: 'Norway' },
-  'Finland': { code: 'fi', short: 'Finland' },
-  
-  // Southern Europe
-  'Spain': { code: 'es', short: 'Spain' },
-  'Italy': { code: 'it', short: 'Italy' },
-  'Portugal': { code: 'pt', short: 'Portugal' },
-  
-  // Central/Eastern Europe
-  'Poland': { code: 'pl', short: 'Poland' },
-  'Czech Republic': { code: 'cz', short: 'Czech' },
-  
-  // Asia-Pacific
-  'Australia': { code: 'au', short: 'Australia' },
-  'New Zealand': { code: 'nz', short: 'New Zealand' },
-  'Japan': { code: 'jp', short: 'Japan' },
-  'South Korea': { code: 'kr', short: 'Korea' },
-  'Singapore': { code: 'sg', short: 'Singapore' },
-  
-  // Middle East
-  'United Arab Emirates': { code: 'ae', short: 'UAE' },
-  'Israel': { code: 'il', short: 'Israel' },
-  'Saudi Arabia': { code: 'sa', short: 'Saudi Arabia' },
-};
-
-// =============================================================================
-// LANGUAGE MAPPINGS - January 16, 2026
-// 
-// Maps language names (stored in database as target_language) to ISO 639-1 codes
-// Used for Serper hl parameter (interface language)
-// =============================================================================
-const LANGUAGE_TO_CODE: Record<string, string> = {
-  // Major Western Languages
-  'English': 'en',
-  'Spanish': 'es',
-  'German': 'de',
-  'French': 'fr',
-  'Portuguese': 'pt',
-  'Italian': 'it',
-  'Dutch': 'nl',
-  
-  // Nordic Languages
-  'Swedish': 'sv',
-  'Danish': 'da',
-  'Norwegian': 'no',
-  'Finnish': 'fi',
-  
-  // Central/Eastern European
-  'Polish': 'pl',
-  'Czech': 'cs',
-  
-  // Asian Languages
-  'Japanese': 'ja',
-  'Korean': 'ko',
-  
-  // Middle Eastern
-  'Arabic': 'ar',
-  'Hebrew': 'he',
-};
-
-// =============================================================================
-// ALLOWED TLDs BY COUNTRY - January 28, 2026
-// 
-// Maps target countries to their allowed domain TLDs.
-// .com is ALWAYS allowed (international domains can have content in any language)
-// 
-// Purpose: Filter out results from wrong countries
-// Example: German user should not see .fr, .es, .it domains
-// 
-// Logic:
-// - Include the country's own TLD (.de for Germany)
-// - Include neighboring/related country TLDs that share the language
-// - Always include .com, .net, .org, .io (international)
-// =============================================================================
-const ALLOWED_TLDS_BY_COUNTRY: Record<string, string[]> = {
-  // North America (English-speaking)
-  'United States': ['.com', '.net', '.org', '.io', '.us', '.ca', '.co.uk', '.au', '.nz'],
-  'Canada': ['.com', '.net', '.org', '.io', '.ca', '.us', '.co.uk'],
-  
-  // German-speaking countries (Germany, Austria, Switzerland)
-  'Germany': ['.com', '.net', '.org', '.io', '.de', '.at', '.ch'],
-  'Austria': ['.com', '.net', '.org', '.io', '.at', '.de', '.ch'],
-  'Switzerland': ['.com', '.net', '.org', '.io', '.ch', '.de', '.at'],
-  
-  // UK and Ireland (English-speaking)
-  'United Kingdom': ['.com', '.net', '.org', '.io', '.co.uk', '.uk', '.ie'],
-  'Ireland': ['.com', '.net', '.org', '.io', '.ie', '.co.uk', '.uk'],
-  
-  // France and French-speaking
-  'France': ['.com', '.net', '.org', '.io', '.fr', '.be', '.ch'],
-  'Belgium': ['.com', '.net', '.org', '.io', '.be', '.fr', '.nl'],
-  
-  // Netherlands
-  'Netherlands': ['.com', '.net', '.org', '.io', '.nl', '.be'],
-  
-  // Nordics
-  'Denmark': ['.com', '.net', '.org', '.io', '.dk', '.se', '.no'],
-  'Sweden': ['.com', '.net', '.org', '.io', '.se', '.dk', '.no', '.fi'],
-  'Norway': ['.com', '.net', '.org', '.io', '.no', '.se', '.dk'],
-  'Finland': ['.com', '.net', '.org', '.io', '.fi', '.se'],
-  
-  // Southern Europe
-  'Spain': ['.com', '.net', '.org', '.io', '.es', '.mx', '.ar'],
-  'Italy': ['.com', '.net', '.org', '.io', '.it', '.ch'],
-  'Portugal': ['.com', '.net', '.org', '.io', '.pt', '.br'],
-  
-  // Central/Eastern Europe
-  'Poland': ['.com', '.net', '.org', '.io', '.pl'],
-  'Czech Republic': ['.com', '.net', '.org', '.io', '.cz', '.sk'],
-  
-  // Asia-Pacific
-  'Australia': ['.com', '.net', '.org', '.io', '.au', '.nz', '.co.uk'],
-  'New Zealand': ['.com', '.net', '.org', '.io', '.nz', '.au'],
-  'Japan': ['.com', '.net', '.org', '.io', '.jp'],
-  'South Korea': ['.com', '.net', '.org', '.io', '.kr'],
-  'Singapore': ['.com', '.net', '.org', '.io', '.sg'],
-  
-  // Middle East
-  'United Arab Emirates': ['.com', '.net', '.org', '.io', '.ae'],
-  'Israel': ['.com', '.net', '.org', '.io', '.il'],
-  'Saudi Arabia': ['.com', '.net', '.org', '.io', '.sa', '.ae'],
-};
-
 /**
  * Get allowed TLDs for a target country
  * 
  * @param targetCountry - Country name from database (e.g., "Germany")
  * @returns Array of allowed TLDs (e.g., ['.com', '.de', '.at', '.ch'])
  */
-export function getAllowedTLDs(targetCountry: string | null | undefined): string[] | null {
-  if (!targetCountry) return null;
-  return ALLOWED_TLDS_BY_COUNTRY[targetCountry] || null;
+export function getAllowedTLDs(
+  targetCountry: string | null | undefined,
+): readonly string[] | null {
+  return getMarketCountry(targetCountry)?.allowedTlds ?? null;
 }
 
 /**
@@ -372,7 +227,7 @@ export function filterResultsByTLD<T extends { link: string }>(
  * 
  * @example
  * getLocationConfig("United Kingdom", "English")
- * // Returns: { countryCode: 'uk', languageCode: 'en', shortName: 'UK' }
+ * // Returns: { countryCode: 'gb', languageCode: 'en', shortName: 'UK' }
  */
 export function getLocationConfig(
   targetCountry: string | null | undefined,
@@ -380,21 +235,18 @@ export function getLocationConfig(
 ): LocationConfig | null {
   if (!targetCountry) return null;
   
-  const countryInfo = COUNTRY_TO_CODE[targetCountry];
+  const countryInfo = getMarketCountry(targetCountry);
   if (!countryInfo) {
     console.warn(`⚠️ Unknown country for location filtering: "${targetCountry}"`);
     return null;
   }
-  
-  // Use provided language code, or default to English
-  const languageCode = targetLanguage 
-    ? LANGUAGE_TO_CODE[targetLanguage] || 'en'
-    : 'en';
+
+  const languageCode = getMarketLanguage(targetLanguage)?.isoCode ?? 'en';
   
   return {
-    countryCode: countryInfo.code,
+    countryCode: countryInfo.isoCode,
     languageCode,
-    shortName: countryInfo.short,
+    shortName: countryInfo.queryLabel,
   };
 }
 

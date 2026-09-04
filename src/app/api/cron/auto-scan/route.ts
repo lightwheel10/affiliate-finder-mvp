@@ -9,28 +9,25 @@
  * affiliates for paid users.
  * 
  * HOW IT WORKS:
- * 1. Vercel Cron calls this endpoint hourly (configured in vercel.json)
- * 2. We find 1 user where:
- *    - status = 'active' (paid users, not trialing)
- *    - next_auto_scan_at <= NOW() (scan is due)
- * 3. For the qualifying user:
- *    - Check if they have topic_search credits available
- *    - Get their topics[] and competitors[] from onboarding data
- *    - Start Apify google-search-scraper run (all platforms batched)
- *    - Poll until complete (40-95s typical)
- *    - Enrich social results with Apify enrichment actors
- *    - Filter results (Web: full pipeline, Social: minimal)
- *    - Save results to discovered_affiliates
- *    - Consume 1 topic_search credit
- *    - Update last_auto_scan_at = NOW()
- *    - Update next_auto_scan_at = NOW() + 7 days
- * 4. If no credits available, scan is skipped
+ * 1. Vercel Cron calls this endpoint hourly (configured in vercel.json).
+ * 2. With multi-brand locations disabled, the existing single-default-location
+ *    scheduler remains unchanged.
+ * 3. With multi-brand locations enabled, one durable account batch captures
+ *    every active, searchable location due in the same weekly occurrence.
+ * 4. The batch reserves exactly one account topic-search credit. Each cron
+ *    invocation claims and processes one captured location so provider polling
+ *    remains inside Vercel's 300-second function limit.
+ * 5. Provider launch intent, run ID, result counts and terminal outcome are
+ *    stored durably. Ambiguous paid work is never replayed or refunded.
+ * 6. When the account has no topic-search credit, auto-scan is switched off for
+ *    the account and all active locations until the user enables it again.
  * 
- * ARCHITECTURE CHANGE (January 29th, 2026):
+ * PROVIDER ARCHITECTURE (January 29th, 2026):
  * - Changed from 10 users/run (Serper) to 1 user/run (Apify)
  * - Apify runs take 40-95s vs Serper's 2-3s
  * - Single user per run stays within Vercel 300s limit
- * - Hourly cron ensures users are processed over time
+ * - Hourly cron ensures accounts and their captured locations are processed
+ *   over time
  * 
  * SECURITY:
  * - Protected by CRON_SECRET header (Vercel auto-sends this)
@@ -43,6 +40,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { sql } from '@/lib/db';
 import { rehostImageIfNeeded } from '@/lib/image-storage';
 import { checkCredits, consumeCredits } from '@/lib/credits';
@@ -71,6 +69,22 @@ import { waitUntil } from '@vercel/functions';
 import { sendEmail } from '@/lib/email';
 import { getAppUrl } from '@/lib/app-url';
 import { ScanSummaryEmail, scanSummaryEmailSubject } from '@/emails/scan-summary';
+import { resolveServerBrandLocationContext } from '@/lib/brand-locations/server';
+import type { BrandLocationContext } from '@/lib/brand-locations/context';
+import { isMultiBrandLocationsEnabled } from '@/lib/feature-flags';
+import type { SearchStartSqlExecutor } from '@/lib/search/start-postgres';
+import {
+  claimNextWeeklyScanWork,
+  completeWeeklyScanLocation,
+  failWeeklyScanLocation,
+  markWeeklyScanDispatching,
+  recordWeeklyScanProviderRun,
+  type WeeklyScanCompletion,
+} from '@/lib/weekly-scan/weekly-scan-postgres';
+import {
+  classifyWeeklyScanWorkerFailure,
+  WeeklyScanExecutionError,
+} from '@/lib/weekly-scan/weekly-scan';
 
 // =============================================================================
 // VERCEL FUNCTION CONFIGURATION
@@ -129,8 +143,10 @@ export async function GET(request: NextRequest) {
     // incrementally. Verified against Apify on 2026-07-29 for jobs 4/7/14/53:
     // every actor run SUCCEEDED, only the 'done' stamp was missing.
     //
-    // SAFETY: Apify actors run minutes, not hours — anything 'enriching' for
-    // >24h is long finished, so stamping it done cannot race a live scan.
+    // SAFETY: This compatibility sweep is restricted to legacy jobs. Jobs
+    // using durable credit reservations or per-platform launch intents must
+    // finish through the transactional finalizer; force-stamping them done
+    // would bypass billing and could hide an uncertain paid actor launch.
     // results_count mirrors the onboarding fast path in search/status
     // (count of the user's discovered_affiliates). Failure here must never
     // block the actual scan below, hence its own try/catch.
@@ -144,9 +160,23 @@ export async function GET(request: NextRequest) {
             results_count = COALESCE(j.results_count, (
               SELECT COUNT(*)::int FROM crewcast.discovered_affiliates d
               WHERE d.user_id = j.user_id
+                AND d.brand_id = j.brand_id
+                AND d.brand_location_id = j.brand_location_id
             ))
         WHERE j.status = 'enriching'
           AND j.created_at < NOW() - INTERVAL '24 hours'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM crewcast.search_credit_reservations AS reservations
+            WHERE reservations.search_job_id = j.id
+              AND reservations.user_id = j.user_id
+          )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM crewcast.search_enrichment_dispatches AS dispatches
+            WHERE dispatches.search_job_id = j.id
+              AND dispatches.user_id = j.user_id
+          )
         RETURNING j.id, j.user_id, j.keyword, j.apify_run_id, j.enrichment_run_ids
       `;
       if (sweptJobs.length > 0) {
@@ -186,6 +216,13 @@ export async function GET(request: NextRequest) {
       console.error('[AutoScan] Stale-job sweep failed (scan continues):', sweepError);
     }
 
+    // The feature-flag boundary is also the scheduler cutover boundary. With
+    // the flag off, the legacy one-default-location path below remains intact.
+    // With it on, only the durable account-batch scheduler can create work.
+    if (isMultiBrandLocationsEnabled()) {
+      return processWeeklyBatchCron(startTime);
+    }
+
     // ========================================================================
     // STEP 1: Find users due for auto-scan
     // ========================================================================
@@ -195,12 +232,7 @@ export async function GET(request: NextRequest) {
         s.next_auto_scan_at,
         s.first_payment_at,
         u.email,
-        u.name,
-        u.topics,
-        u.competitors,
-        u.target_country,
-        u.target_language,
-        u.brand
+        u.name
       FROM crewcast.subscriptions s
       JOIN crewcast.users u ON s.user_id = u.id
       WHERE
@@ -247,12 +279,19 @@ export async function GET(request: NextRequest) {
       const userId = user.user_id as number;
       const userEmail = user.email as string;
       const userName = (user.name as string | null) ?? null; // 2026-05-04: scan-summary email
-      const topics = (user.topics as string[]) || [];
-      const competitors = (user.competitors as string[]) || [];
+      let locationContext: BrandLocationContext | null = null;
       
       console.log(`[AutoScan] Processing user ${userId} (${userEmail})`);
       
       try {
+        // Compatibility behavior is explicit: until the per-location scheduler
+        // is activated, the existing account-level schedule scans only the
+        // account's active default location. It never reads mutable profile
+        // fields or writes results without immutable location ownership.
+        locationContext = await resolveServerBrandLocationContext({ accountId: userId });
+        const topics = locationContext.location.topics;
+        const competitors = locationContext.location.competitors;
+
         // Check if user has topic_search credits
         const creditCheck = await checkCredits(userId, 'topic_search', 1);
         
@@ -280,7 +319,11 @@ export async function GET(request: NextRequest) {
           // manual "Find Affiliates" button still works — only the auto-scan
           // is delayed up to 7 days.
           // ===================================================================
-          await updateScanSchedule(userId);
+          await updateScanSchedule(
+            userId,
+            locationContext.brand.id,
+            locationContext.location.id,
+          );
           continue;
         }
         
@@ -290,21 +333,36 @@ export async function GET(request: NextRequest) {
           results.push({ userId, email: userEmail, status: 'no_keywords' });
           
           // Still update the schedule - they can add keywords later
-          await updateScanSchedule(userId);
+          await updateScanSchedule(
+            userId,
+            locationContext.brand.id,
+            locationContext.location.id,
+          );
           continue;
         }
         
         // Get user's target settings
-        const targetCountry = user.target_country as string | null;
-        const targetLanguage = user.target_language as string | null;
-        const userBrand = user.brand as string | null;
+        const targetCountry = locationContext.location.countryCode;
+        const targetLanguage = locationContext.location.languageCode;
+        const userBrand = locationContext.brand.name;
+        const userDomain = locationContext.brand.normalizedDomain;
         
         console.log(`[AutoScan] User ${userId}: Scanning ${topics.length} topics + ${competitors.length} competitors`);
         
         // Run the scan with Apify polling
         // January 29, 2026: Pass topics and competitors directly (no more buildSearchKeywords)
         // January 29, 2026: Pass userBrand for social filtering (exclude own accounts)
-        const scanResult = await runAutoScan(userId, topics, competitors, userBrand, targetCountry, targetLanguage);
+        const scanResult = await runAutoScan(
+          userId,
+          locationContext.brand.id,
+          locationContext.location.id,
+          topics,
+          competitors,
+          userBrand,
+          userDomain,
+          targetCountry,
+          targetLanguage,
+        );
         
         // Consume credit (only if we found results or attempted search)
         const consumeResult = await consumeCredits(userId, 'topic_search', 1, 'auto_scan', 'cron');
@@ -329,7 +387,11 @@ export async function GET(request: NextRequest) {
         }
         
         // Update scan schedule
-        await updateScanSchedule(userId);
+        await updateScanSchedule(
+          userId,
+          locationContext.brand.id,
+          locationContext.location.id,
+        );
         
         results.push({
           userId,
@@ -370,7 +432,11 @@ export async function GET(request: NextRequest) {
         results.push({ userId, email: userEmail, status: 'error', error: errorMessage });
         
         // Still update schedule to prevent stuck users
-        await updateScanSchedule(userId);
+        await updateScanSchedule(
+          userId,
+          locationContext?.brand.id,
+          locationContext?.location.id,
+        );
       }
     }
     
@@ -413,6 +479,157 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * Notifications are deliberately best-effort and outside the scan state
+ * machine. A transient user lookup or email-provider failure must never turn
+ * already-completed paid work into a failed/uncertain weekly-scan location.
+ */
+async function queueWeeklyBatchSummary(
+  accountId: number,
+  completion: WeeklyScanCompletion,
+): Promise<void> {
+  if (
+    !completion.batchFinished
+    || completion.totalResults <= 0
+    || completion.batchStatus === 'uncertain'
+  ) {
+    return;
+  }
+  try {
+    const users = await sql<{ email: string | null; name: string | null }[]>`
+      SELECT email, name
+      FROM crewcast.users
+      WHERE id = ${accountId}
+      LIMIT 2
+    `;
+    if (users.length !== 1 || !users[0].email) return;
+    const locale = 'de' as const;
+    waitUntil(
+      sendEmail({
+        to: users[0].email,
+        subject: scanSummaryEmailSubject(locale, completion.totalResults),
+        react: ScanSummaryEmail({
+          name: users[0].name ?? 'there',
+          locale,
+          affiliatesFound: completion.totalResults,
+          sources: completion.sourceCounts,
+          appUrl: getAppUrl(),
+        }),
+      }).catch((error: unknown) => {
+        console.error(
+          `[AutoScan] Account ${accountId}: weekly summary email failed after scan finalization:`,
+          errorMessage(error),
+        );
+      }),
+    );
+  } catch (error: unknown) {
+    console.error(
+      `[AutoScan] Account ${accountId}: weekly summary could not be queued after scan finalization:`,
+      errorMessage(error),
+    );
+  }
+}
+
+async function processWeeklyBatchCron(startTime: number) {
+  const executor = sql as SearchStartSqlExecutor;
+  const claim = await claimNextWeeklyScanWork(executor, {
+    now: new Date(),
+    batchId: randomUUID(),
+    claimToken: randomUUID(),
+  });
+
+  if (claim.outcome === 'idle') {
+    return NextResponse.json({
+      success: true,
+      message: 'No weekly scan work is currently claimable.',
+      workProcessed: 0,
+      duration: Date.now() - startTime,
+    });
+  }
+  if (claim.outcome === 'disabled_insufficient') {
+    console.warn(
+      `[AutoScan] Account ${claim.accountId}: weekly scan switched off because no topic-search credit was available.`,
+    );
+    return NextResponse.json({
+      success: true,
+      outcome: claim.outcome,
+      accountId: claim.accountId,
+      workProcessed: 0,
+      duration: Date.now() - startTime,
+    });
+  }
+  if (claim.outcome === 'no_work') {
+    return NextResponse.json({
+      success: true,
+      outcome: claim.outcome,
+      accountId: claim.accountId,
+      batchId: claim.batchId,
+      workProcessed: 0,
+      duration: Date.now() - startTime,
+    });
+  }
+
+  const { work } = claim;
+  let providerRunRecorded = false;
+  try {
+    const scanResult = await runAutoScan(
+      work.accountId,
+      work.brandId,
+      work.brandLocationId,
+      work.settings.topics,
+      work.settings.competitors,
+      work.settings.brandName,
+      work.settings.normalizedDomain,
+      work.settings.countryCode,
+      work.settings.languageCode,
+      {
+        beforeProviderLaunch: (searchId) =>
+          markWeeklyScanDispatching(executor, work, new Date(), searchId),
+        providerStarted: async (providerRunId) => {
+          await recordWeeklyScanProviderRun(executor, work, providerRunId);
+          providerRunRecorded = true;
+        },
+      },
+    );
+    const completion = await completeWeeklyScanLocation(executor, work, {
+      resultsCount: scanResult.totalResults,
+      sourceCounts: scanResult.sourceCounts,
+      estimatedCost: scanResult.totalCost,
+    });
+    await queueWeeklyBatchSummary(work.accountId, completion);
+    return NextResponse.json({
+      success: true,
+      outcome: 'location_succeeded',
+      accountId: work.accountId,
+      batchId: work.batchId,
+      brandLocationId: work.brandLocationId,
+      resultsFound: scanResult.totalResults,
+      batchFinished: completion.batchFinished,
+      batchStatus: completion.batchStatus,
+      workProcessed: 1,
+      duration: Date.now() - startTime,
+    });
+  } catch (error) {
+    const failure = classifyWeeklyScanWorkerFailure(error, providerRunRecorded);
+    const completion = await failWeeklyScanLocation(executor, work, failure);
+    await queueWeeklyBatchSummary(work.accountId, completion);
+    console.error(
+      `[AutoScan] Batch ${work.batchId}, location ${work.brandLocationId}: ${failure.code}`,
+    );
+    return NextResponse.json({
+      success: true,
+      outcome: failure.outcome,
+      accountId: work.accountId,
+      batchId: work.batchId,
+      brandLocationId: work.brandLocationId,
+      batchFinished: completion.batchFinished,
+      batchStatus: completion.batchStatus,
+      workProcessed: 1,
+      duration: Date.now() - startTime,
+    });
+  }
+}
+
 // =============================================================================
 // HELPER: Format number for display (e.g., 5700 -> "5.7K")
 // January 29th, 2026
@@ -433,6 +650,10 @@ function formatNumber(num: number): string {
 // =============================================================================
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
 }
 
 // =============================================================================
@@ -490,8 +711,8 @@ async function enrichYouTubeResults(results: SearchResult[]): Promise<SearchResu
       }
       return result;
     });
-  } catch (error: any) {
-    console.warn(`[AutoScan] YouTube enrichment failed:`, error.message);
+  } catch (error: unknown) {
+    console.warn(`[AutoScan] YouTube enrichment failed:`, errorMessage(error));
     return results;
   }
 }
@@ -511,19 +732,19 @@ async function enrichInstagramResults(results: SearchResult[]): Promise<SearchRe
     
     return results.map(result => {
       const apifyData = enrichmentMap.get(result.link);
-      if (apifyData && (apifyData.username || (apifyData as any).ownerUsername)) {
+      if (apifyData && (apifyData.username || apifyData.ownerUsername)) {
         // January 30, 2026: Fixed to handle both POST URLs and PROFILE URLs
         // POST URLs: displayUrl, caption, likesCount at root level
         // PROFILE URLs: profilePicUrl at root, post data in latestPosts[0]
-        const isPostUrl = !!(apifyData as any).displayUrl && !apifyData.latestPosts;
+        const isPostUrl = !!apifyData.displayUrl && !apifyData.latestPosts;
         const firstPost = apifyData.latestPosts?.[0];
         
         // Post data for RELEVANT CONTENT column
-        const postThumbnail = isPostUrl ? (apifyData as any).displayUrl : firstPost?.displayUrl;
-        const postCaption = isPostUrl ? (apifyData as any).caption : firstPost?.caption;
-        const postLikes = isPostUrl ? (apifyData as any).likesCount : firstPost?.likesCount;
-        const postComments = isPostUrl ? (apifyData as any).commentsCount : firstPost?.commentsCount;
-        const postViews = isPostUrl ? (apifyData as any).videoViewCount : firstPost?.videoViewCount;
+        const postThumbnail = isPostUrl ? apifyData.displayUrl : firstPost?.displayUrl;
+        const postCaption = isPostUrl ? apifyData.caption : firstPost?.caption;
+        const postLikes = isPostUrl ? apifyData.likesCount : firstPost?.likesCount;
+        const postComments = isPostUrl ? apifyData.commentsCount : firstPost?.commentsCount;
+        const postViews = isPostUrl ? apifyData.videoViewCount : firstPost?.videoViewCount;
         
         // Profile pic for AFFILIATE column
         const profilePic = apifyData.profilePicUrlHD || apifyData.profilePicUrl;
@@ -532,14 +753,14 @@ async function enrichInstagramResults(results: SearchResult[]): Promise<SearchRe
           ...result,
           // AFFILIATE column: profile pic + username + followers
           channel: {
-            name: (apifyData as any).ownerFullName || apifyData.fullName || (apifyData as any).ownerUsername || apifyData.username,
-            link: apifyData.url || `https://www.instagram.com/${(apifyData as any).ownerUsername || apifyData.username}/`,
+            name: apifyData.ownerFullName || apifyData.fullName || apifyData.ownerUsername || apifyData.username,
+            link: apifyData.url || `https://www.instagram.com/${apifyData.ownerUsername || apifyData.username}/`,
             thumbnail: profilePic,
             verified: apifyData.verified,
             subscribers: apifyData.followersCount ? formatNumber(apifyData.followersCount) : undefined,
           },
-          instagramUsername: (apifyData as any).ownerUsername || apifyData.username,
-          instagramFullName: (apifyData as any).ownerFullName || apifyData.fullName,
+          instagramUsername: apifyData.ownerUsername || apifyData.username,
+          instagramFullName: apifyData.ownerFullName || apifyData.fullName,
           instagramBio: apifyData.biography,
           instagramFollowers: apifyData.followersCount,
           instagramFollowing: apifyData.followsCount,
@@ -552,15 +773,15 @@ async function enrichInstagramResults(results: SearchResult[]): Promise<SearchRe
           instagramPostViews: postViews,
           // RELEVANT CONTENT: post thumbnail + caption
           thumbnail: postThumbnail || profilePic,
-          personName: (apifyData as any).ownerFullName || apifyData.fullName || (apifyData as any).ownerUsername || apifyData.username,
+          personName: apifyData.ownerFullName || apifyData.fullName || apifyData.ownerUsername || apifyData.username,
           title: postCaption?.substring(0, 100) || result.title,
           snippet: postCaption?.substring(0, 300) || apifyData.biography?.substring(0, 300) || result.snippet,
         };
       }
       return result;
     });
-  } catch (error: any) {
-    console.warn(`[AutoScan] Instagram enrichment failed:`, error.message);
+  } catch (error: unknown) {
+    console.warn(`[AutoScan] Instagram enrichment failed:`, errorMessage(error));
     return results;
   }
 }
@@ -609,8 +830,8 @@ async function enrichTikTokResults(results: SearchResult[]): Promise<SearchResul
       }
       return result;
     });
-  } catch (error: any) {
-    console.warn(`[AutoScan] TikTok enrichment failed:`, error.message);
+  } catch (error: unknown) {
+    console.warn(`[AutoScan] TikTok enrichment failed:`, errorMessage(error));
     return results;
   }
 }
@@ -621,13 +842,22 @@ async function enrichTikTokResults(results: SearchResult[]): Promise<SearchResul
 // January 29th, 2026 - FIX: Now uses keywords[] + competitors[] properly
 // January 29th, 2026 - Added userBrand for social filtering
 // =============================================================================
+interface AutoScanLifecycleCallbacks {
+  beforeProviderLaunch: (searchId: number | null) => Promise<void>;
+  providerStarted: (providerRunId: string) => Promise<void>;
+}
+
 async function runAutoScan(
   userId: number,
+  brandId: string,
+  brandLocationId: string,
   topics: string[],
   competitors: string[],
   userBrand: string | null,
+  userDomain: string | null,
   targetCountry: string | null,
-  targetLanguage: string | null
+  targetLanguage: string | null,
+  lifecycle?: AutoScanLifecycleCallbacks,
 ): Promise<{
   totalResults: number;
   totalCost: number;
@@ -647,6 +877,8 @@ async function runAutoScan(
     userId,
     keyword: searchLabel.substring(0, 200), // Limit length for DB
     sources,
+    brandId,
+    brandLocationId,
   });
   
   console.log(`[AutoScan] Starting Apify run:`);
@@ -654,7 +886,15 @@ async function runAutoScan(
   console.log(`[AutoScan]   Competitors (${competitors.length}): ${competitors.join(', ')}`);
   console.log(`[AutoScan]   Target: ${targetCountry || 'default'} / ${targetLanguage || 'default'}`);
   
+  let providerDispatchPrepared = false;
+  let providerRunId: string | null = null;
   try {
+    // The durable worker commits both its one-credit reservation and launch
+    // intent before this function crosses the paid provider boundary.
+    if (lifecycle) {
+      await lifecycle.beforeProviderLaunch(searchId);
+      providerDispatchPrepared = true;
+    }
     // =========================================================================
     // STEP 1: START APIFY RUN (NON-BLOCKING)
     // 
@@ -670,6 +910,8 @@ async function runAutoScan(
       targetCountry,
       targetLanguage,
     });
+    providerRunId = runId;
+    if (lifecycle) await lifecycle.providerStarted(runId);
     
     console.log(`[AutoScan] Apify run started: ${runId}`);
     
@@ -724,7 +966,11 @@ async function runAutoScan(
     }
 
     if (status.status === 'FAILED' || status.status === 'ABORTED' || status.status === 'TIMED-OUT') {
-      throw new Error(`Apify run ${status.status}`);
+      throw new WeeklyScanExecutionError(
+        'failed',
+        'provider_terminal_failure',
+        `Apify run ${status.status}`,
+      );
     }
 
     console.log(`[AutoScan] Apify run SUCCEEDED`);
@@ -745,10 +991,10 @@ async function runAutoScan(
     // =========================================================================
     // STEP 4: CATEGORIZE BY PLATFORM
     // =========================================================================
-    let youtubeResults = rawResults.filter(r => r.source === 'YouTube');
-    let instagramResults = rawResults.filter(r => r.source === 'Instagram');
-    let tiktokResults = rawResults.filter(r => r.source === 'TikTok');
-    let webResults = rawResults.filter(r => r.source === 'Web');
+    const youtubeResults = rawResults.filter(r => r.source === 'YouTube');
+    const instagramResults = rawResults.filter(r => r.source === 'Instagram');
+    const tiktokResults = rawResults.filter(r => r.source === 'TikTok');
+    const webResults = rawResults.filter(r => r.source === 'Web');
     
     console.log(`[AutoScan] Raw breakdown: YouTube=${youtubeResults.length}, Instagram=${instagramResults.length}, TikTok=${tiktokResults.length}, Web=${webResults.length}`);
     
@@ -769,7 +1015,19 @@ async function runAutoScan(
     // =========================================================================
     // STEP 6: APPLY FILTERING
     // =========================================================================
+    // Existing blocks remain account-wide. Keeping this query here makes the
+    // weekly path match the manual search finalizer without copying mutable UI
+    // preferences into the immutable batch snapshot.
+    const blockedDomainRows = await sql`
+      SELECT domain
+      FROM crewcast.user_blocked_domains
+      WHERE user_id = ${userId}
+      ORDER BY domain ASC
+    ` as Array<{ domain: string }>;
+    const excludeDomains = blockedDomainRows.map(({ domain }) => domain);
     const filteredWeb = filterWebResults(webResults, {
+      userBrand: userDomain || undefined,
+      excludeDomains,
       targetCountry: targetCountry || undefined,
       targetLanguage: targetLanguage || undefined,
     });
@@ -818,7 +1076,13 @@ async function runAutoScan(
         // so the scan-summary email reflects genuinely-new affiliates only.
         // Before this fix, duplicates from prior weeks inflated `totalResults`
         // and the email said "we found N new" when N was wrong.
-        const inserted = await saveDiscoveredAffiliate(userId, primaryKeyword, result);
+        const inserted = await saveDiscoveredAffiliate(
+          userId,
+          brandId,
+          brandLocationId,
+          primaryKeyword,
+          result,
+        );
         if (inserted) {
           totalResults++;
           if (result.source === 'YouTube') sourceCounts.youtube++;
@@ -837,6 +1101,16 @@ async function runAutoScan(
     
   } catch (error) {
     console.error(`[AutoScan] Run failed:`, error);
+    if (error instanceof WeeklyScanExecutionError) throw error;
+    if (lifecycle && providerDispatchPrepared) {
+      throw new WeeklyScanExecutionError(
+        'uncertain',
+        providerRunId
+          ? 'provider_processing_uncertain'
+          : 'provider_launch_uncertain',
+        error instanceof Error ? error.message : 'The provider outcome is uncertain.',
+      );
+    }
     throw error;
   }
   
@@ -862,6 +1136,8 @@ async function runAutoScan(
 // =============================================================================
 async function saveDiscoveredAffiliate(
   userId: number,
+  brandId: string,
+  brandLocationId: string,
   searchKeyword: string,
   result: {
     title: string;
@@ -916,7 +1192,10 @@ async function saveDiscoveredAffiliate(
   // Check for existing (duplicate detection by link)
   const existing = await sql`
     SELECT id FROM crewcast.discovered_affiliates
-    WHERE user_id = ${userId} AND link = ${result.link}
+    WHERE user_id = ${userId}
+      AND brand_id = ${brandId}::bigint
+      AND brand_location_id = ${brandLocationId}::bigint
+      AND link = ${result.link}
   `;
 
   if (existing.length > 0) {
@@ -938,9 +1217,10 @@ async function saveDiscoveredAffiliate(
   ]);
 
   // Insert new affiliate
-  await sql`
+  const inserted = await sql`
     INSERT INTO crewcast.discovered_affiliates (
-      user_id, search_keyword, title, link, domain, snippet, source,
+      user_id, brand_id, brand_location_id,
+      search_keyword, title, link, domain, snippet, source,
       thumbnail, views, date, rank, keyword,
       discovery_method_type, discovery_method_value,
       is_new, channel_name, channel_link, channel_thumbnail, 
@@ -955,7 +1235,8 @@ async function saveDiscoveredAffiliate(
       tiktok_videos_count, tiktok_is_verified,
       tiktok_video_plays, tiktok_video_likes, tiktok_video_comments, tiktok_video_shares
     ) VALUES (
-      ${userId}, ${searchKeyword}, ${result.title}, ${result.link}, ${result.domain},
+      ${userId}, ${brandId}::bigint, ${brandLocationId}::bigint,
+      ${searchKeyword}, ${result.title}, ${result.link}, ${result.domain},
       ${result.snippet || ''}, ${result.source},
       ${permThumbnail || null}, ${result.views || null}, ${result.date || null},
       ${result.rank || null}, ${result.keyword || null},
@@ -974,26 +1255,56 @@ async function saveDiscoveredAffiliate(
       ${result.tiktokVideoPlays || null}, ${result.tiktokVideoLikes || null},
       ${result.tiktokVideoComments || null}, ${result.tiktokVideoShares || null}
     )
+    ON CONFLICT (brand_location_id, link) DO NOTHING
+    RETURNING id
   `;
   // 2026-05-09 (paras): true = genuinely new row inserted. See header comment.
-  return true;
+  return inserted.length === 1;
 }
 
 // =============================================================================
 // HELPER: Update scan schedule for next run
 // =============================================================================
-async function updateScanSchedule(userId: number): Promise<void> {
+async function updateScanSchedule(
+  userId: number,
+  brandId?: string,
+  brandLocationId?: string,
+): Promise<void> {
+  if ((brandId === undefined) !== (brandLocationId === undefined)) {
+    throw new Error('Auto-scan schedule brand and location must be supplied together.');
+  }
   const now = new Date();
   const nextScanAt = new Date(now.getTime() + SCAN_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
-  
-  await sql`
-    UPDATE crewcast.subscriptions
-    SET
-      last_auto_scan_at = ${now.toISOString()},
-      next_auto_scan_at = ${nextScanAt.toISOString()},
-      updated_at = NOW()
-    WHERE user_id = ${userId}
-  `;
+
+  await sql.begin(async (transactionValue: unknown) => {
+    const transaction = transactionValue as unknown as typeof sql;
+    await transaction`
+      UPDATE crewcast.subscriptions
+      SET
+        last_auto_scan_at = ${now.toISOString()},
+        next_auto_scan_at = ${nextScanAt.toISOString()},
+        updated_at = NOW()
+      WHERE user_id = ${userId}
+    `;
+
+    if (brandId && brandLocationId) {
+      const updatedLocations = await transaction`
+        UPDATE crewcast.brand_locations
+        SET
+          last_auto_scan_at = ${now.toISOString()},
+          next_auto_scan_at = ${nextScanAt.toISOString()},
+          updated_at = NOW()
+        WHERE id = ${brandLocationId}::bigint
+          AND brand_id = ${brandId}::bigint
+          AND user_id = ${userId}
+          AND archived_at IS NULL
+        RETURNING id
+      `;
+      if (updatedLocations.length !== 1) {
+        throw new Error('The auto-scan location changed before its schedule could be updated.');
+      }
+    }
+  });
   
   console.log(`[AutoScan] User ${userId}: Next scan scheduled for ${nextScanAt.toISOString()}`);
 }

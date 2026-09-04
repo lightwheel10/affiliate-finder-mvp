@@ -16,32 +16,33 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import { resolveAuthenticatedAccount } from '@/lib/auth/account';
+import { BrandLocationContextError } from '@/lib/brand-locations/context';
+import { resolveServerBrandLocationContext } from '@/lib/brand-locations/server';
 import { sql } from '@/lib/db';
 import { checkAllEnrichmentStatus, EnrichmentRunIds } from '@/app/services/apify';
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Authenticate user
-    const authUser = await getAuthenticatedUser();
+    const authenticated = await resolveAuthenticatedAccount();
     
-    if (!authUser) {
+    if (!authenticated) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
     
-    // Get user ID from database
-    const users = await sql`
-      SELECT id FROM crewcast.users WHERE email = ${authUser.email}
-    `;
-    
-    if (users.length === 0) {
+    if (!authenticated.account) {
       return NextResponse.json({ hasActiveJobs: false, jobs: [] });
     }
     
-    const userId = users[0].id as number;
+    const userId = authenticated.account.id;
+    const locationContext = await resolveServerBrandLocationContext({
+      accountId: userId,
+      requestedBrandLocationId: request.nextUrl.searchParams.get('brandLocationId'),
+    });
     
     // ==========================================================================
     // 2026-07-15 07:40 IST (Paras): Also report jobs still in the 'running'
@@ -62,9 +63,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // paid enrichment actors). Real searches finish in well under 30 minutes.
     // ==========================================================================
     const enrichingJobs = await sql`
-      SELECT id, keyword, enrichment_status, enrichment_run_ids, created_at
-      FROM crewcast.search_jobs
-      WHERE user_id = ${userId}
+      SELECT
+        jobs.id,
+        jobs.keyword,
+        jobs.enrichment_status,
+        jobs.enrichment_run_ids,
+        jobs.created_at
+      FROM crewcast.search_jobs AS jobs
+      JOIN crewcast.brands AS brands
+        ON brands.id = jobs.brand_id
+       AND brands.user_id = jobs.user_id
+      JOIN crewcast.brand_locations AS locations
+        ON locations.id = jobs.brand_location_id
+       AND locations.brand_id = jobs.brand_id
+       AND locations.user_id = jobs.user_id
+      WHERE jobs.user_id = ${userId}
+        AND jobs.brand_location_id = ${locationContext.location.id}::bigint
         AND (
           -- 2026-08-04 (Paras): also report 'finalizing' jobs. search/status now
           -- claims completion via enrichment_status 'running' -> 'finalizing'
@@ -74,10 +88,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           -- until the 24h sweep. Re-polling a 'finalizing' job is safe: the
           -- claim guard in search/status bounces extra polls until the
           -- 5-minute reclaim window opens.
-          (status = 'enriching' AND enrichment_status IN ('running', 'finalizing'))
-          OR (status = 'running' AND created_at > now() - interval '30 minutes')
+          (jobs.status = 'enriching' AND jobs.enrichment_status IN (
+            'dispatching',
+            'dispatch_blocked',
+            'running',
+            'finalizing'
+          ))
+          OR (jobs.status = 'running' AND jobs.created_at > now() - interval '30 minutes')
         )
-      ORDER BY created_at DESC
+      ORDER BY jobs.created_at DESC
       LIMIT 5
     `;
     
@@ -87,7 +106,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     
     // Check status of each job's enrichment actors
     const jobStatuses = await Promise.all(
-      enrichingJobs.map(async (job: { id: number; keyword: string; enrichment_run_ids: unknown }) => {
+      enrichingJobs.map(async (job: {
+        id: number;
+        keyword: string;
+        enrichment_status: string | null;
+        enrichment_run_ids: unknown;
+      }) => {
         let enrichmentRunIds: EnrichmentRunIds | null = null;
         
         // Parse JSONB if needed
@@ -97,13 +121,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             : job.enrichment_run_ids;
         }
         
-        if (!enrichmentRunIds) {
+        if (
+          job.enrichment_status === 'dispatching'
+          || job.enrichment_status === 'dispatch_blocked'
+          || !enrichmentRunIds
+        ) {
           return {
             jobId: job.id,
             keyword: job.keyword,
             completedActors: 0,
             totalActors: 0,
             platforms: {},
+            dispatchStatus: job.enrichment_status,
           };
         }
         
@@ -136,8 +165,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       jobs: jobStatuses,
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Enrichment Status] Error:', error);
+
+    if (error instanceof BrandLocationContextError) {
+      return NextResponse.json(
+        {
+          error: error.status >= 500
+            ? 'Unable to resolve the brand location.'
+            : error.message,
+          code: error.code,
+        },
+        { status: error.status },
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -7,50 +7,58 @@
  */
 
 import { sql } from './db';
+import { PLAN_CATALOG, SEARCH_INPUT_LIMITS } from './plans/catalog';
 
 // =============================================================================
 // CREDIT CONFIGURATION
 // =============================================================================
 
 export const PLAN_CREDITS = {
-  // Trial allocations (3 days, same for ALL users regardless of plan)
-  trial: {
-    topicSearches: 1,
-    email: 30,
-    ai: 30,
-  },
-  
-  // Pro plan (€79/month)
-  pro: {
-    topicSearches: 5,
-    email: 30,
-    ai: 30,
-  },
-  
-  // Business Class plan (€199/month)
-  business: {
-    topicSearches: 10,
-    email: 150,
-    ai: 150,
-  },
-  
-  // Enterprise (custom pricing) - unlimited
-  enterprise: {
-    topicSearches: -1,  // -1 = unlimited
-    email: -1,
-    ai: -1,
-  },
+  trial: PLAN_CATALOG.free_trial.credits,
+  pro: PLAN_CATALOG.pro.credits,
+  business: PLAN_CATALOG.business.credits,
+  enterprise: PLAN_CATALOG.enterprise.credits,
 } as const;
 
 // What counts as 1 topic search
-export const SEARCH_LIMITS = {
-  maxKeywords: 5,
-  maxCompetitors: 3,
-  maxBrands: 1,
-} as const;
+export const SEARCH_LIMITS = SEARCH_INPUT_LIMITS;
 
 // Credit types
 export type CreditType = 'topic_search' | 'email' | 'ai';
+
+export interface CreditSqlExecutor {
+  <T extends object = Record<string, unknown>>(
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): Promise<readonly T[]>;
+}
+
+interface CreditDatabase extends CreditSqlExecutor {
+  begin<T>(operation: (transaction: CreditSqlExecutor) => Promise<T>): Promise<T>;
+}
+
+export interface CreditResetOptions {
+  executor?: CreditSqlExecutor;
+  stripeInvoiceId?: string;
+}
+
+function runCreditTransaction<T>(
+  executor: CreditSqlExecutor | undefined,
+  operation: (transaction: CreditSqlExecutor) => Promise<T>,
+): Promise<T> {
+  if (executor) return operation(executor);
+  return (sql as CreditDatabase).begin(operation);
+}
+
+function assertStripeInvoiceId(value: string): void {
+  if (
+    value.length < 1
+    || value.length > 255
+    || /[\u0000-\u001f\u007f]/.test(value)
+  ) {
+    throw new Error('Stripe invoice ID is invalid.');
+  }
+}
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -591,11 +599,25 @@ export async function refundCredits(
 export async function initializeTrialCredits(
   userId: number,
   periodStart: Date,
-  periodEnd: Date
+  periodEnd: Date,
+  executor?: CreditSqlExecutor,
 ): Promise<boolean> {
-  try {
+  return runCreditTransaction(executor, async (transaction) => {
+    // Serialize the direct subscription route and webhook backup path. This
+    // prevents both workers from independently deciding that no trial exists.
+    const lockedUsers = await transaction<{ id: number }>`
+      SELECT id FROM crewcast.users WHERE id = ${userId} FOR UPDATE
+    `;
+    if (lockedUsers.length !== 1) {
+      throw new Error(`Cannot initialize trial credits for missing user ${userId}.`);
+    }
+
     // Check if user already has credits
-    const existing = await sql`
+    const existing = await transaction<{
+      id: number;
+      period_end: string | Date;
+      is_trial_period: boolean;
+    }>`
       SELECT id, period_end, is_trial_period FROM crewcast.user_credits WHERE user_id = ${userId}
     `;
 
@@ -621,7 +643,7 @@ export async function initializeTrialCredits(
     // SECURITY: Check if user already had a trial before by looking at credit transactions
     // NOTE: We can't use trial_start_date from crewcast.users table because it's set DURING signup
     // before this function is called. Instead, check if there's a previous trial_start transaction.
-    const previousTrialCheck = await sql`
+    const previousTrialCheck = await transaction`
       SELECT id FROM crewcast.credit_transactions 
       WHERE user_id = ${userId} 
       AND reason IN ('trial_start', 'trial_restart')
@@ -635,7 +657,7 @@ export async function initializeTrialCredits(
     }
 
     // Create credit record with trial credits (same for all users)
-    await sql`
+    await transaction`
       INSERT INTO crewcast.user_credits (
         user_id,
         topic_search_credits_total,
@@ -662,7 +684,7 @@ export async function initializeTrialCredits(
     `;
 
     // Log the transaction
-    await sql`
+    await transaction`
       INSERT INTO crewcast.credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
       VALUES 
         (${userId}, 'topic_search', ${PLAN_CREDITS.trial.topicSearches}, ${PLAN_CREDITS.trial.topicSearches}, 'trial_start', 'subscription'),
@@ -673,10 +695,7 @@ export async function initializeTrialCredits(
     console.log(`[Credits] Initialized trial credits for user ${userId}: ${PLAN_CREDITS.trial.topicSearches} searches, ${PLAN_CREDITS.trial.email} email, ${PLAN_CREDITS.trial.ai} AI`);
     
     return true;
-  } catch (error) {
-    console.error('[Credits] Error initializing trial credits:', error);
-    return false;
-  }
+  });
 }
 
 // =============================================================================
@@ -726,16 +745,42 @@ export async function resetCreditsForNewPeriod(
   userId: number,
   plan: 'pro' | 'business' | 'enterprise',
   periodStart: Date,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  periodEnd: Date
+  periodEnd: Date,
+  options: CreditResetOptions = {},
 ): Promise<boolean> {
-  try {
+  const stripeInvoiceId = options.stripeInvoiceId;
+  if (stripeInvoiceId) assertStripeInvoiceId(stripeInvoiceId);
+
+  return runCreditTransaction(options.executor, async (transaction) => {
+    const lockedUsers = await transaction<{ id: number }>`
+      SELECT id FROM crewcast.users WHERE id = ${userId} FOR UPDATE
+    `;
+    if (lockedUsers.length !== 1) {
+      throw new Error(`Cannot reset credits for missing user ${userId}.`);
+    }
+
+    if (stripeInvoiceId) {
+      const priorReset = await transaction<{ id: number }>`
+        SELECT id
+        FROM crewcast.credit_transactions
+        WHERE user_id = ${userId}
+          AND reason = 'reset'
+          AND reference_type = 'stripe_invoice'
+          AND reference_id = ${stripeInvoiceId}
+        LIMIT 1
+      `;
+      if (priorReset.length > 0) {
+        console.log(`[Credits] Stripe invoice ${stripeInvoiceId} already reset credits for user ${userId}`);
+        return true;
+      }
+    }
+
     // SECURITY: Enterprise plan grants unlimited credits (-1)
     // Only allow enterprise if explicitly verified from database
     // This prevents plan injection attacks
     let verifiedPlan = plan;
     if (plan === 'enterprise') {
-      const userCheck = await sql`
+      const userCheck = await transaction`
         SELECT plan FROM crewcast.users WHERE id = ${userId}
       `;
       if (userCheck.length === 0 || userCheck[0].plan !== 'enterprise') {
@@ -763,64 +808,61 @@ export async function resetCreditsForNewPeriod(
     const effectivePeriodEnd = new Date(periodStart.getTime());
     effectivePeriodEnd.setUTCMonth(effectivePeriodEnd.getUTCMonth() + 1);
 
-    // Update or insert credit record
-    const existing = await sql`
-      SELECT id FROM crewcast.user_credits WHERE user_id = ${userId}
+    // One statement covers both first paid period and renewal. The user lock
+    // above serializes competing resets for this account.
+    await transaction`
+      INSERT INTO crewcast.user_credits (
+        user_id,
+        topic_search_credits_total,
+        email_credits_total,
+        ai_credits_total,
+        topic_search_credits_used,
+        email_credits_used,
+        ai_credits_used,
+        period_start,
+        period_end,
+        is_trial_period
+      ) VALUES (
+        ${userId},
+        ${planCredits.topicSearches},
+        ${planCredits.email},
+        ${planCredits.ai},
+        0,
+        0,
+        0,
+        ${periodStart.toISOString()},
+        ${effectivePeriodEnd.toISOString()},
+        false
+      )
+      ON CONFLICT (user_id) DO UPDATE
+      SET
+        topic_search_credits_total = EXCLUDED.topic_search_credits_total,
+        email_credits_total = EXCLUDED.email_credits_total,
+        ai_credits_total = EXCLUDED.ai_credits_total,
+        topic_search_credits_used = 0,
+        email_credits_used = 0,
+        ai_credits_used = 0,
+        period_start = EXCLUDED.period_start,
+        period_end = EXCLUDED.period_end,
+        is_trial_period = false,
+        updated_at = NOW()
     `;
 
-    if (existing.length > 0) {
-      // Update existing record
-      await sql`
-        UPDATE crewcast.user_credits
-        SET
-          topic_search_credits_total = ${planCredits.topicSearches},
-          email_credits_total = ${planCredits.email},
-          ai_credits_total = ${planCredits.ai},
-          topic_search_credits_used = 0,
-          email_credits_used = 0,
-          ai_credits_used = 0,
-          period_start = ${periodStart.toISOString()},
-          period_end = ${effectivePeriodEnd.toISOString()},
-          is_trial_period = false,
-          updated_at = NOW()
-        WHERE user_id = ${userId}
-      `;
-    } else {
-      // Insert new record
-      await sql`
-        INSERT INTO crewcast.user_credits (
-          user_id,
-          topic_search_credits_total,
-          email_credits_total,
-          ai_credits_total,
-          topic_search_credits_used,
-          email_credits_used,
-          ai_credits_used,
-          period_start,
-          period_end,
-          is_trial_period
-        ) VALUES (
-          ${userId},
-          ${planCredits.topicSearches},
-          ${planCredits.email},
-          ${planCredits.ai},
-          0,
-          0,
-          0,
-          ${periodStart.toISOString()},
-          ${effectivePeriodEnd.toISOString()},
-          false
-        )
-      `;
-    }
-
     // Log the transactions
-    await sql`
-      INSERT INTO crewcast.credit_transactions (user_id, credit_type, amount, balance_after, reason, reference_type)
+    await transaction`
+      INSERT INTO crewcast.credit_transactions (
+        user_id,
+        credit_type,
+        amount,
+        balance_after,
+        reason,
+        reference_id,
+        reference_type
+      )
       VALUES
-        (${userId}, 'topic_search', ${planCredits.topicSearches}, ${planCredits.topicSearches}, 'reset', 'invoice'),
-        (${userId}, 'email', ${planCredits.email}, ${planCredits.email}, 'reset', 'invoice'),
-        (${userId}, 'ai', ${planCredits.ai}, ${planCredits.ai}, 'reset', 'invoice')
+        (${userId}, 'topic_search', ${planCredits.topicSearches}, ${planCredits.topicSearches}, 'reset', ${stripeInvoiceId ?? null}, ${stripeInvoiceId ? 'stripe_invoice' : 'invoice'}),
+        (${userId}, 'email', ${planCredits.email}, ${planCredits.email}, 'reset', ${stripeInvoiceId ?? null}, ${stripeInvoiceId ? 'stripe_invoice' : 'invoice'}),
+        (${userId}, 'ai', ${planCredits.ai}, ${planCredits.ai}, 'reset', ${stripeInvoiceId ?? null}, ${stripeInvoiceId ? 'stripe_invoice' : 'invoice'})
     `;
 
     console.log(
@@ -830,10 +872,7 @@ export async function resetCreditsForNewPeriod(
     );
 
     return true;
-  } catch (error) {
-    console.error('[Credits] Error resetting credits:', error);
-    return false;
-  }
+  });
 }
 
 // =============================================================================

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
 
 // =============================================================================
 // GET /api/stripe/invoices
@@ -56,36 +60,23 @@ export async function GET(request: NextRequest) {
     // STEP 1: AUTHENTICATION
     // Verify the user is authenticated via Stack Auth
     // =========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      console.error('[Stripe Invoices] Unauthorized: No authenticated user');
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     // =========================================================================
     // STEP 2: GET USER ID FROM QUERY PARAMS
     // =========================================================================
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const legacyUserId = searchParams.get('userId');
 
-    if (!userId) {
+    if (!legacyUserId) {
       return NextResponse.json(
         { error: 'User ID is required' },
         { status: 400 }
       );
     }
 
-    const userIdNum = parseInt(userId, 10);
-    if (isNaN(userIdNum)) {
-      return NextResponse.json(
-        { error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
+    assertLegacyAccountId(legacyUserId, authenticated.account.id);
+    const userIdNum = authenticated.account.id;
 
     // =========================================================================
     // STEP 3: GET USER AND STRIPE CUSTOMER ID FROM DATABASE
@@ -106,19 +97,6 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = users[0];
-
-    // =========================================================================
-    // STEP 4: AUTHORIZATION CHECK
-    // Verify the authenticated user matches the requested user
-    // This prevents users from viewing other users' invoices
-    // =========================================================================
-    if (authUser.email !== userData.email) {
-      console.error(`[Stripe Invoices] Authorization failed: ${authUser.email} tried to access invoices for user ${userIdNum} (${userData.email})`);
-      return NextResponse.json(
-        { error: 'Not authorized to access this resource' },
-        { status: 403 }
-      );
-    }
 
     // =========================================================================
     // STEP 5: CHECK IF USER HAS A STRIPE CUSTOMER
@@ -216,6 +194,9 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     // =========================================================================
     // ERROR HANDLING
     // Log error and return generic message to avoid leaking details

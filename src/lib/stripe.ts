@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { PLAN_CATALOG } from './plans/catalog';
 
 // =============================================================================
 // STRIPE SERVER-SIDE CONFIGURATION
@@ -38,12 +39,12 @@ export const PLAN_DETAILS = {
   pro: {
     name: 'Pro',
     monthly: {
-      amount: 9900, // €99.00 in cents
+      amount: PLAN_CATALOG.pro.pricing.monthlyEur * 100,
       priceId: process.env.STRIPE_PRICE_PRO_MONTHLY!,
       interval: 'month' as const,
     },
     annual: {
-      amount: 94800, // €948.00 in cents (€79/mo)
+      amount: PLAN_CATALOG.pro.pricing.annualTotalEur * 100,
       priceId: process.env.STRIPE_PRICE_PRO_ANNUAL!,
       interval: 'year' as const,
     },
@@ -51,12 +52,12 @@ export const PLAN_DETAILS = {
   business: {
     name: 'Business Class',
     monthly: {
-      amount: 24900, // €249.00 in cents
+      amount: PLAN_CATALOG.business.pricing.monthlyEur * 100,
       priceId: process.env.STRIPE_PRICE_BUSINESS_MONTHLY!,
       interval: 'month' as const,
     },
     annual: {
-      amount: 238800, // €2,388.00 in cents (€199/mo)
+      amount: PLAN_CATALOG.business.pricing.annualTotalEur * 100,
       priceId: process.env.STRIPE_PRICE_BUSINESS_ANNUAL!,
       interval: 'year' as const,
     },

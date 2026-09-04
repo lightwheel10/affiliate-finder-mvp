@@ -1,50 +1,17 @@
 /**
- * =============================================================================
- * ONBOARDING SCOUT START API - January 30, 2026
- * =============================================================================
- * 
- * PURPOSE:
- * Starts the onboarding affiliate search and returns immediately with a jobId.
- * The frontend polls /api/search/status?jobId=X until complete.
- * 
- * WHY THIS EXISTS (January 30, 2026):
- * The old /api/scout/onboarding endpoint did everything synchronously:
- * - Start Google Scraper
- * - Poll until complete (40-95s)
- * - Enrich social results (20-30s each, blocking)
- * - Filter and save
- * 
- * This caused Vercel 504 timeouts because enrichment actors blocked the request.
- * 
- * NEW FLOW:
- * 1. POST /api/scout/onboarding/start → returns { jobId }
- * 2. Frontend polls /api/search/status?jobId=X
- * 3. Status endpoint handles non-blocking enrichment
- * 4. When done, frontend fetches results and saves to discovered_affiliates
- * 
- * IMPORTANT:
- * - This endpoint does NOT save to discovered_affiliates (status endpoint does)
- * - This endpoint does NOT consume credits (onboarding is free)
- * - The old /api/scout/onboarding route is kept for rollback
- * 
- * =============================================================================
+ * Starts the free onboarding search through the same attributed, idempotent
+ * job-start boundary as a normal Find search. The status endpoint owns result
+ * persistence and finalization.
  */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
-import { startGoogleSearchRun } from '@/app/services/apify-google-scraper';
-import { Platform } from '@/app/services/search';
+import { trackApiCall } from '@/app/services/tracking';
+import { resolveAuthenticatedAccount, legacyAccountIdMatches } from '@/lib/auth/account';
+import { BrandLocationContextError } from '@/lib/brand-locations/context';
+import { startSearchInputSchema } from '@/lib/search/input';
+import { SearchStartError } from '@/lib/search/start';
+import { completeServerSearchStart } from '@/lib/search/start-server';
 
-// =============================================================================
-// TYPES
-// =============================================================================
-
-interface OnboardingStartRequest {
-  userId: number;
-  topics: string[];
-  competitors?: string[];
-}
+const ONBOARDING_SOURCES = ['Web', 'YouTube', 'Instagram', 'TikTok'] as const;
 
 interface OnboardingStartResponse {
   success: boolean;
@@ -53,182 +20,138 @@ interface OnboardingStartResponse {
   error?: string;
 }
 
-// =============================================================================
-// POST /api/scout/onboarding/start
-// January 30, 2026
-// =============================================================================
+function objectRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
 
-export async function POST(req: NextRequest): Promise<NextResponse<OnboardingStartResponse>> {
+export async function POST(
+  req: NextRequest,
+): Promise<NextResponse<OnboardingStartResponse>> {
   const startTime = Date.now();
-  
+
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ 
-        success: false, 
+    const authenticated = await resolveAuthenticatedAccount();
+    if (!authenticated) {
+      return NextResponse.json({
+        success: false,
         message: 'Unauthorized',
-        error: 'UNAUTHORIZED'
+        error: 'UNAUTHORIZED',
       }, { status: 401 });
     }
-
-    // =========================================================================
-    // PARSE REQUEST
-    // =========================================================================
-    const body = await req.json() as OnboardingStartRequest;
-    const { userId, topics, competitors } = body;
-
-    // Validate required fields
-    if (!userId) {
-      console.error('[Onboarding Start] Missing userId');
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Missing userId',
-        error: 'MISSING_USER_ID'
-      }, { status: 400 });
-    }
-
-    if (!topics || !Array.isArray(topics) || topics.length === 0) {
-      console.error('[Onboarding Start] Missing or empty topics array');
-      return NextResponse.json({ 
-        success: false, 
-        message: 'No topics provided for search',
-        error: 'MISSING_TOPICS'
-      }, { status: 400 });
-    }
-
-    console.log(`\n${'='.repeat(70)}`);
-    console.log(`[Onboarding Start] NON-BLOCKING ARCHITECTURE - January 30, 2026`);
-    console.log(`[Onboarding Start] User: ${userId}`);
-    console.log(`[Onboarding Start] Topics: ${topics.join(', ')}`);
-    console.log(`[Onboarding Start] Competitors: ${competitors?.join(', ') || 'none'}`);
-    console.log(`${'='.repeat(70)}\n`);
-
-    // =========================================================================
-    // VERIFY USER EXISTS AND GET TARGET SETTINGS
-    // =========================================================================
-    const userCheck = await sql`
-      SELECT id, email, target_country, target_language, brand 
-      FROM crewcast.users 
-      WHERE id = ${userId}
-    `;
-
-    if (userCheck.length === 0) {
-      console.error(`[Onboarding Start] User ${userId} not found`);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'User not found',
-        error: 'USER_NOT_FOUND'
+    if (!authenticated.account) {
+      return NextResponse.json({
+        success: false,
+        message: 'User account not found',
+        error: 'USER_NOT_FOUND',
       }, { status: 404 });
     }
 
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ 
-        success: false, 
+    let requestBody: unknown;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return NextResponse.json({
+        success: false,
+        message: 'Request body must be valid JSON',
+        error: 'INVALID_JSON',
+      }, { status: 400 });
+    }
+
+    const record = objectRecord(requestBody);
+    if (!record) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid onboarding search input',
+        error: 'INVALID_SEARCH_INPUT',
+      }, { status: 400 });
+    }
+
+    const requestedUserId = record.userId === undefined
+      ? undefined
+      : typeof record.userId === 'number'
+        && Number.isSafeInteger(record.userId)
+        && record.userId > 0
+        ? record.userId
+        : Number.NaN;
+    if (!legacyAccountIdMatches(requestedUserId, authenticated.account.id)) {
+      return NextResponse.json({
+        success: false,
         message: 'Not authorized to access this resource',
-        error: 'FORBIDDEN'
+        error: 'FORBIDDEN',
       }, { status: 403 });
     }
 
-    const targetCountry = userCheck[0].target_country as string | null;
-    const targetLanguage = userCheck[0].target_language as string | null;
-    const userBrand = userCheck[0].brand as string | null;
-
-    console.log(`[Onboarding Start] User settings: country=${targetCountry}, language=${targetLanguage}, brand=${userBrand}`);
-
-    // =========================================================================
-    // START APIFY GOOGLE SCRAPER (NON-BLOCKING)
-    // January 30, 2026
-    // =========================================================================
-    const sources: Platform[] = ['Web', 'YouTube', 'Instagram', 'TikTok'];
-    
-    console.log(`[Onboarding Start] Starting Apify Google Scraper...`);
-    
-    let runId: string;
-    try {
-      const runResult = await startGoogleSearchRun({
-        keywords: topics,
-        competitors: competitors || [],
-        sources,
-        targetCountry: targetCountry || undefined,
-        targetLanguage: targetLanguage || undefined,
-      });
-      
-      runId = runResult.runId;
-      console.log(`[Onboarding Start] Apify run started: ${runId}`);
-    } catch (error: any) {
-      console.error(`[Onboarding Start] Failed to start Apify run:`, error.message);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Failed to start search',
-        error: error.message
-      }, { status: 500 });
+    const parsedInput = startSearchInputSchema.safeParse({
+      keywords: record.topics,
+      competitors: record.competitors,
+      sources: [...ONBOARDING_SOURCES],
+      requestId: record.requestId,
+    });
+    if (!parsedInput.success || !parsedInput.data.requestId) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid onboarding search input',
+        error: 'INVALID_SEARCH_INPUT',
+      }, { status: 400 });
     }
 
-    // =========================================================================
-    // CREATE SEARCH JOB RECORD
-    // January 30, 2026
-    // 
-    // We create a search_jobs record so we can poll /api/search/status.
-    // The keyword is set to 'onboarding:<primaryTopic>' for identification.
-    // =========================================================================
-    const primaryTopic = topics[0];
-    const jobKeyword = `onboarding:${primaryTopic}`;
-    
-    const insertResult = await sql`
-      INSERT INTO crewcast.search_jobs (
-        user_id,
-        keyword,
-        sources,
-        apify_run_id,
-        status,
-        created_at,
-        started_at,
-        user_settings
-      ) VALUES (
-        ${userId},
-        ${jobKeyword},
-        ${sources}::text[],
-        ${runId},
-        'running',
-        NOW(),
-        NOW(),
-        ${JSON.stringify({
-          targetCountry: targetCountry || null,
-          targetLanguage: targetLanguage || null,
-          userBrand: userBrand || null,
-          // January 30, 2026: Store onboarding context for saving results
-          isOnboarding: true,
-          topics: topics,
-          competitors: competitors || [],
-        })}::jsonb
-      )
-      RETURNING id
-    `;
-    
-    const jobId = insertResult[0].id as number;
-    
-    console.log(`[Onboarding Start] Created search job: ${jobId}`);
-    console.log(`[Onboarding Start] Duration: ${Date.now() - startTime}ms`);
-
-    // =========================================================================
-    // RETURN SUCCESS
-    // January 30, 2026
-    // 
-    // Frontend will now poll /api/search/status?jobId=X
-    // =========================================================================
-    return NextResponse.json({
-      success: true,
-      jobId,
-      message: 'Onboarding search started. Poll /api/search/status for results.',
+    const started = await completeServerSearchStart({
+      accountId: authenticated.account.id,
+      requestId: parsedInput.data.requestId,
+      isOnboarding: true,
+      keywords: parsedInput.data.keywords ?? [],
+      competitors: parsedInput.data.competitors ?? [],
+      sources: [...ONBOARDING_SOURCES],
     });
 
-  } catch (error: any) {
+    if (!started.reused) {
+      await trackApiCall({
+        userId: authenticated.account.id,
+        service: 'apify_google_scraper',
+        endpoint: 'onboarding_start',
+        keyword: started.combinedKeyword,
+        status: 'success',
+        apifyRunId: started.runId,
+        durationMs: Date.now() - startTime,
+        brandId: started.brandId,
+        brandLocationId: started.brandLocationId,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      jobId: started.jobId,
+      message: 'Onboarding search started. Poll /api/search/status for results.',
+    });
+  } catch (error: unknown) {
     console.error('[Onboarding Start] Error:', error);
-    
+
+    if (error instanceof BrandLocationContextError || error instanceof SearchStartError) {
+      return NextResponse.json({
+        success: false,
+        message: error.status >= 500 ? 'Unable to start onboarding search safely.' : error.message,
+        error: error.code,
+      }, { status: error.status });
+    }
+
+    const errorType = typeof error === 'object' && error !== null && 'type' in error
+      ? String(error.type)
+      : '';
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (errorType === 'platform-feature-disabled' || /usage hard limit/i.test(errorMessage)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Search service temporarily at capacity',
+        error: 'SERVICE_AT_CAPACITY',
+      }, { status: 503 });
+    }
+
     return NextResponse.json({
       success: false,
-      message: error.message || 'Internal server error',
-      error: 'INTERNAL_ERROR'
+      message: 'Internal server error',
+      error: 'INTERNAL_ERROR',
     }, { status: 500 });
   }
 }

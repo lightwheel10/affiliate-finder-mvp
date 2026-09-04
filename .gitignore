@@ -47,8 +47,28 @@ next-env.d.ts
 *.md
 !README.md
 
+# Local client-operation evidence. This repository is public; dashboard
+# screenshots and the rollout tracker can contain project/account identifiers.
+/docs/client-assets/
+
 # scripts folder (test files and results)
-/scripts/
+/scripts/*
+!/scripts/build-staging.mjs
+!/scripts/manage-ui-multi-location-fixture.ts
+!/scripts/provision-search-reconciliation-operator.ts
+!/scripts/verify-account-identity-staging.ts
+!/scripts/verify-affiliate-location-isolation-staging.ts
+!/scripts/verify-brand-location-management-staging.ts
+!/scripts/verify-deferred-plan-changes-staging.ts
+!/scripts/verify-downgrade-capacity-staging.ts
+!/scripts/verify-onboarding-suggestions-staging.ts
+!/scripts/verify-paid-search-migration-staging.ts
+!/scripts/verify-search-credit-reservations-staging.ts
+!/scripts/verify-search-reconciliation-staging.ts
+!/scripts/verify-stripe-webhook-events-staging.ts
+!/scripts/verify-weekly-auto-scan-staging.ts
+!/scripts/migrations/
+!/scripts/migrations/**
 
 # test results
 /test-results/

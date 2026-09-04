@@ -42,13 +42,18 @@
  * =============================================================================
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Check, Zap, Loader2, Star, ShieldCheck, TrendingUp, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from './Modal';
 import { CURRENCY_SYMBOL, PLAN_PRICING } from '@/lib/stripe-client';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { DowngradeCapacityStep } from './DowngradeCapacityStep';
+import { PLAN_CATALOG, type PurchasablePlanId } from '@/lib/plans/catalog';
+import type { ManagedPortfolio } from '@/lib/brand-locations/portfolio';
+import type { DowngradeRetentionSelection } from '@/lib/plans/downgrade-capacity';
+import { toast } from 'sonner';
 
 // =============================================================================
 // TYPES
@@ -73,6 +78,15 @@ interface PlanConfig {
   annualPrice: number | null;
   features: readonly string[];        // readonly to match PLAN_PRICING type
   popular: boolean;
+}
+
+interface DowngradeFlowState {
+  plan: PurchasablePlanId;
+  interval: 'monthly' | 'annual';
+  portfolio: ManagedPortfolio;
+  maxBrands: number;
+  maxLocations: number;
+  selection: DowngradeRetentionSelection;
 }
 
 // =============================================================================
@@ -127,6 +141,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showTrialEndOption, setShowTrialEndOption] = useState(false);
   const [pendingPlanChange, setPendingPlanChange] = useState<{ plan: string; interval: string } | null>(null);
+  const [downgradeFlow, setDowngradeFlow] = useState<DowngradeFlowState | null>(null);
+
+  useEffect(() => {
+    if (isOpen) return;
+    setDowngradeFlow(null);
+    setShowTrialEndOption(false);
+    setPendingPlanChange(null);
+    setError(null);
+  }, [isOpen]);
 
   // =========================================================================
   // HELPERS
@@ -216,6 +239,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       return;
     }
 
+    if (changeType === 'downgrade') {
+      await prepareDowngradeChoice(
+        plan.id as PurchasablePlanId,
+        billingInterval,
+      );
+      return;
+    }
+
     // If user is on trial, show the trial end option for:
     // - 'same': Buy current plan now (end trial)
     // - 'upgrade': Move to higher plan
@@ -230,7 +261,56 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     await executePlanChange(plan.id, billingInterval, false);
   };
 
-  const executePlanChange = async (newPlan: string, newInterval: string, endTrialNow: boolean) => {
+  const prepareDowngradeChoice = async (
+    newPlan: PurchasablePlanId,
+    newInterval: 'monthly' | 'annual',
+  ) => {
+    setIsLoading(newPlan);
+    setError(null);
+    try {
+      const response = await fetch('/api/brands', {
+        headers: { Accept: 'application/json' },
+      });
+      const portfolio = await response.json() as ManagedPortfolio & { error?: string };
+      if (!response.ok || portfolio.error) {
+        throw new Error(portfolio.error || t.pricingModal.downgradePortfolioError);
+      }
+      const activeBrands = portfolio.brands.filter((brand) => brand.archivedAt === null);
+      const activeLocationCount = activeBrands.reduce(
+        (count, brand) => count + brand.locations.filter(
+          (location) => location.archivedAt === null,
+        ).length,
+        0,
+      );
+      const entitlements = PLAN_CATALOG[newPlan].entitlements;
+      const needsChoice = activeBrands.length > entitlements.maxBrands
+        || activeLocationCount > entitlements.maxLocationsPerAccount;
+      if (!needsChoice) {
+        await executePlanChange(newPlan, newInterval, false);
+        return;
+      }
+      setDowngradeFlow({
+        plan: newPlan,
+        interval: newInterval,
+        portfolio,
+        maxBrands: entitlements.maxBrands,
+        maxLocations: entitlements.maxLocationsPerAccount,
+        selection: { brandIds: [], locationIds: [] },
+      });
+    } catch (err) {
+      console.error('[PricingModal] Error preparing downgrade choice:', err);
+      setError(err instanceof Error ? err.message : t.pricingModal.downgradePortfolioError);
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  const executePlanChange = async (
+    newPlan: string,
+    newInterval: string,
+    endTrialNow: boolean,
+    downgradeRetention?: DowngradeRetentionSelection,
+  ) => {
     setIsLoading(newPlan);
     setError(null);
     setShowTrialEndOption(false);
@@ -245,12 +325,28 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           newPlan,
           newBillingInterval: newInterval,
           endTrialNow,
+          ...(downgradeRetention ? { downgradeRetention } : {}),
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as {
+        error?: string;
+        code?: string;
+        capacityRestoration?: {
+          status: 'none' | 'restored' | 'selection_required';
+          restoredBrands: number;
+          restoredLocations: number;
+        };
+      };
 
       if (!response.ok || data.error) {
+        if (data.code === 'DOWNGRADE_SELECTION_REQUIRED') {
+          await prepareDowngradeChoice(
+            newPlan as PurchasablePlanId,
+            newInterval as 'monthly' | 'annual',
+          );
+          return;
+        }
         throw new Error(data.error || 'Failed to change plan');
       }
 
@@ -272,6 +368,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       // =========================================================================
       window.dispatchEvent(new CustomEvent('subscription-updated'));
       window.dispatchEvent(new CustomEvent('credits-updated'));
+      window.dispatchEvent(new CustomEvent('brand-portfolio-updated'));
+
+      if (data.capacityRestoration?.status === 'restored') {
+        toast.success(
+          t.pricingModal.upgradeRestorationComplete
+            .replace('{brands}', String(data.capacityRestoration.restoredBrands))
+            .replace('{locations}', String(data.capacityRestoration.restoredLocations)),
+        );
+      } else if (data.capacityRestoration?.status === 'selection_required') {
+        toast.warning(t.pricingModal.upgradeRestorationNeedsChoice);
+      }
       
       // Call success callback to refresh data (for the local component)
       if (onSuccess) {
@@ -300,6 +407,27 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" width="max-w-5xl">
+      {downgradeFlow ? (
+        <DowngradeCapacityStep
+          portfolio={downgradeFlow.portfolio}
+          targetPlan={downgradeFlow.plan}
+          maxBrands={downgradeFlow.maxBrands}
+          maxLocations={downgradeFlow.maxLocations}
+          selection={downgradeFlow.selection}
+          copy={t.pricingModal}
+          isSubmitting={isLoading !== null}
+          onChange={(selection) => setDowngradeFlow((current) => current
+            ? { ...current, selection }
+            : current)}
+          onBack={() => setDowngradeFlow(null)}
+          onConfirm={() => void executePlanChange(
+            downgradeFlow.plan,
+            downgradeFlow.interval,
+            false,
+            downgradeFlow.selection,
+          )}
+        />
+      ) : (
       <div className="py-6 px-2">
         {/* ================================================================= */}
         {/* HEADER — smoover refresh (April 25th, 2026) */}
@@ -575,6 +703,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           )}
         </div>
       </div>
+      )}
     </Modal>
   );
 };

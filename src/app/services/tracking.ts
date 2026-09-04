@@ -28,6 +28,8 @@ export interface SearchLog {
   userId: number;
   keyword: string;
   sources: string[];
+  brandId?: string;
+  brandLocationId?: string;
 }
 
 /**
@@ -35,9 +37,19 @@ export interface SearchLog {
  */
 export async function trackSearch(log: SearchLog): Promise<number | null> {
   try {
+    if ((log.brandId === undefined) !== (log.brandLocationId === undefined)) {
+      throw new Error('Search brand and location attribution must be supplied together');
+    }
     const result = await sql`
-      INSERT INTO crewcast.searches (user_id, keyword, sources, results_count, searched_at)
-      VALUES (${log.userId}, ${log.keyword}, ${log.sources}, 0, NOW())
+      INSERT INTO crewcast.searches (
+        user_id, keyword, sources, results_count, searched_at,
+        brand_id, brand_location_id
+      )
+      VALUES (
+        ${log.userId}, ${log.keyword}, ${log.sources}, 0, NOW(),
+        ${log.brandId ?? null}::bigint,
+        ${log.brandLocationId ?? null}::bigint
+      )
       RETURNING id
     `;
     return result[0]?.id || null;
@@ -100,6 +112,8 @@ export interface ApiCallLog {
   estimatedCost?: number;
   apifyRunId?: string;
   durationMs?: number;
+  brandId?: string;
+  brandLocationId?: string;
 }
 
 /**
@@ -107,6 +121,10 @@ export interface ApiCallLog {
  */
 export async function trackApiCall(log: ApiCallLog): Promise<void> {
   try {
+    if ((log.brandId === undefined) !== (log.brandLocationId === undefined)) {
+      throw new Error('API call brand and location attribution must be supplied together');
+    }
+
     // Calculate cost if not provided
     const cost = log.estimatedCost ?? 
       (log.resultsCount ? log.resultsCount * API_COSTS[log.service] : API_COSTS[log.service]);
@@ -115,7 +133,7 @@ export async function trackApiCall(log: ApiCallLog): Promise<void> {
       INSERT INTO crewcast.api_calls (
         user_id, service, endpoint, keyword, domain,
         status, results_count, error_message, estimated_cost,
-        apify_run_id, duration_ms
+        apify_run_id, duration_ms, brand_id, brand_location_id
       ) VALUES (
         ${log.userId}, 
         ${log.service}, 
@@ -127,7 +145,9 @@ export async function trackApiCall(log: ApiCallLog): Promise<void> {
         ${log.errorMessage || null},
         ${cost}, 
         ${log.apifyRunId || null},
-        ${log.durationMs || null}
+        ${log.durationMs || null},
+        ${log.brandId ?? null}::bigint,
+        ${log.brandLocationId ?? null}::bigint
       )
     `;
   } catch (error) {

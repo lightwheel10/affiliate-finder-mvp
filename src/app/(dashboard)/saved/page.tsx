@@ -63,13 +63,18 @@ import {
   Clock,  // Added January 6th, 2026 for neo-brutalist header
   Download,  // Added January 29th, 2026 for export functionality
 } from 'lucide-react';
-import { FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount } from '../../types';
+import { FilterState, DEFAULT_FILTER_STATE, parseSubscriberCount, ResultItem } from '../../types';
 import { FilterPanel } from '../../components/FilterPanel';
 // April 28, 2026: Unified search predicate (Find/Discovered/Saved) — see utils/affiliate-search.ts
 import { affiliateMatchesSearchQuery } from '../../utils/affiliate-search';
 // 2026-06-14 (paras): group postings by domain (web) / creator (social).
 // David's request. See utils/affiliate-grouping.ts.
-import { groupAffiliates, groupCountsBySource, groupKeyOf } from '../../utils/affiliate-grouping';
+import {
+  affiliateIdentityKey,
+  groupAffiliates,
+  groupCountsBySource,
+  groupKeyOf,
+} from '../../utils/affiliate-grouping';
 import { useNeonUser } from '../../hooks/useNeonUser';
 // =============================================================================
 // SUBSCRIPTION GATE FOR EXPORT - February 9th, 2026
@@ -83,12 +88,29 @@ import { PricingModal } from '../../components/PricingModal';
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useBrandLocation } from '@/contexts/BrandLocationContext';
+import { buildLocationScopeExportSlug } from '@/lib/brand-locations/export';
+import { resolveBrandLocationPresentation } from '@/lib/brand-locations/presentation';
 
 export default function SavedPage() {
   // Translation hook (January 9th, 2026)
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   // User data for filter options (January 13th, 2026)
   const { user } = useNeonUser();
+  const {
+    activeBrand,
+    activeLocation,
+    activeLocations,
+    selectedLocations,
+    featureEnabled,
+    locationScopeIds,
+  } = useBrandLocation();
+  const activeBrandLocationCount = activeBrand?.locations.filter(
+    (location) => location.archivedAt === null,
+  ).length ?? 0;
+  const exportScope = featureEnabled && activeBrand && selectedLocations.length > 0
+    ? `-${buildLocationScopeExportSlug(activeBrand.name, selectedLocations, activeBrandLocationCount)}`
+    : '';
   // ==========================================================================
   // SUBSCRIPTION CHECK FOR EXPORT GATE - February 9th, 2026
   // Uses hasAutoScanAccess (first_payment_at && status === 'active') to
@@ -113,12 +135,12 @@ export default function SavedPage() {
     findEmail,
     findEmailsBulk,
     isLoading: loading
-  } = useSavedAffiliates();
+  } = useSavedAffiliates(locationScopeIds);
 
   // ============================================================================
   // BULK SELECTION STATE (Added Dec 2025)  
   // ============================================================================
-  const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
+  const [selectedAffiliateKeys, setSelectedAffiliateKeys] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
@@ -170,22 +192,22 @@ export default function SavedPage() {
 
   // 2026-06-14 (paras): grouped-row handlers. A row represents a domain/creator
   // group; unsave/delete and selection act on the whole group (main + all
-  // sub-postings). Bulk handlers are unaffected — selecting a group adds every
-  // posting's link to selectedLinks, which the link-based bulk logic already
-  // operates on.
-  const handleRemoveGroup = async (links: string[]) => {
-    await removeAffiliatesBulk(links);
-    setDeleteResult({ count: links.length, show: true });
+  // sub-postings). Selection uses location + link so aggregate views cannot
+  // confuse identical links belonging to different locations.
+  const handleRemoveGroup = async (items: ResultItem[]) => {
+    await removeAffiliatesBulk(items);
+    setDeleteResult({ count: items.length, show: true });
     setTimeout(() => {
       setDeleteResult(prev => prev ? { ...prev, show: false } : null);
     }, 3000);
   };
 
-  const toggleSelectGroup = (links: string[]) => {
-    setSelectedLinks(prev => {
+  const toggleSelectGroup = (items: ResultItem[]) => {
+    const keys = items.map(affiliateIdentityKey);
+    setSelectedAffiliateKeys(prev => {
       const next = new Set(prev);
-      const selected = next.has(links[0]); // main link represents the group
-      links.forEach(l => { if (selected) next.delete(l); else next.add(l); });
+      const selected = next.has(keys[0]);
+      keys.forEach((key) => { if (selected) next.delete(key); else next.add(key); });
       return next;
     });
   };
@@ -194,35 +216,38 @@ export default function SavedPage() {
   // BULK SELECTION HANDLERS (Added Dec 2025)
   // ============================================================================
   const selectAllVisible = () => {
-    setSelectedLinks(prev => {
+    setSelectedAffiliateKeys(prev => {
       const newSet = new Set(prev);
-      filteredResults.forEach(r => newSet.add(r.link));
+      filteredResults.forEach((item) => newSet.add(affiliateIdentityKey(item)));
       return newSet;
     });
   };
   
   const deselectAllVisible = () => {
-    setSelectedLinks(prev => {
+    setSelectedAffiliateKeys(prev => {
       const newSet = new Set(prev);
-      filteredResults.forEach(r => newSet.delete(r.link));
+      filteredResults.forEach((item) => newSet.delete(affiliateIdentityKey(item)));
       return newSet;
     });
   };
 
   const handleBulkDelete = () => {
-    if (visibleSelectedLinks.size === 0) return;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
     setIsDeleteModalOpen(true);
   };
 
   const confirmBulkDelete = async () => {
-    if (visibleSelectedLinks.size === 0) return;
-    const deleteCount = visibleSelectedLinks.size;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
+    const affiliatesToDelete = filteredResults.filter((item) =>
+      visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
+    );
+    const deleteCount = affiliatesToDelete.length;
     setIsBulkDeleting(true);
     try {
-      await removeAffiliatesBulk(Array.from(visibleSelectedLinks));
-      setSelectedLinks(prev => {
+      await removeAffiliatesBulk(affiliatesToDelete);
+      setSelectedAffiliateKeys(prev => {
         const newSet = new Set(prev);
-        visibleSelectedLinks.forEach(link => newSet.delete(link));
+        visibleSelectedAffiliateKeys.forEach((key) => newSet.delete(key));
         return newSet;
       });
       setIsDeleteModalOpen(false);
@@ -244,9 +269,11 @@ export default function SavedPage() {
   };
 
   const handleBulkFindEmails = async () => {
-    if (visibleSelectedLinks.size === 0) return;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
     
-    const selectedAffiliates = savedAffiliates.filter(a => visibleSelectedLinks.has(a.link));
+    const selectedAffiliates = savedAffiliates.filter((affiliate) =>
+      visibleSelectedAffiliateKeys.has(affiliateIdentityKey(affiliate)),
+    );
     // Updated January 24, 2026: Only check emailStatus, not email field existence
     // Bio emails are no longer stored in email field - they're extracted on-demand
     const needsLookup = selectedAffiliates.filter(a => 
@@ -478,26 +505,25 @@ export default function SavedPage() {
   }, [savedAffiliates, activeFilter, searchQuery, advancedFilters, showOnlyWithEmail, isBlocked]);
 
   // 2026-06-14 (paras): collapse the flat filtered list into domain/creator
-  // groups for rendering. Selection stays link-based, so bulk handlers and the
-  // "select all" header checkbox keep working unchanged.
+  // groups for rendering. Selection remains location-aware in aggregate views.
   const groupedResults = useMemo(() => groupAffiliates(filteredResults), [filteredResults]);
 
-  const visibleSelectedLinks = useMemo(() => {
-    const visibleLinks = new Set(filteredResults.map(r => r.link));
+  const visibleSelectedAffiliateKeys = useMemo(() => {
+    const visibleKeys = new Set(filteredResults.map(affiliateIdentityKey));
     const visible = new Set<string>();
-    selectedLinks.forEach(link => {
-      if (visibleLinks.has(link)) {
-        visible.add(link);
+    selectedAffiliateKeys.forEach((key) => {
+      if (visibleKeys.has(key)) {
+        visible.add(key);
       }
     });
     return visible;
-  }, [selectedLinks, filteredResults]);
+  }, [selectedAffiliateKeys, filteredResults]);
 
   // ==========================================================================
   // 2026-08-03 (Paras): SELECTED GROUP COUNT (display only)
   // The bulk bar shows how many GROUPS (creators/domains) are selected, in the
   // same unit as the visible rows and filter chips. Selection itself stays
-  // link-based (selectedLinks), so every bulk handler is unchanged — this is
+  // location-aware, so every bulk handler targets the exact market row. This is
   // purely what the "N selected" label displays. Before: select-all on 61
   // visible groups read "70 selected" (postings), which the client reported
   // as a count bug.
@@ -505,15 +531,17 @@ export default function SavedPage() {
   const selectedGroupCount = useMemo(() => {
     const keys = new Set<string>();
     filteredResults.forEach(r => {
-      if (visibleSelectedLinks.has(r.link)) keys.add(groupKeyOf(r));
+      if (visibleSelectedAffiliateKeys.has(affiliateIdentityKey(r))) keys.add(groupKeyOf(r));
     });
     return keys.size;
-  }, [filteredResults, visibleSelectedLinks]);
+  }, [filteredResults, visibleSelectedAffiliateKeys]);
 
   const [isBulkBlocking, setIsBulkBlocking] = useState(false);
   const handleBulkBlockDomains = async () => {
-    if (visibleSelectedLinks.size === 0) return;
-    const selectedItems = filteredResults.filter(r => selectedLinks.has(r.link));
+    if (visibleSelectedAffiliateKeys.size === 0) return;
+    const selectedItems = filteredResults.filter((item) =>
+      selectedAffiliateKeys.has(affiliateIdentityKey(item)),
+    );
     const domainsToBlock = [...new Set(selectedItems.map(r => normalizeDomainForCompare(r.domain)))];
     const canAdd = Math.max(0, 10 - blockedDomains.length);
     const toBlock = domainsToBlock.slice(0, canAdd);
@@ -526,9 +554,11 @@ export default function SavedPage() {
       for (const domain of toBlock) {
         await blockDomain(domain);
       }
-      setSelectedLinks(prev => {
+      setSelectedAffiliateKeys(prev => {
         const next = new Set(prev);
-        selectedItems.filter(r => toBlock.includes(normalizeDomainForCompare(r.domain))).forEach(r => next.delete(r.link));
+        selectedItems
+          .filter(r => toBlock.includes(normalizeDomainForCompare(r.domain)))
+          .forEach(r => next.delete(affiliateIdentityKey(r)));
         return next;
       });
       toast.success(toBlock.length === 1 ? t.dashboard.find.bulkActions.blockDomainDone : `${toBlock.length} ${t.dashboard.find.bulkActions.blockDomainsDone}`);
@@ -543,11 +573,11 @@ export default function SavedPage() {
   // Bio emails are no longer stored in email field - they're extracted on-demand
   const selectedNeedingEmailLookup = useMemo(() => {
     return savedAffiliates.filter(a => 
-      visibleSelectedLinks.has(a.link) &&
+      visibleSelectedAffiliateKeys.has(affiliateIdentityKey(a)) &&
       a.emailStatus !== 'found' && 
       a.emailStatus !== 'searching'
     ).length;
-  }, [savedAffiliates, visibleSelectedLinks]);
+  }, [savedAffiliates, visibleSelectedAffiliateKeys]);
 
   // 2026-06-14 (paras): tab badges now count GROUPS (distinct domains/creators),
   // not individual postings — matches the grouped row display.
@@ -640,6 +670,9 @@ export default function SavedPage() {
     // CSV Header
     const headers = [
       'Name',
+      'Brand',
+      'Search Country',
+      'Search Language',
       'Email',
       'Platform',
       'Domain',
@@ -650,17 +683,27 @@ export default function SavedPage() {
     ];
     
     // CSV Rows
-    const rows = affiliates.map(item => [
-      escapeCSVValue(item.personName || item.title),
-      // Only include email if it was found through paid lookup
-      escapeCSVValue(item.emailStatus === 'found' ? item.email : ''),
-      escapeCSVValue(item.source),
-      escapeCSVValue(item.domain),
-      escapeCSVValue(item.link),
-      escapeCSVValue(getFollowerCount(item)),
-      escapeCSVValue(item.discoveryMethod ? `${item.discoveryMethod.type}: ${item.discoveryMethod.value}` : ''),
-      escapeCSVValue(item.savedAt ? new Date(item.savedAt).toLocaleDateString() : '')
-    ]);
+    const rows = affiliates.map(item => {
+      const location = resolveBrandLocationPresentation(
+        activeLocations,
+        item.brandLocationId,
+        language,
+      );
+      return [
+        escapeCSVValue(item.personName || item.title),
+        escapeCSVValue(location?.brandName ?? ''),
+        escapeCSVValue(location ? `${location.countryName} (${location.countryCode})` : ''),
+        escapeCSVValue(location ? `${location.languageName} (${location.languageCode})` : ''),
+        // Only include email if it was found through paid lookup
+        escapeCSVValue(item.emailStatus === 'found' ? item.email : ''),
+        escapeCSVValue(item.source),
+        escapeCSVValue(item.domain),
+        escapeCSVValue(item.link),
+        escapeCSVValue(getFollowerCount(item)),
+        escapeCSVValue(item.discoveryMethod ? `${item.discoveryMethod.type}: ${item.discoveryMethod.value}` : ''),
+        escapeCSVValue(item.savedAt ? new Date(item.savedAt).toLocaleDateString() : ''),
+      ];
+    });
     
     // Combine header and rows
     return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
@@ -694,7 +737,7 @@ export default function SavedPage() {
 
     const csv = generateCSV(filteredResults);
     const date = new Date().toISOString().split('T')[0];
-    downloadCSV(csv, `saved-affiliates-${date}.csv`);
+    downloadCSV(csv, `saved-affiliates${exportScope}-${date}.csv`);
 
     toast.success(`${filteredResults.length} ${t.dashboard.saved.toasts.affiliatesExported}`);
     setIsExportModalOpen(false);
@@ -705,7 +748,7 @@ export default function SavedPage() {
    */
   const handleExportSelected = () => {
     // April 28, 2026: i18n migration of CSV export toasts.
-    if (visibleSelectedLinks.size === 0) {
+    if (visibleSelectedAffiliateKeys.size === 0) {
       toast.error(t.dashboard.saved.toasts.noAffiliatesSelected);
       setIsExportModalOpen(false);
       return;
@@ -713,12 +756,12 @@ export default function SavedPage() {
 
     // Filter to only selected affiliates
     const selectedAffiliates = filteredResults.filter(item =>
-      visibleSelectedLinks.has(item.link)
+      visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item))
     );
 
     const csv = generateCSV(selectedAffiliates);
     const date = new Date().toISOString().split('T')[0];
-    downloadCSV(csv, `saved-affiliates-selected-${date}.csv`);
+    downloadCSV(csv, `saved-affiliates-selected${exportScope}-${date}.csv`);
 
     toast.success(`${selectedAffiliates.length} ${t.dashboard.saved.toasts.affiliatesExported}`);
     setIsExportModalOpen(false);
@@ -870,8 +913,8 @@ export default function SavedPage() {
               isOpen={isFilterPanelOpen}
               onClose={() => setIsFilterPanelOpen(false)}
               onOpen={() => setIsFilterPanelOpen(true)}
-              userCompetitors={user?.competitors || undefined}
-              userTopics={user?.topics || undefined}
+              userCompetitors={activeLocation?.competitors ?? user?.competitors ?? undefined}
+              userTopics={activeLocation?.topics ?? user?.topics ?? undefined}
             />
           </div>
         </div>
@@ -883,8 +926,8 @@ export default function SavedPage() {
             extra Find-Emails button with three states (idle / searching /
             complete); all three get the smoover treatment.
             ============================================================================= */}
-        {visibleSelectedLinks.size > 0 && (() => {
-          const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
+        {visibleSelectedAffiliateKeys.size > 0 && (() => {
+          const allVisibleSelected = visibleSelectedAffiliateKeys.size === filteredResults.length;
           
           return (
           <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
@@ -898,9 +941,9 @@ export default function SavedPage() {
                   {selectedGroupCount} {t.common.selected}
                 </span>
                 {/* Breakdown: how many already have emails */}
-                {visibleSelectedLinks.size !== selectedNeedingEmailLookup && selectedNeedingEmailLookup > 0 && (
+                {visibleSelectedAffiliateKeys.size !== selectedNeedingEmailLookup && selectedNeedingEmailLookup > 0 && (
                   <span className="text-xs text-[#8898aa] dark:text-gray-400">
-                    ({visibleSelectedLinks.size - selectedNeedingEmailLookup} {t.dashboard.saved.bulkActions.alreadyHaveEmails || 'already have emails'})
+                    ({visibleSelectedAffiliateKeys.size - selectedNeedingEmailLookup} {t.dashboard.saved.bulkActions.alreadyHaveEmails || 'already have emails'})
                   </span>
                 )}
               </div>
@@ -1032,8 +1075,8 @@ export default function SavedPage() {
             <div className="col-span-1 flex justify-center">
               <input
                 type="checkbox"
-                checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
-                onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
+                checked={filteredResults.length > 0 && visibleSelectedAffiliateKeys.size === filteredResults.length}
+                onChange={() => visibleSelectedAffiliateKeys.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
                 className="accent-[#ffbf23] w-4 h-4"
               />
             </div>
@@ -1082,10 +1125,11 @@ export default function SavedPage() {
             // delete/select act on the whole group.
             groupedResults.map((group) => {
               const item = group.main;
-              const groupLinks = [item.link, ...group.subItems.map(s => s.link)];
+              const groupItems = [item, ...group.subItems];
+              const itemKey = affiliateIdentityKey(item);
               return (
               <AffiliateRow
-                key={item.link}
+                key={groupKeyOf(item)}
                 id={item.id}
                 title={item.title}
                 domain={item.domain}
@@ -1095,7 +1139,7 @@ export default function SavedPage() {
                 keyword={item.keyword}
                 subItems={group.subItems}
                 isSaved={true}
-                onSave={() => handleRemoveGroup(groupLinks)}
+                onSave={() => handleRemoveGroup(groupItems)}
                 thumbnail={item.thumbnail}
                 views={item.views}
                 date={item.date}
@@ -1111,9 +1155,9 @@ export default function SavedPage() {
                 channel={item.channel}
                 duration={item.duration}
                 personName={item.personName}
-                isSelected={selectedLinks.has(item.link)}
-                onSelect={() => toggleSelectGroup(groupLinks)}
-                onDelete={() => handleRemoveGroup(groupLinks)}
+                isSelected={selectedAffiliateKeys.has(itemKey)}
+                onSelect={() => toggleSelectGroup(groupItems)}
+                onDelete={() => handleRemoveGroup(groupItems)}
                 affiliateData={item}
                 currentUser={user}
                 searchQuery={searchQuery}
@@ -1147,7 +1191,7 @@ export default function SavedPage() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmBulkDelete}
-        itemCount={visibleSelectedLinks.size}
+        itemCount={visibleSelectedAffiliateKeys.size}
         isDeleting={isBulkDeleting}
         itemType="affiliate"
       />
@@ -1186,32 +1230,32 @@ export default function SavedPage() {
           {/* Export Selected Option */}
           <button
             onClick={handleExportSelected}
-            disabled={visibleSelectedLinks.size === 0}
+            disabled={visibleSelectedAffiliateKeys.size === 0}
             className={cn(
               "w-full flex items-center gap-3 p-4 border rounded-xl transition-all group",
-              visibleSelectedLinks.size > 0
+              visibleSelectedAffiliateKeys.size > 0
                 ? "bg-white dark:bg-gray-900 border-[#e6ebf1] dark:border-gray-700 hover:bg-[#f6f9fc] dark:hover:bg-gray-800 hover:border-[#cdd5df] dark:hover:border-gray-600"
                 : "bg-[#f6f9fc] dark:bg-gray-800 border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed opacity-70"
             )}
           >
             <div className={cn(
               "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-              visibleSelectedLinks.size > 0
+              visibleSelectedAffiliateKeys.size > 0
                 ? "bg-[#ffbf23] shadow-yellow-glow-sm"
                 : "bg-gray-200 dark:bg-gray-700"
             )}>
-              <Check size={18} strokeWidth={2.5} className={visibleSelectedLinks.size > 0 ? "text-[#0f172a]" : "text-gray-400"} />
+              <Check size={18} strokeWidth={2.5} className={visibleSelectedAffiliateKeys.size > 0 ? "text-[#0f172a]" : "text-gray-400"} />
             </div>
             <div className="flex-1 text-left">
               <h4 className={cn(
                 "text-sm font-semibold",
-                visibleSelectedLinks.size > 0 ? "text-[#0f172a] dark:text-white" : "text-gray-400"
+                visibleSelectedAffiliateKeys.size > 0 ? "text-[#0f172a] dark:text-white" : "text-gray-400"
               )}>
                 Export Selected
               </h4>
               <p className="text-xs text-[#8898aa] dark:text-gray-400">
-                {visibleSelectedLinks.size > 0 
-                  ? `${visibleSelectedLinks.size} affiliates selected`
+                {visibleSelectedAffiliateKeys.size > 0
+                  ? `${visibleSelectedAffiliateKeys.size} affiliates selected`
                   : "No affiliates selected"
                 }
               </p>

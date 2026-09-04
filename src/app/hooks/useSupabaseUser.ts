@@ -44,10 +44,10 @@
  * When the app loads, multiple components call useSupabaseUser() simultaneously.
  * Without caching, each would trigger its own API call (bad!).
  * 
- * We use module-level (global) variables:
- * - userCache: Stores fetched user data
- * - cacheEmail: Tracks which email the cache is for
- * - fetchPromise: If a fetch is in progress, others await the same promise
+ * We use module-level (global) state:
+ * - userCache: Stores fetched user data for one immutable auth identity
+ * - identity key: Combines the auth UUID and current email
+ * - in-flight request: Shared only by hook instances for that same identity
  * - cacheListeners: Notifies all hook instances when cache updates
  * 
  * =============================================================================
@@ -57,6 +57,10 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getSupabaseBrowserClient, Session, User as SupabaseUser } from '@/lib/supabase/client';
+import {
+  buildBrowserUserCacheKey,
+  IdentityBoundAsyncCache,
+} from '@/lib/auth/browser-user-cache';
 
 // =============================================================================
 // USER DATA TYPE (Same as useNeonUser for compatibility)
@@ -97,9 +101,7 @@ export interface SupabaseUserData {
 // 
 // =============================================================================
 
-let userCache: SupabaseUserData | null = null;
-let cacheEmail: string | null = null;
-let fetchPromise: Promise<SupabaseUserData | null> | null = null;
+const userCache = new IdentityBoundAsyncCache<SupabaseUserData>();
 const cacheListeners: Set<(user: SupabaseUserData | null) => void> = new Set();
 
 /**
@@ -113,9 +115,7 @@ function notifyCacheListeners(user: SupabaseUserData | null) {
  * Clear cache (used on logout or user change)
  */
 export function clearUserCache() {
-  userCache = null;
-  cacheEmail = null;
-  fetchPromise = null;
+  userCache.clear();
   notifyCacheListeners(null);
 }
 
@@ -147,13 +147,9 @@ export function useSupabaseUser() {
   const [authLoading, setAuthLoading] = useState(true);
   
   // Database user state
-  const [dbUser, setDbUser] = useState<SupabaseUserData | null>(() => {
-    // Initialize from cache if available
-    if (userCache && cacheEmail) {
-      return userCache;
-    }
-    return null;
-  });
+  // Wait until the current Supabase identity is known before reading shared
+  // cache state. This prevents a previous login from flashing on screen.
+  const [dbUser, setDbUser] = useState<SupabaseUserData | null>(null);
   const [dbLoading, setDbLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -165,6 +161,7 @@ export function useSupabaseUser() {
   
   // Derived values
   const email = supabaseUser?.email;
+  const identityCacheKey = buildBrowserUserCacheKey(supabaseUser?.id, email);
   const name = supabaseUser?.user_metadata?.name || email?.split('@')[0] || 'User';
 
   // ===========================================================================
@@ -236,50 +233,38 @@ export function useSupabaseUser() {
     }
 
     // Not authenticated - clear state
-    if (!supabaseUser || !email) {
+    if (!supabaseUser || !email || !identityCacheKey) {
       setDbUser(null);
       setDbLoading(false);
       clearUserCache();
       return;
     }
 
-    // Check cache first
-    if (userCache && cacheEmail === email) {
-      setDbUser(userCache);
-      setDbLoading(false);
-      return;
+    const selected = userCache.select(identityCacheKey);
+    if (selected.changed) {
+      setDbUser(null);
+      notifyCacheListeners(null);
     }
-
-    // If fetch already in progress for this email, wait for it
-    if (fetchPromise && cacheEmail === email) {
-      setDbLoading(true);
-      try {
-        const user = await fetchPromise;
-        if (user) {
-          setDbUser(user);
-        }
-      } catch {
-        // Error handled by original request
-      } finally {
-        setDbLoading(false);
-      }
+    if (selected.value) {
+      setDbUser(selected.value);
+      setDbLoading(false);
       return;
     }
 
     // Start new fetch
     setDbLoading(true);
     setError(null);
-    cacheEmail = email;
-
     const doFetch = async (): Promise<SupabaseUserData | null> => {
       try {
         // First, try to get existing user
-        const getRes = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
+        const getRes = await fetch('/api/users');
         const getData = await getRes.json();
 
+        if (!getRes.ok) {
+          throw new Error(typeof getData.error === 'string' ? getData.error : 'Failed to fetch user');
+        }
+
         if (getData.user) {
-          userCache = getData.user;
-          notifyCacheListeners(getData.user);
           return getData.user;
         }
 
@@ -288,19 +273,15 @@ export function useSupabaseUser() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email,
             name,
-            isOnboarded: false,
-            onboardingStep: 1,
-            hasSubscription: false,
-            plan: 'free_trial',
           }),
         });
 
         const createData = await createRes.json();
+        if (!createRes.ok) {
+          throw new Error(typeof createData.error === 'string' ? createData.error : 'Failed to create user');
+        }
         if (createData.user) {
-          userCache = createData.user;
-          notifyCacheListeners(createData.user);
           return createData.user;
         } else {
           throw new Error('Failed to create user');
@@ -311,20 +292,31 @@ export function useSupabaseUser() {
       }
     };
 
-    fetchPromise = doFetch();
-    
     try {
-      const user = await fetchPromise;
-      if (user) {
+      const user = await userCache.load(
+        identityCacheKey,
+        async () => {
+          const loaded = await doFetch();
+          if (!loaded) throw new Error('Failed to sync user');
+          return loaded;
+        },
+        { onCommit: notifyCacheListeners },
+      );
+      if (user && userCache.isCurrent(identityCacheKey)) {
         setDbUser(user);
       }
-    } catch (err) {
-      setError('Failed to sync user');
+    } catch {
+      if (userCache.isCurrent(identityCacheKey)) {
+        setError('Failed to sync user');
+      }
     } finally {
-      setDbLoading(false);
-      fetchPromise = null;
+      // A previous account's request may finish after the user has switched
+      // accounts. It must not change the loading state of the new account.
+      if (userCache.isCurrent(identityCacheKey)) {
+        setDbLoading(false);
+      }
     }
-  }, [authLoading, supabaseUser, email, name]);
+  }, [authLoading, supabaseUser, email, identityCacheKey, name]);
 
   // Trigger sync when auth state changes
   useEffect(() => {
@@ -339,21 +331,20 @@ export function useSupabaseUser() {
    * Force refetch user data from API
    */
   const refetch = useCallback(async () => {
-    if (!email) return;
+    if (!identityCacheKey) return;
     
     try {
-      const res = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
+      const res = await fetch('/api/users');
       const data = await res.json();
-      if (data.user) {
+      if (res.ok && data.user && userCache.isCurrent(identityCacheKey)) {
         setDbUser(data.user);
-        userCache = data.user;
-        cacheEmail = email;
+        userCache.set(identityCacheKey, data.user);
         notifyCacheListeners(data.user);
       }
     } catch (err) {
       console.error('[useSupabaseUser] Error refetching user:', err);
     }
-  }, [email]);
+  }, [identityCacheKey]);
 
   /**
    * Update onboarding step
@@ -366,16 +357,15 @@ export function useSupabaseUser() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: dbUser.id,
           onboardingStep: step,
         }),
       });
       
-      if (res.ok) {
+      if (res.ok && identityCacheKey && userCache.isCurrent(identityCacheKey)) {
         setDbUser(prev => {
-          if (!prev) return null;
+          if (!prev || !userCache.isCurrent(identityCacheKey)) return prev;
           const updated = { ...prev, onboarding_step: step };
-          userCache = updated;
+          if (!userCache.set(identityCacheKey, updated)) return prev;
           notifyCacheListeners(updated);
           return updated;
         });
@@ -383,7 +373,7 @@ export function useSupabaseUser() {
     } catch (err) {
       console.error('[useSupabaseUser] Error updating onboarding step:', err);
     }
-  }, [dbUser?.id]);
+  }, [dbUser?.id, identityCacheKey]);
 
   /**
    * Sign out the user

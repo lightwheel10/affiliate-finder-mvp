@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
 import { getUserCredits } from '@/lib/credits';
 
 // =============================================================================
@@ -21,14 +25,7 @@ export async function GET(request: NextRequest) {
     // ==========================================================================
     // AUTHENTICATION CHECK (January 19th, 2026: Supabase Auth)
     // ==========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -37,29 +34,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const userIdNum = parseInt(userId);
-    if (isNaN(userIdNum)) {
-      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
-    }
+    assertLegacyAccountId(userId, authenticated.account.id);
+    const userIdNum = authenticated.account.id;
 
     // ==========================================================================
     // AUTHORIZATION CHECK
     // Verify the authenticated user matches the requested user
     // ==========================================================================
     const users = await sql`
-      SELECT email, plan FROM crewcast.users WHERE id = ${userIdNum}
+      SELECT plan FROM crewcast.users WHERE id = ${userIdNum}
     `;
 
     if (users.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    if (authUser.email !== users[0].email) {
-      console.error(`[Credits] Authorization failed: ${authUser.email} tried to access credits for user ${userIdNum}`);
-      return NextResponse.json(
-        { error: 'Not authorized to access this resource' },
-        { status: 403 }
-      );
     }
 
     // ==========================================================================
@@ -91,6 +78,9 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('[Credits] Error fetching credits:', error);
     return NextResponse.json({ error: 'Failed to fetch credits' }, { status: 500 });
   }

@@ -1,34 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbDiscoveredAffiliate } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  affiliateRequestErrorResponse,
+  resolveAffiliateReadRequestContext,
+  resolveAffiliateRequestContext,
+} from '@/lib/affiliates/server';
 
 // GET /api/affiliates/discovered?userId=xxx - Get all discovered affiliates for a user
 export async function GET(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    const userIdNum = parseInt(userId);
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateReadRequestContext({
+      legacyAccountId: searchParams.get('userId'),
+      requestedBrandLocationIds: searchParams.getAll('brandLocationId'),
+    });
 
     const affiliates = await sql`
       SELECT * FROM crewcast.discovered_affiliates
-      WHERE user_id = ${userIdNum}
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ANY(${context.brandLocationIds}::bigint[])
       ORDER BY discovered_at DESC
     `;
 
@@ -40,19 +31,35 @@ export async function GET(request: NextRequest) {
     // 1-hour buffer because updateScanSchedule() runs AFTER inserts in
     // auto-scan/route.ts (~minutes later), so just-inserted rows have a
     // discovered_at slightly before last_auto_scan_at.
-    const sub = await sql`
-      SELECT last_auto_scan_at FROM crewcast.subscriptions
-      WHERE user_id = ${userIdNum}
+    const locations = await sql`
+      SELECT id::text AS id, last_auto_scan_at
+      FROM crewcast.brand_locations
+      WHERE id = ANY(${context.brandLocationIds}::bigint[])
+        AND brand_id = ${context.brandId}::bigint
+        AND user_id = ${context.accountId}
     `;
-    const lastScanIso = sub.length > 0 ? (sub[0] as { last_auto_scan_at: string | null }).last_auto_scan_at : null;
-    const cutoffMs = lastScanIso ? new Date(lastScanIso).getTime() - 60 * 60 * 1000 : null;
+    const cutoffByLocationId = new Map(
+      (locations as Array<{ id: string; last_auto_scan_at: string | null }>).map((location) => [
+        location.id,
+        location.last_auto_scan_at
+          ? new Date(location.last_auto_scan_at).getTime() - 60 * 60 * 1000
+          : null,
+      ]),
+    );
     const result = (affiliates as DbDiscoveredAffiliate[]).map((a) => ({
       ...a,
-      is_new: cutoffMs !== null && new Date(a.discovered_at).getTime() >= cutoffMs,
+      is_new: (() => {
+        const cutoffMs = cutoffByLocationId.get(String(a.brand_location_id)) ?? null;
+        return cutoffMs !== null && new Date(a.discovered_at).getTime() >= cutoffMs;
+      })(),
     }));
 
     return NextResponse.json({ affiliates: result });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error fetching discovered affiliates:', error);
     return NextResponse.json({ error: 'Failed to fetch discovered affiliates' }, { status: 500 });
   }
@@ -61,11 +68,6 @@ export async function GET(request: NextRequest) {
 // POST /api/affiliates/discovered - Save a discovered affiliate
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const {
       userId,
@@ -142,33 +144,22 @@ export async function POST(request: NextRequest) {
       similarwebMonthlyVisitsHistory,
       similarwebTopKeywords,
       similarwebSnapshotDate,
+      brandLocationId,
     } = body;
 
     if (!userId || !searchKeyword || !title || !link || !domain || !snippet || !source) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
-
-    // Check for duplicate
-    const existing = await sql`
-      SELECT id FROM crewcast.discovered_affiliates 
-      WHERE user_id = ${userId} AND link = ${link}
-    `;
-
-    if (existing.length > 0) {
-      return NextResponse.json({ id: existing[0].id, duplicate: true });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: userId,
+      requestedBrandLocationId: brandLocationId,
+    });
 
     const newAffiliates = await sql`
       INSERT INTO crewcast.discovered_affiliates (
-        user_id, search_keyword, title, link, domain, snippet, source,
+        user_id, brand_id, brand_location_id,
+        search_keyword, title, link, domain, snippet, source,
         is_affiliate, person_name, summary, email, thumbnail,
         views, date, rank, keyword, highlighted_words,
         discovery_method_type, discovery_method_value,
@@ -190,7 +181,8 @@ export async function POST(request: NextRequest) {
         similarweb_category_rank, similarweb_monthly_visits_history, similarweb_top_keywords, similarweb_snapshot_date
       )
       VALUES (
-        ${userId}, ${searchKeyword}, ${title}, ${link}, ${domain}, ${snippet}, ${source},
+        ${context.accountId}, ${context.brandId}::bigint, ${context.brandLocationId}::bigint,
+        ${searchKeyword}, ${title}, ${link}, ${domain}, ${snippet}, ${source},
         ${isAffiliate ?? null}, ${personName ?? null}, ${summary ?? null}, 
         ${email ?? null}, ${thumbnail ?? null}, ${views ?? null}, 
         ${date ?? null}, ${rank ?? null}, ${keyword ?? null}, 
@@ -219,11 +211,32 @@ export async function POST(request: NextRequest) {
         ${similarwebTopKeywords ? JSON.stringify(similarwebTopKeywords) : null},
         ${similarwebSnapshotDate ?? null}
       )
+      ON CONFLICT (brand_location_id, link) DO NOTHING
       RETURNING id
     `;
 
-    return NextResponse.json({ id: newAffiliates[0].id, duplicate: false });
+    if (newAffiliates.length > 0) {
+      return NextResponse.json({ id: newAffiliates[0].id, duplicate: false });
+    }
+
+    const existing = await sql`
+      SELECT id
+      FROM crewcast.discovered_affiliates
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+        AND link = ${link}
+      LIMIT 1
+    `;
+    if (existing.length !== 1) {
+      throw new Error('The location-scoped affiliate conflict could not be resolved.');
+    }
+    return NextResponse.json({ id: existing[0].id, duplicate: true });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error saving discovered affiliate:', error);
     return NextResponse.json({ error: 'Failed to save discovered affiliate' }, { status: 500 });
   }
@@ -244,14 +257,10 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 export async function PATCH(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const {
       userId,
+      brandLocationId,
       domain,
       similarWeb, // The full SimilarWebData object from enrichment_update
     } = body;
@@ -260,13 +269,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'userId and domain are required' }, { status: 400 });
     }
 
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: userId,
+      requestedBrandLocationId: brandLocationId,
+    });
 
     if (!similarWeb) {
       return NextResponse.json({ error: 'similarWeb data is required' }, { status: 400 });
@@ -293,7 +299,11 @@ export async function PATCH(request: NextRequest) {
         similarweb_monthly_visits_history = ${similarWeb.monthlyVisitsHistory ? JSON.stringify(similarWeb.monthlyVisitsHistory) : null},
         similarweb_top_keywords = ${similarWeb.topKeywords ? JSON.stringify(similarWeb.topKeywords) : null},
         similarweb_snapshot_date = ${similarWeb.snapshotDate ?? null}
-      WHERE user_id = ${userId} AND domain = ${domain} AND source = 'Web'
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+        AND domain = ${domain}
+        AND source = 'Web'
       RETURNING id
     `;
 
@@ -305,6 +315,10 @@ export async function PATCH(request: NextRequest) {
       domain 
     });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error updating SimilarWeb data:', error);
     return NextResponse.json({ error: 'Failed to update SimilarWeb data' }, { status: 500 });
   }
@@ -313,34 +327,22 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/affiliates/discovered - Remove or clear discovered affiliates
 export async function DELETE(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const link = searchParams.get('link');
     const clearAll = searchParams.get('clearAll');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    const userIdNum = parseInt(userId);
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: searchParams.get('userId'),
+      requestedBrandLocationId: searchParams.get('brandLocationId'),
+    });
 
     if (clearAll === 'true') {
-      // Clear all discovered affiliates for the user
+      // Clear only the explicitly resolved location; other brands and markets
+      // remain untouched even when an older client omitted brandLocationId.
       await sql`
         DELETE FROM crewcast.discovered_affiliates 
-        WHERE user_id = ${userIdNum}
+        WHERE user_id = ${context.accountId}
+          AND brand_id = ${context.brandId}::bigint
+          AND brand_location_id = ${context.brandLocationId}::bigint
       `;
       return NextResponse.json({ success: true, cleared: true });
     }
@@ -351,11 +353,18 @@ export async function DELETE(request: NextRequest) {
 
     await sql`
       DELETE FROM crewcast.discovered_affiliates 
-      WHERE user_id = ${userIdNum} AND link = ${link}
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+        AND link = ${link}
     `;
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error removing discovered affiliate:', error);
     return NextResponse.json({ error: 'Failed to remove affiliate' }, { status: 500 });
   }

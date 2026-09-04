@@ -1,4 +1,5 @@
 import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { PLAN_CATALOG } from './plans/catalog';
 
 // =============================================================================
 // STRIPE CLIENT-SIDE CONFIGURATION
@@ -38,14 +39,14 @@ export const PLAN_PRICING = {
   pro: {
     name: 'Pro',
     description: 'For growing e-commerce & SaaS brands ready to scale their affiliate channel.',
-    monthlyPrice: 99,    // €99/month
-    annualPrice: 79,     // €79/month (billed €948/year)
-    annualTotal: 948,    // Total annual cost
+    monthlyPrice: PLAN_CATALOG.pro.pricing.monthlyEur,
+    annualPrice: PLAN_CATALOG.pro.pricing.annualMonthlyEquivalentEur,
+    annualTotal: PLAN_CATALOG.pro.pricing.annualTotalEur,
     features: [
       'Find 75 new affiliates / month',
       '30 verified email credits / month',
       '30 hyper-personalized mail credits',
-      '1 brand project',
+      `${PLAN_CATALOG.pro.entitlements.maxBrands} brand project`,
       'Search filters included',
       'Self-service (no support)',
       'Export to CSV',
@@ -55,15 +56,15 @@ export const PLAN_PRICING = {
   business: {
     name: 'Business Class',
     description: 'For growing brands that need more reach, more brands and e-mail support.',
-    monthlyPrice: 249,   // €249/month
-    annualPrice: 199,    // €199/month (billed €2,388/year)
-    annualTotal: 2388,   // Total annual cost
+    monthlyPrice: PLAN_CATALOG.business.pricing.monthlyEur,
+    annualPrice: PLAN_CATALOG.business.pricing.annualMonthlyEquivalentEur,
+    annualTotal: PLAN_CATALOG.business.pricing.annualTotalEur,
     features: [
       'Everything in Pro +',
       'Find unlimited affiliates',
       '150 verified email credits / month',
       '150 hyper-personalized mail credits',
-      '5 brand projects',
+      `${PLAN_CATALOG.business.entitlements.maxBrands} brand projects`,
       'E-mail support',
     ],
     popular: false,

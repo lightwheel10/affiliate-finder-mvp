@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
 
 // =============================================================================
 // POST /api/stripe/validate-promo-code
@@ -29,17 +33,16 @@ function formatAmount(amountInMinorUnits: number, currency: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const body: ValidatePromoCodeBody = await request.json();
-    const { userId, code } = body;
+    const { userId: legacyUserId, code } = body;
 
-    if (!userId || typeof userId !== 'number') {
+    if (!legacyUserId || typeof legacyUserId !== 'number') {
       return NextResponse.json({ error: 'Valid user ID is required' }, { status: 400 });
     }
+    assertLegacyAccountId(legacyUserId, authenticated.account.id);
+    const userId = authenticated.account.id;
 
     if (!code || typeof code !== 'string' || !code.trim()) {
       return NextResponse.json({ error: 'Discount code is required' }, { status: 400 });
@@ -57,9 +60,6 @@ export async function POST(request: NextRequest) {
     }
 
     const user = userRows[0];
-    if (authUser.email !== user.email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
 
     const normalizedCode = code.trim().toUpperCase();
 
@@ -142,6 +142,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('[Stripe Promo] Error validating promotion code:', error);
 
     if (error instanceof Error && 'type' in error) {

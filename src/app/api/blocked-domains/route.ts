@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbUserBlockedDomain } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
 
 const BLOCKED_DOMAINS_CAP = 10;
 
@@ -9,7 +13,7 @@ function normalizeDomain(input: string): string {
   try {
     if (!s.includes('://')) s = 'https://' + s;
     const url = new URL(s);
-    let host = url.hostname.replace(/^www\./, '');
+    const host = url.hostname.replace(/^www\./, '');
     return host;
   } catch {
     const match = s.match(/(?:https?:\/\/)?(?:www\.)?([^/\s?#]+)/i);
@@ -17,24 +21,9 @@ function normalizeDomain(input: string): string {
   }
 }
 
-async function assertUserOwnership(authUser: { email?: string | null }, userIdNum: number): Promise<NextResponse | null> {
-  const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
-  if (userCheck.length === 0) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  }
-  const ownerEmail = (userCheck[0] as { email: string }).email;
-  if (authUser.email !== ownerEmail) {
-    return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-  }
-  return null;
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -42,9 +31,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const userIdNum = parseInt(userId);
-    const err = await assertUserOwnership(authUser, userIdNum);
-    if (err) return err;
+    assertLegacyAccountId(userId, authenticated.account.id);
+    const userIdNum = authenticated.account.id;
 
     const rows = await sql`
       SELECT id, user_id, domain, created_at
@@ -60,6 +48,9 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching blocked domains:', error);
     return NextResponse.json({ error: 'Failed to fetch blocked domains' }, { status: 500 });
   }
@@ -67,10 +58,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const body = await request.json();
     const { userId, domain: rawDomain } = body;
@@ -83,9 +71,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid domain' }, { status: 400 });
     }
 
-    const userIdNum = parseInt(String(userId));
-    const err = await assertUserOwnership(authUser, userIdNum);
-    if (err) return err;
+    assertLegacyAccountId(userId, authenticated.account.id);
+    const userIdNum = authenticated.account.id;
 
     const countResult = await sql`
       SELECT COUNT(*)::int AS cnt FROM crewcast.user_blocked_domains WHERE user_id = ${userIdNum}
@@ -106,6 +93,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, domain });
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error adding blocked domain:', error);
     return NextResponse.json({ error: 'Failed to add blocked domain' }, { status: 500 });
   }
@@ -113,10 +103,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -125,9 +112,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'userId and domain are required' }, { status: 400 });
     }
 
-    const userIdNum = parseInt(userId);
-    const err = await assertUserOwnership(authUser, userIdNum);
-    if (err) return err;
+    assertLegacyAccountId(userId, authenticated.account.id);
+    const userIdNum = authenticated.account.id;
 
     const normalized = normalizeDomain(domain);
     await sql`
@@ -137,6 +123,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error removing blocked domain:', error);
     return NextResponse.json({ error: 'Failed to remove blocked domain' }, { status: 500 });
   }

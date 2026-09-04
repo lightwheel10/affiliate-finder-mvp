@@ -1,90 +1,147 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
-import { sql, DbUser } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
-import { sendEmail, detectLocale } from '@/lib/email';
-import { getAppUrl } from '@/lib/app-url';
+import { NextRequest, NextResponse } from 'next/server';
 import { WelcomeEmail, welcomeEmailSubject } from '@/emails/welcome';
+import { getAppUrl } from '@/lib/app-url';
+import {
+  legacyAccountIdMatches,
+  resolveAuthenticatedAccount,
+} from '@/lib/auth/account';
+import { sql, type DbUser } from '@/lib/db';
+import { detectLocale, sendEmail } from '@/lib/email';
+import {
+  createAccountInputSchema,
+  profilePatchInputSchema,
+} from '@/lib/users/profile-input';
 
-// GET /api/users?email=xxx - Get user by email
-export async function GET(request: NextRequest) {
+function invalidInput(message: string) {
+  return NextResponse.json({ error: message }, { status: 400 });
+}
+
+// The authenticated Supabase identity is the sole account selector. Query
+// parameters are deliberately ignored so callers cannot request another row.
+export async function GET() {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
+    const context = await resolveAuthenticatedAccount();
+    if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const email = searchParams.get('email');
-    const id = searchParams.get('id');
-
-    if (id) {
-      const users = await sql`SELECT * FROM crewcast.users WHERE id = ${parseInt(id)}`;
-      if (users.length === 0) {
-        return NextResponse.json({ user: null });
-      }
-      if (authUser.email !== (users[0] as { email: string }).email) {
-        return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-      }
-      return NextResponse.json({ user: users[0] as DbUser });
+    if (!context.account) {
+      return NextResponse.json({ user: null });
     }
 
-    if (email) {
-      if (authUser.email !== email) {
-        return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-      }
-      const users = await sql`SELECT * FROM crewcast.users WHERE email = ${email}`;
-      if (users.length === 0) {
-        return NextResponse.json({ user: null });
-      }
-      return NextResponse.json({ user: users[0] as DbUser });
-    }
+    const users = await sql`
+      SELECT * FROM crewcast.users WHERE id = ${context.account.id}
+    `;
 
-    return NextResponse.json({ error: 'Email or ID is required' }, { status: 400 });
+    return NextResponse.json({ user: (users[0] as DbUser | undefined) ?? null });
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error('Error fetching authenticated account:', error);
     return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
   }
 }
 
-// POST /api/users - Create or update user (upsert)
+// Create the application account for the authenticated Supabase user. Plan,
+// subscription and billing authority always start from server-owned defaults.
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
+    const context = await resolveAuthenticatedAccount();
+    if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { email, name, isOnboarded, onboardingStep, hasSubscription, plan } = body;
-
-    if (!email || !name) {
-      return NextResponse.json({ error: 'Email and name are required' }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return invalidInput('Invalid JSON body');
     }
 
-    if (authUser.email !== email) {
-      return NextResponse.json({ error: 'Not authorized to create or access this user' }, { status: 403 });
+    const parsed = createAccountInputSchema.safeParse(body);
+    if (!parsed.success) {
+      return invalidInput('A valid name is required');
     }
 
-    // Use INSERT ... ON CONFLICT to handle race conditions
-    // If user exists, just return the existing user without updating
-    const result = await sql`
-      INSERT INTO crewcast.users (email, name, is_onboarded, onboarding_step, has_subscription, plan)
-      VALUES (${email}, ${name}, ${isOnboarded ?? false}, ${onboardingStep ?? 1}, ${hasSubscription ?? false}, ${plan ?? 'free_trial'})
-      ON CONFLICT (email) DO NOTHING
-      RETURNING *
-    `;
-
-    // If INSERT returned nothing, user already exists - fetch them
-    if (result.length === 0) {
-      const existingUsers = await sql`SELECT * FROM crewcast.users WHERE email = ${email}`;
-      return NextResponse.json({ user: existingUsers[0] as DbUser, created: false });
+    if (context.account) {
+      const existing = await sql`
+        SELECT * FROM crewcast.users WHERE id = ${context.account.id}
+      `;
+      return NextResponse.json({ user: existing[0] as DbUser, created: false });
     }
 
-    const newUser = result[0] as DbUser;
+    const email = context.authUser.email?.trim();
+    if (!email) {
+      return NextResponse.json({ error: 'Authenticated email is required' }, { status: 400 });
+    }
 
-    // Welcome email — fire-and-forget. sendEmail never throws; a send failure
-    // is logged but does not break the signup response.
+    // Multiple mounted components can create the application account together.
+    // Serialize on the immutable Auth UUID so only one row and one welcome
+    // email win, regardless of email casing or later email changes.
+    const creation = await sql.begin(async (transaction: typeof sql) => {
+      await transaction`
+        SELECT pg_advisory_xact_lock(hashtextextended(${context.authUser.id}, 0))
+      `;
+
+      const existing = await transaction`
+        SELECT *
+        FROM crewcast.users
+        WHERE auth_user_id = ${context.authUser.id}::uuid
+        LIMIT 1
+        FOR UPDATE
+      `;
+      if (existing.length === 1) {
+        const synchronized = await transaction`
+          UPDATE crewcast.users
+          SET email = ${email}, updated_at = NOW()
+          WHERE id = ${existing[0].id}
+            AND auth_user_id = ${context.authUser.id}::uuid
+          RETURNING *
+        `;
+        return { user: synchronized[0] as DbUser, created: false };
+      }
+
+      const inserted = await transaction`
+        INSERT INTO crewcast.users (
+          auth_user_id,
+          email,
+          name,
+          is_onboarded,
+          onboarding_step,
+          has_subscription,
+          plan
+        )
+        VALUES (
+          ${context.authUser.id}::uuid,
+          ${email},
+          ${parsed.data.name},
+          false,
+          1,
+          false,
+          'free_trial'
+        )
+        ON CONFLICT (auth_user_id) DO NOTHING
+        RETURNING *
+      `;
+      if (inserted.length === 1) {
+        return { user: inserted[0] as DbUser, created: true };
+      }
+
+      const concurrent = await transaction`
+        SELECT *
+        FROM crewcast.users
+        WHERE auth_user_id = ${context.authUser.id}::uuid
+        LIMIT 1
+      `;
+      if (concurrent.length !== 1) {
+        throw new Error('The authenticated application account could not be created exactly once.');
+      }
+      return { user: concurrent[0] as DbUser, created: false };
+    });
+
+    const newUser = creation.user;
+    if (!creation.created) {
+      return NextResponse.json({ user: newUser, created: false });
+    }
     const locale = detectLocale(request.headers.get('accept-language'));
     const appUrl = getAppUrl();
     waitUntil(
@@ -92,142 +149,128 @@ export async function POST(request: NextRequest) {
         to: newUser.email,
         subject: welcomeEmailSubject(locale),
         react: WelcomeEmail({ name: newUser.name, locale, appUrl }),
-      })
+      }),
     );
 
     return NextResponse.json({ user: newUser, created: true });
   } catch (error) {
-    console.error('Error creating/updating user:', error);
-    return NextResponse.json({ error: 'Failed to create/update user' }, { status: 500 });
+    console.error('Error creating authenticated account:', error);
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }
 
-// PATCH /api/users - Update user profile
+// Update profile-owned fields only. Subscription state, billing identifiers,
+// trial dates, the effective plan and onboarding completion are intentionally
+// absent from the schema and can only be changed by their server workflows.
 export async function PATCH(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
+    const context = await resolveAuthenticatedAccount();
+    if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const body = await request.json();
-    const { id, ...updates } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${id}`;
-    if (userCheck.length === 0) {
+    if (!context.account) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return invalidInput('Invalid JSON body');
     }
 
-    // Build dynamic update query
-    const setClauses: string[] = [];
-    const updateValues: Record<string, unknown> = {};
+    const parsed = profilePatchInputSchema.safeParse(body);
+    if (!parsed.success) {
+      return invalidInput('Invalid or unsupported profile update');
+    }
 
-    const fieldMapping: Record<string, string> = {
-      name: 'name',
-      isOnboarded: 'is_onboarded',
-      onboardingStep: 'onboarding_step',
-      hasSubscription: 'has_subscription',
-      role: 'role',
-      brand: 'brand',
-      bio: 'bio',
-      plan: 'plan',
-      trialPlan: 'trial_plan',
-      trialStartDate: 'trial_start_date',
-      trialEndDate: 'trial_end_date',
-      targetCountry: 'target_country',
-      targetLanguage: 'target_language',
-      competitors: 'competitors',
-      topics: 'topics',
-      affiliateTypes: 'affiliate_types',
-      billingLast4: 'billing_last4',
-      billingBrand: 'billing_brand',
-      billingExpiry: 'billing_expiry',
-      emailMatches: 'email_matches',
-      emailReports: 'email_reports',
-      emailUpdates: 'email_updates',
-      appReplies: 'app_replies',
-      appReminders: 'app_reminders',
-      profileImageUrl: 'profile_image_url', // January 13th, 2026: Added for Vercel Blob storage
-      // 2026-08-03 (Paras): weekly auto-scan opt-out toggle (Settings -> Profile).
-      // NOTE: this mapping alone does NOT persist a field — the hardcoded
-      // UPDATE below must also list the column (several mapped fields above,
-      // e.g. email_matches/profile_image_url, are missing there and silently
-      // no-op; discovered while adding this flag).
-      autoScanEnabled: 'auto_scan_enabled',
-    };
+    const updates = parsed.data;
+    const accountId = context.account.id;
+    if (!legacyAccountIdMatches(updates.id, accountId)) {
+      return NextResponse.json(
+        { error: 'Not authorized to update this account' },
+        { status: 403 },
+      );
+    }
 
-    for (const [jsKey, dbKey] of Object.entries(fieldMapping)) {
-      if (updates[jsKey] !== undefined) {
-        updateValues[dbKey] = updates[jsKey];
+    const has = (field: keyof typeof updates) =>
+      Object.prototype.hasOwnProperty.call(updates, field);
+
+    // Keep the profile update and the auto-scan cadence reset atomic. This
+    // prevents a successful toggle from leaving an immediately-due schedule.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updatedUsers = await sql.begin(async (tx: any) => {
+      const rows = await tx`
+        UPDATE crewcast.users
+        SET
+          name = CASE WHEN ${has('name')} THEN ${updates.name ?? null} ELSE name END,
+          onboarding_step = CASE WHEN ${has('onboardingStep')} THEN ${updates.onboardingStep ?? null} ELSE onboarding_step END,
+          role = CASE WHEN ${has('role')} THEN ${updates.role ?? null} ELSE role END,
+          brand = CASE WHEN ${has('brand')} THEN ${updates.brand ?? null} ELSE brand END,
+          bio = CASE WHEN ${has('bio')} THEN ${updates.bio ?? null} ELSE bio END,
+          trial_plan = CASE WHEN ${has('trialPlan')} THEN ${updates.trialPlan ?? null} ELSE trial_plan END,
+          target_country = CASE WHEN ${has('targetCountry')} THEN ${updates.targetCountry ?? null} ELSE target_country END,
+          target_language = CASE WHEN ${has('targetLanguage')} THEN ${updates.targetLanguage ?? null} ELSE target_language END,
+          competitors = CASE WHEN ${has('competitors')} THEN ${updates.competitors ?? null} ELSE competitors END,
+          topics = CASE WHEN ${has('topics')} THEN ${updates.topics ?? null} ELSE topics END,
+          affiliate_types = CASE WHEN ${has('affiliateTypes')} THEN ${updates.affiliateTypes ?? null} ELSE affiliate_types END,
+          email_matches = CASE WHEN ${has('emailMatches')} THEN ${updates.emailMatches ?? null} ELSE email_matches END,
+          email_reports = CASE WHEN ${has('emailReports')} THEN ${updates.emailReports ?? null} ELSE email_reports END,
+          email_updates = CASE WHEN ${has('emailUpdates')} THEN ${updates.emailUpdates ?? null} ELSE email_updates END,
+          app_replies = CASE WHEN ${has('appReplies')} THEN ${updates.appReplies ?? null} ELSE app_replies END,
+          app_reminders = CASE WHEN ${has('appReminders')} THEN ${updates.appReminders ?? null} ELSE app_reminders END,
+          profile_image_url = CASE WHEN ${has('profileImageUrl')} THEN ${updates.profileImageUrl ?? null} ELSE profile_image_url END,
+          auto_scan_enabled = CASE WHEN ${has('autoScanEnabled')} THEN ${updates.autoScanEnabled ?? null} ELSE auto_scan_enabled END,
+          updated_at = NOW()
+        WHERE id = ${accountId}
+        RETURNING *
+      `;
+
+      if (updates.autoScanEnabled === true) {
+        await tx`
+          UPDATE crewcast.subscriptions
+          SET next_auto_scan_at = NOW() + interval '7 days'
+          WHERE user_id = ${accountId} AND next_auto_scan_at < NOW()
+        `;
+        await tx`
+          UPDATE crewcast.brand_locations AS locations
+          SET
+            auto_scan_enabled = true,
+            next_auto_scan_at = (
+              SELECT subscriptions.next_auto_scan_at
+              FROM crewcast.subscriptions AS subscriptions
+              WHERE subscriptions.user_id = ${accountId}
+                AND subscriptions.status IN ('active', 'trialing')
+              ORDER BY subscriptions.updated_at DESC, subscriptions.id DESC
+              LIMIT 1
+            )
+          WHERE locations.user_id = ${accountId}
+            AND locations.archived_at IS NULL
+        `;
+      } else if (updates.autoScanEnabled === false) {
+        // Do not erase a live worker lease: the claimed provider operation must
+        // finish or expire fail-closed. Pending locations are skipped by the
+        // next cron transaction because the account preference is authoritative.
+        await tx`
+          UPDATE crewcast.brand_locations
+          SET
+            auto_scan_enabled = false,
+            next_auto_scan_at = NULL
+          WHERE user_id = ${accountId}
+            AND archived_at IS NULL
+        `;
       }
-    }
 
-    if (Object.keys(updateValues).length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
-    }
-
-    // For simplicity, we'll update all provided fields
-    // Note: This is a simplified version - in production you'd want proper parameterized queries
-    const updatedUsers = await sql`
-      UPDATE crewcast.users 
-      SET 
-        name = COALESCE(${updates.name ?? null}, name),
-        is_onboarded = COALESCE(${updates.isOnboarded ?? null}, is_onboarded),
-        onboarding_step = COALESCE(${updates.onboardingStep ?? null}, onboarding_step),
-        has_subscription = COALESCE(${updates.hasSubscription ?? null}, has_subscription),
-        role = COALESCE(${updates.role ?? null}, role),
-        brand = COALESCE(${updates.brand ?? null}, brand),
-        bio = COALESCE(${updates.bio ?? null}, bio),
-        plan = COALESCE(${updates.plan ?? null}, plan),
-        trial_plan = COALESCE(${updates.trialPlan ?? null}, trial_plan),
-        trial_start_date = COALESCE(${updates.trialStartDate ?? null}, trial_start_date),
-        trial_end_date = COALESCE(${updates.trialEndDate ?? null}, trial_end_date),
-        target_country = COALESCE(${updates.targetCountry ?? null}, target_country),
-        target_language = COALESCE(${updates.targetLanguage ?? null}, target_language),
-        competitors = COALESCE(${updates.competitors ?? null}, competitors),
-        topics = COALESCE(${updates.topics ?? null}, topics),
-        affiliate_types = COALESCE(${updates.affiliateTypes ?? null}, affiliate_types),
-        auto_scan_enabled = COALESCE(${updates.autoScanEnabled ?? null}, auto_scan_enabled),
-        updated_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `;
+      return rows;
+    });
 
     if (updatedUsers.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // ==========================================================================
-    // 2026-08-03 (Paras): AUTO-SCAN RE-ENABLE — RESET STALE SCHEDULE
-    //
-    // While auto-scan is disabled the cron filters the user out, so
-    // subscriptions.next_auto_scan_at freezes in the past. Without this reset,
-    // re-enabling would make the user immediately "due" and the next hourly
-    // cron would scan (and charge 1 topic_search credit) within the hour — a
-    // surprise charge right after flipping a switch. Resetting stale schedules
-    // to NOW() + 7 days restarts the weekly cadence predictably. Schedules
-    // still in the future (quick off/on flip) are left untouched.
-    // COALESCE(false, x) = false, so disabling via the UPDATE above works.
-    // ==========================================================================
-    if (updates.autoScanEnabled === true) {
-      await sql`
-        UPDATE crewcast.subscriptions
-        SET next_auto_scan_at = NOW() + interval '7 days'
-        WHERE user_id = ${id} AND next_auto_scan_at < NOW()
-      `;
-    }
-
     return NextResponse.json({ user: updatedUsers[0] as DbUser });
   } catch (error) {
-    console.error('Error updating user:', error);
+    console.error('Error updating authenticated account:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
-

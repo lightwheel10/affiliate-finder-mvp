@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser, getSupabaseServerClient } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
+import { getSupabaseServerClient } from '@/lib/supabase/server';
+import {
+  legacyAccountIdMatches,
+  resolveAuthenticatedAccount,
+} from '@/lib/auth/account';
+import { deletePostgresAccountData } from '@/lib/users/delete-account-postgres';
+import { deleteOnboardingSuggestionIdentityGuard } from '@/lib/suggestions/analysis-postgres';
 
 // =============================================================================
 // DELETE /api/users/delete
@@ -23,19 +29,19 @@ import { getAuthenticatedUser, getSupabaseServerClient } from '@/lib/supabase/se
 //
 // SECURITY:
 // - Requires authenticated Supabase session
-// - Verifies authenticated user matches the requested userId
+// - Resolves the database user from the authenticated Supabase identity
+// - Accepts a legacy userId only for compatibility and never as authority
 // - Validates user must type "DELETE" to confirm
 // =============================================================================
 
 export async function POST(request: NextRequest) {
   try {
     // ==========================================================================
-    // AUTHENTICATION CHECK
-    // Verify the user is authenticated via Stack Auth
+    // AUTHENTICATION AND ACCOUNT RESOLUTION
     // ==========================================================================
-    const authUser = await getAuthenticatedUser();
+    const context = await resolveAuthenticatedAccount();
     
-    if (!authUser) {
+    if (!context) {
       console.error('[DeleteAccount] Unauthorized: No authenticated user');
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -43,16 +49,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { userId, confirmText } = body;
+    if (!context.account) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const authUser = context.authUser;
+
+    let body: unknown;
+    let authIdentityDeleted = false;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const { userId: legacyUserId, confirmText } = body as {
+      userId?: unknown;
+      confirmText?: unknown;
+    };
 
     // ==========================================================================
     // INPUT VALIDATION
     // ==========================================================================
-    if (!userId || typeof userId !== 'number') {
+    if (
+      legacyUserId !== undefined &&
+      (typeof legacyUserId !== 'number' || !Number.isInteger(legacyUserId) || legacyUserId <= 0)
+    ) {
       return NextResponse.json(
-        { error: 'Valid user ID is required' },
+        { error: 'Invalid legacy user ID' },
         { status: 400 }
+      );
+    }
+
+    if (
+      !legacyAccountIdMatches(
+        legacyUserId as number | undefined,
+        context.account.id,
+      )
+    ) {
+      return NextResponse.json(
+        { error: 'Not authorized to delete this account' },
+        { status: 403 },
       );
     }
 
@@ -64,12 +105,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userId = context.account.id;
+
     // ==========================================================================
     // GET USER FROM DATABASE
     // January 13th, 2026: Only select id and email (stack_auth_id doesn't exist in schema)
     // ==========================================================================
     const users = await sql`
-      SELECT id, email
+      SELECT id, email, auth_user_id::text AS auth_user_id
       FROM crewcast.users
       WHERE id = ${userId}
     `;
@@ -84,11 +127,12 @@ export async function POST(request: NextRequest) {
     const userData = users[0];
 
     // ==========================================================================
-    // AUTHORIZATION CHECK
-    // Verify the authenticated user matches the requested user
+    // DEFENCE IN DEPTH
+    // The resolver already bound this row to the immutable Auth UUID. Recheck
+    // the fetched row before performing the irreversible workflow.
     // ==========================================================================
-    if (authUser.email !== userData.email) {
-      console.error(`[DeleteAccount] Authorization failed: ${authUser.email} tried to delete user ${userId}`);
+    if (authUser.id !== userData.auth_user_id) {
+      console.error(`[DeleteAccount] Immutable Auth identity mismatch for user ${userId}`);
       return NextResponse.json(
         { error: 'Not authorized to delete this account' },
         { status: 403 }
@@ -126,46 +170,13 @@ export async function POST(request: NextRequest) {
     // January 13th, 2026: Delete all related records before deleting user
     // ==========================================================================
     
-    // Delete saved affiliates
-    const deletedSaved = await sql`
-      DELETE FROM crewcast.saved_affiliates WHERE user_id = ${userId}
-      RETURNING id
-    `;
-    console.log(`[DeleteAccount] Deleted ${deletedSaved.length} saved affiliates`);
+    // Lock the account and delete every database row in one transaction. The
+    // onboarding and search-claim paths lock this same account row first, so
+    // they either finish before deletion or observe that the account is gone;
+    // they cannot recreate a restrictive child row halfway through deletion.
+    const deletedData = await deletePostgresAccountData(userId, sql);
 
-    // Delete discovered affiliates
-    const deletedDiscovered = await sql`
-      DELETE FROM crewcast.discovered_affiliates WHERE user_id = ${userId}
-      RETURNING id
-    `;
-    console.log(`[DeleteAccount] Deleted ${deletedDiscovered.length} discovered affiliates`);
-
-    // Delete searches
-    const deletedSearches = await sql`
-      DELETE FROM crewcast.searches WHERE user_id = ${userId}
-      RETURNING id
-    `;
-    console.log(`[DeleteAccount] Deleted ${deletedSearches.length} searches`);
-
-    // Delete API call logs
-    const deletedApiCalls = await sql`
-      DELETE FROM crewcast.api_calls WHERE user_id = ${userId}
-      RETURNING id
-    `;
-    console.log(`[DeleteAccount] Deleted ${deletedApiCalls.length} API call logs`);
-
-    // Delete subscription record
-    const deletedSubscriptions = await sql`
-      DELETE FROM crewcast.subscriptions WHERE user_id = ${userId}
-      RETURNING id
-    `;
-    console.log(`[DeleteAccount] Deleted ${deletedSubscriptions.length} subscription records`);
-
-    // Delete user record (must be last due to foreign keys)
-    await sql`
-      DELETE FROM crewcast.users WHERE id = ${userId}
-    `;
-    console.log(`[DeleteAccount] Deleted user record`);
+    console.log('[DeleteAccount] Database deletion committed', deletedData);
 
     // ==========================================================================
     // STEP 3: DELETE FROM SUPABASE AUTH
@@ -180,6 +191,7 @@ export async function POST(request: NextRequest) {
       if (deleteAuthError) {
         console.error('[DeleteAccount] Error deleting Supabase Auth user:', deleteAuthError);
       } else {
+        authIdentityDeleted = true;
         console.log(`[DeleteAccount] Deleted Supabase Auth user`);
       }
     } catch (supabaseError) {
@@ -187,18 +199,23 @@ export async function POST(request: NextRequest) {
       console.error('[DeleteAccount] Error deleting Supabase Auth user:', supabaseError);
     }
 
+    if (authIdentityDeleted) {
+      try {
+        await deleteOnboardingSuggestionIdentityGuard(authUser.id);
+      } catch (guardCleanupError) {
+        // The UUID-only row is intentionally safer to retain than to remove
+        // before Auth deletion is proven. Existing cross-system cleanup work
+        // will reconcile this rare post-Auth database failure.
+        console.error('[DeleteAccount] Error deleting suggestion identity guard:', guardCleanupError);
+      }
+    }
+
     console.log(`[DeleteAccount] Account deletion completed for user ${userId}`);
 
     return NextResponse.json({
       success: true,
       message: 'Account deleted successfully',
-      deletedData: {
-        savedAffiliates: deletedSaved.length,
-        discoveredAffiliates: deletedDiscovered.length,
-        searches: deletedSearches.length,
-        apiCalls: deletedApiCalls.length,
-        subscriptions: deletedSubscriptions.length,
-      },
+      deletedData,
     });
 
   } catch (error) {

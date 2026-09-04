@@ -33,6 +33,12 @@
 
 import { ApifyClient } from 'apify-client';
 import { trackApiCall, API_COSTS } from './tracking';
+import { APIFY_ACTOR_IDS } from '@/lib/search/apify-actors';
+import {
+  EnrichmentProviderStartError,
+  type EnrichmentPlatform,
+} from '@/lib/search/enrichment-dispatch';
+import { buildEnrichmentProviderInput } from '@/lib/search/provider-input';
 import { SearchResult, YouTubeChannelInfo, Platform } from './search';
 import { getLocationConfig } from './location';
 
@@ -72,11 +78,11 @@ const client = APIFY_TOKEN
 // - similarweb: Website traffic data
 // =============================================================================
 const ACTORS = {
-  youtube: 'h7sDV53CddomktSi5',
-  instagram: 'DrF9mzPPEuVizVF4l',           // Search actor (keyword-based only)
-  instagramProfile: 'shu8hvrXbJbY3Eb9W',    // Profile actor (URL-based) - January 28, 2026
-  tiktok: 'GdWCkxBtKWOsKjdch',
-  similarweb: 'yOYYzj2J5K88boIVO',
+  youtube: APIFY_ACTOR_IDS.youtubeEnrichment,
+  instagram: APIFY_ACTOR_IDS.instagramSearch,
+  instagramProfile: APIFY_ACTOR_IDS.instagramEnrichment,
+  tiktok: APIFY_ACTOR_IDS.tiktokEnrichment,
+  similarweb: APIFY_ACTOR_IDS.similarwebEnrichment,
 } as const;
 
 // =============================================================================
@@ -569,7 +575,7 @@ export async function enrichInstagramByUrls(
 // 
 // All URL types return the AUTHOR's full profile data.
 // ============================================================================
-interface ApifyInstagramProfileResult {
+export interface ApifyInstagramProfileResult {
   // Input URL that was processed
   inputUrl: string;
   
@@ -630,6 +636,17 @@ interface ApifyInstagramProfileResult {
   
   // Facebook integration
   fbid?: string;
+
+  // Post/reel inputs expose the content owner and post payload at root level.
+  // Keep these optional because profile inputs use username/fullName and
+  // latestPosts instead.
+  ownerUsername?: string;
+  ownerFullName?: string;
+  displayUrl?: string;
+  caption?: string;
+  likesCount?: number;
+  commentsCount?: number;
+  videoViewCount?: number;
 }
 
 // =============================================================================
@@ -1329,6 +1346,75 @@ export interface EnrichmentRunIds {
   instagram?: string;
   tiktok?: string;
   similarweb?: string;
+}
+
+/**
+ * Durable-dispatch entry point. Unlike the legacy helpers below, this never
+ * swallows a start failure: callers must persist an uncertain terminal state
+ * when Apify might have accepted the launch but no run ID was returned.
+ */
+export async function startEnrichmentPlatform(
+  platform: EnrichmentPlatform,
+  urls: readonly string[],
+  correlationId: string,
+): Promise<string> {
+  if (!client) {
+    throw new EnrichmentProviderStartError(
+      'Apify client is not configured for enrichment.',
+      false,
+    );
+  }
+  if (urls.length === 0) {
+    throw new EnrichmentProviderStartError(
+      `No canonical ${platform} enrichment inputs were provided.`,
+      false,
+    );
+  }
+
+  try {
+    let run: { id: string };
+    const input = buildEnrichmentProviderInput(platform, urls, correlationId);
+    switch (platform) {
+      case 'youtube':
+        run = await client.actor(ACTORS.youtube).start(input);
+        break;
+      case 'instagram':
+        run = await client.actor(ACTORS.instagramProfile).start(input);
+        break;
+      case 'tiktok':
+        run = await client.actor(ACTORS.tiktok).start(input);
+        break;
+      case 'similarweb':
+        run = await client.actor(ACTORS.similarweb).start(input);
+        break;
+    }
+    if (
+      typeof run.id !== 'string'
+      || run.id.trim() === ''
+      || run.id.length > 255
+      || /[\u0000-\u001f\u007f]/.test(run.id)
+    ) {
+      throw new EnrichmentProviderStartError(
+        `${platform} enrichment returned an invalid provider run ID.`,
+        true,
+      );
+    }
+    return run.id;
+  } catch (error) {
+    if (error instanceof EnrichmentProviderStartError) throw error;
+    throw new EnrichmentProviderStartError(
+      `${platform} enrichment start did not return a durable run ID.`,
+      true,
+      error,
+    );
+  }
+}
+
+export async function abortEnrichmentRun(runId: string): Promise<void> {
+  if (!client) {
+    throw new Error('Apify client is not configured for enrichment cleanup.');
+  }
+  await client.run(runId).abort();
 }
 
 // =============================================================================

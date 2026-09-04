@@ -38,8 +38,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
 import { checkCredits, consumeCredits, refundCredits } from '@/lib/credits';
+import {
+  affiliateRequestErrorResponse,
+  resolveAffiliateRequestContext,
+} from '@/lib/affiliates/server';
 import { 
   generateOutreachEmail, 
   generateRequestId,
@@ -136,27 +139,22 @@ async function scrapeAffiliatePage(url: string): Promise<string | null> {
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  let creditConsumed = false;
+  let refundUserId: number | null = null;
+  let refundAffiliateId = 'unknown';
   
   try {
-    // =========================================================================
-    // STEP 1: AUTHENTICATION
-    // Verify user is authenticated via Stack Auth
-    // =========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      console.error('[AI Outreach] Unauthorized: No authenticated user');
-      return NextResponse.json(
-        { error: 'Unauthorized. Please sign in.' },
-        { status: 401 }
-      );
-    }
-
     // =========================================================================
     // STEP 2: PARSE REQUEST BODY
     // =========================================================================
     const body = await request.json();
-    const { affiliateId, affiliate: affiliateData, selectedContact } = body;
+    const {
+      affiliateId,
+      affiliate: affiliateData,
+      selectedContact,
+      userId: legacyUserId,
+      brandLocationId,
+    } = body;
     
     // =========================================================================
     // MULTI-CONTACT SUPPORT (December 25, 2025)
@@ -182,17 +180,18 @@ export async function POST(request: NextRequest) {
     // STEP 3: GET USER FROM DATABASE
     // Fetch full user profile including business context
     // =========================================================================
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: legacyUserId,
+      requestedBrandLocationId: brandLocationId,
+    });
     const users = await sql`
       SELECT 
-        id, email, name, brand, bio, 
-        target_country, target_language,
-        competitors, topics, affiliate_types
+        id, email, name
       FROM crewcast.users 
-      WHERE email = ${authUser.email}
+      WHERE id = ${context.accountId}
     `;
 
     if (users.length === 0) {
-      console.error(`[AI Outreach] User not found: ${authUser.email}`);
       return NextResponse.json(
         { error: 'User account not found. Please complete onboarding.' },
         { status: 404 }
@@ -200,7 +199,8 @@ export async function POST(request: NextRequest) {
     }
 
     const user = users[0];
-    const userId = user.id as number;
+    const userId = context.accountId;
+    refundUserId = userId;
 
     // =========================================================================
     // STEP 3.5: CHECK IF GENERATION IS ALREADY IN PROGRESS (January 24th, 2026)
@@ -224,6 +224,7 @@ export async function POST(request: NextRequest) {
     // for subsequent requests.
     // =========================================================================
     const requestedAffiliateId = affiliateId || affiliateData?.id;
+    refundAffiliateId = requestedAffiliateId?.toString() || 'unknown';
     
     // =========================================================================
     // STEP 3.5a: CHECK IF GENERATION IS IN PROGRESS (January 24th, 2026)
@@ -242,9 +243,17 @@ export async function POST(request: NextRequest) {
           FROM crewcast.saved_affiliates 
           WHERE id = ${requestedAffiliateId} 
             AND user_id = ${userId}
+            AND brand_id = ${context.brandId}::bigint
+            AND brand_location_id = ${context.brandLocationId}::bigint
         `;
-        
-        if (existingRecord.length > 0) {
+        if (existingRecord.length !== 1) {
+          return NextResponse.json(
+            { error: 'Affiliate not found' },
+            { status: 404 },
+          );
+        }
+
+        {
           const record = existingRecord[0];
           const now = Date.now();
           const startedAt = record.ai_generation_started_at 
@@ -279,8 +288,13 @@ export async function POST(request: NextRequest) {
         // This prevents setting lock when credits are insufficient
         
       } catch (lockError) {
-        // Log but don't fail - proceed with generation if lock check fails
-        console.error('[AI Outreach] ⚠️ Lock check failed (proceeding with generation):', lockError);
+        // Fail closed: ownership/lock uncertainty must not reserve a credit or
+        // launch a paid generation request.
+        console.error('[AI Outreach] Failed to verify the affiliate generation lock:', lockError);
+        return NextResponse.json(
+          { error: 'Unable to verify affiliate state. Please try again.' },
+          { status: 503 },
+        );
       }
     }
 
@@ -307,8 +321,6 @@ export async function POST(request: NextRequest) {
     // If generation fails, we refund. This guarantees credit integrity.
     // =========================================================================
     const enforceCredits = isCreditEnforcementEnabled();
-    let creditConsumed = false; // Track if we consumed a credit (for refund on failure)
-    
     if (enforceCredits) {
       const creditCheck = await checkCredits(userId, 'ai', 1);
       
@@ -364,15 +376,34 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     if (requestedAffiliateId) {
       try {
-        await sql`
+        const lockedAffiliates = await sql`
           UPDATE crewcast.saved_affiliates
           SET ai_generation_started_at = NOW()
-          WHERE id = ${requestedAffiliateId} AND user_id = ${userId}
+          WHERE id = ${requestedAffiliateId}
+            AND user_id = ${userId}
+            AND brand_id = ${context.brandId}::bigint
+            AND brand_location_id = ${context.brandLocationId}::bigint
+          RETURNING id
         `;
+        if (lockedAffiliates.length !== 1) {
+          throw new Error('The affiliate location changed before generation was locked.');
+        }
         console.log(`[AI Outreach] 🔒 Marked generation as started for affiliate ${requestedAffiliateId}`);
       } catch (lockError) {
-        // Log but don't fail - continue with generation
-        console.error('[AI Outreach] ⚠️ Failed to set lock (proceeding with generation):', lockError);
+        console.error('[AI Outreach] Failed to lock generation:', lockError);
+        if (creditConsumed) {
+          await refundCredits(
+            userId,
+            'ai',
+            1,
+            requestedAffiliateId.toString(),
+            'outreach_lock_failed',
+          );
+        }
+        return NextResponse.json(
+          { error: 'Unable to start generation safely. Please try again.' },
+          { status: 503 },
+        );
       }
     }
 
@@ -415,7 +446,10 @@ export async function POST(request: NextRequest) {
           tiktok_username, tiktok_bio, tiktok_followers,
           channel_name, channel_subscribers
         FROM crewcast.saved_affiliates
-        WHERE id = ${affiliateId} AND user_id = ${userId}
+        WHERE id = ${affiliateId}
+          AND user_id = ${userId}
+          AND brand_id = ${context.brandId}::bigint
+          AND brand_location_id = ${context.brandLocationId}::bigint
       `;
 
       if (affiliates.length === 0) {
@@ -499,13 +533,13 @@ export async function POST(request: NextRequest) {
     const userContext: UserBusinessContext = {
       name: user.name || '',
       email: user.email || '',
-      brand: user.brand || null,
-      bio: user.bio || null,
-      targetCountry: user.target_country || null,
-      targetLanguage: user.target_language || null,
-      competitors: user.competitors || [],
-      topics: user.topics || [],
-      affiliateTypes: user.affiliate_types || [],
+      brand: context.brand.name,
+      bio: context.brand.bio,
+      targetCountry: context.location.countryCode,
+      targetLanguage: context.location.languageCode,
+      competitors: context.location.competitors,
+      topics: context.location.topics,
+      affiliateTypes: context.brand.affiliateTypes,
     };
 
     // =========================================================================
@@ -679,7 +713,10 @@ export async function POST(request: NextRequest) {
             ${sql.json(messageEntry)},
             true
           )
-        WHERE id = ${affiliate.id} AND user_id = ${userId}
+        WHERE id = ${affiliate.id}
+          AND user_id = ${userId}
+          AND brand_id = ${context.brandId}::bigint
+          AND brand_location_id = ${context.brandLocationId}::bigint
       `;
       console.log(`[AI Outreach] 💾 Saved message for affiliate ${affiliate.id}, contact: ${emailKey}`);
     } catch (saveError) {
@@ -705,6 +742,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('[AI Outreach] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
@@ -712,28 +753,20 @@ export async function POST(request: NextRequest) {
     // REFUND CREDIT ON UNEXPECTED ERROR (January 24th, 2026)
     // 
     // If we consumed a credit but hit an unexpected error, refund it.
-    // Note: creditConsumed may not be defined if error occurred before STEP 4,
-    // so we check if the variable exists and is true.
+    // The refund identifiers are initialized before parsing so an unexpected
+    // failure can be compensated without out-of-scope variables or ts-ignore.
     // =========================================================================
-    // @ts-ignore - creditConsumed may not be in scope if error before STEP 4
-    if (typeof creditConsumed !== 'undefined' && creditConsumed) {
+    if (creditConsumed && refundUserId !== null) {
       try {
-        // @ts-ignore - userId may not be in scope if error before STEP 3
-        const refundUserId = typeof userId !== 'undefined' ? userId : null;
-        // @ts-ignore - requestedAffiliateId may not be in scope
-        const refundAffId = typeof requestedAffiliateId !== 'undefined' ? requestedAffiliateId : null;
-        
-        if (refundUserId) {
-          const refundResult = await refundCredits(
-            refundUserId,
-            'ai',
-            1,
-            refundAffId?.toString() || 'unknown',
-            'outreach_error'
-          );
-          if (refundResult.success) {
-            console.log(`[AI Outreach] ↩️ Refunded 1 AI credit for user ${refundUserId} due to error`);
-          }
+        const refundResult = await refundCredits(
+          refundUserId,
+          'ai',
+          1,
+          refundAffiliateId,
+          'outreach_error'
+        );
+        if (refundResult.success) {
+          console.log(`[AI Outreach] ↩️ Refunded 1 AI credit for user ${refundUserId} due to error`);
         }
       } catch (refundError) {
         console.error('[AI Outreach] ⚠️ Failed to refund credit after error:', refundError);
@@ -768,22 +801,19 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     // =========================================================================
-    // STEP 1: AUTHENTICATION
-    // =========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Please sign in.' },
-        { status: 401 }
-      );
-    }
-
-    // =========================================================================
     // STEP 2: PARSE REQUEST BODY
     // =========================================================================
     const body = await request.json();
-    const { affiliateId, contactEmail, message, subject, channel, channels } = body;
+    const {
+      affiliateId,
+      contactEmail,
+      message,
+      subject,
+      channel,
+      channels,
+      userId: legacyUserId,
+      brandLocationId,
+    } = body;
 
     if (!affiliateId || !message) {
       return NextResponse.json(
@@ -792,28 +822,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // =========================================================================
-    // STEP 3: GET USER ID FROM DATABASE
-    // =========================================================================
-    const users = await sql`
-      SELECT id FROM crewcast.users WHERE email = ${authUser.email}
-    `;
-
-    if (users.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const userId = users[0].id as number;
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: legacyUserId,
+      requestedBrandLocationId: brandLocationId,
+    });
+    const userId = context.accountId;
 
     // =========================================================================
     // STEP 4: VERIFY AFFILIATE BELONGS TO USER
     // =========================================================================
     const affiliates = await sql`
       SELECT id FROM crewcast.saved_affiliates 
-      WHERE id = ${affiliateId} AND user_id = ${userId}
+      WHERE id = ${affiliateId}
+        AND user_id = ${userId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
     `;
 
     if (affiliates.length === 0) {
@@ -836,7 +859,10 @@ export async function PATCH(request: NextRequest) {
     // First, read the existing JSONB entry so we can merge channel edits
     const existing = await sql`
       SELECT ai_generated_messages FROM crewcast.saved_affiliates
-      WHERE id = ${affiliateId} AND user_id = ${userId}
+      WHERE id = ${affiliateId}
+        AND user_id = ${userId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
     `;
     const existingMessages = existing[0]?.ai_generated_messages || {};
     const existingEntry = existingMessages[emailKey] || {};
@@ -871,7 +897,10 @@ export async function PATCH(request: NextRequest) {
           ${sql.json(messageEntry)},
           true
         )
-      WHERE id = ${affiliateId} AND user_id = ${userId}
+      WHERE id = ${affiliateId}
+        AND user_id = ${userId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
     `;
 
     console.log(`[AI Outreach] ✏️ Saved edited message for affiliate ${affiliateId}, contact: ${emailKey}${channel ? `, channel: ${channel}` : ''}`);
@@ -886,6 +915,10 @@ export async function PATCH(request: NextRequest) {
     });
 
   } catch (error: unknown) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('[AI Outreach] Error saving edited message:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

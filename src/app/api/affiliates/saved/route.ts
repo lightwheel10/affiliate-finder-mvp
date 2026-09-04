@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbSavedAffiliate } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
 import { checkCredits, consumeCredits } from '@/lib/credits';
+import {
+  affiliateRequestErrorResponse,
+  resolveAffiliateReadRequestContext,
+  resolveAffiliateRequestContext,
+} from '@/lib/affiliates/server';
 // 2026-07-27 13:23 IST (Paras): defensive image re-hosting on save — see the
 // comment above the rehost call in POST for the full WHY.
 import { rehostImageIfNeeded } from '@/lib/image-storage';
@@ -26,35 +30,26 @@ function isCreditEnforcementEnabled(): boolean {
 // GET /api/affiliates/saved?userId=xxx - Get all saved affiliates for a user
 export async function GET(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    const userIdNum = parseInt(userId);
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateReadRequestContext({
+      legacyAccountId: searchParams.get('userId'),
+      requestedBrandLocationIds: searchParams.getAll('brandLocationId'),
+    });
 
     const affiliates = await sql`
       SELECT * FROM crewcast.saved_affiliates 
-      WHERE user_id = ${userIdNum}
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ANY(${context.brandLocationIds}::bigint[])
       ORDER BY saved_at DESC
     `;
 
     return NextResponse.json({ affiliates: affiliates as DbSavedAffiliate[] });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error fetching saved affiliates:', error);
     return NextResponse.json({ error: 'Failed to fetch saved affiliates' }, { status: 500 });
   }
@@ -63,14 +58,10 @@ export async function GET(request: NextRequest) {
 // POST /api/affiliates/saved - Save an affiliate
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const {
       userId,
+      brandLocationId,
       title,
       link,
       domain,
@@ -141,18 +132,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: userId,
+      requestedBrandLocationId: brandLocationId,
+    });
 
     // Check for duplicate
     const existing = await sql`
       SELECT id FROM crewcast.saved_affiliates 
-      WHERE user_id = ${userId} AND link = ${link}
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+        AND link = ${link}
     `;
 
     if (existing.length > 0) {
@@ -178,7 +169,8 @@ export async function POST(request: NextRequest) {
 
     const newAffiliates = await sql`
       INSERT INTO crewcast.saved_affiliates (
-        user_id, title, link, domain, snippet, source,
+        user_id, brand_id, brand_location_id,
+        title, link, domain, snippet, source,
         is_affiliate, person_name, summary, email, thumbnail,
         views, date, rank, keyword, highlighted_words,
         discovery_method_type, discovery_method_value,
@@ -198,7 +190,8 @@ export async function POST(request: NextRequest) {
         similarweb_time_on_site, similarweb_category, similarweb_traffic_sources, similarweb_top_countries
       )
       VALUES (
-        ${userId}, ${title}, ${link}, ${domain}, ${snippet}, ${source},
+        ${context.accountId}, ${context.brandId}::bigint, ${context.brandLocationId}::bigint,
+        ${title}, ${link}, ${domain}, ${snippet}, ${source},
         ${isAffiliate ?? null}, ${personName ?? null}, ${summary ?? null}, 
         ${email ?? null}, ${permThumbnail ?? null}, ${views ?? null},
         ${date ?? null}, ${rank ?? null}, ${keyword ?? null},
@@ -222,11 +215,32 @@ export async function POST(request: NextRequest) {
         ${similarwebTrafficSources ? JSON.stringify(similarwebTrafficSources) : null}, 
         ${similarwebTopCountries ? JSON.stringify(similarwebTopCountries) : null}
       )
+      ON CONFLICT (brand_location_id, link) DO NOTHING
       RETURNING id
     `;
 
-    return NextResponse.json({ id: newAffiliates[0].id, duplicate: false });
+    if (newAffiliates.length > 0) {
+      return NextResponse.json({ id: newAffiliates[0].id, duplicate: false });
+    }
+
+    const concurrentDuplicate = await sql`
+      SELECT id
+      FROM crewcast.saved_affiliates
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+        AND link = ${link}
+      LIMIT 1
+    `;
+    if (concurrentDuplicate.length !== 1) {
+      throw new Error('The location-scoped saved affiliate conflict could not be resolved.');
+    }
+    return NextResponse.json({ id: concurrentDuplicate[0].id, duplicate: true });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error saving affiliate:', error);
     return NextResponse.json({ error: 'Failed to save affiliate' }, { status: 500 });
   }
@@ -235,35 +249,32 @@ export async function POST(request: NextRequest) {
 // DELETE /api/affiliates/saved - Remove a saved affiliate
 export async function DELETE(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const link = searchParams.get('link');
 
-    if (!userId || !link) {
-      return NextResponse.json({ error: 'User ID and link are required' }, { status: 400 });
+    if (!link) {
+      return NextResponse.json({ error: 'Link is required' }, { status: 400 });
     }
 
-    const userIdNum = parseInt(userId);
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userIdNum}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: searchParams.get('userId'),
+      requestedBrandLocationId: searchParams.get('brandLocationId'),
+    });
 
     await sql`
       DELETE FROM crewcast.saved_affiliates 
-      WHERE user_id = ${userIdNum} AND link = ${link}
+      WHERE user_id = ${context.accountId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+        AND link = ${link}
     `;
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error removing saved affiliate:', error);
     return NextResponse.json({ error: 'Failed to remove affiliate' }, { status: 500 });
   }
@@ -314,15 +325,11 @@ export async function DELETE(request: NextRequest) {
 // =============================================================================
 export async function PATCH(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const { 
       affiliateId, 
       userId, 
+      brandLocationId,
       emailStatus, 
       email,
       provider = 'bio_extraction' 
@@ -336,13 +343,11 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
+    const context = await resolveAffiliateRequestContext({
+      legacyAccountId: userId,
+      requestedBrandLocationId: brandLocationId,
+    });
+    const scopedUserId = context.accountId;
 
     if (!emailStatus || !['found', 'not_found'].includes(emailStatus)) {
       return NextResponse.json(
@@ -363,7 +368,10 @@ export async function PATCH(request: NextRequest) {
     // ==========================================================================
     const existingRecord = await sql`
       SELECT email_status, email FROM crewcast.saved_affiliates 
-      WHERE id = ${affiliateId} AND user_id = ${userId}
+      WHERE id = ${affiliateId}
+        AND user_id = ${scopedUserId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
     `;
 
     if (existingRecord.length === 0) {
@@ -404,10 +412,10 @@ export async function PATCH(request: NextRequest) {
 
     if (enforceCredits && emailStatus === 'found') {
       // Check if user has sufficient email credits
-      const creditCheck = await checkCredits(userId, 'email', 1);
+      const creditCheck = await checkCredits(scopedUserId, 'email', 1);
       
       if (!creditCheck.allowed) {
-        console.log(`[PATCH /api/affiliates/saved] User ${userId} has insufficient email credits`);
+        console.log(`[PATCH /api/affiliates/saved] User ${scopedUserId} has insufficient email credits`);
         return NextResponse.json(
           { 
             error: 'Insufficient email credits',
@@ -430,7 +438,10 @@ export async function PATCH(request: NextRequest) {
         email_status = ${emailStatus},
         email_searched_at = NOW(),
         email_provider = ${provider}
-      WHERE id = ${affiliateId} AND user_id = ${userId}
+      WHERE id = ${affiliateId}
+        AND user_id = ${scopedUserId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
     `;
 
     // ==========================================================================
@@ -441,7 +452,7 @@ export async function PATCH(request: NextRequest) {
     // ==========================================================================
     if (enforceCredits && emailStatus === 'found') {
       const consumeResult = await consumeCredits(
-        userId,
+        scopedUserId,
         'email',
         1,
         affiliateId.toString(),
@@ -451,10 +462,10 @@ export async function PATCH(request: NextRequest) {
       if (consumeResult.success) {
         creditsConsumed = true;
         creditsRemaining = consumeResult.newBalance;
-        console.log(`[PATCH /api/affiliates/saved] User ${userId}: Consumed 1 email credit for bio extraction. Remaining: ${creditsRemaining}`);
+        console.log(`[PATCH /api/affiliates/saved] User ${scopedUserId}: Consumed 1 email credit for bio extraction. Remaining: ${creditsRemaining}`);
       } else {
         // This shouldn't happen since we checked above, but log it
-        console.error(`[PATCH /api/affiliates/saved] Failed to consume credit for user ${userId} after check passed`);
+        console.error(`[PATCH /api/affiliates/saved] Failed to consume credit for user ${scopedUserId} after check passed`);
       }
     }
 
@@ -467,6 +478,10 @@ export async function PATCH(request: NextRequest) {
       creditsRemaining,
     });
   } catch (error) {
+    const requestError = affiliateRequestErrorResponse(error);
+    if (requestError) {
+      return NextResponse.json(requestError.body, { status: requestError.status });
+    }
     console.error('Error updating email status:', error);
     return NextResponse.json(
       { error: 'Failed to update email status' }, 

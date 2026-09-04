@@ -31,13 +31,12 @@
  */
 
 import { ApifyClient } from 'apify-client';
+import { APIFY_ACTOR_IDS } from '@/lib/search/apify-actors';
+import { buildGoogleProviderInput } from '@/lib/search/provider-input';
+import { SearchProviderStartError } from '@/lib/search/start';
 import { Platform, SearchResult, isEcommerceDomain } from './search';
-import { getLocationConfig, LocationConfig } from './location';
 import { 
-  buildAllLocalizedQueries, 
   buildSingleKeywordQueries,
-  queriesToApifyInput,
-  BuiltQuery,
   Platform as LocalizedPlatform 
 } from '../utils/localized-search';
 
@@ -63,14 +62,7 @@ const client = APIFY_TOKEN
 // ACTOR CONFIGURATION
 // January 29, 2026
 // =============================================================================
-const GOOGLE_SCRAPER_ACTOR_ID = 'nFJndFXA5zjCTuudP';
-
-// Results per page (Google standard is 10)
-const RESULTS_PER_PAGE = 10;
-
-// Pages per query (1 page × 10 results = 10 results per query)
-// January 30, 2026: Reduced to 1 to save Apify credits during testing
-const MAX_PAGES_PER_QUERY = 1;
+const GOOGLE_SCRAPER_ACTOR_ID = APIFY_ACTOR_IDS.googleSearch;
 
 // =============================================================================
 // NOTE: Localized terms and query building logic moved to:
@@ -95,6 +87,7 @@ export interface GoogleScraperRunOptions {
   sources: Platform[];
   targetCountry?: string | null;
   targetLanguage?: string | null;
+  correlationId?: string;
 }
 
 export interface GoogleScraperRunResult {
@@ -116,10 +109,6 @@ export interface GoogleScraperStatus {
   finishedAt?: string;
   datasetId?: string;
   defaultDatasetId?: string;
-  stats?: {
-    inputRecords?: number;
-    outputRecords?: number;
-  };
 }
 
 export interface ProcessResultsOptions {
@@ -193,80 +182,61 @@ export function buildBatchedQueries(
 export async function startGoogleSearchRun(
   options: GoogleScraperRunOptions
 ): Promise<GoogleScraperRunResult> {
-  const { keyword, keywords, competitors, sources, targetCountry, targetLanguage } = options;
+  const {
+    keyword,
+    keywords,
+    competitors,
+    sources,
+    targetCountry,
+    targetLanguage,
+    correlationId,
+  } = options;
   
   if (!client) {
-    throw new Error('Apify client not configured - missing APIFY_API_TOKEN');
+    throw new SearchProviderStartError(
+      'Apify client not configured - missing APIFY_API_TOKEN',
+      false,
+    );
   }
-  
-  // Determine mode and build queries using shared utility
-  let builtQueries: BuiltQuery[];
-  
-  if (keywords && keywords.length > 0) {
-    // Multi-keyword mode (Onboarding, Auto-Scan)
-    console.log(`🔍 [GoogleScraper] Starting multi-keyword run: ${keywords.length} keywords, ${competitors?.length || 0} competitors`);
-    builtQueries = buildAllLocalizedQueries({
-      keywords,
-      competitors: competitors || [],
-      platforms: sources as LocalizedPlatform[],
-      targetLanguage,
-      targetCountry,
-    });
-  } else if (keyword) {
-    // Single keyword mode (Find Affiliate - backward compatible)
-    console.log(`🔍 [GoogleScraper] Starting single-keyword run for "${keyword}"`);
-    builtQueries = buildSingleKeywordQueries(keyword, sources as LocalizedPlatform[], targetLanguage);
-  } else {
-    throw new Error('Either keyword or keywords[] must be provided');
-  }
-  
-  console.log(`🔍 [GoogleScraper] Built ${builtQueries.length} queries (sources: ${sources.join(', ')})`);
-  console.log(`🔍 [GoogleScraper] Queries:\n${builtQueries.map(q => `  - [${q.sourceType}:${q.platform}] ${q.query.substring(0, 80)}...`).join('\n')}`);
-  
-  // Get location config
-  const locationConfig = getLocationConfig(targetCountry, targetLanguage);
-  
-  // Convert to Apify input format (newline-separated)
-  const queriesString = queriesToApifyInput(builtQueries);
-  
-  // Build actor input
-  const input = {
-    // Queries - newline separated for batching
-    queries: queriesString,
-    
-    // Pagination
-    resultsPerPage: RESULTS_PER_PAGE,
-    maxPagesPerQuery: MAX_PAGES_PER_QUERY,
-    
-    // Language & Location (critical for German accuracy)
-    languageCode: locationConfig?.languageCode || 'en',
-    countryCode: locationConfig?.countryCode || 'us',
-    googleDomain: locationConfig ? `google.${locationConfig.countryCode}` : 'google.com',
-    // CRITICAL: searchLanguage is the lr parameter that RESTRICTS results by language!
-    // Without this, we only set interface language (hl) but don't filter results.
-    // January 30, 2026: Added to fix Chinese/Russian/Arabic results appearing for German users
-    searchLanguage: locationConfig?.languageCode || '',
-    
-    // Disable features we don't need (saves cost/time)
-    mobileResults: false,
-    includeUnfilteredResults: false,
-    saveHtml: false,
-    saveHtmlToKeyValueStore: false,
-    includeIcons: false,
-    aiMode: 'aiModeOff',
-    perplexitySearch: {
-      enablePerplexity: false,
-      returnImages: false,
-      returnRelatedQuestions: false,
-    },
-    maximumLeadsEnrichmentRecords: 0,
-    focusOnPaidAds: false,
-    forceExactMatch: false,
-  };
+
+  // Everything in this block is deterministic local preparation. Classifying
+  // its failures explicitly lets the caller safely release a reserved credit
+  // or onboarding entitlement because no external actor start was attempted.
+  const input = (() => {
+    try {
+      return buildGoogleProviderInput({
+        keyword,
+        keywords,
+        competitors,
+        sources,
+        targetCountry,
+        targetLanguage,
+        correlationId,
+      });
+    } catch (error) {
+      if (error instanceof SearchProviderStartError) throw error;
+      throw new SearchProviderStartError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to prepare the Apify search input',
+        false,
+        error,
+      );
+    }
+  })();
   
   // Start the actor (non-blocking)
   // Note: We use start() not call() - start() returns immediately
-  const run = await client.actor(GOOGLE_SCRAPER_ACTOR_ID).start(input);
+  let run;
+  try {
+    run = await client.actor(GOOGLE_SCRAPER_ACTOR_ID).start(input);
+  } catch (error) {
+    throw new SearchProviderStartError(
+      error instanceof Error ? error.message : 'Apify start failed',
+      true,
+      error,
+    );
+  }
   
   console.log(`🔍 [GoogleScraper] Run started: ${run.id} (status: ${run.status})`);
   
@@ -275,6 +245,23 @@ export async function startGoogleSearchRun(
     status: run.status as GoogleScraperRunResult['status'],
     datasetId: run.defaultDatasetId,
   };
+}
+
+/**
+ * Abort a run that was launched but could not be attached to a valid search
+ * job. This is the compensation path for the network/database boundary in the
+ * search-start route.
+ */
+export async function abortGoogleSearchRun(runId: string): Promise<void> {
+  if (!client) {
+    throw new SearchProviderStartError(
+      'Apify client not configured - missing APIFY_API_TOKEN',
+      false,
+    );
+  }
+
+  await client.run(runId).abort();
+  console.log(`🛑 [GoogleScraper] Run aborted: ${runId}`);
 }
 
 /**
@@ -303,11 +290,6 @@ export async function getRunStatus(runId: string): Promise<GoogleScraperStatus> 
     finishedAt: run.finishedAt?.toISOString(),
     datasetId: run.defaultDatasetId,
     defaultDatasetId: run.defaultDatasetId,
-    stats: {
-      // Cast stats to any to access properties that may not be in type definition
-      inputRecords: (run.stats as any)?.inputRecords,
-      outputRecords: (run.stats as any)?.outputRecords,
-    },
   };
 }
 
@@ -324,14 +306,18 @@ export async function getRunStatus(runId: string): Promise<GoogleScraperStatus> 
  * That happens in the /api/search/status endpoint after enrichment.
  * 
  * @param runId - The run ID from startGoogleSearchRun
- * @param options - Processing options
+ * @param options - Compatibility context; filtering remains caller-owned
  * @returns Array of SearchResult objects categorized by platform
  * @throws Error if Apify client not configured or dataset fetch fails
  */
 export async function fetchAndProcessResults(
   runId: string,
-  options: ProcessResultsOptions = {}
+  options: ProcessResultsOptions = {},
 ): Promise<SearchResult[]> {
+  // Keep the existing call contract while making it explicit that this layer
+  // returns raw results. Country/language filtering happens after enrichment.
+  void options;
+
   if (!client) {
     throw new Error('Apify client not configured - missing APIFY_API_TOKEN');
   }

@@ -56,11 +56,21 @@ import { Step7CardForm } from './Step7CardForm';
 import { AnalyzingScreen } from './AnalyzingScreen';
 import { FindingAffiliatesScreen } from './FindingAffiliatesScreen';
 import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
+import {
+  MARKET_COUNTRIES as countries,
+  MARKET_LANGUAGES as languages,
+} from '@/lib/markets/catalog';
+import {
+  PLAN_CATALOG,
+  PURCHASABLE_PLAN_IDS,
+  SEARCH_INPUT_LIMITS,
+} from '@/lib/plans/catalog';
 // =============================================================================
 // i18n TRANSLATIONS (January 9th, 2026)
 // All UI strings are now translated - see LANGUAGE_MIGRATION.md
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
+import { isValidBrandDomainInput } from '@/lib/brands/domain';
 
 // =============================================================================
 // AI SUGGESTIONS TYPES (January 3rd, 2026)
@@ -89,10 +99,15 @@ interface SuggestedTopic {
 //   unreachable while PRICING_PLANS omits 'enterprise', and leaving them
 //   minimises the diff / risk on this paid-project edit. Remove or restore
 //   in a follow-up if the tier is never coming back / is coming back.
-const PRICING_PLANS = [
-  { id: 'pro', monthlyPrice: 99, annualPrice: 79, popular: true },
-  { id: 'business', monthlyPrice: 249, annualPrice: 199, popular: false },
-] as const;
+const PRICING_PLANS = PURCHASABLE_PLAN_IDS.map((id) => ({
+  id,
+  monthlyPrice: PLAN_CATALOG[id].pricing.monthlyEur,
+  annualPrice: PLAN_CATALOG[id].pricing.annualMonthlyEquivalentEur,
+  popular: id === 'pro',
+}));
+
+const MAX_TOPICS_LIMIT = SEARCH_INPUT_LIMITS.maxKeywords;
+const MAX_COMPETITORS_LIMIT = SEARCH_INPUT_LIMITS.maxCompetitors;
 
 // =============================================================================
 // DOMAIN VALIDATION HELPER (January 3rd, 2026)
@@ -105,25 +120,6 @@ const PRICING_PLANS = [
 // - Client: Instant UX feedback, catches obvious typos
 // - Server: Verifies domain actually exists and is reachable
 // =============================================================================
-function isValidDomainFormat(domain: string): boolean {
-  if (!domain) return false;
-  
-  // Normalize: strip protocols, www, paths
-  let normalized = domain.trim().toLowerCase();
-  normalized = normalized.replace(/^https?:\/\//, '');
-  normalized = normalized.replace(/^www\./, '');
-  normalized = normalized.split('/')[0];
-  normalized = normalized.split('?')[0];
-  normalized = normalized.split('#')[0];
-  normalized = normalized.split(':')[0];
-  
-  if (!normalized) return false;
-  
-  // Check domain format with regex
-  const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
-  return domainRegex.test(normalized);
-}
-
 // =============================================================================
 // STATIC SUGGESTIONS - DEPRECATED (January 3rd, 2026)
 // 
@@ -267,8 +263,9 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // 
   // Tracks when the affiliate search API has returned (success or error).
   // Used to signal FindingAffiliatesScreen to jump to 100% progress.
-  // ==========================================================================
+  // ===========================================================================
   const [isSearchComplete, setIsSearchComplete] = useState(false);
+  const [searchPrefetchError, setSearchPrefetchError] = useState(false);
   
   // Discount Code
   const [discountCode, setDiscountCode] = useState('');
@@ -358,87 +355,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   // - If app is in German → show German names (Deutschland, Frankreich, etc.)
   // - If app is in English → show English names (Germany, France, etc.)
   // 
-  // Expanded list of developed market countries with ISO 3166-1 alpha-2 codes.
-  // Focused on markets with strong affiliate marketing potential.
-  // Flag images are loaded from flagcdn.com CDN using ISO country codes.
-  // ==========================================================================
-  const countries = [
-    // North America
-    { name: 'United States', nameDE: 'Vereinigte Staaten', code: 'us' },
-    { name: 'Canada', nameDE: 'Kanada', code: 'ca' },
-    // Europe - Major Markets
-    { name: 'United Kingdom', nameDE: 'Vereinigtes Königreich', code: 'gb' },
-    { name: 'Germany', nameDE: 'Deutschland', code: 'de' },
-    { name: 'France', nameDE: 'Frankreich', code: 'fr' },
-    { name: 'Netherlands', nameDE: 'Niederlande', code: 'nl' },
-    { name: 'Belgium', nameDE: 'Belgien', code: 'be' },
-    { name: 'Switzerland', nameDE: 'Schweiz', code: 'ch' },
-    { name: 'Austria', nameDE: 'Österreich', code: 'at' },
-    { name: 'Ireland', nameDE: 'Irland', code: 'ie' },
-    // Nordics
-    { name: 'Denmark', nameDE: 'Dänemark', code: 'dk' },
-    { name: 'Sweden', nameDE: 'Schweden', code: 'se' },
-    { name: 'Norway', nameDE: 'Norwegen', code: 'no' },
-    { name: 'Finland', nameDE: 'Finnland', code: 'fi' },
-    // Southern Europe
-    { name: 'Spain', nameDE: 'Spanien', code: 'es' },
-    { name: 'Italy', nameDE: 'Italien', code: 'it' },
-    { name: 'Portugal', nameDE: 'Portugal', code: 'pt' },
-    // Central/Eastern Europe
-    { name: 'Poland', nameDE: 'Polen', code: 'pl' },
-    { name: 'Czech Republic', nameDE: 'Tschechien', code: 'cz' },
-    // Asia-Pacific
-    { name: 'Australia', nameDE: 'Australien', code: 'au' },
-    { name: 'New Zealand', nameDE: 'Neuseeland', code: 'nz' },
-    { name: 'Japan', nameDE: 'Japan', code: 'jp' },
-    { name: 'South Korea', nameDE: 'Südkorea', code: 'kr' },
-    { name: 'Singapore', nameDE: 'Singapur', code: 'sg' },
-    // Middle East
-    { name: 'United Arab Emirates', nameDE: 'Vereinigte Arabische Emirate', code: 'ae' },
-    { name: 'Israel', nameDE: 'Israel', code: 'il' },
-    { name: 'Saudi Arabia', nameDE: 'Saudi-Arabien', code: 'sa' },
-  ];
-  
-  // ==========================================================================
-  // LANGUAGES (January 3rd, 2026)
-  // Updated: January 21st, 2026 - Added flags and translations per client request
-  // 
-  // CHANGES (January 21st, 2026):
-  // - Added 'code' field for country flag representing the language
-  // - Added 'nameDE' field for German translations of language names
-  // - Replaced letter symbols with country flags for visual clarity
-  // - Language names now display based on current app language
-  // 
-  // Note: Language flags use representative country codes:
-  // - English → GB (could also be US, but GB is more neutral)
-  // - Spanish → ES (Spain, not Latin America)
-  // - Portuguese → PT (Portugal, not Brazil)
-  // ==========================================================================
-  const languages = [
-    // Major Western Languages
-    { name: 'English', nameDE: 'Englisch', code: 'gb' },
-    { name: 'Spanish', nameDE: 'Spanisch', code: 'es' },
-    { name: 'German', nameDE: 'Deutsch', code: 'de' },
-    { name: 'French', nameDE: 'Französisch', code: 'fr' },
-    { name: 'Portuguese', nameDE: 'Portugiesisch', code: 'pt' },
-    { name: 'Italian', nameDE: 'Italienisch', code: 'it' },
-    { name: 'Dutch', nameDE: 'Niederländisch', code: 'nl' },
-    // Nordic Languages
-    { name: 'Swedish', nameDE: 'Schwedisch', code: 'se' },
-    { name: 'Danish', nameDE: 'Dänisch', code: 'dk' },
-    { name: 'Norwegian', nameDE: 'Norwegisch', code: 'no' },
-    { name: 'Finnish', nameDE: 'Finnisch', code: 'fi' },
-    // Central/Eastern European
-    { name: 'Polish', nameDE: 'Polnisch', code: 'pl' },
-    { name: 'Czech', nameDE: 'Tschechisch', code: 'cz' },
-    // Asian Languages
-    { name: 'Japanese', nameDE: 'Japanisch', code: 'jp' },
-    { name: 'Korean', nameDE: 'Koreanisch', code: 'kr' },
-    // Middle Eastern
-    { name: 'Arabic', nameDE: 'Arabisch', code: 'sa' },
-    { name: 'Hebrew', nameDE: 'Hebräisch', code: 'il' },
-  ];
-  
   // Helper function to get flag image URL from flagcdn.com (January 3rd, 2026)
   const getFlagUrl = (code: string) => `https://flagcdn.com/w40/${code}.png`;
   
@@ -470,7 +386,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     
     // Only validate format if user has entered something
     if (value.trim()) {
-      const isValid = isValidDomainFormat(value);
+      const isValid = isValidBrandDomainInput(value);
       setBrandFormatValid(isValid);
     } else {
       setBrandFormatValid(null); // Reset to neutral state when empty
@@ -498,7 +414,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     }
 
     // Quick format check before making API call
-    if (!isValidDomainFormat(brand)) {
+    if (!isValidBrandDomainInput(brand)) {
       setBrandError(t.onboarding.step1.validation.invalidFormat);
       return false;
     }
@@ -667,7 +583,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: userId,
           onboardingStep: nextStep,
           ...additionalData,
         }),
@@ -767,7 +682,9 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       // because the tier is not yet implemented (no Stripe price, no team /
       // brand-projects / API features). If the tier is reintroduced, restore
       // the branch from git history prior to 2026-04-14.
-      await saveProgress(7, { plan: selectedPlan });
+      // Store the checkout preference only. The verified Stripe workflow owns
+      // the effective plan and subscription state.
+      await saveProgress(7, { trialPlan: selectedPlan });
       setStep(7);
     }
     // Note: Step 7 (card submission) is handled by handleStripeSubmit below
@@ -795,6 +712,67 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
   // Check if back button should be shown
   const showBackButton = step >= 3 && step <= 5 && !isAnalyzing && !isLoading;
+
+  const runOnboardingSearchPrefetch = async (): Promise<boolean> => {
+    try {
+      const requestId = crypto.randomUUID();
+      const startRes = await fetch('/api/scout/onboarding/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          topics,
+          competitors,
+          requestId,
+        }),
+      });
+      const startData = await startRes.json().catch(() => ({}));
+      if (!startRes.ok || !startData.success || !startData.jobId) {
+        console.error('[Onboarding] Failed to start search:', startData.error);
+        return false;
+      }
+
+      const maxWaitMs = 600000;
+      const pollIntervalMs = 3000;
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < maxWaitMs) {
+        await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+        try {
+          const statusRes = await fetch(`/api/search/status?jobId=${startData.jobId}`);
+          const statusData = await statusRes.json();
+          if (statusData.status === 'done') return true;
+          if (statusData.status === 'failed' || statusData.status === 'timeout') {
+            console.error('[Onboarding] Search failed:', statusData.message);
+            return false;
+          }
+        } catch (pollError) {
+          console.warn('[Onboarding] Poll failed, retrying next interval:', pollError);
+        }
+      }
+
+      console.error('[Onboarding] Search did not finish within 10 minutes.');
+      return false;
+    } catch (scoutError) {
+      console.error('[Onboarding] Pre-fetch error:', scoutError);
+      return false;
+    }
+  };
+
+  const handleRetryOnboardingSearch = async () => {
+    setIsLoading(true);
+    setSearchPrefetchError(false);
+    setIsSearchComplete(false);
+    const succeeded = await runOnboardingSearchPrefetch();
+    if (!succeeded) {
+      setSearchPrefetchError(true);
+      setIsLoading(false);
+      return;
+    }
+    setIsSearchComplete(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsLoading(false);
+    onComplete();
+  };
 
   // ==========================================================================
   // STRIPE PAYMENT FLOW (Step 7)
@@ -855,7 +833,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         throw new Error(errorData.error || 'Failed to initialize payment');
       }
 
-      const { clientSecret, customerId } = await setupRes.json();
+      const { clientSecret } = await setupRes.json();
 
       // Step 2: Confirm card setup with Stripe (handles 3D Secure)
       const setupResult = await confirmSetup(clientSecret, cardholderName);
@@ -875,7 +853,6 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           billingInterval,
           paymentMethodId: setupResult.paymentMethodId,
           promotionCodeId: promotionCodeId || undefined,
-          customerId,
         }),
       });
 
@@ -884,14 +861,13 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         throw new Error(errorData.error || 'Failed to create subscription');
       }
 
-      const subscriptionData = await subscriptionRes.json();
+      await subscriptionRes.json();
 
       // Step 4: Complete onboarding data
       const onboardingRes = await fetch('/api/users/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: userId,
           name,
           role,
           brand,
@@ -939,81 +915,21 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       // PAID CLIENT PROJECT - This feature MUST work correctly!
       // ======================================================================
       if (topics.length > 0) {
-        // Show the FindingAffiliatesScreen and reset completion state
         setIsFindingAffiliates(true);
         setIsSearchComplete(false);
-        
-        try {
-          // January 30, 2026: Start search with new non-blocking endpoint
-          const startRes = await fetch('/api/scout/onboarding/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              topics,
-              competitors,
-            }),
-          });
+        setSearchPrefetchError(false);
 
-          const startData = await startRes.json();
-          
-          if (!startRes.ok || !startData.success) {
-            console.error('[Onboarding] Failed to start search:', startData.error);
-            // Don't fail onboarding - user can still proceed
-          } else {
-            const jobId = startData.jobId;
-            
-            // Poll until complete (max 10 minutes for enrichment which can take 8-10 minutes)
-            // February 2, 2026: Increased from 7 to 10 minutes
-            const maxWaitMs = 600000;
-            const pollIntervalMs = 3000;
-            const startTime = Date.now();
-            
-            while (Date.now() - startTime < maxWaitMs) {
-              await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
-
-              // 2026-07-29 10:33 IST (Paras): each poll gets its own try/catch.
-              // Previously a single bad response (e.g. a 504 when one poll hit
-              // maxDuration mid-save) threw out of the WHOLE loop into the outer
-              // catch — polling stopped silently and the job stayed 'enriching'
-              // forever. A transient failure must mean "ask again in 3s", not
-              // "never ask again".
-              try {
-                const statusRes = await fetch(`/api/search/status?jobId=${jobId}`);
-                const statusData = await statusRes.json();
-
-                if (statusData.status === 'done') {
-                  break;
-                }
-
-                if (statusData.status === 'failed' || statusData.status === 'timeout') {
-                  console.error('[Onboarding] Search failed:', statusData.message);
-                  break;
-                }
-
-                // Continue polling for 'running', 'processing', 'enriching'
-              } catch (pollError) {
-                console.warn('[Onboarding] Poll failed, retrying next interval:', pollError);
-              }
-            }
-          }
-        } catch (scoutError) {
-          // Log error but don't fail - user can still proceed
-          console.error('[Onboarding] Pre-fetch error:', scoutError);
+        const searchSucceeded = await runOnboardingSearchPrefetch();
+        if (!searchSucceeded) {
+          // Payment and profile setup succeeded. Keep the user on an honest,
+          // recoverable search-error screen instead of displaying a false 100%
+          // completion state or asking them to enter payment details again.
+          setSearchPrefetchError(true);
+          return;
         }
-        
-        // ====================================================================
-        // January 21st, 2026: Signal completion and wait for celebration
-        // 
-        // Set isSearchComplete=true so FindingAffiliatesScreen jumps to 100%
-        // Wait 1 second for user to see "Complete!" message before redirect
-        // ====================================================================
+
         setIsSearchComplete(true);
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // February 9th, 2026: Removed setIsFindingAffiliates(false) here.
-        // It was causing Step 7 (card form) to flash briefly before navigation.
-        // The component unmounts on navigation anyway. Error path handled in catch.
       }
 
       // Success - subscription, onboarding data, and affiliates all ready!
@@ -1037,7 +953,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     if (competitors.includes(domain)) {
       setCompetitors(competitors.filter(c => c !== domain));
     } else {
-      if (competitors.length >= 5) return;
+      if (competitors.length >= MAX_COMPETITORS_LIMIT) return;
       setCompetitors([...competitors, domain]);
     }
   };
@@ -1048,15 +964,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
        setCompetitorInput('');
        return;
     }
-    if (competitors.length >= 5) return;
+    if (competitors.length >= MAX_COMPETITORS_LIMIT) return;
     
     setCompetitors([...competitors, competitorInput.trim()]);
     setCompetitorInput('');
   };
-
-  // MAX_TOPICS_LIMIT - January 15th, 2026
-  // Reduced from 10 to 5 to limit topic selection during onboarding
-  const MAX_TOPICS_LIMIT = 5;
 
   const toggleTopic = (topic: string) => {
     if (topics.includes(topic)) {
@@ -1126,6 +1038,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const renderFindingAffiliatesScreen = () => (
     <FindingAffiliatesScreen
       isComplete={isSearchComplete}
+      error={searchPrefetchError}
+      isRetrying={isLoading}
+      onRetry={handleRetryOnboardingSearch}
+      onContinue={onComplete}
     />
   );
 
@@ -1376,7 +1292,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             {targetCountry ? (
               <span className="flex items-center gap-2">
                 <img
-                  src={getFlagUrl(countries.find(c => c.name === targetCountry)?.code || '')}
+                  src={getFlagUrl(countries.find(c => c.name === targetCountry)?.isoCode || '')}
                   alt=""
                   className="w-5 h-auto"
                 />
@@ -1420,7 +1336,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     className="w-full text-left px-4 py-2 text-[#425466] dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-[#0f172a] dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     <span className="flex items-center gap-2">
-                      <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto" />
+                      <img src={getFlagUrl(c.isoCode)} alt="" className="w-5 h-auto" />
                       <span>{getLocalizedName(c)}</span>
                     </span>
                     {targetCountry === c.name && <Check size={14} className="text-[#ffbf23]" />}
@@ -1456,7 +1372,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             {targetLanguage ? (
               <span className="flex items-center gap-2">
                 <img
-                  src={getFlagUrl(languages.find(l => l.name === targetLanguage)?.code || '')}
+                  src={getFlagUrl(languages.find(l => l.name === targetLanguage)?.flagCountryCode || '')}
                   alt=""
                   className="w-5 h-auto"
                 />
@@ -1486,7 +1402,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     className="w-full text-left px-4 py-2 text-[#425466] dark:text-gray-300 hover:bg-[#ffbf23]/20 hover:text-[#0f172a] dark:hover:text-white transition-colors text-sm flex items-center justify-between group"
                   >
                     <span className="flex items-center gap-2">
-                      <img src={getFlagUrl(l.code)} alt="" className="w-5 h-auto" />
+                      <img src={getFlagUrl(l.flagCountryCode)} alt="" className="w-5 h-auto" />
                       <span>{getLocalizedName(l)}</span>
                     </span>
                     {targetLanguage === l.name && <Check size={14} className="text-[#ffbf23]" />}
@@ -1582,7 +1498,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
             <button
               type="button"
               onClick={addCustomCompetitor}
-              disabled={!competitorInput.trim() || competitors.length >= 5}
+              disabled={!competitorInput.trim() || competitors.length >= MAX_COMPETITORS_LIMIT}
               className="w-9 h-9 bg-[#ffbf23] text-[#1A1D21] rounded-xl hover:bg-[#e5ac20] flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-yellow-glow-sm hover:shadow-yellow-glow hover:-translate-y-px"
             >
               <Plus size={16} />
@@ -1634,10 +1550,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     key={comp.domain}
                     type="button"
                     onClick={() => toggleCompetitor(comp.domain)}
-                    disabled={competitors.length >= 5}
+                    disabled={competitors.length >= MAX_COMPETITORS_LIMIT}
                     className={cn(
                       "group relative flex items-center gap-3 p-2.5 border rounded-xl text-left transition-all",
-                      competitors.length >= 5
+                      competitors.length >= MAX_COMPETITORS_LIMIT
                         ? "border-[#e6ebf1] dark:border-gray-700 opacity-50 cursor-not-allowed"
                         : "border-[#e6ebf1] dark:border-gray-700 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10"
                     )}

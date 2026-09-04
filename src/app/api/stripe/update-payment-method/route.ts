@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
+import {
+  requireServerOwnedStripeCustomerId,
+  StripeCustomerOwnershipError,
+} from '@/lib/stripe-customer-ownership';
 
 // =============================================================================
 // UPDATE PAYMENT METHOD API
@@ -20,7 +28,8 @@ export const dynamic = 'force-dynamic';
 interface UpdatePaymentMethodBody {
   userId: number;
   paymentMethodId: string;
-  customerId?: string;
+  // Rolling-client compatibility only. This value is never billing authority.
+  customerId?: unknown;
 }
 
 export async function POST(request: NextRequest) {
@@ -28,26 +37,22 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     // AUTHENTICATION: Verify user is logged in
     // ==========================================================================
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Please log in.' },
-        { status: 401 }
-      );
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const body: UpdatePaymentMethodBody = await request.json();
-    const { userId, paymentMethodId, customerId } = body;
+    const { userId: legacyUserId, paymentMethodId, customerId } = body;
 
     // ==========================================================================
     // INPUT VALIDATION
     // ==========================================================================
-    if (!userId || typeof userId !== 'number') {
+    if (!legacyUserId || typeof legacyUserId !== 'number') {
       return NextResponse.json(
         { error: 'Invalid userId' },
         { status: 400 }
       );
     }
+    assertLegacyAccountId(legacyUserId, authenticated.account.id);
+    const userId = authenticated.account.id;
 
     if (!paymentMethodId || typeof paymentMethodId !== 'string') {
       return NextResponse.json(
@@ -76,30 +81,12 @@ export async function POST(request: NextRequest) {
     const user = users[0];
 
     // ==========================================================================
-    // AUTHORIZATION: Verify the authenticated user matches the target user
-    // ==========================================================================
-    if (authUser.email !== user.email) {
-      console.error('[UpdatePaymentMethod] Auth mismatch:', {
-        authEmail: authUser.email,
-        userEmail: user.email,
-      });
-      return NextResponse.json(
-        { error: 'You can only update your own payment method' },
-        { status: 403 }
-      );
-    }
-
-    // ==========================================================================
     // GET STRIPE CUSTOMER ID
     // ==========================================================================
-    const stripeCustomerId = user.stripe_customer_id || customerId;
-
-    if (!stripeCustomerId) {
-      return NextResponse.json(
-        { error: 'No Stripe customer found for this user' },
-        { status: 400 }
-      );
-    }
+    const stripeCustomerId = requireServerOwnedStripeCustomerId(
+      user.stripe_customer_id,
+      customerId,
+    );
 
     // ==========================================================================
     // ATTACH PAYMENT METHOD TO CUSTOMER
@@ -181,6 +168,15 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof StripeCustomerOwnershipError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('[UpdatePaymentMethod] Error:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Failed to update payment method';

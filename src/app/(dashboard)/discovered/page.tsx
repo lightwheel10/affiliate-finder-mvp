@@ -65,19 +65,27 @@ import { FilterPanel } from '../../components/FilterPanel';
 import { affiliateMatchesSearchQuery } from '../../utils/affiliate-search';
 // 2026-06-14 (paras): group postings by domain (web) / creator (social).
 // David's request. See utils/affiliate-grouping.ts.
-import { groupAffiliates, groupCountsBySource, groupKeyOf, type AffiliateGroup } from '../../utils/affiliate-grouping';
+import {
+  affiliateIdentityKey,
+  groupAffiliates,
+  groupCountsBySource,
+  groupKeyOf,
+  type AffiliateGroup,
+} from '../../utils/affiliate-grouping';
 import { useNeonUser } from '../../hooks/useNeonUser';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
 // See LANGUAGE_MIGRATION.md for documentation
 // =============================================================================
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useBrandLocation } from '@/contexts/BrandLocationContext';
 
 export default function DiscoveredPage() {
   // Translation hook (January 9th, 2026)
   const { t } = useLanguage();
   // User data for filter options (January 13th, 2026)
   const { user } = useNeonUser();
+  const { activeLocation, featureEnabled, locationScopeIds } = useBrandLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -89,20 +97,20 @@ export default function DiscoveredPage() {
     // 2026-07-15 07:40 IST (Paras): pull refetch so the live enrichment poll can
     // refresh the on-screen list after the server saves new rows (see checkEnrichmentStatus).
     refetch: refetchDiscovered
-  } = useDiscoveredAffiliates();
+  } = useDiscoveredAffiliates(locationScopeIds);
 
   const {
     removeAffiliate,
     isAffiliateSaved,
     saveAffiliatesBulk
-  } = useSavedAffiliates();
+  } = useSavedAffiliates(locationScopeIds);
 
   const { blockDomain, isBlocked, blockedDomains, isAtLimit: isBlockLimitReached } = useBlockedDomains();
 
   // ============================================================================
   // BULK SELECTION STATE (Added Dec 2025)
   // ============================================================================
-  const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
+  const [selectedAffiliateKeys, setSelectedAffiliateKeys] = useState<Set<string>>(new Set());
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   
@@ -153,11 +161,28 @@ export default function DiscoveredPage() {
 
   // Check for active enrichment jobs and poll for updates
   const checkEnrichmentStatus = useCallback(async () => {
+    // With the feature enabled the shell normally guarantees a selected
+    // location. Fail closed if that invariant is ever broken. Legacy mode
+    // intentionally omits the parameter and resolves the account default.
+    if (featureEnabled && !locationScopeIds?.length) return false;
+
     try {
-      const res = await fetch('/api/search/enrichment-status');
-      if (!res.ok) return;
-      
-      const data = await res.json();
+      const requestedLocationIds = featureEnabled ? locationScopeIds! : [undefined];
+      const responses = await Promise.all(requestedLocationIds.map(async (locationId) => {
+        const query = locationId
+          ? `?${new URLSearchParams({ brandLocationId: locationId }).toString()}`
+          : '';
+        const response = await fetch(`/api/search/enrichment-status${query}`);
+        return response.ok ? response.json() : { hasActiveJobs: false, jobs: [] };
+      }));
+      const jobsById = new Map<number, (typeof responses)[number]['jobs'][number]>();
+      for (const response of responses) {
+        for (const job of response.jobs) jobsById.set(job.jobId, job);
+      }
+      const data = {
+        hasActiveJobs: responses.some((response) => response.hasActiveJobs),
+        jobs: Array.from(jobsById.values()),
+      };
       setEnrichmentStatus(data);
       
       // If there are active jobs and we have a jobId, poll the status endpoint
@@ -182,7 +207,7 @@ export default function DiscoveredPage() {
       console.error('[Discovered] Failed to check enrichment status:', error);
       return false;
     }
-  }, [refetchDiscovered]);
+  }, [featureEnabled, locationScopeIds, refetchDiscovered]);
 
   // ==========================================================================
   // 2026-07-15 07:40 IST (Paras): Poll on a fixed 5s interval for the WHOLE time
@@ -238,31 +263,31 @@ export default function DiscoveredPage() {
 
   // 2026-06-14 (paras): grouped-row handlers. A row now represents a domain/
   // creator group, so save/delete/select act on the whole group (main + all
-  // sub-postings), per the agreed behaviour. Bulk save/delete are unaffected:
-  // selecting a group adds every posting's link to selectedLinks, so the
-  // existing link-based bulk handlers already operate on the full group.
+  // sub-postings), per the agreed behaviour. Selection uses location + link,
+  // because the same link may legitimately appear in several locations.
   const toggleSaveGroup = (group: AffiliateGroup) => {
     const items = [group.main, ...group.subItems];
-    const allSaved = items.every(i => isAffiliateSaved(i.link));
+    const allSaved = items.every(isAffiliateSaved);
     if (allSaved) {
-      items.forEach(i => removeAffiliate(i.link));
+      items.forEach(removeAffiliate);
     } else {
-      saveAffiliatesBulk(items.filter(i => !isAffiliateSaved(i.link)));
+      saveAffiliatesBulk(items.filter(i => !isAffiliateSaved(i)));
     }
   };
 
-  const toggleSelectGroup = (links: string[]) => {
-    setSelectedLinks(prev => {
+  const toggleSelectGroup = (items: ResultItem[]) => {
+    const keys = items.map(affiliateIdentityKey);
+    setSelectedAffiliateKeys(prev => {
       const next = new Set(prev);
-      const selected = next.has(links[0]); // main link represents the group
-      links.forEach(l => { if (selected) next.delete(l); else next.add(l); });
+      const selected = next.has(keys[0]);
+      keys.forEach((key) => { if (selected) next.delete(key); else next.add(key); });
       return next;
     });
   };
 
-  const handleGroupDelete = async (links: string[]) => {
-    await removeDiscoveredAffiliatesBulk(links);
-    setDeleteResult({ count: links.length, show: true });
+  const handleGroupDelete = async (items: ResultItem[]) => {
+    await removeDiscoveredAffiliatesBulk(items);
+    setDeleteResult({ count: items.length, show: true });
     setTimeout(() => {
       setDeleteResult(prev => prev ? { ...prev, show: false } : null);
     }, 3000);
@@ -272,28 +297,30 @@ export default function DiscoveredPage() {
   // BULK SELECTION HANDLERS (Added Dec 2025)
   // ============================================================================
   const selectAllVisible = () => {
-    setSelectedLinks(prev => {
+    setSelectedAffiliateKeys(prev => {
       const newSet = new Set(prev);
-      filteredResults.forEach(r => newSet.add(r.link));
+      filteredResults.forEach((item) => newSet.add(affiliateIdentityKey(item)));
       return newSet;
     });
   };
   
   const deselectAllVisible = () => {
-    setSelectedLinks(prev => {
+    setSelectedAffiliateKeys(prev => {
       const newSet = new Set(prev);
-      filteredResults.forEach(r => newSet.delete(r.link));
+      filteredResults.forEach((item) => newSet.delete(affiliateIdentityKey(item)));
       return newSet;
     });
   };
 
   const handleBulkSave = async () => {
-    if (visibleSelectedLinks.size === 0) return;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
     setIsBulkSaving(true);
-    setSavingLinks(new Set(visibleSelectedLinks));
+    setSavingLinks(new Set(visibleSelectedAffiliateKeys));
     
     try {
-      const affiliatesToSave = discoveredAffiliates.filter(r => visibleSelectedLinks.has(r.link));
+      const affiliatesToSave = discoveredAffiliates.filter((item) =>
+        visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
+      );
       const result = await saveAffiliatesBulk(affiliatesToSave);
       
       // =======================================================================
@@ -310,9 +337,9 @@ export default function DiscoveredPage() {
         setBulkSaveResult(prev => prev ? { ...prev, show: false } : null);
       }, 4000);
       
-      setSelectedLinks(prev => {
+      setSelectedAffiliateKeys(prev => {
         const newSet = new Set(prev);
-        visibleSelectedLinks.forEach(link => newSet.delete(link));
+        visibleSelectedAffiliateKeys.forEach((key) => newSet.delete(key));
         return newSet;
       });
     } catch (err) {
@@ -327,19 +354,22 @@ export default function DiscoveredPage() {
   };
 
   const handleBulkDelete = () => {
-    if (visibleSelectedLinks.size === 0) return;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
     setIsDeleteModalOpen(true);
   };
 
   const confirmBulkDelete = async () => {
-    if (visibleSelectedLinks.size === 0) return;
-    const deleteCount = visibleSelectedLinks.size;
+    if (visibleSelectedAffiliateKeys.size === 0) return;
+    const affiliatesToDelete = filteredResults.filter((item) =>
+      visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
+    );
+    const deleteCount = affiliatesToDelete.length;
     setIsBulkDeleting(true);
     try {
-      await removeDiscoveredAffiliatesBulk(Array.from(visibleSelectedLinks));
-      setSelectedLinks(prev => {
+      await removeDiscoveredAffiliatesBulk(affiliatesToDelete);
+      setSelectedAffiliateKeys(prev => {
         const newSet = new Set(prev);
-        visibleSelectedLinks.forEach(link => newSet.delete(link));
+        visibleSelectedAffiliateKeys.forEach((key) => newSet.delete(key));
         return newSet;
       });
       setIsDeleteModalOpen(false);
@@ -457,39 +487,40 @@ export default function DiscoveredPage() {
   }, [discoveredAffiliates, activeFilter, searchQuery, advancedFilters, isBlocked]);
 
   // 2026-06-14 (paras): collapse the flat filtered list into domain/creator
-  // groups for rendering. Selection bookkeeping stays link-based below, so the
-  // existing bulk handlers keep working unchanged.
+  // groups for rendering. Selection remains location-aware in aggregate views.
   const groupedResults = useMemo(() => groupAffiliates(filteredResults), [filteredResults]);
 
-  const visibleSelectedLinks = useMemo(() => {
-    const visibleLinks = new Set(filteredResults.map(r => r.link));
+  const visibleSelectedAffiliateKeys = useMemo(() => {
+    const visibleKeys = new Set(filteredResults.map(affiliateIdentityKey));
     const visible = new Set<string>();
-    selectedLinks.forEach(link => {
-      if (visibleLinks.has(link)) {
-        visible.add(link);
+    selectedAffiliateKeys.forEach((key) => {
+      if (visibleKeys.has(key)) {
+        visible.add(key);
       }
     });
     return visible;
-  }, [selectedLinks, filteredResults]);
+  }, [selectedAffiliateKeys, filteredResults]);
 
   // ==========================================================================
   // 2026-08-03 (Paras): SELECTED GROUP COUNT (display only)
   // Same as saved/page.tsx: the bulk bar label shows selected GROUPS
   // (creators/domains) to match the grouped rows and filter chips. Selection
-  // and all bulk handlers stay link-based and unchanged.
+  // and all bulk handlers remain tied to the exact location-specific row.
   // ==========================================================================
   const selectedGroupCount = useMemo(() => {
     const keys = new Set<string>();
     filteredResults.forEach(r => {
-      if (visibleSelectedLinks.has(r.link)) keys.add(groupKeyOf(r));
+      if (visibleSelectedAffiliateKeys.has(affiliateIdentityKey(r))) keys.add(groupKeyOf(r));
     });
     return keys.size;
-  }, [filteredResults, visibleSelectedLinks]);
+  }, [filteredResults, visibleSelectedAffiliateKeys]);
 
   const [isBulkBlocking, setIsBulkBlocking] = useState(false);
   const handleBulkBlockDomains = useCallback(async () => {
-    if (visibleSelectedLinks.size === 0) return;
-    const selectedItems = filteredResults.filter(r => selectedLinks.has(r.link));
+    if (visibleSelectedAffiliateKeys.size === 0) return;
+    const selectedItems = filteredResults.filter((item) =>
+      selectedAffiliateKeys.has(affiliateIdentityKey(item)),
+    );
     const domainsToBlock = [...new Set(selectedItems.map(r => normalizeDomainForCompare(r.domain)))];
     const canAdd = Math.max(0, 10 - blockedDomains.length);
     const toBlock = domainsToBlock.slice(0, canAdd);
@@ -502,9 +533,11 @@ export default function DiscoveredPage() {
       for (const domain of toBlock) {
         await blockDomain(domain);
       }
-      setSelectedLinks(prev => {
+      setSelectedAffiliateKeys(prev => {
         const next = new Set(prev);
-        selectedItems.filter(r => toBlock.includes(normalizeDomainForCompare(r.domain))).forEach(r => next.delete(r.link));
+        selectedItems
+          .filter(r => toBlock.includes(normalizeDomainForCompare(r.domain)))
+          .forEach(r => next.delete(affiliateIdentityKey(r)));
         return next;
       });
       toast.success(toBlock.length === 1 ? t.dashboard.find.bulkActions.blockDomainDone : `${toBlock.length} ${t.dashboard.find.bulkActions.blockDomainsDone}`);
@@ -513,7 +546,7 @@ export default function DiscoveredPage() {
     } finally {
       setIsBulkBlocking(false);
     }
-  }, [visibleSelectedLinks.size, filteredResults, selectedLinks, blockedDomains.length, blockDomain, t.dashboard.find.bulkActions]);
+  }, [visibleSelectedAffiliateKeys.size, filteredResults, selectedAffiliateKeys, blockedDomains.length, blockDomain, t.dashboard.find.bulkActions]);
 
   // 2026-06-14 (paras): tab badges now count GROUPS (distinct domains/creators),
   // not individual postings — matches the grouped row display.
@@ -721,8 +754,8 @@ export default function DiscoveredPage() {
               isOpen={isFilterPanelOpen}
               onClose={() => setIsFilterPanelOpen(false)}
               onOpen={() => setIsFilterPanelOpen(true)}
-              userCompetitors={user?.competitors || undefined}
-              userTopics={user?.topics || undefined}
+              userCompetitors={activeLocation?.competitors ?? user?.competitors ?? undefined}
+              userTopics={activeLocation?.topics ?? user?.topics ?? undefined}
             />
           </div>
         </div>
@@ -733,10 +766,13 @@ export default function DiscoveredPage() {
             Mirror of /find bulk bar (same structure, same translations).
             See find/page.tsx for full rationale.
             ============================================================================= */}
-        {visibleSelectedLinks.size > 0 && (() => {
-          const alreadySavedCount = Array.from(visibleSelectedLinks).filter(link => isAffiliateSaved(link)).length;
-          const newToSaveCount = visibleSelectedLinks.size - alreadySavedCount;
-          const allVisibleSelected = visibleSelectedLinks.size === filteredResults.length;
+        {visibleSelectedAffiliateKeys.size > 0 && (() => {
+          const selectedItems = filteredResults.filter((item) =>
+            visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
+          );
+          const alreadySavedCount = selectedItems.filter(isAffiliateSaved).length;
+          const newToSaveCount = selectedItems.length - alreadySavedCount;
+          const allVisibleSelected = visibleSelectedAffiliateKeys.size === filteredResults.length;
           
           return (
           <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
@@ -837,8 +873,8 @@ export default function DiscoveredPage() {
             <div className="col-span-1 flex justify-center">
               <input
                 type="checkbox"
-                checked={filteredResults.length > 0 && visibleSelectedLinks.size === filteredResults.length}
-                onChange={() => visibleSelectedLinks.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
+                checked={filteredResults.length > 0 && visibleSelectedAffiliateKeys.size === filteredResults.length}
+                onChange={() => visibleSelectedAffiliateKeys.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
                 className="accent-[#ffbf23] w-4 h-4"
               />
             </div>
@@ -871,10 +907,11 @@ export default function DiscoveredPage() {
             // Save/Delete/Select act on the whole group.
             groupedResults.map((group) => {
               const item = group.main;
-              const groupLinks = [item.link, ...group.subItems.map(s => s.link)];
+              const groupItems = [item, ...group.subItems];
+              const itemKey = affiliateIdentityKey(item);
               return (
               <AffiliateRow
-                key={item.link}
+                key={groupKeyOf(item)}
                 title={item.title}
                 domain={item.domain}
                 link={item.link}
@@ -882,7 +919,7 @@ export default function DiscoveredPage() {
                 rank={item.rank}
                 keyword={item.keyword}
                 subItems={group.subItems}
-                isSaved={[item, ...group.subItems].every(i => isAffiliateSaved(i.link))}
+                isSaved={groupItems.every(isAffiliateSaved)}
                 onSave={() => toggleSaveGroup(group)}
                 thumbnail={item.thumbnail}
                 views={item.views}
@@ -899,10 +936,10 @@ export default function DiscoveredPage() {
                 channel={item.channel}
                 duration={item.duration}
                 personName={item.personName}
-                isSelected={selectedLinks.has(item.link)}
-                onSelect={() => toggleSelectGroup(groupLinks)}
-                isSaving={savingLinks.has(item.link)}
-                onDelete={() => handleGroupDelete(groupLinks)}
+                isSelected={selectedAffiliateKeys.has(itemKey)}
+                onSelect={() => toggleSelectGroup(groupItems)}
+                isSaving={savingLinks.has(itemKey)}
+                onDelete={() => handleGroupDelete(groupItems)}
                 affiliateData={item}
                 currentUser={user}
                 searchQuery={searchQuery}
@@ -936,7 +973,7 @@ export default function DiscoveredPage() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmBulkDelete}
-        itemCount={visibleSelectedLinks.size}
+        itemCount={visibleSelectedAffiliateKeys.size}
         isDeleting={isBulkDeleting}
         itemType="affiliate"
       />

@@ -1,0 +1,7 @@
+{
+  "schema": "crewcast",
+  "ledgerTable": "schema_migrations",
+  "advisoryLockKey": "affiliate-finder:crewcast:migrations",
+  "stagingProjectRef": "jxerxreqezhdsisdwddw",
+  "productionProjectRef": "mbhvufgafhpqmyaidgho"
+}

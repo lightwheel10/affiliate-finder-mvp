@@ -51,12 +51,44 @@
  */
 
 import { buffer } from 'micro';
+import { createHash } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { initializeTrialCredits, resetCreditsForNewPeriod, normalizePlan, addTopupCredits } from '@/lib/credits';
+import {
+  initializeTrialCredits,
+  resetCreditsForNewPeriod,
+  normalizePlan,
+  addTopupCredits,
+  type CreditSqlExecutor,
+} from '@/lib/credits';
 import { getCreditPackDetails, CREDIT_PACK_PRICES } from '@/lib/stripe';
+import {
+  processDurableStripeWebhookEvent,
+  type StripeWebhookEnvelope,
+} from '@/lib/stripe/webhook-events';
+import {
+  createStripeWebhookEventStore,
+  type StripeWebhookSqlExecutor,
+} from '@/lib/stripe/webhook-events-postgres';
+import {
+  extractInvoiceSubscriptionId,
+  extractStripeId,
+  snapshotStripeSubscription,
+  type StripeSubscriptionSnapshot,
+} from '@/lib/stripe/subscription-state';
+import {
+  synchronizePendingSubscriptionPlanChange,
+  type PendingPlanSyncOutcome,
+  type SubscriptionPlanChangeSql,
+} from '@/lib/stripe/subscription-plan-changes-postgres';
+import { isPlanCapacityIncrease } from '@/lib/plans/catalog';
+import {
+  restoreDowngradeArchivedCapacity,
+  type UpgradeCapacityRestorationOutcome,
+  type UpgradeCapacitySql,
+} from '@/lib/stripe/upgrade-capacity-postgres';
 // 2026-05-01: n8n transactional email integration removed (unreliable in production). See git history.
 // 2026-05-03/04: Resend integration. Wired below: payment-success, subscription-canceled,
 // credits-added. Welcome lives in src/app/api/users/route.ts. Pending: trial-ending, scan-summary.
@@ -77,38 +109,7 @@ export const config = {
   },
 };
 
-// =============================================================================
-// IDEMPOTENCY: Track processed events to prevent duplicates
-// Using in-memory Map for simplicity. In a multi-instance deployment,
-// consider using Redis or database-backed tracking.
-// Events are automatically cleaned up after 24 hours.
-// =============================================================================
-const processedEvents = new Map<string, number>();
-const EVENT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-function isEventProcessed(eventId: string): boolean {
-  const timestamp = processedEvents.get(eventId);
-  if (timestamp) {
-    if (Date.now() - timestamp < EVENT_TTL_MS) {
-      return true;
-    }
-    processedEvents.delete(eventId);
-  }
-  return false;
-}
-
-function markEventProcessed(eventId: string): void {
-  processedEvents.set(eventId, Date.now());
-  
-  if (processedEvents.size > 100) {
-    const now = Date.now();
-    for (const [id, timestamp] of processedEvents.entries()) {
-      if (now - timestamp >= EVENT_TTL_MS) {
-        processedEvents.delete(id);
-      }
-    }
-  }
-}
+const stripeWebhookEventStore = createStripeWebhookEventStore();
 
 // =============================================================================
 // MAIN WEBHOOK HANDLER
@@ -161,81 +162,30 @@ export default async function handler(
 
     console.log(`[Webhook] Received event: ${event.type} (${event.id})`);
 
-    // =========================================================================
-    // IDEMPOTENCY CHECK
-    // =========================================================================
-    if (isEventProcessed(event.id)) {
-      console.log(`[Webhook] Skipping duplicate event: ${event.id}`);
-      return res.status(200).json({ received: true, skipped: true });
+    const objectId = extractStripeId(event.data.object);
+    const receipt: StripeWebhookEnvelope = {
+      eventId: event.id,
+      eventType: event.type,
+      objectId,
+      createdAtSeconds: event.created,
+      livemode: event.livemode,
+      payloadSha256: createHash('sha256').update(rawBody).digest('hex'),
+    };
+
+    const processing = await processDurableStripeWebhookEvent(
+      stripeWebhookEventStore,
+      receipt,
+      () => handleVerifiedStripeEvent(event),
+    );
+
+    if (processing.outcome === 'busy') {
+      // A non-2xx response keeps Stripe's retry path alive if the active worker
+      // crashes before completing its lease.
+      return res.status(409).json({ received: true, processing: true });
     }
-
-    markEventProcessed(event.id);
-
-    // =========================================================================
-    // HANDLE SPECIFIC EVENTS
-    // =========================================================================
-    switch (event.type) {
-      // SUBSCRIPTION EVENTS
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-        // 2026-05-03: pass previous_attributes so handler can detect the
-        // cancel_at_period_end false→true transition (= user clicked cancel).
-        const previousAttributes = event.data.previous_attributes as
-          | Partial<Stripe.Subscription>
-          | undefined;
-        await handleSubscriptionUpdate(subscription, previousAttributes);
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionCanceled(subscription);
-        break;
-      }
-
-      case 'customer.subscription.trial_will_end': {
-        const subscription = event.data.object as Stripe.Subscription;
-        await handleTrialWillEnd(subscription);
-        break;
-      }
-
-      // INVOICE EVENTS
-      case 'invoice.paid': {
-        const invoice = event.data.object as Stripe.Invoice;
-        await handleInvoicePaid(invoice);
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
-        await handleInvoicePaymentFailed(invoice);
-        break;
-      }
-
-      // PAYMENT METHOD EVENTS
-      case 'payment_method.attached': {
-        const paymentMethod = event.data.object as Stripe.PaymentMethod;
-        await handlePaymentMethodAttached(paymentMethod);
-        break;
-      }
-
-      // CUSTOMER EVENTS
-      case 'customer.updated': {
-        const customer = event.data.object as Stripe.Customer;
-        console.log(`[Webhook] Customer updated: ${customer.id}`);
-        break;
-      }
-
-      // ONE-TIME CREDIT PACK PURCHASE (February 2026)
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutSessionCompleted(session);
-        break;
-      }
-
-      default:
-        console.log(`[Webhook] Unhandled event type: ${event.type}`);
+    if (processing.outcome === 'completed') {
+      console.log(`[Webhook] Skipping completed duplicate event: ${event.id}`);
+      return res.status(200).json({ received: true, skipped: true });
     }
 
     // 2026-05-01: pending-N8N-calls flush block removed here (n8n unreliable). See git history.
@@ -246,6 +196,244 @@ export default async function handler(
     console.error('[Webhook] Error processing webhook:', error);
     return res.status(500).json({ error: 'Webhook processing failed' });
   }
+}
+
+async function handleVerifiedStripeEvent(event: Stripe.Event): Promise<void> {
+  switch (event.type) {
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object as Stripe.Subscription;
+      const previousAttributes = event.data.previous_attributes as
+        | Partial<Stripe.Subscription>
+        | undefined;
+      await handleSubscriptionUpdate(subscription, previousAttributes);
+      return;
+    }
+    case 'customer.subscription.deleted':
+      await handleSubscriptionCanceled(event.data.object as Stripe.Subscription);
+      return;
+    case 'customer.subscription.trial_will_end':
+      await handleTrialWillEnd(event.data.object as Stripe.Subscription);
+      return;
+    case 'invoice.paid':
+      await handleInvoicePaid(event.data.object as Stripe.Invoice);
+      return;
+    case 'invoice.payment_failed':
+      await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+      return;
+    case 'payment_method.attached':
+      await handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod);
+      return;
+    case 'customer.updated':
+      console.log(`[Webhook] Customer updated: ${(event.data.object as Stripe.Customer).id}`);
+      return;
+    case 'checkout.session.completed':
+      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+      return;
+    default:
+      console.log(`[Webhook] Unhandled event type: ${event.type}`);
+  }
+}
+
+interface SubscriptionOwnerRow {
+  user_id: number;
+  stripe_subscription_id: string | null;
+  plan: string;
+  billing_interval: string | null;
+  email: string | null;
+  name: string | null;
+}
+
+interface CurrentSubscriptionContext {
+  userId: number;
+  email: string | null;
+  name: string | null;
+  plan: 'pro' | 'business' | 'enterprise';
+  billingInterval: 'monthly' | 'annual' | null;
+  snapshot: StripeSubscriptionSnapshot;
+  eventMatchesCurrentSubscription: boolean;
+  pendingPlanChangeOutcome: PendingPlanSyncOutcome;
+  capacityRestoration: UpgradeCapacityRestorationOutcome;
+}
+
+function stripePriceConfiguration() {
+  return {
+    proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+    proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+    businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+    businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
+  };
+}
+
+function isSupportedPlan(value: string): value is CurrentSubscriptionContext['plan'] {
+  return value === 'pro' || value === 'business' || value === 'enterprise';
+}
+
+function isSupportedBillingInterval(
+  value: string | null,
+): value is NonNullable<CurrentSubscriptionContext['billingInterval']> {
+  return value === 'monthly' || value === 'annual';
+}
+
+function unixSecondsToIso(value: number | null): string | null {
+  return value === null ? null : new Date(value * 1000).toISOString();
+}
+
+/**
+ * Serializes all subscription state changes for one Stripe customer, then
+ * retrieves the subscription currently owned by the account from Stripe while
+ * holding that lock. This makes delayed events converge to today's Stripe state
+ * instead of writing the stale snapshot carried by the delayed event.
+ */
+async function withCurrentStripeSubscription<T>(
+  customerId: string,
+  eventSubscriptionId: string | null,
+  effect: (
+    transaction: StripeWebhookSqlExecutor,
+    context: CurrentSubscriptionContext,
+  ) => Promise<T>,
+): Promise<T> {
+  return (sql as {
+    begin<R>(callback: (transaction: StripeWebhookSqlExecutor) => Promise<R>): Promise<R>;
+  }).begin(async (transaction) => {
+    await transaction`
+      SELECT pg_advisory_xact_lock(
+        hashtextextended(${`stripe-subscription:${customerId}`}, 0)
+      )
+    `;
+
+    const owners = await transaction<SubscriptionOwnerRow>`
+      SELECT
+        subscriptions.user_id,
+        subscriptions.stripe_subscription_id,
+        subscriptions.plan,
+        subscriptions.billing_interval,
+        users.email,
+        users.name
+      FROM crewcast.subscriptions AS subscriptions
+      JOIN crewcast.users AS users ON users.id = subscriptions.user_id
+      WHERE subscriptions.stripe_customer_id = ${customerId}
+      ORDER BY subscriptions.id
+      LIMIT 2
+      FOR UPDATE OF subscriptions, users
+    `;
+    if (owners.length !== 1) {
+      // This is retryable: customer.subscription.created can beat the route that
+      // records the new customer/subscription IDs in PostgreSQL.
+      throw new Error(`Expected one application account for Stripe customer ${customerId}; found ${owners.length}.`);
+    }
+
+    const owner = owners[0];
+    const previousPlan = isSupportedPlan(owner.plan) ? owner.plan : null;
+    const currentSubscriptionId = owner.stripe_subscription_id ?? eventSubscriptionId;
+    if (!currentSubscriptionId) {
+      throw new Error(`No Stripe subscription is recorded for customer ${customerId}.`);
+    }
+
+    // Stripe is the source of truth. Retrieval occurs after taking the per-
+    // customer lock, so concurrent old/new deliveries cannot finish in reverse
+    // order with different snapshots.
+    const currentSubscription = await stripe.subscriptions.retrieve(currentSubscriptionId);
+    const snapshot = snapshotStripeSubscription(
+      currentSubscription,
+      stripePriceConfiguration(),
+    );
+    if (snapshot.customerId !== customerId) {
+      throw new Error(`Stripe subscription ${snapshot.subscriptionId} belongs to a different customer.`);
+    }
+
+    const plan = snapshot.plan ?? (isSupportedPlan(owner.plan) ? owner.plan : null);
+    if (!plan) {
+      throw new Error(`Cannot derive a supported plan for Stripe subscription ${snapshot.subscriptionId}.`);
+    }
+    const billingInterval = snapshot.billingInterval
+      ?? (isSupportedBillingInterval(owner.billing_interval) ? owner.billing_interval : null);
+    const hasSubscription = snapshot.status === 'active' || snapshot.status === 'trialing';
+
+    const updatedSubscriptions = await transaction<{ user_id: number }>`
+      UPDATE crewcast.subscriptions
+      SET
+        stripe_subscription_id = ${snapshot.subscriptionId},
+        status = ${snapshot.status},
+        plan = ${plan},
+        billing_interval = ${billingInterval},
+        current_period_start = COALESCE(
+          ${unixSecondsToIso(snapshot.currentPeriodStartSeconds)}::timestamptz,
+          current_period_start
+        ),
+        current_period_end = ${unixSecondsToIso(snapshot.currentPeriodEndSeconds)}::timestamptz,
+        trial_ends_at = ${unixSecondsToIso(snapshot.trialEndSeconds)}::timestamptz,
+        cancel_at_period_end = ${snapshot.cancelAtPeriodEnd},
+        updated_at = NOW()
+      WHERE user_id = ${owner.user_id}
+        AND stripe_customer_id = ${customerId}
+      RETURNING user_id
+    `;
+    if (updatedSubscriptions.length !== 1) {
+      throw new Error(`Stripe subscription state did not update exactly one account for customer ${customerId}.`);
+    }
+
+    const updatedUsers = await transaction<{ id: number }>`
+      UPDATE crewcast.users
+      SET
+        plan = ${plan},
+        has_subscription = ${hasSubscription},
+        updated_at = NOW()
+      WHERE id = ${owner.user_id}
+      RETURNING id
+    `;
+    if (updatedUsers.length !== 1) {
+      throw new Error(`Stripe subscription state did not update user ${owner.user_id}.`);
+    }
+
+    // The normal plan-change route performs this immediately. Repeating the
+    // same idempotent recovery here covers a closed browser, a route timeout,
+    // or a delayed Stripe confirmation without restoring manually archived data.
+    const capacityRestoration = previousPlan
+      && isPlanCapacityIncrease(previousPlan, plan)
+      && hasSubscription
+      ? await restoreDowngradeArchivedCapacity(
+          transaction as unknown as UpgradeCapacitySql,
+          {
+            userId: owner.user_id,
+            targetPlan: plan,
+            stripeSubscriptionId: snapshot.subscriptionId,
+          },
+        )
+      : {
+          status: 'none' as const,
+          restoredBrands: 0 as const,
+          restoredLocations: 0 as const,
+        };
+
+    // Settle the durable future-change record from the same authoritative
+    // Stripe snapshot and inside the same transaction as plan synchronization.
+    // A target-price transition marks it applied; a detached/released schedule
+    // marks it canceled; otherwise it remains pending.
+    const pendingPlanChangeOutcome = await synchronizePendingSubscriptionPlanChange(
+      transaction as unknown as SubscriptionPlanChangeSql,
+      {
+        userId: owner.user_id,
+        stripeSubscriptionId: snapshot.subscriptionId,
+        stripeScheduleId: snapshot.scheduleId,
+        currentPlan: plan,
+        currentBillingInterval: billingInterval,
+      },
+    );
+
+    return effect(transaction, {
+      userId: owner.user_id,
+      email: owner.email,
+      name: owner.name,
+      plan,
+      billingInterval,
+      snapshot,
+      eventMatchesCurrentSubscription:
+        eventSubscriptionId === null || eventSubscriptionId === snapshot.subscriptionId,
+      pendingPlanChangeOutcome,
+      capacityRestoration,
+    });
+  });
 }
 
 // =============================================================================
@@ -349,6 +537,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         sendEmail({
           to: recipient.email,
           subject: creditsAddedEmailSubject(creditsEmailLocale, amount, creditType),
+          idempotencyKey: `stripe-checkout/${sessionId}/credits-added`,
           react: CreditsAddedEmail({
             name: creditsCustomerName,
             locale: creditsEmailLocale,
@@ -377,208 +566,79 @@ async function handleSubscriptionUpdate(
   previousAttributes?: Partial<Stripe.Subscription> // 2026-05-03: for cancel-transition detection
 ) {
   console.log(`[Webhook] Processing subscription update: ${subscription.id}, status: ${subscription.status}`);
+  const customerId = extractStripeId(subscription.customer);
+  if (!customerId) throw new Error(`Stripe subscription ${subscription.id} has no customer ID.`);
 
-  // Safely extract customer ID (can be string or Customer object)
-  const customerId = typeof subscription.customer === 'string' 
-    ? subscription.customer 
-    : (subscription.customer as { id: string })?.id;
-  
-  if (!customerId) {
-    console.error(`[Webhook] Subscription ${subscription.id} has no customer ID`);
-    return;
-  }
-
-  const users = await sql`
-    SELECT u.id FROM crewcast.users u
-    JOIN crewcast.subscriptions s ON u.id = s.user_id
-    WHERE s.stripe_customer_id = ${customerId}
-  `;
-
-  if (users.length === 0) {
-    console.error(`[Webhook] No user found for customer: ${customerId}`);
-    return;
-  }
-
-  const dbUserId = users[0].id;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const subObj = subscription as any;
-  
-  const subData = {
-    id: subscription.id,
-    status: subscription.status,
-    current_period_start: typeof subObj.current_period_start === 'number' ? subObj.current_period_start : null,
-    current_period_end: typeof subObj.current_period_end === 'number' ? subObj.current_period_end : null,
-    trial_end: typeof subObj.trial_end === 'number' ? subObj.trial_end : null,
-    cancel_at_period_end: !!subObj.cancel_at_period_end,
-  };
-
-  // Extract plan and billing interval
-  let plan: string | null = null;
-  let billingInterval: string | null = null;
-
-  if (subscription.metadata?.plan) {
-    plan = subscription.metadata.plan;
-  }
-  if (subscription.metadata?.billing_interval) {
-    billingInterval = subscription.metadata.billing_interval;
-  }
-
-  if (!plan || !billingInterval) {
-    const items = subscription.items?.data;
-    if (items && items.length > 0) {
-      const price = items[0].price;
-      const priceId = price?.id;
-      
-      const priceProMonthly = process.env.STRIPE_PRICE_PRO_MONTHLY;
-      const priceProAnnual = process.env.STRIPE_PRICE_PRO_ANNUAL;
-      const priceBusinessMonthly = process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
-      const priceBusinessAnnual = process.env.STRIPE_PRICE_BUSINESS_ANNUAL;
-
-      if (priceId === priceProMonthly) {
-        plan = 'pro';
-        billingInterval = 'monthly';
-      } else if (priceId === priceProAnnual) {
-        plan = 'pro';
-        billingInterval = 'annual';
-      } else if (priceId === priceBusinessMonthly) {
-        plan = 'business';
-        billingInterval = 'monthly';
-      } else if (priceId === priceBusinessAnnual) {
-        plan = 'business';
-        billingInterval = 'annual';
+  const cancellationEmail = await withCurrentStripeSubscription(
+    customerId,
+    subscription.id,
+    async (transaction, context) => {
+      if (!context.eventMatchesCurrentSubscription) {
+        console.log(`[Webhook] Ignored stale subscription event for ${subscription.id}; current subscription is ${context.snapshot.subscriptionId}`);
+        return null;
       }
 
-      if (!billingInterval && price?.recurring?.interval) {
-        billingInterval = price.recurring.interval === 'year' ? 'annual' : 'monthly';
+      if (context.capacityRestoration.status !== 'none') {
+        console.log(
+          `[Webhook] Upgrade capacity restoration for user ${context.userId}:`,
+          context.capacityRestoration,
+        );
       }
-    }
-  }
 
-  console.log(`[Webhook] Extracted plan: ${plan}, interval: ${billingInterval}`);
+      if (
+        context.snapshot.status === 'trialing'
+        && context.snapshot.trialEndSeconds !== null
+      ) {
+        const trialStartSeconds = context.snapshot.currentPeriodStartSeconds;
+        if (trialStartSeconds === null) {
+          throw new Error(`Trialing subscription ${context.snapshot.subscriptionId} has no period start.`);
+        }
+        const initialized = await initializeTrialCredits(
+          context.userId,
+          new Date(trialStartSeconds * 1000),
+          new Date(context.snapshot.trialEndSeconds * 1000),
+          transaction as CreditSqlExecutor,
+        );
+        if (initialized) {
+          console.log(`[Webhook] Trial credits are ready for user ${context.userId}`);
+        } else {
+          console.log(`[Webhook] Existing trial history prevented a second grant for user ${context.userId}`);
+        }
+      }
 
-  // Map Stripe status to our status
-  let dbStatus: string;
-  switch (subData.status) {
-    case 'trialing':
-      dbStatus = 'trialing';
-      break;
-    case 'active':
-      dbStatus = 'active';
-      break;
-    case 'canceled':
-      dbStatus = 'canceled';
-      break;
-    case 'past_due':
-      dbStatus = 'past_due';
-      break;
-    case 'incomplete':
-    case 'incomplete_expired':
-      dbStatus = 'incomplete';
-      break;
-    default:
-      dbStatus = subData.status;
-  }
+      const justCanceled =
+        previousAttributes?.cancel_at_period_end === false
+        && context.snapshot.cancelAtPeriodEnd;
+      if (!justCanceled || !context.email) return null;
 
-  const periodStartIso = subData.current_period_start 
-    ? new Date(subData.current_period_start * 1000).toISOString() 
-    : new Date().toISOString();
-  const periodEndIso = subData.current_period_end 
-    ? new Date(subData.current_period_end * 1000).toISOString() 
-    : null;
-  const trialEndIso = subData.trial_end 
-    ? new Date(subData.trial_end * 1000).toISOString() 
-    : null;
+      const accessUntil = unixSecondsToIso(context.snapshot.currentPeriodEndSeconds);
+      if (!accessUntil) {
+        throw new Error(`Canceling subscription ${context.snapshot.subscriptionId} has no access end.`);
+      }
+      return {
+        email: context.email,
+        name: context.name ?? 'there',
+        plan: context.plan.charAt(0).toUpperCase() + context.plan.slice(1),
+        accessUntil,
+      };
+    },
+  );
 
-  await sql`
-    UPDATE crewcast.subscriptions
-    SET
-      stripe_subscription_id = ${subData.id},
-      status = ${dbStatus},
-      plan = COALESCE(${plan}, plan),
-      billing_interval = COALESCE(${billingInterval}, billing_interval),
-      current_period_start = ${periodStartIso},
-      current_period_end = ${periodEndIso},
-      trial_ends_at = ${trialEndIso},
-      cancel_at_period_end = ${subData.cancel_at_period_end},
-      updated_at = NOW()
-    WHERE user_id = ${dbUserId}
-  `;
-
-  await sql`
-    UPDATE crewcast.users
-    SET
-      plan = COALESCE(${plan}, plan),
-      has_subscription = ${dbStatus === 'active' || dbStatus === 'trialing'},
-      updated_at = NOW()
-    WHERE id = ${dbUserId}
-  `;
-
-  console.log(`[Webhook] Updated subscription for user ${dbUserId} to status: ${dbStatus}, plan: ${plan}`);
-
-  // Initialize trial credits
-  if (dbStatus === 'trialing' && subData.trial_end) {
-    const trialStart = subData.current_period_start 
-      ? new Date(subData.current_period_start * 1000) 
-      : new Date();
-    const trialEnd = new Date(subData.trial_end * 1000);
-    
-    try {
-      await initializeTrialCredits(dbUserId, trialStart, trialEnd);
-      console.log(`[Webhook] ✅ Initialized trial credits for user ${dbUserId}`);
-    } catch (creditError) {
-      console.error(`[Webhook] Failed to initialize trial credits for user ${dbUserId}:`, creditError);
-    }
-  }
-
-  // SUBSCRIPTION-CANCELED EMAIL — added 2026-05-03
-  // Fires when cancel_at_period_end flips false→true (= user just clicked cancel),
-  // not when subscription.deleted runs (by then access is already gone, so the
-  // "you have access until X" copy would be stale).
-  // Locale/name/plan trade-offs: same as the payment-success block in handleInvoicePaid.
-  const justCanceled =
-    previousAttributes?.cancel_at_period_end === false &&
-    subData.cancel_at_period_end === true;
-
-  if (justCanceled) {
-    // The query above only fetched u.id — fetch email/name/plan now.
-    const emailRecipients = await sql`
-      SELECT u.email, u.name, u.plan
-      FROM crewcast.users u
-      WHERE u.id = ${dbUserId}
-    `;
-
-    if (emailRecipients.length > 0 && emailRecipients[0].email) {
-      const recipient = emailRecipients[0];
-      const cancelEmailLocale = 'de' as const;
-      const cancelCustomerName = recipient.name ?? 'there';
-      const cancelPlanForEmail =
-        recipient.plan && recipient.plan !== 'free_trial' ? recipient.plan : 'pro';
-      const cancelPlanLabel =
-        cancelPlanForEmail.charAt(0).toUpperCase() + cancelPlanForEmail.slice(1);
-
-      const accessUntilIso = subData.current_period_end
-        ? new Date(subData.current_period_end * 1000).toISOString()
-        : new Date().toISOString();
-
-      waitUntil(
-        sendEmail({
-          to: recipient.email,
-          subject: subscriptionCanceledEmailSubject(cancelEmailLocale),
-          react: SubscriptionCanceledEmail({
-            name: cancelCustomerName,
-            locale: cancelEmailLocale,
-            plan: cancelPlanLabel,
-            accessUntil: accessUntilIso,
-            appUrl: getAppUrl(),
-          }),
-        })
-      );
-
-      console.log(`[Webhook] ✅ Cancellation email queued for user ${dbUserId} (access until ${accessUntilIso})`);
-    } else {
-      console.error(`[Webhook] Cannot send cancellation email — no email found for user ${dbUserId}`);
-    }
+  if (cancellationEmail) {
+    const locale = 'de' as const;
+    waitUntil(sendEmail({
+      to: cancellationEmail.email,
+      subject: subscriptionCanceledEmailSubject(locale),
+      idempotencyKey: `stripe-subscription/${subscription.id}/${cancellationEmail.accessUntil}/canceled`,
+      react: SubscriptionCanceledEmail({
+        name: cancellationEmail.name,
+        locale,
+        plan: cancellationEmail.plan,
+        accessUntil: cancellationEmail.accessUntil,
+        appUrl: getAppUrl(),
+      }),
+    }));
+    console.log(`[Webhook] Cancellation email queued for ${cancellationEmail.email}`);
   }
 }
 
@@ -590,55 +650,15 @@ async function handleSubscriptionUpdate(
  */
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   console.log(`[Webhook] Processing subscription cancellation: ${subscription.id}`);
-
-  const customerId = typeof subscription.customer === 'string' 
-    ? subscription.customer 
-    : (subscription.customer as { id: string })?.id;
-  
-  if (!customerId) {
-    console.error(`[Webhook] Subscription ${subscription.id} has no customer ID`);
-    return;
-  }
-
-  // Extended query to include email/name for notification
-  const users = await sql`
-    SELECT u.id, u.email, u.name, u.plan
-    FROM crewcast.users u
-    JOIN crewcast.subscriptions s ON u.id = s.user_id
-    WHERE s.stripe_customer_id = ${customerId}
-  `;
-
-  if (users.length === 0) {
-    console.error(`[Webhook] No user found for customer: ${customerId}`);
-    return;
-  }
-
-  const user = users[0];
-  const dbUserId = user.id;
-
-  await sql`
-    UPDATE crewcast.subscriptions
-    SET
-      status = 'canceled',
-      cancel_at_period_end = true,
-      updated_at = NOW()
-    WHERE user_id = ${dbUserId}
-  `;
-
-  await sql`
-    UPDATE crewcast.users
-    SET
-      has_subscription = false,
-      plan = 'free_trial',
-      updated_at = NOW()
-    WHERE id = ${dbUserId}
-  `;
-
-  // 2026-05-03: Cancellation email is sent in handleSubscriptionUpdate() when
-  // cancel_at_period_end flips false→true (= user just clicked cancel), not here.
-  // By the time .deleted fires, access has already ended.
-
-  console.log(`[Webhook] ✅ Subscription canceled for user ${dbUserId}`);
+  const customerId = extractStripeId(subscription.customer);
+  if (!customerId) throw new Error(`Stripe subscription ${subscription.id} has no customer ID.`);
+  await withCurrentStripeSubscription(
+    customerId,
+    subscription.id,
+    async (_transaction, context) => {
+      console.log(`[Webhook] Subscription truth synchronized for user ${context.userId}: ${context.snapshot.status}`);
+    },
+  );
 }
 
 /**
@@ -694,279 +714,149 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
  * subscription was an object, causing credits to never reset after payment.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  // ==========================================================================
-  // SAFELY EXTRACT INVOICE DATA
-  // Handle both string and object formats for customer and subscription
-  // ==========================================================================
-  
-  // Use 'any' cast to safely access properties that may vary across Stripe API versions
-  // The Stripe SDK types may not reflect all properties returned by the webhook
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const invoiceObj = invoice as any;
-  
-  // Extract customer ID (can be string or Customer object)
-  let customerId: string | null = null;
-  const customerField = invoiceObj.customer;
-  if (typeof customerField === 'string') {
-    customerId = customerField;
-  } else if (customerField && typeof customerField === 'object' && customerField.id) {
-    customerId = customerField.id;
-  }
-  
-  // Extract subscription ID - IMPORTANT: API version 2025-11-17.clover changed the structure!
-  // OLD location: invoice.subscription (string or object)
-  // NEW location: invoice.parent.subscription_details.subscription (string)
-  let subscriptionId: string | null = null;
-  
-  // Try OLD location first (for backwards compatibility)
-  const subscriptionField = invoiceObj.subscription;
-  if (typeof subscriptionField === 'string') {
-    subscriptionId = subscriptionField;
-  } else if (subscriptionField && typeof subscriptionField === 'object' && subscriptionField.id) {
-    subscriptionId = subscriptionField.id;
-  }
-  
-  // Try NEW location (API version 2025-11-17.clover)
-  // Structure: invoice.parent.subscription_details.subscription
-  if (!subscriptionId && invoiceObj.parent?.subscription_details?.subscription) {
-    const parentSubId = invoiceObj.parent.subscription_details.subscription;
-    if (typeof parentSubId === 'string') {
-      subscriptionId = parentSubId;
-      console.log(`[Webhook] Found subscription ID in new location (parent.subscription_details): ${subscriptionId}`);
-    }
-  }
-  
-  // Also check line items as another fallback
-  // Structure: invoice.lines.data[0].parent.subscription_item_details.subscription
-  if (!subscriptionId && invoiceObj.lines?.data?.[0]?.parent?.subscription_item_details?.subscription) {
-    const lineSubId = invoiceObj.lines.data[0].parent.subscription_item_details.subscription;
-    if (typeof lineSubId === 'string') {
-      subscriptionId = lineSubId;
-      console.log(`[Webhook] Found subscription ID in line items: ${subscriptionId}`);
-    }
-  }
-  
-  // Get amount and billing reason safely
-  const amountPaid = typeof invoiceObj.amount_paid === 'number' ? invoiceObj.amount_paid : 0;
-  const billingReason: string | null = typeof invoiceObj.billing_reason === 'string' ? invoiceObj.billing_reason : null;
-  
-  console.log(`[Webhook] Invoice paid: ${invoice.id}, amount: ${amountPaid}, billing_reason: ${billingReason}, customer: ${customerId}`);
+  const invoiceObject = invoice as Stripe.Invoice & {
+    amount_paid?: number;
+    billing_reason?: string | null;
+    status_transitions?: { paid_at?: number | null } | null;
+  };
+  const customerId = extractStripeId(invoice.customer);
+  if (!customerId) throw new Error(`Stripe invoice ${invoice.id} has no customer ID.`);
 
-  // ==========================================================================
-  // VALIDATE CUSTOMER ID
-  // ==========================================================================
-  if (!customerId) {
-    console.error(`[Webhook] Invoice ${invoice.id} has no customer ID - cannot process`);
+  const eventSubscriptionId = extractInvoiceSubscriptionId(invoice);
+  if (!eventSubscriptionId) {
+    console.log(`[Webhook] Ignoring non-subscription paid invoice ${invoice.id}.`);
     return;
   }
+  const amountPaid = typeof invoiceObject.amount_paid === 'number'
+    ? invoiceObject.amount_paid
+    : 0;
+  const billingReason = typeof invoiceObject.billing_reason === 'string'
+    ? invoiceObject.billing_reason
+    : null;
 
-  // ==========================================================================
-  // FIND USER BY CUSTOMER ID
-  // Extended query includes name for email notification (February 2026)
-  // ==========================================================================
-  const users = await sql`
-    SELECT u.id, u.email, u.name, u.plan, s.stripe_subscription_id, s.status, s.first_payment_at
-    FROM crewcast.users u
-    JOIN crewcast.subscriptions s ON u.id = s.user_id
-    WHERE s.stripe_customer_id = ${customerId}
-  `;
+  console.log(
+    `[Webhook] Invoice paid: ${invoice.id}, amount: ${amountPaid}, billing_reason: ${billingReason}`,
+  );
 
-  if (users.length === 0) {
-    console.error(`[Webhook] No user found for customer: ${customerId}`);
-    return;
-  }
-
-  const dbUserId = users[0].id;
-  const userEmail = users[0].email;
-  const userName = users[0].name;
-  const userPlan = users[0].plan;
-  const dbSubscriptionId = users[0].stripe_subscription_id;
-
-  // ==========================================================================
-  // FALLBACK: If invoice doesn't have subscription ID, use the one from DB
-  // This handles cases where Stripe's invoice.subscription is null but we
-  // know the user has a subscription (e.g., trial-to-paid conversion)
-  // ==========================================================================
-  if (!subscriptionId && dbSubscriptionId) {
-    console.log(`[Webhook] Using subscription ID from database: ${dbSubscriptionId}`);
-    subscriptionId = dbSubscriptionId;
-  }
-
-  // ==========================================================================
-  // Skip ONLY $0 trial-start invoices (billing_reason: subscription_create).
-  // Do NOT skip $0 invoices from coupons/discounts — those have
-  // billing_reason: subscription_cycle and must be processed so that
-  // credits are reset and period_end is updated for the new billing period.
-  // ==========================================================================
-  if (amountPaid === 0 && billingReason === 'subscription_create') {
-    console.log(`[Webhook] Skipping $0 trial-start invoice (billing_reason=${billingReason})`);
-    return;
-  }
-
-  if (amountPaid === 0) {
-    console.log(`[Webhook] Processing $0 invoice with billing_reason=${billingReason} (coupon/discount)`);
-  }
-
-  // ==========================================================================
-  // UPDATE SUBSCRIPTION STATUS (only for actual payments)
-  // ==========================================================================
-  await sql`
-    UPDATE crewcast.subscriptions
-    SET
-      status = 'active',
-      updated_at = NOW()
-    WHERE user_id = ${dbUserId}
-  `;
-
-  await sql`
-    UPDATE crewcast.users
-    SET
-      has_subscription = true,
-      updated_at = NOW()
-    WHERE id = ${dbUserId}
-  `;
-
-  console.log(`[Webhook] Payment successful for user ${dbUserId}`);
-
-  try {
-    let periodStart = new Date();
-    let periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default 30 days
-    let plan = userPlan || 'pro';
-
-    // Try to get accurate period from Stripe subscription
-    if (subscriptionId) {
-      try {
-        const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
-        
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const subObj = stripeSubscription as any;
-        
-        if (typeof subObj.current_period_start === 'number') {
-          periodStart = new Date(subObj.current_period_start * 1000);
-        }
-        if (typeof subObj.current_period_end === 'number') {
-          periodEnd = new Date(subObj.current_period_end * 1000);
-        }
-        
-        // Get plan from subscription metadata (most accurate source)
-        if (stripeSubscription.metadata?.plan) {
-          plan = stripeSubscription.metadata.plan;
-        }
-        
-        console.log(`[Webhook] Got subscription details: plan=${plan}, period=${periodStart.toISOString()} to ${periodEnd.toISOString()}`);
-      } catch (subError) {
-        console.error(`[Webhook] Failed to retrieve subscription ${subscriptionId}, using defaults:`, subError);
+  const paymentEmail = await withCurrentStripeSubscription(
+    customerId,
+    eventSubscriptionId,
+    async (transaction, context) => {
+      if (!context.eventMatchesCurrentSubscription) {
+        console.log(
+          `[Webhook] Ignored invoice ${invoice.id} for stale subscription ${eventSubscriptionId}; `
+          + `current subscription is ${context.snapshot.subscriptionId}`,
+        );
+        return null;
       }
-    } else {
-      console.log(`[Webhook] No subscription ID available, using defaults for credit reset`);
-    }
-    
-    const normalizedPlan = normalizePlan(plan);
 
-    // April 20th, 2026: resetCreditsForNewPeriod ignores the passed periodEnd
-    // and always creates a 1-month entitlement window from periodStart — see
-    // the policy comment on that function in src/lib/credits.ts. The
-    // periodEnd computed above (from Stripe's current_period_end) is still
-    // used for logging and for the subscriptions table (updated elsewhere in
-    // the webhook), but not for the credit window.
-    await resetCreditsForNewPeriod(dbUserId, normalizedPlan, periodStart, periodEnd);
-    console.log(`[Webhook] ✅ Reset credits for user ${dbUserId} to ${normalizedPlan} plan`);
-  } catch (creditError) {
-    console.error(`[Webhook] Failed to reset credits for user ${dbUserId}:`, creditError);
-  }
+      // Stripe emits a zero-value invoice when a trial starts. It proves no paid
+      // entitlement and must not reset paid credits or unlock weekly scanning.
+      if (amountPaid === 0 && billingReason === 'subscription_create') {
+        console.log(`[Webhook] Skipping zero-value trial-start invoice ${invoice.id}`);
+        return null;
+      }
 
-  // ============================================================================
-  // AUTO-SCAN SCHEDULING - January 13th, 2026
-  // Updated: January 14th, 2026 - Cleaned up debug logging
-  // 
-  // When a user makes their first payment, we unlock the auto-scan feature:
-  // 1. Set first_payment_at to NOW() (only if not already set)
-  // 2. Set next_auto_scan_at to NOW() + 7 days
-  // 
-  // On subsequent payments (renewals), we don't reset the scan schedule -
-  // the scan continues on its 7-day cycle independent of billing cycles.
-  // 
-  // NOTE: first_payment_at may already be set by change-subscription route
-  // when user clicks "Buy Now". This webhook acts as a backup.
-  // ============================================================================
-  try {
-    const subscriptionCheck = await sql`
-      SELECT first_payment_at FROM crewcast.subscriptions WHERE user_id = ${dbUserId}
-    `;
-    
-    if (subscriptionCheck.length > 0 && !subscriptionCheck[0].first_payment_at) {
-      // This is the user's FIRST payment - unlock auto-scan!
-      const now = new Date();
-      const nextScanAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-      
-      await sql`
+      if (context.snapshot.status !== 'active') {
+        // A delayed paid event can arrive after cancellation or another newer
+        // state. We synchronized that newer state above and must not re-grant
+        // access or credits from this older delivery.
+        console.log(
+          `[Webhook] Invoice ${invoice.id} is paid, but current subscription `
+          + `status is ${context.snapshot.status}; no current entitlement was reset.`,
+        );
+        return null;
+      }
+
+      const periodStartSeconds = context.snapshot.currentPeriodStartSeconds;
+      if (periodStartSeconds === null) {
+        throw new Error(
+          `Active Stripe subscription ${context.snapshot.subscriptionId} has no period start.`,
+        );
+      }
+      const periodStart = new Date(periodStartSeconds * 1000);
+
+      const priorReset = await transaction<{ id: number }>`
+        SELECT id
+        FROM crewcast.credit_transactions
+        WHERE user_id = ${context.userId}
+          AND reason = 'reset'
+          AND reference_type = 'stripe_invoice'
+          AND reference_id = ${invoice.id}
+        LIMIT 1
+      `;
+
+      await resetCreditsForNewPeriod(
+        context.userId,
+        normalizePlan(context.plan),
+        periodStart,
+        periodStart,
+        {
+          executor: transaction as CreditSqlExecutor,
+          stripeInvoiceId: invoice.id,
+        },
+      );
+
+      const paidAtSeconds =
+        invoiceObject.status_transitions?.paid_at
+        ?? (typeof invoice.created === 'number' ? invoice.created : null);
+      if (
+        typeof paidAtSeconds !== 'number'
+        || !Number.isSafeInteger(paidAtSeconds)
+        || paidAtSeconds <= 0
+      ) {
+        throw new Error(`Stripe invoice ${invoice.id} has no valid paid timestamp.`);
+      }
+      const paidAt = new Date(paidAtSeconds * 1000).toISOString();
+
+      const scheduled = await transaction<{ user_id: number }>`
         UPDATE crewcast.subscriptions
         SET
-          first_payment_at = ${now.toISOString()},
-          next_auto_scan_at = ${nextScanAt.toISOString()},
+          first_payment_at = COALESCE(first_payment_at, ${paidAt}::timestamptz),
+          next_auto_scan_at = CASE
+            WHEN first_payment_at IS NULL AND next_auto_scan_at IS NULL
+              THEN ${paidAt}::timestamptz + INTERVAL '7 days'
+            ELSE next_auto_scan_at
+          END,
           updated_at = NOW()
-        WHERE user_id = ${dbUserId}
+        WHERE user_id = ${context.userId}
+          AND status = 'active'
+        RETURNING user_id
       `;
-      
-      console.log(`[Webhook] Auto-scan unlocked for user ${dbUserId}`);
-    }
-  } catch (autoScanError) {
-    // Non-critical: Don't fail the webhook if auto-scan scheduling fails
-    console.error(`[Webhook] Failed to set auto-scan schedule for user ${dbUserId}:`, autoScanError);
-  }
+      if (scheduled.length !== 1) {
+        throw new Error(`Paid subscription scheduling did not update user ${context.userId}.`);
+      }
 
-  // ============================================================================
-  // SEND PAYMENT-SUCCESS EMAIL VIA RESEND — added 2026-05-03
-  //
-  // Replaces the n8n call removed on 2026-05-01 (see git history). Fires for BOTH
-  // first-time conversion AND every monthly/annual renewal, because invoice.paid
-  // is the same event for both.
-  //
-  // SAFETY: sendEmail() never throws — it swallows and logs errors internally.
-  // We wrap with waitUntil() so the serverless function stays alive until the
-  // email is delivered, while Stripe still gets its 200 response immediately.
-  //
-  // LOCALE: hardcoded to 'de' for now. Target market is German-speaking and we
-  // don't yet have a `preferred_language` column on users. If David asks for
-  // both EN and DE, add the column + detect locale from there. If he asks for
-  // EN only, swap this to 'en'.
-  //
-  // PLAN NAME CAVEAT: we use `userPlan` from the original DB fetch (above).
-  // On first-time conversion this MIGHT still read 'free_trial' if Stripe fires
-  // invoice.paid before customer.subscription.updated. We fall back to 'pro' in
-  // that case as a sensible default. If wrong plan names show up in receipts,
-  // hoist `plan` (declared inside the try block above) into outer scope and
-  // use that here instead.
-  //
-  // CURRENCY: amount uses German number formatting via Intl.NumberFormat with
-  // the de-DE locale (e.g. "29,00 €", with comma decimal and trailing €).
-  // Currency code comes from Stripe (lowercase ISO 4217) and is uppercased for
-  // the formatter. Falls back to 'EUR' if Stripe ever returns null.
-  // ============================================================================
-  const emailLocale = 'de' as const;
-  const customerName = userName ?? 'there';
-  const planForEmail = (userPlan && userPlan !== 'free_trial') ? userPlan : 'pro';
-  const planLabel = planForEmail.charAt(0).toUpperCase() + planForEmail.slice(1);
-  const amountFormatted = new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: (invoice.currency || 'eur').toUpperCase(),
-  }).format(amountPaid / 100);
+      if (priorReset.length > 0 || !context.email) return null;
+      return {
+        email: context.email,
+        name: context.name ?? 'there',
+        plan: context.plan.charAt(0).toUpperCase() + context.plan.slice(1),
+      };
+    },
+  );
 
-  waitUntil(
-    sendEmail({
-      to: userEmail,
-      subject: paymentSuccessEmailSubject(emailLocale),
+  if (paymentEmail) {
+    const locale = 'de' as const;
+    const amountFormatted = new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: (invoice.currency || 'eur').toUpperCase(),
+    }).format(amountPaid / 100);
+
+    waitUntil(sendEmail({
+      to: paymentEmail.email,
+      subject: paymentSuccessEmailSubject(locale),
+      idempotencyKey: `stripe-invoice/${invoice.id}/payment-success`,
       react: PaymentSuccessEmail({
-        name: customerName,
-        locale: emailLocale,
-        plan: planLabel,
+        name: paymentEmail.name,
+        locale,
+        plan: paymentEmail.plan,
         amountFormatted,
         appUrl: getAppUrl(),
       }),
-    })
-  );
-
-  console.log(`[Webhook] ✅ Payment success handled for user ${userEmail} (amount=${amountPaid}, plan=${userPlan})`);
+    }));
+    console.log(`[Webhook] Payment-success email queued for ${paymentEmail.email}`);
+  }
 }
 
 /**
@@ -976,44 +866,28 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
  * February 2026: Added N8N webhook for payment_failed email notification.
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  console.log(`[Webhook] Invoice payment failed: ${invoice.id}`);
+  const customerId = extractStripeId(invoice.customer);
+  if (!customerId) throw new Error(`Stripe invoice ${invoice.id} has no customer ID.`);
 
-  const customerId = typeof invoice.customer === 'string' 
-    ? invoice.customer 
-    : (invoice.customer as { id: string })?.id;
-  
-  if (!customerId) {
-    console.error(`[Webhook] Invoice ${invoice.id} has no customer ID`);
+  const eventSubscriptionId = extractInvoiceSubscriptionId(invoice);
+  if (!eventSubscriptionId) {
+    console.log(`[Webhook] Ignoring non-subscription failed invoice ${invoice.id}.`);
     return;
   }
 
-  // Extended query to include email/name for notification
-  const users = await sql`
-    SELECT u.id, u.email, u.name, u.plan
-    FROM crewcast.users u
-    JOIN crewcast.subscriptions s ON u.id = s.user_id
-    WHERE s.stripe_customer_id = ${customerId}
-  `;
-
-  if (users.length === 0) {
-    console.error(`[Webhook] No user found for customer: ${customerId}`);
-    return;
-  }
-
-  const user = users[0];
-  const dbUserId = user.id;
-
-  await sql`
-    UPDATE crewcast.subscriptions
-    SET
-      status = 'past_due',
-      updated_at = NOW()
-    WHERE user_id = ${dbUserId}
-  `;
-
-  // 2026-05-01: n8n payment_failed email call removed here (n8n unreliable). See git history.
-
-  console.log(`[Webhook] ✅ Payment failed for user ${dbUserId} - status set to past_due`);
+  await withCurrentStripeSubscription(
+    customerId,
+    eventSubscriptionId,
+    async (_transaction, context) => {
+      // Never write 'past_due' from the event snapshot. A delayed failure can
+      // arrive after payment recovery; the authoritative retrieval above writes
+      // whichever status Stripe has now.
+      console.log(
+        `[Webhook] Payment-failure event ${invoice.id} synchronized user `
+        + `${context.userId} to current status ${context.snapshot.status}`,
+      );
+    },
+  );
 }
 
 /**
@@ -1022,58 +896,110 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
  * FIXED (Dec 2025): Properly extract customer ID from both string and object formats
  */
 async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) {
-  console.log(`[Webhook] Payment method attached: ${paymentMethod.id}`);
-
-  // Safely extract customer ID (can be string or Customer object)
-  const customerId = typeof paymentMethod.customer === 'string' 
-    ? paymentMethod.customer 
-    : (paymentMethod.customer as { id: string })?.id;
-  
+  const customerId = extractStripeId(paymentMethod.customer);
   if (!customerId) {
-    console.log(`[Webhook] Payment method ${paymentMethod.id} has no customer`);
+    console.log(`[Webhook] Payment method ${paymentMethod.id} is not attached to a customer.`);
     return;
   }
 
-  const card = paymentMethod.card;
-  if (!card) {
-    console.log(`[Webhook] Payment method ${paymentMethod.id} is not a card`);
-    return;
-  }
+  await (sql as {
+    begin<T>(callback: (transaction: StripeWebhookSqlExecutor) => Promise<T>): Promise<T>;
+  }).begin(async (transaction) => {
+    await transaction`
+      SELECT pg_advisory_xact_lock(
+        hashtextextended(${`stripe-subscription:${customerId}`}, 0)
+      )
+    `;
 
-  const users = await sql`
-    SELECT u.id FROM crewcast.users u
-    JOIN crewcast.subscriptions s ON u.id = s.user_id
-    WHERE s.stripe_customer_id = ${customerId}
-  `;
+    const owners = await transaction<{
+      user_id: number;
+      stripe_subscription_id: string | null;
+    }>`
+      SELECT user_id, stripe_subscription_id
+      FROM crewcast.subscriptions
+      WHERE stripe_customer_id = ${customerId}
+      ORDER BY id
+      LIMIT 2
+      FOR UPDATE
+    `;
+    if (owners.length !== 1) {
+      throw new Error(
+        `Expected one application account for Stripe customer ${customerId}; found ${owners.length}.`,
+      );
+    }
 
-  if (users.length === 0) {
-    console.log(`[Webhook] No user found for customer: ${customerId} (might be new customer)`);
-    return;
-  }
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer.deleted) {
+      throw new Error(`Stripe customer ${customerId} was deleted before card synchronization.`);
+    }
 
-  const dbUserId = users[0].id;
+    let defaultPaymentMethodId = extractStripeId(
+      customer.invoice_settings.default_payment_method,
+    );
+    if (!defaultPaymentMethodId && owners[0].stripe_subscription_id) {
+      const currentSubscription = await stripe.subscriptions.retrieve(
+        owners[0].stripe_subscription_id,
+      );
+      defaultPaymentMethodId = extractStripeId(currentSubscription.default_payment_method);
+    }
 
-  await sql`
-    UPDATE crewcast.subscriptions
-    SET
-      stripe_payment_method_id = ${paymentMethod.id},
-      card_last4 = ${card.last4},
-      card_brand = ${card.brand},
-      card_exp_month = ${card.exp_month},
-      card_exp_year = ${card.exp_year},
-      updated_at = NOW()
-    WHERE user_id = ${dbUserId}
-  `;
+    // Attaching a card does not necessarily make it the customer's default.
+    // If Stripe has no authoritative default yet, preserve the current display
+    // data; the create/update-payment route will write it after its own success.
+    if (!defaultPaymentMethodId) {
+      console.log(
+        `[Webhook] Customer ${customerId} has no current default payment method; `
+        + `attached event ${paymentMethod.id} did not overwrite card display data.`,
+      );
+      return;
+    }
 
-  await sql`
-    UPDATE crewcast.users
-    SET
-      billing_last4 = ${card.last4},
-      billing_brand = ${card.brand},
-      billing_expiry = ${`${String(card.exp_month).padStart(2, '0')}/${String(card.exp_year).slice(-2)}`},
-      updated_at = NOW()
-    WHERE id = ${dbUserId}
-  `;
+    const currentPaymentMethod = defaultPaymentMethodId === paymentMethod.id
+      ? paymentMethod
+      : await stripe.paymentMethods.retrieve(defaultPaymentMethodId);
+    if (extractStripeId(currentPaymentMethod.customer) !== customerId) {
+      throw new Error(
+        `Default payment method ${currentPaymentMethod.id} belongs to a different customer.`,
+      );
+    }
+    const card = currentPaymentMethod.card;
+    if (!card) {
+      console.log(
+        `[Webhook] Current default payment method ${currentPaymentMethod.id} is not a card.`,
+      );
+      return;
+    }
 
-  console.log(`[Webhook] Updated card details for user ${dbUserId}`);
+    const updatedSubscriptions = await transaction<{ user_id: number }>`
+      UPDATE crewcast.subscriptions
+      SET
+        stripe_payment_method_id = ${currentPaymentMethod.id},
+        card_last4 = ${card.last4},
+        card_brand = ${card.brand},
+        card_exp_month = ${card.exp_month},
+        card_exp_year = ${card.exp_year},
+        updated_at = NOW()
+      WHERE user_id = ${owners[0].user_id}
+        AND stripe_customer_id = ${customerId}
+      RETURNING user_id
+    `;
+    const updatedUsers = await transaction<{ id: number }>`
+      UPDATE crewcast.users
+      SET
+        billing_last4 = ${card.last4},
+        billing_brand = ${card.brand},
+        billing_expiry = ${`${String(card.exp_month).padStart(2, '0')}/${String(card.exp_year).slice(-2)}`},
+        updated_at = NOW()
+      WHERE id = ${owners[0].user_id}
+      RETURNING id
+    `;
+    if (updatedSubscriptions.length !== 1 || updatedUsers.length !== 1) {
+      throw new Error(`Card synchronization did not update exactly one account for ${customerId}.`);
+    }
+
+    console.log(
+      `[Webhook] Current default card ${currentPaymentMethod.id} synchronized for user `
+      + `${owners[0].user_id}`,
+    );
+  });
 }

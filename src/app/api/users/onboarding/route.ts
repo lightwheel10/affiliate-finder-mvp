@@ -1,65 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql, DbUser } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  legacyAccountIdMatches,
+  resolveAuthenticatedAccount,
+} from '@/lib/auth/account';
+import { OnboardingError } from '@/lib/brand-locations/onboarding';
+import { completeServerAccountOnboarding } from '@/lib/brand-locations/onboarding-server';
+import type { DbUser } from '@/lib/db';
+import { completeOnboardingInputSchema } from '@/lib/users/profile-input';
 
-// POST /api/users/onboarding - Complete onboarding
+// Complete onboarding for the authenticated application account. The optional
+// legacy id is accepted only to keep older clients working during rollout; it
+// never selects the row that is updated.
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
+    const context = await resolveAuthenticatedAccount();
+    if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const body = await request.json();
-    const {
-      id,
-      name,
-      role,
-      brand,
-      targetCountry,
-      targetLanguage,
-      competitors,
-      topics,
-      affiliateTypes,
-    } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${id}`;
-    if (userCheck.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    if (authUser.email !== (userCheck[0] as { email: string }).email) {
-      return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-    }
-
-    const updatedUsers = await sql`
-      UPDATE crewcast.users 
-      SET 
-        name = ${name},
-        role = ${role},
-        brand = ${brand},
-        target_country = ${targetCountry},
-        target_language = ${targetLanguage},
-        competitors = ${competitors},
-        topics = ${topics},
-        affiliate_types = ${affiliateTypes},
-        is_onboarded = true,
-        updated_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `;
-
-    if (updatedUsers.length === 0) {
+    if (!context.account) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ user: updatedUsers[0] as DbUser });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    const parsed = completeOnboardingInputSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid or incomplete onboarding data' },
+        { status: 400 },
+      );
+    }
+
+    const input = parsed.data;
+    if (!legacyAccountIdMatches(input.id, context.account.id)) {
+      return NextResponse.json(
+        { error: 'Not authorized to update this account' },
+        { status: 403 },
+      );
+    }
+
+    const result = await completeServerAccountOnboarding(
+      context.account.id,
+      input,
+    );
+
+    return NextResponse.json({ user: result.user as DbUser });
   } catch (error) {
+    if (error instanceof OnboardingError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
     console.error('Error completing onboarding:', error);
     return NextResponse.json({ error: 'Failed to complete onboarding' }, { status: 500 });
   }
 }
-

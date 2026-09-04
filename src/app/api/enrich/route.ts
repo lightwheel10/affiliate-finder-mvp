@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server';
-import { enrichDomainWithSimilarWeb, enrichDomainsWithSimilarWeb } from '../../services/apify';
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
+import {
+  enrichDomainWithSimilarWeb,
+  enrichDomainsWithSimilarWeb,
+  type SimilarWebData,
+} from '../../services/apify';
 
 /**
  * SimilarWeb Enrichment API
@@ -22,29 +29,19 @@ import { enrichDomainWithSimilarWeb, enrichDomainsWithSimilarWeb } from '../../s
  */
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthenticatedUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const body = await request.json();
     const { domain, domains, userId } = body;
 
-    if (userId != null) {
-      const userCheck = await sql`SELECT email FROM crewcast.users WHERE id = ${userId}`;
-      if (userCheck.length === 0) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-      if (authUser.email !== (userCheck[0] as { email: string }).email) {
-        return NextResponse.json({ error: 'Not authorized to access this resource' }, { status: 403 });
-      }
-    }
+    assertLegacyAccountId(userId, authenticated.account.id);
+    const accountId = authenticated.account.id;
 
     // Single domain enrichment
     if (domain && typeof domain === 'string') {
       console.log(`📊 Enriching single domain: ${domain}`);
       
-      const data = await enrichDomainWithSimilarWeb(domain, userId);
+      const data = await enrichDomainWithSimilarWeb(domain, accountId);
       
       if (!data) {
         return NextResponse.json({ 
@@ -63,10 +60,10 @@ export async function POST(request: NextRequest) {
       // Limit to 10 domains per request to prevent abuse
       const domainsToEnrich = domains.slice(0, 10);
       
-      const results = await enrichDomainsWithSimilarWeb(domainsToEnrich, userId);
+      const results = await enrichDomainsWithSimilarWeb(domainsToEnrich, accountId);
       
       // Convert Map to object for JSON response
-      const data: Record<string, any> = {};
+      const data: Record<string, SimilarWebData> = {};
       results.forEach((value, key) => {
         data[key] = value;
       });
@@ -83,6 +80,9 @@ export async function POST(request: NextRequest) {
     }, { status: 400 });
 
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error enriching domains:', error);
     return NextResponse.json({ 
       error: 'Failed to enrich domains' 

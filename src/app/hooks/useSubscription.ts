@@ -45,6 +45,14 @@ export interface SubscriptionData extends DbSubscription {
   } | null;
 }
 
+export interface PendingPlanChangeData {
+  plan: 'pro' | 'business';
+  billingInterval: 'monthly' | 'annual';
+  effectiveAt: string;
+  retainedBrandIds: string[];
+  retainedLocationIds: string[];
+}
+
 // Plan pricing info
 const PLAN_PRICES = {
   pro: { monthly: 99, annual: 79 },
@@ -60,6 +68,7 @@ const PLAN_PRICES = {
  */
 export function useSubscription(userId: number | null) {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [pendingPlanChange, setPendingPlanChange] = useState<PendingPlanChangeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasFetched, setHasFetched] = useState(false); // Track if we've fetched for current userId
@@ -68,6 +77,7 @@ export function useSubscription(userId: number | null) {
   const fetchSubscription = useCallback(async () => {
     if (!userId) {
       setSubscription(null);
+      setPendingPlanChange(null);
       setIsLoading(false);
       setHasFetched(false); // Reset when no userId
       return;
@@ -84,6 +94,7 @@ export function useSubscription(userId: number | null) {
       if (data.error) {
         setError(data.error);
         setSubscription(null);
+        setPendingPlanChange(null);
       } else if (data.subscription) {
         // Compute additional fields
         const sub = data.subscription as DbSubscription;
@@ -179,13 +190,28 @@ export function useSubscription(userId: number | null) {
           lastScanAt,
           timeUntilNextScan,
         });
+        const pending = data.pendingPlanChange;
+        setPendingPlanChange(
+          pending
+          && (pending.plan === 'pro' || pending.plan === 'business')
+          && (pending.billingInterval === 'monthly' || pending.billingInterval === 'annual')
+          && typeof pending.effectiveAt === 'string'
+          && Array.isArray(pending.retainedBrandIds)
+          && pending.retainedBrandIds.every((id: unknown) => typeof id === 'string')
+          && Array.isArray(pending.retainedLocationIds)
+          && pending.retainedLocationIds.every((id: unknown) => typeof id === 'string')
+            ? pending as PendingPlanChangeData
+            : null,
+        );
       } else {
         setSubscription(null);
+        setPendingPlanChange(null);
       }
     } catch (err) {
       console.error('Error fetching subscription:', err);
       setError('Failed to fetch subscription');
       setSubscription(null);
+      setPendingPlanChange(null);
     } finally {
       setIsLoading(false);
       setHasFetched(true); // Mark that we've completed fetching
@@ -299,6 +325,7 @@ export function useSubscription(userId: number | null) {
   return {
     // Subscription data with computed fields
     subscription,
+    pendingPlanChange,
     // Loading state - true if loading OR if we have a userId but haven't fetched yet
     isLoading: isLoading || (!!userId && !hasFetched),
     // Error message if any

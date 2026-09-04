@@ -43,13 +43,19 @@ interface SendEmailParams {
   to: string;
   subject: string;
   react: ReactElement;
+  idempotencyKey?: string;
 }
 
 /**
  * Send a transactional email. NEVER throws — always returns.
  * Failures are logged. Caller does not need to handle errors.
  */
-export async function sendEmail({ to, subject, react }: SendEmailParams): Promise<void> {
+export async function sendEmail({
+  to,
+  subject,
+  react,
+  idempotencyKey,
+}: SendEmailParams): Promise<void> {
   if (!EMAILS_ENABLED) {
     console.log(`[Email] 🔕 Disabled (EMAILS_ENABLED=false). Would have sent: "${subject}" → ${to}`);
     return;
@@ -62,12 +68,15 @@ export async function sendEmail({ to, subject, react }: SendEmailParams): Promis
 
   try {
     const html = await render(react);
-    const result = await resend.emails.send({
-      from: EMAIL_FROM,
-      to,
-      subject,
-      html,
-    });
+    const result = await resend.emails.send(
+      {
+        from: EMAIL_FROM,
+        to,
+        subject,
+        html,
+      },
+      idempotencyKey ? { idempotencyKey } : undefined,
+    );
 
     if (result.error) {
       console.error(`[Email] ❌ Resend rejected "${subject}" → ${to}:`, result.error);

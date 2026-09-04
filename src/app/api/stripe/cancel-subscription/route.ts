@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
+import { extractStripeId } from '@/lib/stripe/subscription-state';
+import {
+  isManagedPlanSchedule,
+  releaseManagedPlanSchedule,
+  subscriptionScheduleId,
+} from '@/lib/stripe/subscription-change';
+import {
+  cancelPendingSubscriptionPlanChange,
+  type SubscriptionPlanChangeSql,
+} from '@/lib/stripe/subscription-plan-changes-postgres';
 
 // =============================================================================
 // POST /api/stripe/cancel-subscription
@@ -10,7 +24,7 @@ import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2
 // This means the user keeps access until their paid period ends.
 //
 // SECURITY:
-// - Requires authenticated Stack Auth session
+// - Requires an authenticated Supabase application account
 // - Verifies authenticated user matches the requested userId
 // - Validates userId exists
 // - Verifies user owns the subscription
@@ -23,28 +37,22 @@ export async function POST(request: NextRequest) {
     // AUTHENTICATION CHECK
     // Verify the user is authenticated via Stack Auth
     // ==========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      console.error('[Stripe] Unauthorized: No authenticated user');
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     const body = await request.json();
-    const { userId, reason, reasonText } = body;
+    const { userId: legacyUserId, reason, reasonText } = body;
 
     // ==========================================================================
     // INPUT VALIDATION
     // ==========================================================================
-    if (!userId || typeof userId !== 'number') {
+    if (!legacyUserId || typeof legacyUserId !== 'number') {
       return NextResponse.json(
         { error: 'Valid user ID is required' },
         { status: 400 }
       );
     }
+    assertLegacyAccountId(legacyUserId, authenticated.account.id);
+    const userId = authenticated.account.id;
 
     // ==========================================================================
     // 2026-08-03 (Paras): OPTIONAL CANCELLATION REASON (David's request)
@@ -72,37 +80,6 @@ export async function POST(request: NextRequest) {
     };
 
     // ==========================================================================
-    // GET USER AND SUBSCRIPTION FROM DATABASE
-    // ==========================================================================
-    const userAndSub = await sql`
-      SELECT u.email, s.stripe_subscription_id, s.stripe_customer_id, s.status
-      FROM crewcast.users u
-      LEFT JOIN crewcast.subscriptions s ON u.id = s.user_id
-      WHERE u.id = ${userId}
-    `;
-
-    if (userAndSub.length === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const userData = userAndSub[0];
-
-    // ==========================================================================
-    // AUTHORIZATION CHECK
-    // Verify the authenticated user matches the requested user
-    // ==========================================================================
-    if (authUser.email !== userData.email) {
-      console.error(`[Stripe] Authorization failed: ${authUser.email} tried to cancel subscription for user ${userId}`);
-      return NextResponse.json(
-        { error: 'Not authorized to access this resource' },
-        { status: 403 }
-      );
-    }
-
-    // ==========================================================================
     // VALIDATE SUBSCRIPTION EXISTS
     // ==========================================================================
     const subscriptions = await sql`
@@ -118,7 +95,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { stripe_subscription_id, status } = subscriptions[0];
+    const { stripe_subscription_id, stripe_customer_id, status } = subscriptions[0];
 
     if (!stripe_subscription_id) {
       return NextResponse.json(
@@ -138,6 +115,33 @@ export async function POST(request: NextRequest) {
     // CANCEL SUBSCRIPTION IN STRIPE (at period end)
     // ==========================================================================
     console.log(`[Stripe] Canceling subscription ${stripe_subscription_id} for user ${userId}`);
+
+    // A future schedule must not survive a full subscription cancellation or it
+    // could later override cancel_at_period_end. Customer cancellation takes
+    // precedence, so release the attached schedule first. App-managed schedules
+    // additionally close their private pending-change audit row below.
+    const currentSubscription = await stripe.subscriptions.retrieve(stripe_subscription_id);
+    if (extractStripeId(currentSubscription.customer) !== stripe_customer_id) {
+      throw new Error('The stored Stripe subscription belongs to a different customer.');
+    }
+    const attachedScheduleId = subscriptionScheduleId(currentSubscription);
+    let releasedScheduleId: string | null = null;
+    if (attachedScheduleId) {
+      const attachedSchedule = await stripe.subscriptionSchedules.retrieve(attachedScheduleId);
+      if (isManagedPlanSchedule(attachedSchedule)) {
+        releasedScheduleId = await releaseManagedPlanSchedule(
+          stripe.subscriptionSchedules,
+          currentSubscription,
+          'subscription-canceled',
+        );
+      } else {
+        await stripe.subscriptionSchedules.release(
+          attachedScheduleId,
+          {},
+          { idempotencyKey: `release-for-cancel:${attachedScheduleId}`.slice(0, 255) },
+        );
+      }
+    }
 
     // 2026-08-03 (Paras): forward the survey answer to Stripe's native churn
     // analytics in the SAME update call — no extra request. Omitted entirely
@@ -170,6 +174,13 @@ export async function POST(request: NextRequest) {
         updated_at = NOW()
       WHERE user_id = ${userId}
     `;
+    if (releasedScheduleId) {
+      await cancelPendingSubscriptionPlanChange(
+        sql as unknown as SubscriptionPlanChangeSql,
+        userId,
+        releasedScheduleId,
+      );
+    }
 
     console.log(`[Stripe] Subscription ${stripe_subscription_id} set to cancel at period end`);
 
@@ -207,6 +218,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('[Stripe] Error canceling subscription:', error);
     
     if (error instanceof Error && 'type' in error) {

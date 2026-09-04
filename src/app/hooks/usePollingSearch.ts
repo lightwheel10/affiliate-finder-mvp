@@ -35,7 +35,7 @@
  * =============================================================================
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Platform, SearchResult } from '../services/search';
 
 // =============================================================================
@@ -90,6 +90,8 @@ export interface SearchOptions {
   maxRetries?: number;
   /** Competitor domains for this run (optional; used with keywords for Find Affiliates) */
   competitors?: string[];
+  /** Canonical brand-location ID; omitted until the switcher UI is enabled. */
+  brandLocationId?: string;
 }
 
 export interface UsePollingSearchReturn {
@@ -152,6 +154,14 @@ export function usePollingSearch(): UsePollingSearchReturn {
   
   // AbortController for cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => {
+    // Leaving Find or switching locations stops only this browser poll. The
+    // server job keeps its immutable location snapshot and can finish safely
+    // without writing results into the newly selected workspace.
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+  }, []);
   
   /**
    * Cancel any ongoing search
@@ -179,6 +189,7 @@ export function usePollingSearch(): UsePollingSearchReturn {
       pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
       maxRetries = DEFAULT_MAX_RETRIES,
       competitors,
+      brandLocationId,
     } = options;
     
     // Reset state
@@ -203,12 +214,37 @@ export function usePollingSearch(): UsePollingSearchReturn {
       
       // February 4, 2026: Send keywords[] for batched search (1 credit per session)
       // Competitors optional: when provided, search runs keyword + competitor queries
-      const startResponse = await fetch('/api/search/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keywords, sources, competitors: competitors ?? [] }),
-        signal,
-      });
+      const requestId = crypto.randomUUID();
+      let startResponse: Response | null = null;
+      let startNetworkError: unknown;
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          startResponse = await fetch('/api/search/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              keywords,
+              sources,
+              competitors: competitors ?? [],
+              brandLocationId,
+              requestId,
+            }),
+            signal,
+          });
+          break;
+        } catch (error) {
+          if (signal.aborted) throw error;
+          startNetworkError = error;
+          if (attempt === 0) continue;
+        }
+      }
+
+      if (!startResponse) {
+        throw startNetworkError instanceof Error
+          ? startNetworkError
+          : new Error('Unable to start search after a network retry.');
+      }
       
       // Handle start errors
       if (!startResponse.ok) {
@@ -389,14 +425,18 @@ export function usePollingSearch(): UsePollingSearchReturn {
               console.warn(`[usePollingSearch] Unknown status: ${statusData.status}`);
           }
           
-        } catch (pollError: any) {
+        } catch (pollError: unknown) {
+          const pollErrorRecord =
+            typeof pollError === 'object' && pollError !== null
+              ? pollError as Record<string, unknown>
+              : null;
           // Re-throw if it's already our error type
-          if (pollError.code) {
+          if (pollErrorRecord?.code) {
             throw pollError;
           }
           
           // Handle abort
-          if (pollError.name === 'AbortError') {
+          if (pollErrorRecord?.name === 'AbortError') {
             throw pollError;
           }
           
@@ -416,23 +456,27 @@ export function usePollingSearch(): UsePollingSearchReturn {
         }
       }
       
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorRecord =
+        typeof err === 'object' && err !== null
+          ? err as Record<string, unknown>
+          : null;
       // Handle abort
-      if (err.name === 'AbortError') {
+      if (errorRecord?.name === 'AbortError') {
         setProgress(prev => prev ? { ...prev, status: 'cancelled', message: 'Search cancelled' } : null);
         setIsSearching(false);
         throw err;
       }
       
       // Re-throw if it's already our error type
-      if (err.code) {
+      if (errorRecord?.code) {
         throw err;
       }
       
       // Unexpected error
       const searchError: SearchError = {
         code: 'UNEXPECTED_ERROR',
-        message: err.message || 'An unexpected error occurred',
+        message: err instanceof Error ? err.message : 'An unexpected error occurred',
       };
       setError(searchError);
       setIsSearching(false);

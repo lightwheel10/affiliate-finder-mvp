@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, TRIAL_DAYS } from '@/lib/stripe';
 import { sql } from '@/lib/db';
-import { getAuthenticatedUser } from '@/lib/supabase/server'; // January 19th, 2026: Migrated from Stack Auth
+import {
+  AccountAccessError,
+  assertLegacyAccountId,
+  requireAuthenticatedAccount,
+} from '@/lib/auth/account';
 
 // =============================================================================
 // POST /api/stripe/create-setup-intent
@@ -28,15 +32,7 @@ export async function POST(request: NextRequest) {
     // AUTHENTICATION CHECK
     // Verify the user is authenticated via Stack Auth
     // ==========================================================================
-    const authUser = await getAuthenticatedUser();
-    
-    if (!authUser) {
-      console.error('[Stripe] Unauthorized: No authenticated user');
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authenticated = await requireAuthenticatedAccount();
 
     // Parse and validate request body
     const body = await request.json();
@@ -44,17 +40,19 @@ export async function POST(request: NextRequest) {
     // value (account ID + visitor ID concatenated) sent by the client when an
     // affiliate referred this signup. If absent, the signup is treated as
     // organic and no affiliate attribution happens.
-    const { userId, email, papCookie } = body;
+    const { userId: legacyUserId, email, papCookie } = body;
 
     // ==========================================================================
     // INPUT VALIDATION
     // ==========================================================================
-    if (!userId || typeof userId !== 'number') {
+    if (!legacyUserId || typeof legacyUserId !== 'number') {
       return NextResponse.json(
         { error: 'Valid user ID is required' },
         { status: 400 }
       );
     }
+    assertLegacyAccountId(legacyUserId, authenticated.account.id);
+    const userId = authenticated.account.id;
 
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return NextResponse.json(
@@ -80,19 +78,6 @@ export async function POST(request: NextRequest) {
     }
 
     const user = users[0];
-
-    // ==========================================================================
-    // AUTHORIZATION CHECK
-    // Verify the authenticated user matches the requested user
-    // This prevents users from creating SetupIntents for other users
-    // ==========================================================================
-    if (authUser.email !== user.email) {
-      console.error(`[Stripe] Authorization failed: ${authUser.email} tried to access user ${userId} (${user.email})`);
-      return NextResponse.json(
-        { error: 'Not authorized to access this resource' },
-        { status: 403 }
-      );
-    }
 
     // Verify email in request matches (additional validation)
     if (user.email !== email) {
@@ -187,11 +172,13 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     return NextResponse.json({
       clientSecret: setupIntent.client_secret,
-      customerId: stripeCustomerId,
       setupIntentId: setupIntent.id,
     });
 
   } catch (error) {
+    if (error instanceof AccountAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('[Stripe] Error creating SetupIntent:', error);
     
     // Handle specific Stripe errors

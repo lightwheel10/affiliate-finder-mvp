@@ -159,8 +159,8 @@ async function createSupabaseServerClientWithCookies() {
  *     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
  *   }
  *   
- *   // user.email contains the authenticated user's email
- *   // Use this to fetch their data from the database
+ *   // Use the immutable user.id through the shared application-account
+ *   // resolver. Email is mutable contact data, not an ownership key.
  * }
  * ```
  * 
