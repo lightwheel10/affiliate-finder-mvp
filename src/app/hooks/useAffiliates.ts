@@ -566,7 +566,7 @@ export function useSavedAffiliates(locationIds?: AffiliateLocationScope, enabled
         (currentData: any) => ({
           ...currentData,
           affiliates: (currentData?.affiliates || []).filter(
-            (item: any) => rawAffiliateIdentityKey(item) !== targetKey,
+            (item: ResultItem) => rawAffiliateIdentityKey(item) !== targetKey,
           )
         }),
         { revalidate: true }
@@ -1732,7 +1732,7 @@ export function useDiscoveredAffiliates(locationIds?: AffiliateLocationScope, en
         (currentData: any) => ({
           ...currentData,
           affiliates: (currentData?.affiliates || []).filter(
-            (item: any) => rawAffiliateIdentityKey(item) !== targetKey,
+            (item: ResultItem) => rawAffiliateIdentityKey(item) !== targetKey,
           )
         }),
         { revalidate: true }
