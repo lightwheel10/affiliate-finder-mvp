@@ -1,0 +1,3 @@
+# Migration manifests hash the exact SQL bytes. Keep those bytes stable across
+# Windows, macOS, Linux, local checkouts, and CI.
+/supabase/migrations/*.sql text eol=lf
