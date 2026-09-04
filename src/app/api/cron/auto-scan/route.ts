@@ -85,6 +85,7 @@ import {
   classifyWeeklyScanWorkerFailure,
   WeeklyScanExecutionError,
 } from '@/lib/weekly-scan/weekly-scan';
+import { truncateProviderText } from '@/lib/search/status';
 
 // =============================================================================
 // VERCEL FUNCTION CONFIGURATION
@@ -705,7 +706,7 @@ async function enrichYouTubeResults(results: SearchResult[]): Promise<SearchResu
           duration: apifyData.duration,
           thumbnail: apifyData.thumbnailUrl,
           title: apifyData.title || result.title,
-          snippet: apifyData.text?.substring(0, 300) || result.snippet,
+          snippet: truncateProviderText(apifyData.text, 300) || result.snippet,
           date: apifyData.date || apifyData.uploadDate || result.date,
         };
       }
@@ -774,8 +775,10 @@ async function enrichInstagramResults(results: SearchResult[]): Promise<SearchRe
           // RELEVANT CONTENT: post thumbnail + caption
           thumbnail: postThumbnail || profilePic,
           personName: apifyData.ownerFullName || apifyData.fullName || apifyData.ownerUsername || apifyData.username,
-          title: postCaption?.substring(0, 100) || result.title,
-          snippet: postCaption?.substring(0, 300) || apifyData.biography?.substring(0, 300) || result.snippet,
+          title: truncateProviderText(postCaption, 100) || result.title,
+          snippet: truncateProviderText(postCaption, 300)
+            || truncateProviderText(apifyData.biography, 300)
+            || result.snippet,
         };
       }
       return result;
