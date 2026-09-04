@@ -85,6 +85,7 @@ import {
 } from '@/lib/search/status-postgres';
 import {
   countResultSources,
+  truncateProviderText,
   type SearchResultSnapshot,
 } from '@/lib/search/status';
 import {
@@ -607,7 +608,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
               // RELEVANT CONTENT thumbnail: post image
               thumbnail: postThumbnail || profilePic,
               // RELEVANT CONTENT title: post caption
-              title: postCaption?.substring(0, 100) || result.title,
+              title: truncateProviderText(postCaption, 100) || result.title,
               instagramUsername: instagramData.ownerUsername || instagramData.username,
               instagramFullName: instagramData.ownerFullName || instagramData.fullName,
               instagramBio: instagramData.biography,
@@ -906,7 +907,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             duration: apifyData.duration,
             thumbnail: apifyData.thumbnailUrl,
             title: apifyData.title || result.title,
-            snippet: apifyData.text?.substring(0, 300) || result.snippet,
+            snippet: truncateProviderText(apifyData.text, 300) || result.snippet,
             date: apifyData.date || apifyData.uploadDate || result.date,
           };
         }
@@ -953,8 +954,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<StatusResponse
             thumbnail: instagramData.displayUrl || instagramData.profilePicUrlHD || instagramData.profilePicUrl,
             personName: ownerFullName || ownerUsername,
             // Use post caption for title/snippet
-            title: instagramData.caption?.substring(0, 100) || ownerFullName || `@${ownerUsername}` || result.title,
-            snippet: instagramData.caption?.substring(0, 300) || instagramData.biography?.substring(0, 300) || result.snippet,
+            title: truncateProviderText(instagramData.caption, 100) || ownerFullName || `@${ownerUsername}` || result.title,
+            snippet: truncateProviderText(instagramData.caption, 300) || truncateProviderText(instagramData.biography, 300) || result.snippet,
           };
         }
         return result;

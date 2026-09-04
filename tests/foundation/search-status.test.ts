@@ -6,6 +6,7 @@ import {
   normalizeResultSnapshot,
   parseSearchJobRuntimeContext,
   SearchStatusIntegrityError,
+  truncateProviderText,
 } from '../../src/lib/search/status';
 
 function jobRow(overrides: Record<string, unknown> = {}) {
@@ -122,4 +123,14 @@ test('result snapshots replace malformed provider Unicode but preserve valid emo
   assert.equal(normalized.title, 'Valid emoji \ud83e\uddf5 and broken high \ufffd');
   assert.equal(normalized.snippet, 'Broken low \ufffd');
   assert.equal(normalized.channel?.name, 'Creator \ud83d\ude80');
+});
+
+test('provider text truncation never cuts an emoji in half', () => {
+  assert.equal(truncateProviderText(`1234\ud83e\uddf5rest`, 5), `1234\ud83e\uddf5`);
+  assert.equal(truncateProviderText(`1234\ud83e\uddf5rest`, 4), '1234');
+  assert.equal(truncateProviderText(`broken \ud83e`, 20), 'broken \ufffd');
+  assert.throws(
+    () => truncateProviderText('text', -1),
+    SearchStatusIntegrityError,
+  );
 });
