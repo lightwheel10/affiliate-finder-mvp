@@ -251,10 +251,36 @@ export function dedupeSearchResults(
   return [...byLink.values()];
 }
 
+function replaceUnpairedSurrogates(value: string): string {
+  let normalized = '';
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const nextCodeUnit = value.charCodeAt(index + 1);
+      if (nextCodeUnit >= 0xdc00 && nextCodeUnit <= 0xdfff) {
+        normalized += value[index] + value[index + 1];
+        index += 1;
+      } else {
+        normalized += '\ufffd';
+      }
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      normalized += '\ufffd';
+    } else {
+      normalized += value[index];
+    }
+  }
+  return normalized;
+}
+
 export function normalizeResultSnapshot(
   result: SearchResultSnapshot,
 ): SearchResultSnapshot {
-  const serialized = JSON.stringify(result);
+  // Provider text is untrusted and can contain an unpaired UTF-16 surrogate
+  // (for example, half of an emoji). JavaScript can represent that value, but
+  // PostgreSQL JSON rejects it. Replace only malformed code units at this one
+  // persistence boundary while preserving every valid Unicode character.
+  const serialized = JSON.stringify(result, (_key, value) =>
+    typeof value === 'string' ? replaceUnpairedSurrogates(value) : value);
   const parsed = JSON.parse(serialized) as unknown;
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new SearchStatusIntegrityError('A search result could not be serialized.');

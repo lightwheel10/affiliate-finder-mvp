@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   countResultSources,
   dedupeSearchResults,
+  normalizeResultSnapshot,
   parseSearchJobRuntimeContext,
   SearchStatusIntegrityError,
 } from '../../src/lib/search/status';
@@ -103,4 +104,22 @@ test('invalid result links and malformed raw snapshots fail closed', () => {
     () => parseSearchJobRuntimeContext(jobRow({ raw_results: '[null]' })),
     SearchStatusIntegrityError,
   );
+});
+
+test('result snapshots replace malformed provider Unicode but preserve valid emoji', () => {
+  const normalized = normalizeResultSnapshot({
+    title: 'Valid emoji \ud83e\uddf5 and broken high \ud83e',
+    link: 'https://example.com/unicode',
+    domain: 'example.com',
+    source: 'Web',
+    snippet: 'Broken low \udc00',
+    channel: {
+      name: 'Creator \ud83d\ude80',
+      link: 'https://example.com/creator',
+    },
+  });
+
+  assert.equal(normalized.title, 'Valid emoji \ud83e\uddf5 and broken high \ufffd');
+  assert.equal(normalized.snippet, 'Broken low \ufffd');
+  assert.equal(normalized.channel?.name, 'Creator \ud83d\ude80');
 });
