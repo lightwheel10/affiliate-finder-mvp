@@ -38,7 +38,7 @@
  * =============================================================================
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Lock, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import { PricingModal } from './PricingModal';
 import { useNeonUser } from '../hooks/useNeonUser';
@@ -77,7 +77,6 @@ export function ScanCountdown() {
     isLoading: subscriptionLoading,
     hasAutoScanAccess,
     nextScanAt,
-    timeUntilNextScan,
   } = useSubscription(userId);
   
   const { 
@@ -91,41 +90,26 @@ export function ScanCountdown() {
   // LIVE COUNTDOWN STATE
   // We use local state for the countdown that updates every minute
   // ==========================================================================
-  const [countdown, setCountdown] = useState<{
-    days: number;
-    hours: number;
-    minutes: number;
-    isPast: boolean;
-  } | null>(null);
-  
-  // Update countdown every minute
+  const [clockNow, setClockNow] = useState(() => Date.now());
+
+  // The interval is the external clock subscription. Countdown values are
+  // derived below, avoiding an extra synchronous state write on mount.
   useEffect(() => {
-    if (!nextScanAt) {
-      setCountdown(null);
-      return;
-    }
-    
-    const calculateCountdown = () => {
-      const now = new Date();
-      const diffMs = nextScanAt.getTime() - now.getTime();
-      const isPast = diffMs <= 0;
-      const absDiffMs = Math.abs(diffMs);
-      
-      const days = Math.floor(absDiffMs / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((absDiffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((absDiffMs % (1000 * 60 * 60)) / (1000 * 60));
-      
-      setCountdown({ days, hours, minutes, isPast });
-    };
-    
-    // Calculate immediately
-    calculateCountdown();
-    
-    // Update every minute
-    const interval = setInterval(calculateCountdown, 60000);
-    
+    const interval = setInterval(() => setClockNow(Date.now()), 60_000);
     return () => clearInterval(interval);
-  }, [nextScanAt]);
+  }, []);
+
+  const countdown = useMemo(() => {
+    if (!nextScanAt) return null;
+    const diffMs = nextScanAt.getTime() - clockNow;
+    const absDiffMs = Math.abs(diffMs);
+    return {
+      days: Math.floor(absDiffMs / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((absDiffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+      minutes: Math.floor((absDiffMs % (1000 * 60 * 60)) / (1000 * 60)),
+      isPast: diffMs <= 0,
+    };
+  }, [clockNow, nextScanAt]);
   
   // ==========================================================================
   // DETERMINE CURRENT STATE
@@ -141,6 +125,17 @@ export function ScanCountdown() {
       return 'locked';
     }
 
+    // Insufficient credit automatically switches auto-scan off. Check the
+    // balance before the generic off state so the customer sees the real
+    // reason and the existing upgrade action instead of a misleading "Off".
+    // A customer who has credit and manually opts out still sees "Off" below.
+    if (creditsEnabled && credits) {
+      const topicCredits = credits.topicSearches;
+      if (!topicCredits.unlimited && topicCredits.remaining <= 0) {
+        return 'no_credits';
+      }
+    }
+
     // 2026-08-03 (Paras): user opted out of the weekly scan. Strict === false
     // so a missing column (pre-migration) keeps today's behavior. Must come
     // before the isPast check — see the ScanState comment above.
@@ -151,14 +146,6 @@ export function ScanCountdown() {
     // Paid but scan is overdue (cron will pick it up soon)
     if (countdown?.isPast) {
       return 'scanning';
-    }
-    
-    // Paid but no credits (only check if credits feature is enabled)
-    if (creditsEnabled && credits) {
-      const topicCredits = credits.topicSearches;
-      if (!topicCredits.unlimited && topicCredits.remaining <= 0) {
-        return 'no_credits';
-      }
     }
     
     // Paid with credits - show countdown
