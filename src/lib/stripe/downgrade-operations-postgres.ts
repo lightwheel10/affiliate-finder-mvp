@@ -295,6 +295,83 @@ export async function completeStripeDowngradeOperation(
   throw new Error('Stripe downgrade operation could not be completed safely.');
 }
 
+/**
+ * Binds the Stripe schedule created for a prepared downgrade before its phases
+ * are configured. This closes the create/update crash window: a retry can use
+ * only the exact schedule already recorded for this immutable operation.
+ */
+export async function bindStripeDowngradeOperationSchedule(
+  transaction: StripeDowngradeOperationSql,
+  input: {
+    userId: number;
+    operationId: string;
+    stripeScheduleId: string;
+  },
+): Promise<StripeDowngradeOperation> {
+  assertStripeDowngradeOperationId(input.operationId);
+  const updated = await transaction<OperationRow[]>`
+    UPDATE crewcast.stripe_downgrade_operations
+    SET stripe_schedule_id = ${input.stripeScheduleId}
+    WHERE operation_id = ${input.operationId}::uuid
+      AND user_id = ${input.userId}
+      AND status = 'prepared'
+      AND stripe_schedule_id IS NULL
+    RETURNING
+      operation_id::text AS operation_id,
+      request_fingerprint,
+      stripe_customer_id,
+      stripe_subscription_id,
+      from_plan,
+      from_billing_interval,
+      source_period_end_seconds::text,
+      to_plan,
+      to_billing_interval,
+      capacity_selection_version,
+      retained_brand_ids::text[] AS retained_brand_ids,
+      retained_location_ids::text[] AS retained_location_ids,
+      status,
+      stripe_schedule_id,
+      effective_at::text AS effective_at,
+      created_at::text AS created_at
+  `;
+  if (updated.length === 1) return mapRow(updated[0]);
+
+  const existing = await transaction<OperationRow[]>`
+    SELECT
+      operation_id::text AS operation_id,
+      request_fingerprint,
+      stripe_customer_id,
+      stripe_subscription_id,
+      from_plan,
+      from_billing_interval,
+      source_period_end_seconds::text,
+      to_plan,
+      to_billing_interval,
+      capacity_selection_version,
+      retained_brand_ids::text[] AS retained_brand_ids,
+      retained_location_ids::text[] AS retained_location_ids,
+      status,
+      stripe_schedule_id,
+      effective_at::text AS effective_at,
+      created_at::text AS created_at
+    FROM crewcast.stripe_downgrade_operations
+    WHERE operation_id = ${input.operationId}::uuid
+      AND user_id = ${input.userId}
+    LIMIT 1
+    FOR UPDATE
+  `;
+  if (
+    existing.length === 1
+    && existing[0].status === 'prepared'
+    && existing[0].stripe_schedule_id === input.stripeScheduleId
+  ) {
+    return mapRow(existing[0]);
+  }
+  throw new StripeDowngradeOperationConflictError(
+    'The prepared downgrade is already bound to a different Stripe schedule.',
+  );
+}
+
 export async function readPreparedStripeDowngradeOperation(
   transaction: StripeDowngradeOperationSql,
   input: { userId: number; operationId: string },

@@ -36,6 +36,8 @@ interface ScheduleClient {
 export interface DeferredDowngradeInput {
   subscription: Stripe.Subscription;
   operationId: string;
+  preparedScheduleId?: string | null;
+  onScheduleAttached?: (scheduleId: string) => Promise<void>;
   sourcePlan: 'pro' | 'business' | 'enterprise';
   sourceBillingInterval: BillingInterval;
   targetPlan: PaidPlan;
@@ -362,24 +364,62 @@ export async function ensureDeferredDowngradeSchedule(
 
   if (attachedScheduleId) {
     schedule = await schedules.retrieve(attachedScheduleId);
-    if (!isManagedPlanSchedule(schedule)) {
+    if (
+      input.preparedScheduleId
+      && input.preparedScheduleId !== attachedScheduleId
+    ) {
       throw new UnsupportedSubscriptionScheduleError(
-        'This subscription already has a Stripe schedule that is not managed by this application.',
+        'The prepared downgrade is bound to a different Stripe schedule.',
       );
     }
+
+    if (!isManagedPlanSchedule(schedule)) {
+      const hasApplicationOwnershipMetadata = Boolean(
+        schedule.metadata?.managed_by
+        || schedule.metadata?.change_kind
+        || schedule.metadata?.[STRIPE_DOWNGRADE_OPERATION_METADATA_KEY],
+      );
+      if (hasApplicationOwnershipMetadata) {
+        throw new UnsupportedSubscriptionScheduleError(
+          'This subscription has incomplete or conflicting schedule ownership metadata.',
+        );
+      }
+
+      // Stripe requires `from_subscription` to be the only create parameter.
+      // If the process stopped after that create but before the schedule update,
+      // replay the exact idempotent create to prove this is the schedule created
+      // by this operation. Never adopt an arbitrary unmarked schedule.
+      if (input.preparedScheduleId !== attachedScheduleId) {
+        let replayed: Stripe.SubscriptionSchedule;
+        try {
+          replayed = await schedules.create(
+            { from_subscription: input.subscription.id },
+            { idempotencyKey: requestKey('create-plan-downgrade-v2', input) },
+          );
+        } catch {
+          throw new UnsupportedSubscriptionScheduleError(
+            'The attached Stripe schedule cannot be proven to belong to this downgrade operation.',
+          );
+        }
+        if (replayed.id !== attachedScheduleId) {
+          throw new UnsupportedSubscriptionScheduleError(
+            'Stripe returned a different schedule for this downgrade operation.',
+          );
+        }
+        schedule = replayed;
+      }
+    }
+  } else if (input.preparedScheduleId) {
+    // Stripe can briefly lag when reflecting a newly attached schedule on the
+    // subscription. The durable database binding is safe to retrieve directly.
+    schedule = await schedules.retrieve(input.preparedScheduleId);
   } else {
+    // Stripe's current API requires a two-call flow when adopting an existing
+    // subscription: create with only `from_subscription`, then update the new
+    // schedule with metadata, end behavior and phases.
     schedule = await schedules.create(
-      {
-        from_subscription: input.subscription.id,
-        end_behavior: 'release',
-        metadata: {
-          managed_by: MANAGED_PLAN_SCHEDULE_OWNER,
-          change_kind: MANAGED_PLAN_SCHEDULE_KIND,
-          account_id: String(input.accountId),
-          [STRIPE_DOWNGRADE_OPERATION_METADATA_KEY]: input.operationId,
-        },
-      },
-      { idempotencyKey: requestKey('create-plan-downgrade', input) },
+      { from_subscription: input.subscription.id },
+      { idempotencyKey: requestKey('create-plan-downgrade-v2', input) },
     );
   }
 
@@ -392,6 +432,23 @@ export async function ensureDeferredDowngradeSchedule(
     throw new UnsupportedSubscriptionScheduleError(
       `The Stripe schedule is ${schedule.status}, not active.`,
     );
+  }
+
+  if (input.onScheduleAttached) {
+    await input.onScheduleAttached(schedule.id);
+  }
+
+  if (!isManagedPlanSchedule(schedule)) {
+    const hasApplicationOwnershipMetadata = Boolean(
+      schedule.metadata?.managed_by
+      || schedule.metadata?.change_kind
+      || schedule.metadata?.[STRIPE_DOWNGRADE_OPERATION_METADATA_KEY],
+    );
+    if (hasApplicationOwnershipMetadata) {
+      throw new UnsupportedSubscriptionScheduleError(
+        'This subscription has incomplete or conflicting schedule ownership metadata.',
+      );
+    }
   }
 
   const currentPhase = locateCurrentPhase(schedule);

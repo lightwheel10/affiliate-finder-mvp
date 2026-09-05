@@ -129,12 +129,18 @@ test('creates a two-phase downgrade without changing the active phase', async ()
     effectiveAtSeconds: 1_802_592_000,
   });
   assert.deepEqual(calls.map((call) => call.method), ['create', 'update']);
-  const createCall = calls[0].value as { options: Stripe.RequestOptions };
+  const createCall = calls[0].value as {
+    params: Stripe.SubscriptionScheduleCreateParams;
+    options: Stripe.RequestOptions;
+  };
   const updateCall = calls[1].value as {
     params: Stripe.SubscriptionScheduleUpdateParams;
     options: Stripe.RequestOptions;
   };
   assert.match(createCall.options.idempotencyKey ?? '', /:operation-create$/);
+  assert.deepEqual(createCall.params, { from_subscription: 'sub_test' });
+  assert.equal('end_behavior' in createCall.params, false);
+  assert.equal('metadata' in createCall.params, false);
   assert.match(updateCall.options.idempotencyKey ?? '', /:operation-create$/);
   const update = updateCall.params;
   assert.equal(update.proration_behavior, 'none');
@@ -186,6 +192,87 @@ test('updates an existing managed schedule instead of creating another one', asy
   assert.equal(result.scheduleId, 'sub_sched_test');
   assert.equal(creates, 0);
   assert.equal(updates, 1);
+});
+
+test('binds the exact attached schedule before configuring its phases', async () => {
+  const baseSchedule = schedule();
+  const bound: string[] = [];
+  await ensureDeferredDowngradeSchedule({
+    create: async () => baseSchedule,
+    retrieve: async () => baseSchedule,
+    update: async (_id, params) => ({
+      ...baseSchedule,
+      metadata: params.metadata as Record<string, string>,
+    }),
+    release: async () => baseSchedule,
+  }, {
+    subscription: subscription(),
+    operationId: 'operation-bind',
+    sourcePlan: 'business',
+    sourceBillingInterval: 'monthly',
+    targetPlan: 'pro',
+    targetBillingInterval: 'monthly',
+    targetPriceId: 'price_pro_month',
+    accountId: 42,
+    changedAt: '2026-09-03T10:00:00.000Z',
+    onScheduleAttached: async (scheduleId) => { bound.push(scheduleId); },
+  });
+  assert.deepEqual(bound, ['sub_sched_test']);
+});
+
+test('recovers only the exact unmarked schedule returned by the idempotent create replay', async () => {
+  const unmarked = schedule();
+  let creates = 0;
+  let updates = 0;
+  const result = await ensureDeferredDowngradeSchedule({
+    create: async (params) => {
+      creates += 1;
+      assert.deepEqual(params, { from_subscription: 'sub_test' });
+      return unmarked;
+    },
+    retrieve: async () => unmarked,
+    update: async (_id, params) => {
+      updates += 1;
+      return { ...unmarked, metadata: params.metadata as Record<string, string> };
+    },
+    release: async () => unmarked,
+  }, {
+    subscription: subscription('sub_sched_test'),
+    operationId: 'operation-replay',
+    sourcePlan: 'business',
+    sourceBillingInterval: 'monthly',
+    targetPlan: 'pro',
+    targetBillingInterval: 'monthly',
+    targetPriceId: 'price_pro_month',
+    accountId: 42,
+    changedAt: '2026-09-03T10:00:00.000Z',
+  });
+  assert.equal(result.scheduleId, 'sub_sched_test');
+  assert.equal(creates, 1);
+  assert.equal(updates, 1);
+});
+
+test('refuses to adopt an unmarked attached schedule that the idempotent replay cannot prove', async () => {
+  const unmarked = schedule();
+  await assert.rejects(
+    ensureDeferredDowngradeSchedule({
+      create: async () => ({ ...unmarked, id: 'sub_sched_other' }),
+      retrieve: async () => unmarked,
+      update: async () => unmarked,
+      release: async () => unmarked,
+    }, {
+      subscription: subscription('sub_sched_test'),
+      operationId: 'operation-wrong-replay',
+      sourcePlan: 'business',
+      sourceBillingInterval: 'monthly',
+      targetPlan: 'pro',
+      targetBillingInterval: 'monthly',
+      targetPriceId: 'price_pro_month',
+      accountId: 42,
+      changedAt: '2026-09-03T10:00:00.000Z',
+    }),
+    /different schedule/i,
+  );
 });
 
 test('refuses to overwrite a schedule owned outside the application', async () => {

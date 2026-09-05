@@ -6,6 +6,7 @@ import { config as loadEnvironment } from 'dotenv';
 import postgres from 'postgres';
 import type Stripe from 'stripe';
 import {
+  bindStripeDowngradeOperationSchedule,
   completeStripeDowngradeOperation,
   prepareStripeDowngradeOperation,
   recoverPreparedStripeDowngradeOperation,
@@ -94,6 +95,11 @@ async function verifyMigration(): Promise<void> {
       version: '0028',
       name: 'resilient_stripe_payment_method_recovery',
       file: '0028_resilient_stripe_payment_method_recovery.up.sql',
+    },
+    {
+      version: '0029',
+      name: 'durable_downgrade_schedule_attachment',
+      file: '0029_durable_downgrade_schedule_attachment.up.sql',
     },
   ];
   for (const migration of expectedMigrations) {
@@ -337,8 +343,26 @@ async function verifyDowngradeCrashRecovery(userId: number): Promise<void> {
   );
 
   const operation = attempts[0];
+  const scheduleId = `sub_sched_codex_${token}`;
+  const bound = await Promise.all(Array.from({ length: 50 }, () =>
+    sql.begin((transaction) => bindStripeDowngradeOperationSchedule(transaction, {
+      userId,
+      operationId: operation.operationId,
+      stripeScheduleId: scheduleId,
+    }))));
+  assert.equal(bound.every((row) => row.status === 'prepared'), true);
+  assert.equal(bound.every((row) => row.stripeScheduleId === scheduleId), true);
+  await assert.rejects(
+    sql.begin((transaction) => bindStripeDowngradeOperationSchedule(transaction, {
+      userId,
+      operationId: operation.operationId,
+      stripeScheduleId: `sub_sched_other_${token}`,
+    })),
+    StripeDowngradeOperationConflictError,
+  );
+
   const schedule = {
-    id: `sub_sched_codex_${token}`,
+    id: scheduleId,
     status: 'active',
     subscription: operation.stripeSubscriptionId,
     metadata: {

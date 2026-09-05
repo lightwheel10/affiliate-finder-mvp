@@ -29,6 +29,7 @@ import {
   type SubscriptionPlanChangeSql,
 } from '@/lib/stripe/subscription-plan-changes-postgres';
 import {
+  bindStripeDowngradeOperationSchedule,
   completeStripeDowngradeOperation,
   prepareStripeDowngradeOperation,
   StripeDowngradeOperationConflictError,
@@ -505,20 +506,36 @@ export async function POST(request: NextRequest) {
             },
           );
         }
-        const scheduled = await ensureDeferredDowngradeSchedule(
-          stripe.subscriptionSchedules,
-          {
-            subscription: sourceSubscription,
-            operationId: confirmedOperation.operationId,
-            sourcePlan: effectiveCurrentPlan,
-            sourceBillingInterval: effectiveCurrentInterval,
-            targetPlan: newPlan,
-            targetBillingInterval: newBillingInterval,
-            targetPriceId: newPriceId,
-            accountId: userId,
-            changedAt: confirmedOperation.createdAt,
-          },
-        );
+        let scheduled;
+        try {
+          scheduled = await ensureDeferredDowngradeSchedule(
+            stripe.subscriptionSchedules,
+            {
+              subscription: sourceSubscription,
+              operationId: confirmedOperation.operationId,
+              preparedScheduleId: confirmedOperation.stripeScheduleId,
+              onScheduleAttached: async (stripeScheduleId) => {
+                await bindStripeDowngradeOperationSchedule(transaction, {
+                  userId,
+                  operationId: confirmedOperation.operationId,
+                  stripeScheduleId,
+                });
+              },
+              sourcePlan: effectiveCurrentPlan,
+              sourceBillingInterval: effectiveCurrentInterval,
+              targetPlan: newPlan,
+              targetBillingInterval: newBillingInterval,
+              targetPriceId: newPriceId,
+              accountId: userId,
+              changedAt: confirmedOperation.createdAt,
+            },
+          );
+        } catch (scheduleError) {
+          // Commit a successfully attached schedule binding even when Stripe's
+          // second configuration call is temporarily unavailable. A retry can
+          // then resume only this exact schedule instead of guessing.
+          return { scheduleError, capacity } as const;
+        }
         const effectiveAt = new Date(scheduled.effectiveAtSeconds * 1000).toISOString();
 
         await recordDeferredPlanChange(transaction, {
@@ -547,8 +564,11 @@ export async function POST(request: NextRequest) {
             AND stripe_customer_id = ${stripe_customer_id}
             AND stripe_subscription_id = ${stripe_subscription_id}
         `;
-        return { effectiveAt, capacity };
+        return { effectiveAt, capacity, scheduleError: null } as const;
       });
+      if (scheduledResult.scheduleError) {
+        throw scheduledResult.scheduleError;
+      }
       const { effectiveAt, capacity } = scheduledResult;
 
       return NextResponse.json({

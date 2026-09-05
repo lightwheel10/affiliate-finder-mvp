@@ -232,6 +232,14 @@
       "down": "0028_resilient_stripe_payment_method_recovery.down.sql",
       "upSha256": "51ed4e81c2041196fe1c782456cc38485944b315f86d4161aa4e5b48865c0218",
       "downSha256": "fa4a88658429278496a5ecaf4eb2e7ba3702af6379586b8eaf52a2767a23a4b7"
+    },
+    {
+      "version": "0029",
+      "name": "durable_downgrade_schedule_attachment",
+      "up": "0029_durable_downgrade_schedule_attachment.up.sql",
+      "down": "0029_durable_downgrade_schedule_attachment.down.sql",
+      "upSha256": "79124afce27833b8bdad5c649acef42c0d99e8572da40c422aaf2c320ba0c65d",
+      "downSha256": "5558c114d21515fb86c2375905163bba4eda0167c07e71c57f282e03c8db15c0"
     }
   ]
 }
