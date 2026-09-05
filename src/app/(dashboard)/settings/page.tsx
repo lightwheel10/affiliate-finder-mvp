@@ -159,45 +159,62 @@ export default function SettingsPage() {
   };
   const [creditPurchaseSuccess, setCreditPurchaseSuccess] = useState(false);
   const [creditPurchaseCancelled, setCreditPurchaseCancelled] = useState(false);
+  const [creditPurchaseVerificationError, setCreditPurchaseVerificationError] = useState(false);
 
   // Sync tab from URL and handle credit_purchase=success | cancelled
   useEffect(() => {
     if (!searchParams) return;
     const purchase = searchParams.get('credit_purchase');
     if (purchase === 'success') {
-      setCreditPurchaseSuccess(true);
+      if (!userId) return;
+      const sessionId = searchParams.get('session_id');
+      let disposed = false;
+      setCreditPurchaseSuccess(false);
       setCreditPurchaseCancelled(false);
-      // February 2026: Fallback fulfillment -- call /api/credits/fulfill to process
-      // any pending purchases in case the Stripe webhook hasn't fired yet.
-      // This is safe because addTopupCredits is idempotent (won't double-add).
-      if (userId) {
-        fetch('/api/credits/fulfill', {
+      setCreditPurchaseVerificationError(false);
+      const verifyPurchase = async () => {
+        try {
+          const response = await fetch('/api/credits/fulfill', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId }),
-        })
-          .then(r => r.json())
-          .then(data => {
-            console.log('[Settings] Fulfill response:', data);
-            // Refresh credits after fulfillment attempt
-            window.dispatchEvent(new CustomEvent('credits-updated'));
-          })
-          .catch(err => {
-            console.error('[Settings] Fulfill failed:', err);
-            // Still try to refresh credits (webhook may have handled it)
-            window.dispatchEvent(new CustomEvent('credits-updated'));
+            body: JSON.stringify({ userId, ...(sessionId ? { sessionId } : {}) }),
           });
-      } else {
-        window.dispatchEvent(new CustomEvent('credits-updated'));
-      }
-      const url = new URL(window.location.href);
-      url.searchParams.delete('credit_purchase');
-      window.history.replaceState({}, '', url.toString());
+          const data = await response.json() as {
+            fulfilled?: number;
+            alreadyApplied?: number;
+          };
+          if (disposed) return;
+          const verified = response.ok
+            && ((data.fulfilled ?? 0) > 0 || (data.alreadyApplied ?? 0) > 0);
+          setCreditPurchaseSuccess(verified);
+          setCreditPurchaseVerificationError(!verified);
+          window.dispatchEvent(new CustomEvent('credits-updated'));
+        } catch (error) {
+          if (!disposed) {
+            console.error('[Settings] Purchase verification failed:', error);
+            setCreditPurchaseVerificationError(true);
+            window.dispatchEvent(new CustomEvent('credits-updated'));
+          }
+        } finally {
+          if (!disposed) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('credit_purchase');
+            url.searchParams.delete('session_id');
+            window.history.replaceState({}, '', url.toString());
+          }
+        }
+      };
+      void verifyPurchase();
+      return () => {
+        disposed = true;
+      };
     } else if (purchase === 'cancelled') {
       setCreditPurchaseCancelled(true);
       setCreditPurchaseSuccess(false);
+      setCreditPurchaseVerificationError(false);
       const url = new URL(window.location.href);
       url.searchParams.delete('credit_purchase');
+      url.searchParams.delete('session_id');
       window.history.replaceState({}, '', url.toString());
     }
   }, [searchParams, userId]);
@@ -356,8 +373,10 @@ export default function SettingsPage() {
                       isTrialing={isTrialing}
                       creditPurchaseSuccess={creditPurchaseSuccess}
                       creditPurchaseCancelled={creditPurchaseCancelled}
+                      creditPurchaseVerificationError={creditPurchaseVerificationError}
                       onDismissPurchaseSuccess={() => setCreditPurchaseSuccess(false)}
                       onDismissPurchaseCancelled={() => setCreditPurchaseCancelled(false)}
+                      onDismissPurchaseVerificationError={() => setCreditPurchaseVerificationError(false)}
                     />
                   )}
                   {activeTab === 'blocked_domains' && <BlockedDomainsSettings />}
@@ -1626,15 +1645,19 @@ interface BuyCreditsSettingsProps {
   isTrialing?: boolean;
   creditPurchaseSuccess?: boolean;
   creditPurchaseCancelled?: boolean;
+  creditPurchaseVerificationError?: boolean;
   onDismissPurchaseSuccess?: () => void;
   onDismissPurchaseCancelled?: () => void;
+  onDismissPurchaseVerificationError?: () => void;
 }
 
-function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess = false, creditPurchaseCancelled = false, onDismissPurchaseSuccess, onDismissPurchaseCancelled }: BuyCreditsSettingsProps) {
+function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess = false, creditPurchaseCancelled = false, creditPurchaseVerificationError = false, onDismissPurchaseSuccess, onDismissPurchaseCancelled, onDismissPurchaseVerificationError }: BuyCreditsSettingsProps) {
   const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState<'email' | 'ai' | 'search'>('email');
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const purchaseInFlightRef = useRef(false);
+  const purchaseRequestRef = useRef<{ packId: string; requestId: string } | null>(null);
 
   // April 28, 2026: i18n-migrated — labels/descriptions previously hardcoded English.
   const categories = [
@@ -1644,17 +1667,25 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
   ];
 
   const handlePurchase = async (packId: string) => {
-    if (!userId) return;
+    if (!userId || purchaseInFlightRef.current) return;
+    purchaseInFlightRef.current = true;
+    const purchaseRequest = purchaseRequestRef.current?.packId === packId
+      ? purchaseRequestRef.current
+      : { packId, requestId: crypto.randomUUID() };
+    purchaseRequestRef.current = purchaseRequest;
     setPurchasingId(packId);
     setPurchaseError(null);
     try {
       const res = await fetch('/api/stripe/buy-credits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, packId }),
+        body: JSON.stringify({ userId, packId, requestId: purchaseRequest.requestId }),
       });
-      const data = await res.json();
+      const data = await res.json() as { url?: string; code?: string };
       if (!res.ok) {
+        if (data.code === 'CHECKOUT_EXPIRED' || data.code === 'CHECKOUT_REQUEST_CONFLICT') {
+          purchaseRequestRef.current = null;
+        }
         // April 28, 2026: i18n migration — server's `data.error` is dropped
         // since it's English. Always show the translated fallback.
         setPurchaseError(t.dashboard.settings.buyCredits.errors.failedToStartCheckout);
@@ -1665,9 +1696,10 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
         return;
       }
       setPurchaseError(t.dashboard.settings.buyCredits.errors.invalidResponse);
-    } catch (err) {
+    } catch {
       setPurchaseError(t.dashboard.settings.buyCredits.errors.networkError);
     } finally {
+      purchaseInFlightRef.current = false;
       setPurchasingId(null);
     }
   };
@@ -1696,6 +1728,16 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
           <span className="text-sm font-semibold text-[#0f172a] dark:text-gray-200">{t.dashboard.settings.buyCredits.callouts.purchaseCancelled}</span>
           {onDismissPurchaseCancelled && (
             <button type="button" onClick={onDismissPurchaseCancelled} className="text-sm font-semibold text-[#425466] dark:text-gray-300 hover:text-[#0f172a] dark:hover:text-white transition-colors">
+              {t.dashboard.settings.buyCredits.callouts.dismiss}
+            </button>
+          )}
+        </div>
+      )}
+      {creditPurchaseVerificationError && (
+        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-500 flex items-center justify-between">
+          <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">{t.dashboard.settings.buyCredits.errors.verificationPending}</span>
+          {onDismissPurchaseVerificationError && (
+            <button type="button" onClick={onDismissPurchaseVerificationError} className="text-sm font-semibold text-amber-700 dark:text-amber-300 hover:underline transition-colors">
               {t.dashboard.settings.buyCredits.callouts.dismiss}
             </button>
           )}

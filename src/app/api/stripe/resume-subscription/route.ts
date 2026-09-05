@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
@@ -6,6 +8,17 @@ import {
   assertLegacyAccountId,
   requireAuthenticatedAccount,
 } from '@/lib/auth/account';
+import { snapshotStripeSubscription } from '@/lib/stripe/subscription-state';
+import {
+  readStripeMutationJson,
+  StripeMutationRequestError,
+} from '@/lib/stripe/mutation-request';
+import { subscriptionLifecycleMutationIdempotencyKey } from '@/lib/stripe/subscription-creation';
+
+const resumeSubscriptionSchema = z.object({
+  userId: z.number().int().positive(),
+  requestId: z.uuid().optional(),
+}).strict();
 
 // =============================================================================
 // POST /api/stripe/resume-subscription
@@ -29,8 +42,14 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const authenticated = await requireAuthenticatedAccount();
 
-    const body = await request.json();
-    const { userId: legacyUserId } = body;
+    const parsedBody = resumeSubscriptionSchema.safeParse(await readStripeMutationJson(request));
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Invalid request input.', code: 'INVALID_INPUT' },
+        { status: 400 },
+      );
+    }
+    const { userId: legacyUserId, requestId } = parsedBody.data;
 
     // ==========================================================================
     // INPUT VALIDATION
@@ -60,7 +79,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { stripe_subscription_id, cancel_at_period_end } = subscriptions[0];
+    const { stripe_subscription_id, stripe_customer_id } = subscriptions[0];
 
     if (!stripe_subscription_id) {
       return NextResponse.json(
@@ -69,9 +88,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!cancel_at_period_end) {
+    if (!stripe_customer_id) {
       return NextResponse.json(
-        { error: 'Subscription is not set to cancel' },
+        { error: 'No Stripe customer found' },
         { status: 400 }
       );
     }
@@ -81,26 +100,57 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     console.log(`[Stripe] Resuming subscription ${stripe_subscription_id} for user ${userId}`);
 
-    const subscription = await stripe.subscriptions.update(stripe_subscription_id, {
-      cancel_at_period_end: false,
+    const currentSubscription = await stripe.subscriptions.retrieve(stripe_subscription_id);
+    const currentSnapshot = snapshotStripeSubscription(currentSubscription, {
+      proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+      proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+      businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+      businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
     });
+    if (currentSnapshot.customerId !== stripe_customer_id) {
+      throw new Error('The stored Stripe subscription belongs to a different customer.');
+    }
+    const subscription = currentSnapshot.cancelAtPeriodEnd
+      ? await stripe.subscriptions.update(
+          stripe_subscription_id,
+          { cancel_at_period_end: false },
+          {
+            idempotencyKey: subscriptionLifecycleMutationIdempotencyKey(
+              'resume',
+              stripe_customer_id,
+              stripe_subscription_id,
+              requestId ?? randomUUID(),
+            ),
+          },
+        )
+      : currentSubscription;
 
-    // Access subscription properties safely with validation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subObj = subscription as any;
-    const periodEndTimestamp = typeof subObj.current_period_end === 'number' ? subObj.current_period_end : null;
-    const periodEndIso = periodEndTimestamp ? new Date(periodEndTimestamp * 1000).toISOString() : null;
+    const updatedSnapshot = snapshotStripeSubscription(subscription, {
+      proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+      proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+      businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+      businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
+    });
+    const periodEndIso = updatedSnapshot.currentPeriodEndSeconds
+      ? new Date(updatedSnapshot.currentPeriodEndSeconds * 1000).toISOString()
+      : null;
 
     // ==========================================================================
     // UPDATE DATABASE
     // ==========================================================================
-    await sql`
+    const updated = await sql<{ user_id: number }[]>`
       UPDATE crewcast.subscriptions
       SET
         cancel_at_period_end = false,
         updated_at = NOW()
       WHERE user_id = ${userId}
+        AND stripe_customer_id = ${stripe_customer_id}
+        AND stripe_subscription_id = ${stripe_subscription_id}
+      RETURNING user_id
     `;
+    if (updated.length !== 1) {
+      throw new Error('Resume did not update exactly one application subscription.');
+    }
 
     console.log(`[Stripe] Subscription ${stripe_subscription_id} resumed`);
 
@@ -109,12 +159,18 @@ export async function POST(request: NextRequest) {
       subscription: {
         id: subscription.id,
         status: subscription.status,
-        cancelAtPeriodEnd: !!subObj.cancel_at_period_end,
+        cancelAtPeriodEnd: updatedSnapshot.cancelAtPeriodEnd,
         currentPeriodEnd: periodEndIso,
       },
     });
 
   } catch (error) {
+    if (error instanceof StripeMutationRequestError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
     if (error instanceof AccountAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }

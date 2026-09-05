@@ -55,7 +55,7 @@ import { StripeProvider } from './StripeProvider';
 import { Step7CardForm } from './Step7CardForm';
 import { AnalyzingScreen } from './AnalyzingScreen';
 import { FindingAffiliatesScreen } from './FindingAffiliatesScreen';
-import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
+import { CURRENCY_SYMBOL, getStripe } from '@/lib/stripe-client';
 import {
   MARKET_COUNTRIES as countries,
   MARKET_LANGUAGES as languages,
@@ -825,6 +825,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           userId,
           email: userEmail,
           papCookie: papCookie || undefined,
+          requestId: crypto.randomUUID(),
         }),
       });
 
@@ -843,25 +844,68 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       }
 
 
-      // Step 3: Create subscription with the verified PaymentMethod
-      const subscriptionRes = await fetch('/api/stripe/create-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          plan: selectedPlan,
-          billingInterval,
-          paymentMethodId: setupResult.paymentMethodId,
-          promotionCodeId: promotionCodeId || undefined,
-        }),
-      });
+      // Step 3: Create the subscription. First-time accounts normally enter
+      // their trial immediately. Returning accounts are charged now and Stripe
+      // may require an on-session 3DS confirmation before access is unlocked.
+      const subscriptionPayload = {
+        userId,
+        plan: selectedPlan,
+        billingInterval,
+        paymentMethodId: setupResult.paymentMethodId,
+        promotionCodeId: promotionCodeId || undefined,
+      };
+      const createSubscription = async () => {
+        const response = await fetch('/api/stripe/create-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(subscriptionPayload),
+        });
+        const data = await response.json().catch(() => ({})) as {
+          success?: boolean;
+          error?: string;
+          code?: string;
+          clientSecret?: string;
+          subscription?: { status?: string };
+        };
+        return { response, data };
+      };
 
-      if (!subscriptionRes.ok) {
-        const errorData = await subscriptionRes.json();
-        throw new Error(errorData.error || 'Failed to create subscription');
+      let subscriptionAttempt = await createSubscription();
+      if (subscriptionAttempt.data.code === 'PAYMENT_ACTION_REQUIRED') {
+        if (!subscriptionAttempt.data.clientSecret) {
+          throw new Error('Stripe could not start secure payment confirmation. Please try again.');
+        }
+        const stripeClient = await getStripe();
+        if (!stripeClient) {
+          throw new Error('Payment system is not ready. Please refresh the page.');
+        }
+        const confirmation = await stripeClient.confirmCardPayment(
+          subscriptionAttempt.data.clientSecret,
+          { payment_method: setupResult.paymentMethodId },
+        );
+        if (confirmation.error) {
+          throw new Error(confirmation.error.message || 'Payment confirmation failed.');
+        }
+        if (confirmation.paymentIntent?.status !== 'succeeded') {
+          throw new Error('Your payment is still processing. Please try again shortly.');
+        }
+
+        // Re-submit the identical request. The server recovers the same Stripe
+        // subscription and atomically records its now-paid state and credits.
+        subscriptionAttempt = await createSubscription();
       }
 
-      await subscriptionRes.json();
+      if (!subscriptionAttempt.response.ok || !subscriptionAttempt.data.success) {
+        throw new Error(
+          subscriptionAttempt.data.error || 'Failed to create subscription',
+        );
+      }
+      if (
+        subscriptionAttempt.data.subscription?.status !== 'active'
+        && subscriptionAttempt.data.subscription?.status !== 'trialing'
+      ) {
+        throw new Error('Your subscription is not active yet. Please try again shortly.');
+      }
 
       // Step 4: Complete onboarding data
       const onboardingRes = await fetch('/api/users/onboarding', {

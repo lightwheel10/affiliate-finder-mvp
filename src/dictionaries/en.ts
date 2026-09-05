@@ -1012,6 +1012,7 @@ export const en: Dictionary = {
           failedToStartCheckout: 'Failed to start checkout',
           invalidResponse: 'Invalid response from server',
           networkError: 'Network error. Please try again.',
+          verificationPending: 'We could not verify this purchase yet. No credits were added. Please refresh shortly.',
         },
         header: {
           title: 'Top Up Credits',

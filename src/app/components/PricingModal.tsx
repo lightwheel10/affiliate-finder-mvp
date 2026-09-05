@@ -47,7 +47,7 @@ import Link from 'next/link';
 import { Check, Zap, Loader2, Star, ShieldCheck, TrendingUp, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Modal } from './Modal';
-import { CURRENCY_SYMBOL, PLAN_PRICING } from '@/lib/stripe-client';
+import { CURRENCY_SYMBOL, getStripe, PLAN_PRICING } from '@/lib/stripe-client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DowngradeCapacityStep } from './DowngradeCapacityStep';
 import { PLAN_CATALOG, type PurchasablePlanId } from '@/lib/plans/catalog';
@@ -87,6 +87,41 @@ interface DowngradeFlowState {
   maxBrands: number;
   maxLocations: number;
   selection: DowngradeRetentionSelection;
+}
+
+async function waitForConfirmedSubscription(
+  userId: number,
+  plan: string,
+  billingInterval: string,
+): Promise<boolean> {
+  // Stripe applies a successfully paid pending update immediately, while the
+  // signed webhook safely copies that state into PostgreSQL. Poll only this
+  // account's authenticated read endpoint so the modal never announces an
+  // upgrade before both systems agree.
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const response = await fetch(`/api/subscriptions?userId=${encodeURIComponent(String(userId))}`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (response.ok) {
+      const data = await response.json() as {
+        subscription?: {
+          plan?: unknown;
+          billing_interval?: unknown;
+          status?: unknown;
+        } | null;
+      };
+      if (
+        data.subscription?.plan === plan
+        && data.subscription.billing_interval === billingInterval
+        && (data.subscription.status === 'active' || data.subscription.status === 'trialing')
+      ) {
+        return true;
+      }
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 750));
+  }
+  return false;
 }
 
 // =============================================================================
@@ -311,6 +346,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     endTrialNow: boolean,
     downgradeRetention?: DowngradeRetentionSelection,
   ) => {
+    if (!userId) {
+      setError(t.pricingModal.signInRequired);
+      return;
+    }
+    const accountId = userId;
     setIsLoading(newPlan);
     setError(null);
     setShowTrialEndOption(false);
@@ -321,7 +361,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
+          userId: accountId,
           newPlan,
           newBillingInterval: newInterval,
           endTrialNow,
@@ -332,6 +372,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       const data = await response.json() as {
         error?: string;
         code?: string;
+        clientSecret?: string;
+        invoiceId?: string;
         capacityRestoration?: {
           status: 'none' | 'restored' | 'selection_required';
           restoredBrands: number;
@@ -339,7 +381,30 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         };
       };
 
-      if (!response.ok || data.error) {
+      if (data.code === 'PAYMENT_ACTION_REQUIRED') {
+        if (!data.clientSecret) {
+          throw new Error('Stripe could not start secure payment confirmation. Please try again.');
+        }
+        const stripeClient = await getStripe();
+        if (!stripeClient) {
+          throw new Error('Payment system is not ready. Please refresh the page.');
+        }
+        const confirmation = await stripeClient.confirmCardPayment(data.clientSecret);
+        if (confirmation.error) {
+          throw new Error(confirmation.error.message || 'Payment confirmation failed.');
+        }
+        if (confirmation.paymentIntent?.status !== 'succeeded') {
+          throw new Error('Your payment is still processing. Please check your plan again shortly.');
+        }
+        const synchronized = await waitForConfirmedSubscription(
+          accountId,
+          newPlan,
+          newInterval,
+        );
+        if (!synchronized) {
+          throw new Error('Payment succeeded, but the plan is still being activated. Please refresh shortly.');
+        }
+      } else if (!response.ok || data.error) {
         if (data.code === 'DOWNGRADE_SELECTION_REQUIRED') {
           await prepareDowngradeChoice(
             newPlan as PurchasablePlanId,

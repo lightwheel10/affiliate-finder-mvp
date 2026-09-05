@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { z } from 'zod';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
@@ -7,6 +8,10 @@ import {
   assertLegacyAccountId,
   requireAuthenticatedAccount,
 } from '@/lib/auth/account';
+import {
+  readStripeMutationJson,
+  StripeMutationRequestError,
+} from '@/lib/stripe/mutation-request';
 
 // =============================================================================
 // POST /api/stripe/validate-promo-code
@@ -19,10 +24,10 @@ import {
 // - Returns only safe promo metadata for the UI
 // =============================================================================
 
-interface ValidatePromoCodeBody {
-  userId: number;
-  code: string;
-}
+const validatePromoCodeSchema = z.object({
+  userId: z.number().int().positive(),
+  code: z.string().trim().min(1).max(128),
+}).strict();
 
 function formatAmount(amountInMinorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -35,18 +40,16 @@ export async function POST(request: NextRequest) {
   try {
     const authenticated = await requireAuthenticatedAccount();
 
-    const body: ValidatePromoCodeBody = await request.json();
-    const { userId: legacyUserId, code } = body;
-
-    if (!legacyUserId || typeof legacyUserId !== 'number') {
-      return NextResponse.json({ error: 'Valid user ID is required' }, { status: 400 });
+    const parsedBody = validatePromoCodeSchema.safeParse(await readStripeMutationJson(request));
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Invalid request input.', code: 'INVALID_INPUT' },
+        { status: 400 },
+      );
     }
+    const { userId: legacyUserId, code } = parsedBody.data;
     assertLegacyAccountId(legacyUserId, authenticated.account.id);
     const userId = authenticated.account.id;
-
-    if (!code || typeof code !== 'string' || !code.trim()) {
-      return NextResponse.json({ error: 'Discount code is required' }, { status: 400 });
-    }
 
     const userRows = await sql`
       SELECT u.id, u.email, s.stripe_customer_id
@@ -70,7 +73,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Stripe code matching is case-insensitive, but we still prefer exact trimmed match.
-    const promotionCode = promoList.data.find((promo) => promo.code?.toUpperCase() === normalizedCode) || promoList.data[0];
+    const promotionCode = promoList.data.find(
+      (promo) => promo.code?.trim().toUpperCase() === normalizedCode,
+    );
 
     if (!promotionCode) {
       return NextResponse.json({ error: 'Invalid or expired discount code' }, { status: 400 });
@@ -96,7 +101,7 @@ export async function POST(request: NextRequest) {
       ? promotionCode.customer
       : (promotionCode.customer as Stripe.Customer | null)?.id || null;
 
-    if (promoCustomerId && user.stripe_customer_id && promoCustomerId !== user.stripe_customer_id) {
+    if (promoCustomerId && promoCustomerId !== user.stripe_customer_id) {
       return NextResponse.json({ error: 'This discount code is not valid for your account' }, { status: 400 });
     }
 
@@ -142,6 +147,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof StripeMutationRequestError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
     if (error instanceof AccountAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }

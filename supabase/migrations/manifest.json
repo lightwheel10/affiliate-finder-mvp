@@ -192,6 +192,30 @@
       "down": "0023_weekly_provider_continuation.down.sql",
       "upSha256": "89dbb9f6bffcf8e6a036906fb40583e5a96be4db71f80b4bc809d245986308d4",
       "downSha256": "1a5a82472260bb144709325696f5cd5031b175de1216944763690efc7a4b5ee1"
+    },
+    {
+      "version": "0024",
+      "name": "durable_stripe_downgrade_operations",
+      "up": "0024_durable_stripe_downgrade_operations.up.sql",
+      "down": "0024_durable_stripe_downgrade_operations.down.sql",
+      "upSha256": "af979171105de8432fafdeba177f41fb385c6ce2c28981d0860fdd4868db3aea",
+      "downSha256": "ed2f02f2602500707984d2d6c9808ae602bc4ec48fe5e2e7e33ece57ce6acefa"
+    },
+    {
+      "version": "0025",
+      "name": "stripe_downgrade_schedule_history",
+      "up": "0025_stripe_downgrade_schedule_history.up.sql",
+      "down": "0025_stripe_downgrade_schedule_history.down.sql",
+      "upSha256": "a9c77b86a7d62f028bd5c51db3c1ea211edb2f9e41866a85b717d4ff85ea3293",
+      "downSha256": "d77104c96a569d8b7154d2702075b6843289cddb8612ccf5b7415fce841a190c"
+    },
+    {
+      "version": "0026",
+      "name": "durable_stripe_credit_checkouts",
+      "up": "0026_durable_stripe_credit_checkouts.up.sql",
+      "down": "0026_durable_stripe_credit_checkouts.down.sql",
+      "upSha256": "2f8bb075c7fa7241f2c21c99946a24d2dc4c28b4ec2d35ea07a44deb23d1c3a1",
+      "downSha256": "7dd00ae6a9a97c5d529e403ed00ff7ffa1d111c582335cbe2bfd518c46732c48"
     }
   ]
 }

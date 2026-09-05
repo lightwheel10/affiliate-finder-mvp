@@ -60,10 +60,12 @@ import {
   initializeTrialCredits,
   resetCreditsForNewPeriod,
   normalizePlan,
-  addTopupCredits,
   type CreditSqlExecutor,
 } from '@/lib/credits';
-import { getCreditPackDetails, CREDIT_PACK_PRICES } from '@/lib/stripe';
+import {
+  CreditCheckoutValidationError,
+  fulfillPaidCreditCheckoutSession,
+} from '@/lib/stripe/credit-fulfillment';
 import {
   processDurableStripeWebhookEvent,
   type StripeWebhookEnvelope,
@@ -73,7 +75,13 @@ import {
   type StripeWebhookSqlExecutor,
 } from '@/lib/stripe/webhook-events-postgres';
 import {
+  isZeroValueTrialStartInvoice,
+  selectAuthoritativeCustomerSubscription,
+} from '@/lib/stripe/subscription-creation';
+import { assertMatchingTrialCredits } from '@/lib/stripe/initial-subscription-postgres';
+import {
   extractInvoiceSubscriptionId,
+  extractInvoiceSubscriptionServicePeriod,
   extractStripeId,
   snapshotStripeSubscription,
   type StripeSubscriptionSnapshot,
@@ -83,6 +91,10 @@ import {
   type PendingPlanSyncOutcome,
   type SubscriptionPlanChangeSql,
 } from '@/lib/stripe/subscription-plan-changes-postgres';
+import {
+  recoverPreparedStripeDowngradeOperation,
+  type StripeDowngradeOperationSql,
+} from '@/lib/stripe/downgrade-operations-postgres';
 import { isPlanCapacityIncrease } from '@/lib/plans/catalog';
 import {
   restoreDowngradeArchivedCapacity,
@@ -201,7 +213,9 @@ export default async function handler(
 async function handleVerifiedStripeEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case 'customer.subscription.created':
-    case 'customer.subscription.updated': {
+    case 'customer.subscription.updated':
+    case 'customer.subscription.pending_update_applied':
+    case 'customer.subscription.pending_update_expired': {
       const subscription = event.data.object as Stripe.Subscription;
       const previousAttributes = event.data.previous_attributes as
         | Partial<Stripe.Subscription>
@@ -212,6 +226,16 @@ async function handleVerifiedStripeEvent(event: Stripe.Event): Promise<void> {
     case 'customer.subscription.deleted':
       await handleSubscriptionCanceled(event.data.object as Stripe.Subscription);
       return;
+    case 'subscription_schedule.updated': {
+      const schedule = event.data.object as Stripe.SubscriptionSchedule;
+      const subscriptionId = extractStripeId(schedule.subscription);
+      if (!subscriptionId) {
+        throw new Error(`Stripe schedule ${schedule.id} has no subscription ID.`);
+      }
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      await handleSubscriptionUpdate(subscription);
+      return;
+    }
     case 'customer.subscription.trial_will_end':
       await handleTrialWillEnd(event.data.object as Stripe.Subscription);
       return;
@@ -225,7 +249,7 @@ async function handleVerifiedStripeEvent(event: Stripe.Event): Promise<void> {
       await handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod);
       return;
     case 'customer.updated':
-      console.log(`[Webhook] Customer updated: ${(event.data.object as Stripe.Customer).id}`);
+      await synchronizeCustomerPaymentMethod((event.data.object as Stripe.Customer).id);
       return;
     case 'checkout.session.completed':
       await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
@@ -267,12 +291,6 @@ function stripePriceConfiguration() {
 
 function isSupportedPlan(value: string): value is CurrentSubscriptionContext['plan'] {
   return value === 'pro' || value === 'business' || value === 'enterprise';
-}
-
-function isSupportedBillingInterval(
-  value: string | null,
-): value is NonNullable<CurrentSubscriptionContext['billingInterval']> {
-  return value === 'monthly' || value === 'annual';
 }
 
 function unixSecondsToIso(value: number | null): string | null {
@@ -325,7 +343,24 @@ async function withCurrentStripeSubscription<T>(
 
     const owner = owners[0];
     const previousPlan = isSupportedPlan(owner.plan) ? owner.plan : null;
-    const currentSubscriptionId = owner.stripe_subscription_id ?? eventSubscriptionId;
+
+    // Do not blindly trust the subscription ID last written to PostgreSQL. A
+    // returning customer can pay for a new subscription and close the browser
+    // before that ID is saved. Stripe's current customer subscription list lets
+    // this webhook recover that paid subscription instead of re-reading the old
+    // canceled one forever.
+    const customerSubscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'all',
+      limit: 100,
+    });
+    const authoritativeSubscription = selectAuthoritativeCustomerSubscription(
+      customerSubscriptions.data,
+      customerSubscriptions.has_more,
+    );
+    const currentSubscriptionId = authoritativeSubscription?.id
+      ?? owner.stripe_subscription_id
+      ?? eventSubscriptionId;
     if (!currentSubscriptionId) {
       throw new Error(`No Stripe subscription is recorded for customer ${customerId}.`);
     }
@@ -342,12 +377,16 @@ async function withCurrentStripeSubscription<T>(
       throw new Error(`Stripe subscription ${snapshot.subscriptionId} belongs to a different customer.`);
     }
 
-    const plan = snapshot.plan ?? (isSupportedPlan(owner.plan) ? owner.plan : null);
+    const plan = snapshot.plan;
     if (!plan) {
       throw new Error(`Cannot derive a supported plan for Stripe subscription ${snapshot.subscriptionId}.`);
     }
-    const billingInterval = snapshot.billingInterval
-      ?? (isSupportedBillingInterval(owner.billing_interval) ? owner.billing_interval : null);
+    const billingInterval = snapshot.billingInterval;
+    if (!billingInterval && plan !== 'enterprise') {
+      throw new Error(
+        `Cannot derive a supported billing interval for Stripe subscription ${snapshot.subscriptionId}.`,
+      );
+    }
     const hasSubscription = snapshot.status === 'active' || snapshot.status === 'trialing';
 
     const updatedSubscriptions = await transaction<{ user_id: number }>`
@@ -406,6 +445,19 @@ async function withCurrentStripeSubscription<T>(
           restoredLocations: 0 as const,
         };
 
+    if (snapshot.scheduleId) {
+      const schedule = await stripe.subscriptionSchedules.retrieve(snapshot.scheduleId);
+      const recovery = await recoverPreparedStripeDowngradeOperation(
+        transaction as unknown as StripeDowngradeOperationSql,
+        { userId: owner.user_id, schedule },
+      );
+      if (recovery === 'completed') {
+        console.log(
+          `[Webhook] Recovered prepared downgrade operation for user ${owner.user_id}.`,
+        );
+      }
+    }
+
     // Settle the durable future-change record from the same authoritative
     // Stripe snapshot and inside the same transaction as plan synchronization.
     // A target-price transition marks it applied; a detached/released schedule
@@ -441,84 +493,39 @@ async function withCurrentStripeSubscription<T>(
 // =============================================================================
 
 /**
- * Handle one-time credit pack purchase (checkout.session.completed, mode=payment).
- * Validates metadata and price, then adds top-up credits via addTopupCredits (idempotent).
- * 
- * IMPORTANT (February 2026): This function now THROWS on DB failures instead of
- * silently returning. This ensures Stripe gets a 500 response and retries the event.
- * Validation errors (bad metadata, etc.) still return silently since retrying won't help.
+ * Handle a one-time credit pack purchase. The shared fulfillment service
+ * re-reads Stripe's current session and validates the durable server-owned
+ * operation before granting anything. Permanent identity failures are handled
+ * once; temporary Stripe/database failures throw so Stripe retries delivery.
  */
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  if (session.mode !== 'payment' || session.payment_status !== 'paid') {
-    return;
-  }
-  const metadata = session.metadata;
-  if (!metadata?.user_id || !metadata?.pack_id || !metadata?.credit_type || !metadata?.credits_amount) {
-    console.error('[Webhook] checkout.session.completed: missing metadata for credit purchase');
-    return;
-  }
-
-  const packId = metadata.pack_id as string;
-  const packDetails = getCreditPackDetails(packId);
-  if (!packDetails || packDetails.creditType !== metadata.credit_type || packDetails.credits !== parseInt(String(metadata.credits_amount), 10)) {
-    console.error('[Webhook] checkout.session.completed: metadata does not match allowed pack', { packId, metadata });
-    return;
-  }
-
-  const allowedPriceIds = Object.values(CREDIT_PACK_PRICES).map((p) => p.priceId);
-  const lineItems = session.line_items?.data ?? (session as { line_items?: { data?: Stripe.LineItem[] } }).line_items?.data;
-  if (lineItems && lineItems.length > 0) {
-    const priceId = typeof lineItems[0].price === 'string' ? lineItems[0].price : lineItems[0].price?.id;
-    if (priceId && !allowedPriceIds.includes(priceId)) {
-      console.error('[Webhook] checkout.session.completed: price ID not in allowlist', priceId);
+  if (session.mode !== 'payment') return;
+  let fulfillment;
+  try {
+    fulfillment = await fulfillPaidCreditCheckoutSession(session.id);
+  } catch (error) {
+    if (error instanceof CreditCheckoutValidationError) {
+      console.error('[Webhook] checkout.session.completed rejected permanently:', error.message);
       return;
     }
+    throw error;
   }
+  if (fulfillment.status === 'awaiting_payment' || !fulfillment.identity) return;
 
-  const userId = parseInt(String(metadata.user_id), 10);
-  if (isNaN(userId)) {
-    console.error('[Webhook] checkout.session.completed: invalid user_id', metadata.user_id);
-    return;
-  }
-
-  const creditType = metadata.credit_type as 'email' | 'ai' | 'topic_search';
-  const amount = packDetails.credits;
-  const sessionId = session.id;
-  if (!sessionId) {
-    console.error('[Webhook] checkout.session.completed: no session id');
-    return;
-  }
-
-  console.log(`[Webhook] Processing credit pack: user=${userId}, type=${creditType}, amount=${amount}, session=${sessionId}`);
-
-  // 2026-05-04: Capture status BEFORE addTopupCredits so we can tell a fresh purchase
-  // apart from a Stripe retry. addTopupCredits returns true in both cases — without
-  // this pre-check we couldn't distinguish them and would email twice on retries.
-  // Race note: same TOCTOU race already accepted for credit_transactions (see
-  // issues.md "Duplicate credit_transactions on webhook replay" — PENDING LOW).
-  const statusBefore = await sql`
-    SELECT status FROM crewcast.credit_purchases
-    WHERE stripe_checkout_session_id = ${sessionId}
-  `;
-  const wasPending = statusBefore.length > 0 && statusBefore[0].status === 'pending';
-
-  const ok = await addTopupCredits(userId, creditType, amount, sessionId);
-  if (!ok) {
-    // CRITICAL: Throw so the main handler returns 500 and Stripe retries.
-    // addTopupCredits returns false when DB operations fail.
-    // Stripe will retry the event up to ~16 times over 72 hours.
-    const errorMsg = `[Webhook] checkout.session.completed: addTopupCredits FAILED for user ${userId}, session ${sessionId}. Throwing to trigger Stripe retry.`;
-    console.error(errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  console.log(`[Webhook] ✅ Credit pack completed: ${amount} ${creditType} for user ${userId}`);
+  const authoritativeSession = fulfillment.session;
+  const userId = fulfillment.identity.userId;
+  const creditType = fulfillment.identity.creditType;
+  const amount = fulfillment.identity.creditsAmount;
+  const sessionId = authoritativeSession.id;
+  console.log(
+    `[Webhook] Credit pack ${fulfillment.status}: user=${userId}, type=${creditType}, amount=${amount}, session=${sessionId}`,
+  );
 
   // CREDITS-ADDED EMAIL — added 2026-05-04
-  // Only fires on a fresh purchase (wasPending), not on Stripe retries of an already-
-  // completed session. Locale/name trade-offs: same as the payment-success block in
+  // Only fires when the atomic grant reports `applied`, not on Stripe retries of an
+  // already-completed session. Locale/name trade-offs: same as the payment-success block in
   // handleInvoicePaid. Currency falls back to 'eur' if Stripe somehow returns null.
-  if (wasPending) {
+  if (fulfillment.status === 'applied') {
     const recipients = await sql`
       SELECT email, name FROM crewcast.users WHERE id = ${userId}
     `;
@@ -527,10 +534,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       const recipient = recipients[0];
       const creditsEmailLocale = 'de' as const;
       const creditsCustomerName = recipient.name ?? 'there';
-      const amountTotal = typeof session.amount_total === 'number' ? session.amount_total : 0;
+      const amountTotal = typeof authoritativeSession.amount_total === 'number'
+        ? authoritativeSession.amount_total
+        : 0;
       const amountFormatted = new Intl.NumberFormat('de-DE', {
         style: 'currency',
-        currency: (session.currency || 'eur').toUpperCase(),
+        currency: (authoritativeSession.currency || 'eur').toUpperCase(),
       }).format(amountTotal / 100);
 
       waitUntil(
@@ -604,6 +613,12 @@ async function handleSubscriptionUpdate(
         } else {
           console.log(`[Webhook] Existing trial history prevented a second grant for user ${context.userId}`);
         }
+        await assertMatchingTrialCredits(transaction as CreditSqlExecutor, {
+          userId: context.userId,
+          stripeSubscriptionId: context.snapshot.subscriptionId,
+          periodStart: new Date(trialStartSeconds * 1000),
+          periodEnd: new Date(context.snapshot.trialEndSeconds * 1000),
+        });
       }
 
       const justCanceled =
@@ -750,9 +765,14 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         return null;
       }
 
-      // Stripe emits a zero-value invoice when a trial starts. It proves no paid
-      // entitlement and must not reset paid credits or unlock weekly scanning.
-      if (amountPaid === 0 && billingReason === 'subscription_create') {
+      // Stripe emits a zero-value invoice when a trial starts. A zero-value
+      // ACTIVE invoice can instead be a legitimate 100% promotion and must
+      // still provision the purchased entitlement.
+      if (isZeroValueTrialStartInvoice({
+        amountPaid,
+        billingReason,
+        subscriptionStatus: context.snapshot.status as Stripe.Subscription.Status,
+      })) {
         console.log(`[Webhook] Skipping zero-value trial-start invoice ${invoice.id}`);
         return null;
       }
@@ -768,25 +788,19 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         return null;
       }
 
-      const periodStartSeconds = context.snapshot.currentPeriodStartSeconds;
-      if (periodStartSeconds === null) {
+      const servicePeriod = extractInvoiceSubscriptionServicePeriod(
+        invoice,
+        eventSubscriptionId,
+        { allowProrationFallback: billingReason === 'subscription_update' },
+      );
+      if (servicePeriod === null) {
         throw new Error(
-          `Active Stripe subscription ${context.snapshot.subscriptionId} has no period start.`,
+          `Stripe invoice ${invoice.id} has no non-proration subscription service period.`,
         );
       }
-      const periodStart = new Date(periodStartSeconds * 1000);
+      const periodStart = new Date(servicePeriod.startSeconds * 1000);
 
-      const priorReset = await transaction<{ id: number }>`
-        SELECT id
-        FROM crewcast.credit_transactions
-        WHERE user_id = ${context.userId}
-          AND reason = 'reset'
-          AND reference_type = 'stripe_invoice'
-          AND reference_id = ${invoice.id}
-        LIMIT 1
-      `;
-
-      await resetCreditsForNewPeriod(
+      const creditResetOutcome = await resetCreditsForNewPeriod(
         context.userId,
         normalizePlan(context.plan),
         periodStart,
@@ -796,6 +810,13 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
           stripeInvoiceId: invoice.id,
         },
       );
+
+      if (creditResetOutcome !== 'applied') {
+        console.log(
+          `[Webhook] Invoice ${invoice.id} did not reset credits: ${creditResetOutcome}.`,
+        );
+        return null;
+      }
 
       const paidAtSeconds =
         invoiceObject.status_transitions?.paid_at
@@ -827,7 +848,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         throw new Error(`Paid subscription scheduling did not update user ${context.userId}.`);
       }
 
-      if (priorReset.length > 0 || !context.email) return null;
+      if (!context.email) return null;
       return {
         email: context.email,
         name: context.name ?? 'there',
@@ -902,6 +923,13 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
     return;
   }
 
+  await synchronizeCustomerPaymentMethod(customerId, paymentMethod);
+}
+
+async function synchronizeCustomerPaymentMethod(
+  customerId: string,
+  attachedPaymentMethod?: Stripe.PaymentMethod,
+) {
   await (sql as {
     begin<T>(callback: (transaction: StripeWebhookSqlExecutor) => Promise<T>): Promise<T>;
   }).begin(async (transaction) => {
@@ -949,13 +977,15 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
     if (!defaultPaymentMethodId) {
       console.log(
         `[Webhook] Customer ${customerId} has no current default payment method; `
-        + `attached event ${paymentMethod.id} did not overwrite card display data.`,
+        + `${attachedPaymentMethod ? `attached event ${attachedPaymentMethod.id}` : 'customer update'} `
+        + `did not overwrite card display data.`,
       );
       return;
     }
 
-    const currentPaymentMethod = defaultPaymentMethodId === paymentMethod.id
-      ? paymentMethod
+    const currentPaymentMethod = attachedPaymentMethod
+      && defaultPaymentMethodId === attachedPaymentMethod.id
+      ? attachedPaymentMethod
       : await stripe.paymentMethods.retrieve(defaultPaymentMethodId);
     if (extractStripeId(currentPaymentMethod.customer) !== customerId) {
       throw new Error(

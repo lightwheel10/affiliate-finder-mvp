@@ -42,6 +42,8 @@ export interface CreditResetOptions {
   stripeInvoiceId?: string;
 }
 
+export type CreditResetOutcome = 'applied' | 'duplicate_invoice' | 'stale_period';
+
 function runCreditTransaction<T>(
   executor: CreditSqlExecutor | undefined,
   operation: (transaction: CreditSqlExecutor) => Promise<T>,
@@ -747,9 +749,10 @@ export async function resetCreditsForNewPeriod(
   periodStart: Date,
   periodEnd: Date,
   options: CreditResetOptions = {},
-): Promise<boolean> {
+): Promise<CreditResetOutcome> {
   const stripeInvoiceId = options.stripeInvoiceId;
   if (stripeInvoiceId) assertStripeInvoiceId(stripeInvoiceId);
+  if (!Number.isFinite(periodStart.getTime())) throw new Error('Credit period start is invalid.');
 
   return runCreditTransaction(options.executor, async (transaction) => {
     const lockedUsers = await transaction<{ id: number }>`
@@ -771,7 +774,30 @@ export async function resetCreditsForNewPeriod(
       `;
       if (priorReset.length > 0) {
         console.log(`[Credits] Stripe invoice ${stripeInvoiceId} already reset credits for user ${userId}`);
-        return true;
+        return 'duplicate_invoice';
+      }
+
+      const currentPeriods = await transaction<{
+        period_start: string | Date;
+        is_trial_period: boolean;
+      }>`
+        SELECT period_start, is_trial_period
+        FROM crewcast.user_credits
+        WHERE user_id = ${userId}
+        LIMIT 1
+      `;
+      if (currentPeriods.length === 1 && currentPeriods[0].is_trial_period === false) {
+        const currentPeriodStart = new Date(currentPeriods[0].period_start);
+        if (!Number.isFinite(currentPeriodStart.getTime())) {
+          throw new Error(`Stored credit period is invalid for user ${userId}.`);
+        }
+        if (periodStart.getTime() <= currentPeriodStart.getTime()) {
+          console.log(
+            `[Credits] Ignored stale Stripe invoice ${stripeInvoiceId} for user ${userId}: `
+            + `${periodStart.toISOString()} <= ${currentPeriodStart.toISOString()}`,
+          );
+          return 'stale_period';
+        }
       }
     }
 
@@ -871,7 +897,7 @@ export async function resetCreditsForNewPeriod(
       `Monthly entitlement window ${periodStart.toISOString()} -> ${effectivePeriodEnd.toISOString()}`
     );
 
-    return true;
+    return 'applied';
   });
 }
 
@@ -894,12 +920,20 @@ export async function addTopupCredits(
   userId: number,
   creditType: CreditType,
   amount: number,
-  checkoutSessionId: string
-): Promise<boolean> {
+  checkoutSessionId: string,
+  operationId?: string | null,
+): Promise<'applied' | 'already_applied' | 'failed'> {
   try {
     if (amount <= 0 || !Number.isInteger(amount)) {
       console.error(`[Credits] SECURITY: Invalid topup amount ${amount} rejected`);
-      return false;
+      return 'failed';
+    }
+    if (
+      operationId
+      && !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)
+    ) {
+      console.error('[Credits] SECURITY: Invalid checkout operation ID rejected');
+      return 'failed';
     }
 
     // ==========================================================================
@@ -913,31 +947,73 @@ export async function addTopupCredits(
     // The transaction-scoped client shadows the module-level `sql` so every
     // query below runs inside the transaction.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const granted: boolean = await sql.begin(async (sql: any) => {
+    const granted = await sql.begin(async (sql: any): Promise<'applied' | 'already_applied'> => {
+      const completeDurableOperation = async (): Promise<void> => {
+        if (!operationId) return;
+        const completed = await sql`
+          UPDATE crewcast.stripe_credit_checkout_operations
+          SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+          WHERE operation_id = ${operationId}::uuid
+            AND user_id = ${userId}
+            AND stripe_checkout_session_id = ${checkoutSessionId}
+            AND credit_type = ${creditType}
+            AND credits_amount = ${amount}
+            AND status = 'session_created'
+          RETURNING operation_id
+        `;
+        if (completed.length === 1) return;
+        const existingOperation = await sql`
+          SELECT operation_id
+          FROM crewcast.stripe_credit_checkout_operations
+          WHERE operation_id = ${operationId}::uuid
+            AND user_id = ${userId}
+            AND stripe_checkout_session_id = ${checkoutSessionId}
+            AND credit_type = ${creditType}
+            AND credits_amount = ${amount}
+            AND status = 'completed'
+          LIMIT 2
+        `;
+        if (existingOperation.length !== 1) {
+          throw new Error('[Credits] Durable checkout operation did not complete exactly once');
+        }
+      };
+
       // Step 1: Atomically claim the pending purchase.
       const claimed = await sql`
         UPDATE crewcast.credit_purchases
         SET status = 'completed', completed_at = NOW()
-        WHERE stripe_checkout_session_id = ${checkoutSessionId} AND status = 'pending'
+        WHERE stripe_checkout_session_id = ${checkoutSessionId}
+          AND user_id = ${userId}
+          AND credit_type = ${creditType}
+          AND credits_amount = ${amount}
+          AND status = 'pending'
         RETURNING id
       `;
 
       if (claimed.length === 0) {
         // Either already completed (idempotent) or the row doesn't exist.
         const existing = await sql`
-          SELECT id, status FROM crewcast.credit_purchases
+          SELECT id, user_id, credit_type, credits_amount, status
+          FROM crewcast.credit_purchases
           WHERE stripe_checkout_session_id = ${checkoutSessionId}
+          LIMIT 2
         `;
         if (existing.length === 0) {
           console.error(`[Credits] No credit_purchases row for session ${checkoutSessionId}`);
-          return false;
+          throw new Error(`[Credits] No credit_purchases row for session ${checkoutSessionId}`);
         }
-        if (existing[0].status === 'completed') {
+        if (
+          existing.length === 1
+          && existing[0].user_id === userId
+          && existing[0].credit_type === creditType
+          && existing[0].credits_amount === amount
+          && existing[0].status === 'completed'
+        ) {
+          await completeDurableOperation();
           console.log(`[Credits] Idempotency: session ${checkoutSessionId} already completed`);
-          return true;
+          return 'already_applied';
         }
-        console.error(`[Credits] Purchase for session ${checkoutSessionId} has unexpected status '${existing[0].status}' - not granting`);
-        return false;
+        throw new Error(`[Credits] Purchase for session ${checkoutSessionId} has mismatched identity or status`);
       }
 
       // Step 2: Grant the credits (same transaction as the claim).
@@ -988,8 +1064,12 @@ export async function addTopupCredits(
         VALUES (${userId}, ${creditType}, ${amount}, ${newBalance}, 'topup_purchase', 'credit_purchase')
       `;
 
+      // Keep the durable Stripe operation and the actual credit grant in the
+      // same transaction. A crash cannot leave one committed without the other.
+      await completeDurableOperation();
+
       console.log(`[Credits] Added ${amount} ${creditType} topup for user ${userId} (session ${checkoutSessionId})`);
-      return true;
+      return 'applied';
     });
 
     return granted;
@@ -1007,7 +1087,7 @@ export async function addTopupCredits(
       // Log full error object in case it has non-standard properties (e.g., DB errors)
       fullError: JSON.stringify(error, Object.getOwnPropertyNames(error || {})),
     });
-    return false;
+    return 'failed';
   }
 }
 

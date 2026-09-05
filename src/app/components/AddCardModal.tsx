@@ -111,6 +111,7 @@ const CardForm: React.FC<{
         body: JSON.stringify({
           userId,
           email: userEmail,
+          requestId: crypto.randomUUID(),
         }),
       });
 
@@ -140,9 +141,9 @@ const CardForm: React.FC<{
         }),
       });
 
-      // If update endpoint doesn't exist yet, that's okay - card is still saved to customer
       if (!updateRes.ok) {
-        console.warn('[AddCard] Payment method update endpoint not available, card saved to Stripe customer');
+        const updateError = await updateRes.json().catch(() => ({})) as { error?: string };
+        throw new Error(updateError.error || 'Card was verified but could not be saved as your default. Please try again.');
       }
 
       // Success!

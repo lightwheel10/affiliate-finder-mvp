@@ -1,130 +1,114 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { sql } from '@/lib/db';
 import {
   AccountAccessError,
   assertLegacyAccountId,
   requireAuthenticatedAccount,
 } from '@/lib/auth/account';
-import { addTopupCredits } from '@/lib/credits';
-import { stripe } from '@/lib/stripe';
-import type Stripe from 'stripe';
+import {
+  CreditCheckoutValidationError,
+  fulfillPaidCreditCheckoutSession,
+} from '@/lib/stripe/credit-fulfillment';
+import {
+  readStripeMutationJson,
+  StripeMutationRequestError,
+} from '@/lib/stripe/mutation-request';
 
-// =============================================================================
-// POST /api/credits/fulfill
-//
-// FALLBACK FULFILLMENT ENDPOINT (February 2026)
-//
-// Checks if the authenticated user has any pending credit purchases
-// and fulfills them. This acts as a safety net when the Stripe webhook
-// fails to process checkout.session.completed events.
-//
-// Called automatically from the settings page when credit_purchase=success
-// URL param is detected, BEFORE the webhook has a chance to process.
-//
-// This is safe because addTopupCredits is idempotent -- if the webhook
-// already processed the purchase, this call will detect status='completed'
-// and skip it.
-//
-// SECURITY:
-// - Requires authenticated Supabase session
-// - Only processes purchases for the authenticated user
-// =============================================================================
-
+// Customer-return safety net. Stripe's signed webhook remains the primary path,
+// but the exact paid Checkout Session can also be fulfilled immediately after
+// redirect. Both paths call the same validation and idempotent grant service.
 export const dynamic = 'force-dynamic';
+
+const fulfillCreditsSchema = z.object({
+  userId: z.number().int().positive(),
+  sessionId: z.string().max(255).regex(/^cs_(?:test_|live_)?[A-Za-z0-9]+$/).optional(),
+}).strict();
 
 export async function POST(request: NextRequest) {
   try {
     const authenticated = await requireAuthenticatedAccount();
-
-    const body = await request.json();
-    const { userId } = body;
-
-    if (!userId || typeof userId !== 'number') {
-      return NextResponse.json({ error: 'Valid user ID is required' }, { status: 400 });
+    const parsedBody = fulfillCreditsSchema.safeParse(await readStripeMutationJson(request));
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Invalid request input.', code: 'INVALID_INPUT' },
+        { status: 400 },
+      );
     }
-    assertLegacyAccountId(userId, authenticated.account.id);
+    assertLegacyAccountId(parsedBody.data.userId, authenticated.account.id);
     const accountId = authenticated.account.id;
 
-    // Find all pending credit purchases for this user
-    const pendingPurchases = await sql`
-      SELECT id, stripe_checkout_session_id, credit_type, credits_amount, status
-      FROM crewcast.credit_purchases
-      WHERE user_id = ${accountId} AND status = 'pending'
-      ORDER BY created_at DESC
-    `;
+    const sessionIds = parsedBody.data.sessionId
+      ? [parsedBody.data.sessionId]
+      : (await sql<{ stripe_checkout_session_id: string }[]>`
+          SELECT stripe_checkout_session_id
+          FROM crewcast.credit_purchases
+          WHERE user_id = ${accountId}
+            AND status = 'pending'
+            AND stripe_checkout_session_id IS NOT NULL
+          ORDER BY created_at DESC
+          LIMIT 20
+        `).map((purchase: { stripe_checkout_session_id: string }) => purchase.stripe_checkout_session_id);
 
-    if (pendingPurchases.length === 0) {
+    if (sessionIds.length === 0) {
       return NextResponse.json({
         fulfilled: 0,
-        message: 'No pending purchases (webhook may have already processed them)',
+        alreadyApplied: 0,
+        awaitingPayment: 0,
+        message: 'No pending purchases were found.',
       });
     }
 
-    console.log(`[Credits Fulfill] Found ${pendingPurchases.length} pending purchase(s) for user ${accountId}`);
-
     let fulfilled = 0;
-    const results = [];
-
-    for (const purchase of pendingPurchases) {
-      const creditType = purchase.credit_type as 'email' | 'ai' | 'topic_search';
-      const amount = purchase.credits_amount;
-      const sessionId = purchase.stripe_checkout_session_id;
-
-      console.log(`[Credits Fulfill] Attempting to fulfill purchase #${purchase.id}: ${amount} ${creditType}`);
-
-      // ========================================================================
-      // SECURITY (C1 fix): Verify with Stripe that this checkout session was
-      // actually PAID before granting credits. Previously any 'pending' row was
-      // fulfilled without asking Stripe, letting any logged-in user mint free
-      // credits by creating a checkout session and never paying.
-      //
-      // Same contract as the webhook (payment_status === 'paid'). On any
-      // uncertainty (Stripe error, unpaid) we SKIP and leave the row 'pending'
-      // so the webhook can still fulfill it later if payment eventually lands.
-      // ========================================================================
-      let session: Stripe.Checkout.Session;
+    let alreadyApplied = 0;
+    let awaitingPayment = 0;
+    let operationalFailures = 0;
+    const results: Array<{ sessionId: string; status: string }> = [];
+    for (const sessionId of sessionIds) {
       try {
-        session = await stripe.checkout.sessions.retrieve(sessionId);
-      } catch (stripeError) {
-        console.error(`[Credits Fulfill] ⚠️ Stripe retrieve failed for purchase #${purchase.id} (session ${sessionId}) - skipping, leaving pending`, stripeError);
-        results.push({ id: purchase.id, status: 'skipped_stripe_error', creditType, amount });
-        continue;
-      }
-
-      if (session.payment_status !== 'paid' || !session.amount_total || session.amount_total <= 0) {
-        console.log(`[Credits Fulfill] Purchase #${purchase.id} not paid (payment_status=${session.payment_status}, amount_total=${session.amount_total}) - skipping, leaving pending`);
-        results.push({ id: purchase.id, status: 'skipped_unpaid', creditType, amount });
-        continue;
-      }
-
-      const ok = await addTopupCredits(accountId, creditType, amount, sessionId);
-      if (ok) {
-        fulfilled++;
-        results.push({ id: purchase.id, status: 'fulfilled', creditType, amount });
-        console.log(`[Credits Fulfill] ✅ Fulfilled purchase #${purchase.id}`);
-      } else {
-        results.push({ id: purchase.id, status: 'failed', creditType, amount });
-        console.error(`[Credits Fulfill] ❌ Failed to fulfill purchase #${purchase.id}`);
+        const result = await fulfillPaidCreditCheckoutSession(sessionId, accountId);
+        if (result.status === 'applied') fulfilled++;
+        if (result.status === 'already_applied') alreadyApplied++;
+        if (result.status === 'awaiting_payment') awaitingPayment++;
+        results.push({ sessionId, status: result.status });
+      } catch (error) {
+        if (error instanceof CreditCheckoutValidationError) {
+          console.error(`[Credits Fulfill] Rejected Stripe Session ${sessionId}:`, error.message);
+          results.push({ sessionId, status: 'rejected' });
+          continue;
+        }
+        operationalFailures++;
+        console.error(`[Credits Fulfill] Temporary failure for Stripe Session ${sessionId}:`, error);
+        results.push({ sessionId, status: 'temporary_failure' });
       }
     }
 
-    return NextResponse.json({
-      fulfilled,
-      total: pendingPurchases.length,
-      results,
-      message: fulfilled > 0
-        ? `Fulfilled ${fulfilled} pending purchase(s)`
-        : 'No purchases could be fulfilled',
-    });
-
+    return NextResponse.json(
+      {
+        fulfilled,
+        alreadyApplied,
+        awaitingPayment,
+        results,
+        message: operationalFailures > 0
+          ? 'Stripe confirmed the request, but one or more purchases still need automatic retry.'
+          : 'Purchase verification completed.',
+      },
+      { status: operationalFailures > 0 ? 503 : 200 },
+    );
   } catch (error) {
+    if (error instanceof StripeMutationRequestError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
     if (error instanceof AccountAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('[Credits Fulfill] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to fulfill pending purchases' },
-      { status: 500 }
+      { error: 'Failed to verify pending purchases.' },
+      { status: 500 },
     );
   }
 }

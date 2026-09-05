@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
+import type postgres from 'postgres';
+import { z } from 'zod';
 import { stripe, TRIAL_DAYS } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
@@ -6,8 +9,27 @@ import {
   assertLegacyAccountId,
   requireAuthenticatedAccount,
 } from '@/lib/auth/account';
+import {
+  initialStripeCustomerIdempotencyKey,
+  selectSingleApplicationStripeCustomer,
+  setupIntentIdempotencyKey,
+} from '@/lib/stripe/subscription-creation';
+import {
+  readStripeMutationJson,
+  StripeMutationRequestError,
+} from '@/lib/stripe/mutation-request';
 
 // =============================================================================
+
+const setupIntentSchema = z.object({
+  userId: z.number().int().positive(),
+  email: z.string().email().max(512),
+  papCookie: z.string().trim().min(1).max(1_024).optional(),
+  // Optional only so an already-open page from the previous deployment keeps
+  // working. New clients send this ID; old clients receive a server-generated
+  // one and still get an idempotent Stripe request.
+  requestId: z.uuid().optional(),
+}).strict();
 // POST /api/stripe/create-setup-intent
 // 
 // Creates a Stripe SetupIntent for securely collecting and saving card details.
@@ -34,13 +56,18 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const authenticated = await requireAuthenticatedAccount();
 
-    // Parse and validate request body
-    const body = await request.json();
+    const parsedBody = setupIntentSchema.safeParse(await readStripeMutationJson(request));
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Invalid request input.', code: 'INVALID_INPUT' },
+        { status: 400 },
+      );
+    }
     // 2026-05-20 (paras): papCookie is the optional PostAffiliatePro tracking
     // value (account ID + visitor ID concatenated) sent by the client when an
     // affiliate referred this signup. If absent, the signup is treated as
     // organic and no affiliate attribution happens.
-    const { userId: legacyUserId, email, papCookie } = body;
+    const { userId: legacyUserId, email, papCookie, requestId } = parsedBody.data;
 
     // ==========================================================================
     // INPUT VALIDATION
@@ -92,77 +119,115 @@ export async function POST(request: NextRequest) {
     // CHECK FOR EXISTING STRIPE CUSTOMER
     // If user already has a Stripe customer, reuse it (idempotency)
     // ==========================================================================
-    const existingSubscriptions = await sql`
-      SELECT stripe_customer_id FROM crewcast.subscriptions WHERE user_id = ${userId}
-    `;
-
-    let stripeCustomerId: string | null = null;
-
-    if (existingSubscriptions.length > 0 && existingSubscriptions[0].stripe_customer_id) {
-      stripeCustomerId = existingSubscriptions[0].stripe_customer_id;
-      console.log(`[Stripe] Using existing customer: ${stripeCustomerId} for user ${userId}`);
-    }
-
-    // ==========================================================================
-    // CREATE STRIPE CUSTOMER IF NEEDED
-    // ==========================================================================
-    if (!stripeCustomerId) {
-      console.log(`[Stripe] Creating new customer for user ${userId}`);
-      
-      // 2026-05-20 (paras): set Stripe customer.description to the PAP cookie
-      // value when an affiliate referred this signup. PAP's Stripe plugin
-      // (configured by David at work.selecdoo.com/plugins/Stripe/stripe.php)
-      // reads this exact field to attribute charges to the right affiliate.
-      // Setting it once at customer creation means every future subscription
-      // / charge tied to this customer inherits the attribution automatically.
-      const customer = await stripe.customers.create({
-        email: email,
-        name: user.name || undefined,
-        description: typeof papCookie === 'string' && papCookie ? papCookie : undefined,
-        metadata: {
-          neon_user_id: userId.toString(),
-          created_from: 'setup_intent',
-        },
-      });
-
-      stripeCustomerId = customer.id;
-      console.log(`[Stripe] Created customer: ${stripeCustomerId}`);
-
-      // Save customer ID to database immediately
-      // Check if subscription record exists
-      const subExists = await sql`
-        SELECT id FROM crewcast.subscriptions WHERE user_id = ${userId}
+    const stripeCustomerId = await (sql as unknown as {
+      begin<T>(callback: (transaction: postgres.Sql) => Promise<T>): Promise<T>;
+    }).begin(async (transaction) => {
+      // Serialize customer creation for one application account. Stripe's
+      // stable key also makes a retry after an uncertain network response
+      // return the same Customer instead of creating another one.
+      await transaction`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(${`stripe-customer:${userId}`}, 0)
+        )
       `;
-
-      if (subExists.length > 0) {
-        await sql`
-          UPDATE crewcast.subscriptions 
-          SET stripe_customer_id = ${stripeCustomerId}, updated_at = NOW()
-          WHERE user_id = ${userId}
-        `;
-      } else {
-        // Create a placeholder subscription record with just the customer ID
-        await sql`
-          INSERT INTO crewcast.subscriptions (user_id, stripe_customer_id, plan, status, cancel_at_period_end)
-          VALUES (${userId}, ${stripeCustomerId}, 'free_trial', 'incomplete', false)
-        `;
+      const existingSubscriptions = await transaction<{
+        id: number;
+        stripe_customer_id: string | null;
+      }[]>`
+        SELECT id, stripe_customer_id
+        FROM crewcast.subscriptions
+        WHERE user_id = ${userId}
+        LIMIT 2
+        FOR UPDATE
+      `;
+      if (existingSubscriptions.length > 1) {
+        throw new Error(`Account ${userId} has multiple subscription records.`);
       }
-    }
+      if (existingSubscriptions[0]?.stripe_customer_id) {
+        return existingSubscriptions[0].stripe_customer_id;
+      }
+
+      // Recover a customer from a prior process failure even after Stripe's
+      // idempotency retention window. The email narrows the bounded list; the
+      // server-owned application ID in metadata is the actual identity check.
+      const customerCandidates = await stripe.customers.list({ email, limit: 100 });
+      const recoveredCustomer = selectSingleApplicationStripeCustomer(
+        customerCandidates.data,
+        customerCandidates.has_more,
+        userId,
+      );
+
+      console.log(
+        recoveredCustomer
+          ? `[Stripe] Recovering initial customer for user ${userId}`
+          : `[Stripe] Creating initial customer for user ${userId}`,
+      );
+      // 2026-05-20 (Paras): PAP reads this description for referral
+      // attribution. It is bounded and copied only on the first customer.
+      const customer = recoveredCustomer ?? await stripe.customers.create(
+        {
+          email,
+          name: user.name || undefined,
+          description: papCookie,
+          metadata: {
+            neon_user_id: userId.toString(),
+            created_from: 'setup_intent',
+          },
+        },
+        { idempotencyKey: initialStripeCustomerIdempotencyKey(userId) },
+      );
+
+      if (existingSubscriptions.length === 1) {
+        const updated = await transaction<{ id: number }[]>`
+          UPDATE crewcast.subscriptions
+          SET stripe_customer_id = ${customer.id}, updated_at = NOW()
+          WHERE id = ${existingSubscriptions[0].id}
+            AND user_id = ${userId}
+            AND stripe_customer_id IS NULL
+          RETURNING id
+        `;
+        if (updated.length !== 1) {
+          throw new Error('Stripe customer was not attached to exactly one subscription record.');
+        }
+      } else {
+        const inserted = await transaction<{ id: number }[]>`
+          INSERT INTO crewcast.subscriptions (
+            user_id, stripe_customer_id, plan, status, cancel_at_period_end
+          ) VALUES (
+            ${userId}, ${customer.id}, 'free_trial', 'incomplete', false
+          )
+          RETURNING id
+        `;
+        if (inserted.length !== 1) {
+          throw new Error('Stripe customer placeholder was not created exactly once.');
+        }
+      }
+      return customer.id;
+    });
 
     // ==========================================================================
     // CREATE SETUP INTENT
     // This allows secure card collection without immediate payment
     // ==========================================================================
-    const setupIntent = await stripe.setupIntents.create({
-      customer: stripeCustomerId,
-      payment_method_types: ['card'],
-      metadata: {
-        neon_user_id: userId.toString(),
-        trial_days: TRIAL_DAYS.toString(),
+    const setupIntentRequestId = requestId ?? randomUUID();
+    const setupIntent = await stripe.setupIntents.create(
+      {
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        metadata: {
+          neon_user_id: userId.toString(),
+          trial_days: TRIAL_DAYS.toString(),
+        },
+        usage: 'off_session',
       },
-      // Enable automatic payment methods for better conversion
-      usage: 'off_session', // Allow future charges without customer present
-    });
+      {
+        idempotencyKey: setupIntentIdempotencyKey(
+          userId,
+          stripeCustomerId,
+          setupIntentRequestId,
+        ),
+      },
+    );
 
     console.log(`[Stripe] Created SetupIntent: ${setupIntent.id} for customer ${stripeCustomerId}`);
 
@@ -176,6 +241,12 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof StripeMutationRequestError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
     if (error instanceof AccountAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }

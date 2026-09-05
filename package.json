@@ -18,6 +18,7 @@
     "test:staging:account-identity": "node --conditions=react-server --import tsx scripts/verify-account-identity-staging.ts",
     "test:staging:stripe-webhooks": "node --env-file=.env.staging.local --conditions=react-server --import tsx scripts/verify-stripe-webhook-events-staging.ts",
     "test:staging:stripe-plan-changes": "node --conditions=react-server --import tsx scripts/verify-deferred-plan-changes-staging.ts",
+    "test:staging:stripe-billing-consistency": "node --env-file=.env.staging.local --conditions=react-server --import tsx scripts/verify-stripe-billing-consistency-staging.ts",
     "test:staging:downgrade-capacity": "node --conditions=react-server --import tsx scripts/verify-downgrade-capacity-staging.ts",
     "test:staging:weekly-auto-scan": "node --import tsx scripts/verify-weekly-auto-scan-staging.ts",
     "test:staging:weekly-persistence": "node --conditions=react-server --import tsx scripts/verify-weekly-affiliate-persistence-staging.ts",

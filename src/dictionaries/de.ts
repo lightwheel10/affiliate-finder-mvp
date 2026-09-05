@@ -1008,6 +1008,7 @@ export const de: Dictionary = {
           failedToStartCheckout: 'Bezahlvorgang konnte nicht gestartet werden',
           invalidResponse: 'Ungültige Antwort vom Server',
           networkError: 'Netzwerkfehler. Bitte versuch es erneut.',
+          verificationPending: 'Wir konnten diesen Kauf noch nicht bestätigen. Es wurden keine Credits hinzugefügt. Bitte aktualisiere die Seite in Kürze.',
         },
         header: {
           title: 'Credits aufladen',

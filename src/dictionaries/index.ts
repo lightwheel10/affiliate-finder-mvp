@@ -998,6 +998,7 @@ export interface Dictionary {
           failedToStartCheckout: string;
           invalidResponse: string;
           networkError: string;
+          verificationPending: string;
         };
         header: {
           title: string;              // "Top Up Credits"

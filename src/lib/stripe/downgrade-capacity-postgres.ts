@@ -235,6 +235,17 @@ export async function assertNotRetainedByPendingDowngrade(
             THEN ${input.locationId ?? null}::bigint = ANY(retained_location_ids)
           ELSE ${input.brandId}::bigint = ANY(retained_brand_ids)
         END
+      UNION ALL
+      SELECT 1
+      FROM crewcast.stripe_downgrade_operations
+      WHERE user_id = ${input.userId}
+        AND status = 'prepared'
+        AND capacity_selection_version = 1
+        AND CASE
+          WHEN ${input.locationId ?? null}::bigint IS NOT NULL
+            THEN ${input.locationId ?? null}::bigint = ANY(retained_location_ids)
+          ELSE ${input.brandId}::bigint = ANY(retained_brand_ids)
+        END
     ) AS conflict
   `;
   if (rows.length !== 1 || typeof rows[0].conflict !== 'boolean') {

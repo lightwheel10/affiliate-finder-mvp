@@ -87,12 +87,6 @@ export async function POST(request: Request) {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const isProduction = process.env.NODE_ENV === 'production';
     
-    // DEBUG: Log secret prefix to verify correct env var is loaded
-    const expectedPrefix = 'whsec_kV7kAyLt'; // First 16 chars of production secret
-    const actualPrefix = webhookSecret?.substring(0, 16) || 'UNDEFINED';
-    const secretMatch = actualPrefix === expectedPrefix;
-    console.log(`[Webhook] Debug: Expected prefix: ${expectedPrefix}, Actual: ${actualPrefix}, Match: ${secretMatch}, Body length: ${body.length}`);
-    
     if (!webhookSecret) {
       console.error('[Webhook] STRIPE_WEBHOOK_SECRET not configured');
       

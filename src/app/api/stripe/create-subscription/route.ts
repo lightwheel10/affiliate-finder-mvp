@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { stripe, getPriceId, isValidPlan, isValidInterval, TRIAL_DAYS } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
@@ -10,8 +11,28 @@ import {
   requireServerOwnedStripeCustomerId,
   StripeCustomerOwnershipError,
 } from '@/lib/stripe-customer-ownership';
-import { initializeTrialCredits } from '@/lib/credits'; // January 19th, 2026: Initialize credits directly
+import {
+  initialSubscriptionIdempotencyKey,
+  initialSubscriptionAccessState,
+  initialTrialDaysForAccount,
+  latestTerminalSubscriptionId,
+  paymentMethodMutationIdempotencyKey,
+  recoveredInitialPaymentMethodDecision,
+  selectSingleReusableInitialSubscription,
+} from '@/lib/stripe/subscription-creation';
+import {
+  extractInvoiceConfirmationClientSecret,
+  extractInvoiceSubscriptionId,
+  extractInvoiceSubscriptionServicePeriod,
+  extractStripeId,
+  snapshotStripeSubscription,
+} from '@/lib/stripe/subscription-state';
+import { reconcileInitialSubscription } from '@/lib/stripe/initial-subscription-postgres';
 import Stripe from 'stripe';
+import {
+  readStripeMutationJson,
+  StripeMutationRequestError,
+} from '@/lib/stripe/mutation-request';
 
 // =============================================================================
 // POST /api/stripe/create-subscription
@@ -34,18 +55,18 @@ import Stripe from 'stripe';
 // - Verifies user exists in database
 // - Verifies Stripe customer exists
 // - Uses Stripe's PaymentMethod (never raw card data)
-// - Idempotent - checks for existing subscription
+// - Stripe-idempotent across concurrent requests and server retries
 // =============================================================================
 
-interface CreateSubscriptionBody {
-  userId: number;
-  plan: string;
-  billingInterval: string;
-  paymentMethodId: string;
-  promotionCodeId?: string;
+const createSubscriptionSchema = z.object({
+  userId: z.number().int().positive(),
+  plan: z.enum(['pro', 'business']),
+  billingInterval: z.enum(['monthly', 'annual']),
+  paymentMethodId: z.string().regex(/^pm_[A-Za-z0-9_]+$/).max(255),
+  promotionCodeId: z.string().regex(/^promo_[A-Za-z0-9_]+$/).max(255).optional(),
   // Rolling-client compatibility only. This value is never billing authority.
-  customerId?: unknown;
-}
+  customerId: z.unknown().optional(),
+}).strict();
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,9 +76,21 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const authenticated = await requireAuthenticatedAccount();
 
-    // Parse request body
-    const body: CreateSubscriptionBody = await request.json();
-    const { userId: legacyUserId, plan, billingInterval, paymentMethodId, promotionCodeId, customerId: providedCustomerId } = body;
+    const parsedBody = createSubscriptionSchema.safeParse(await readStripeMutationJson(request));
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Invalid request input.', code: 'INVALID_INPUT' },
+        { status: 400 },
+      );
+    }
+    const {
+      userId: legacyUserId,
+      plan,
+      billingInterval,
+      paymentMethodId,
+      promotionCodeId,
+      customerId: providedCustomerId,
+    } = parsedBody.data;
 
     // ==========================================================================
     // INPUT VALIDATION
@@ -124,32 +157,92 @@ export async function POST(request: NextRequest) {
       providedCustomerId,
     );
 
-    // ==========================================================================
-    // CHECK FOR EXISTING ACTIVE SUBSCRIPTION
-    // Prevent creating duplicate subscriptions
-    // ==========================================================================
-    if (user.stripe_subscription_id && user.status && user.status !== 'incomplete' && user.status !== 'canceled') {
-      console.log(`[Stripe] User ${userId} already has active subscription: ${user.stripe_subscription_id}`);
-      
-      // Fetch the existing subscription from Stripe
-      const existingSub = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
-      
-      // Access properties safely with validation
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const existingSubObj = existingSub as any;
-      const existingPeriodEnd = (typeof existingSubObj.current_period_end === 'number' && existingSubObj.current_period_end > 0)
-        ? new Date(existingSubObj.current_period_end * 1000).toISOString()
-        : null;
-      
-      return NextResponse.json({
-        subscription: {
-          id: existingSub.id,
-          status: existingSub.status,
-          currentPeriodEnd: existingPeriodEnd,
-        },
-        message: 'Subscription already exists',
-        alreadyExists: true,
+    // A trial belongs to the application account, not to a particular Stripe
+    // subscription. Either historical credit record is durable evidence that
+    // this account is returning and must be charged immediately.
+    const trialHistoryRows = await sql`
+      SELECT
+        EXISTS (
+          SELECT 1 FROM crewcast.user_credits WHERE user_id = ${userId}
+        ) AS has_credit_record,
+        EXISTS (
+          SELECT 1
+          FROM crewcast.credit_transactions
+          WHERE user_id = ${userId}
+            AND reason IN ('trial_start', 'trial_restart')
+        ) AS has_trial_grant
+    `;
+    if (
+      trialHistoryRows.length !== 1
+      || typeof trialHistoryRows[0].has_credit_record !== 'boolean'
+      || typeof trialHistoryRows[0].has_trial_grant !== 'boolean'
+    ) {
+      throw new Error(`Could not determine trial history for user ${userId}.`);
+    }
+    const initialTrialDays = initialTrialDaysForAccount({
+      configuredTrialDays: TRIAL_DAYS,
+      hasCreditRecord: trialHistoryRows[0].has_credit_record,
+      hasTrialGrant: trialHistoryRows[0].has_trial_grant,
+    });
+
+    // Stripe is also checked directly. This repairs the important case where
+    // Stripe created the subscription but this server died before PostgreSQL
+    // recorded it or before the webhook finished retrying.
+    const customerSubscriptions = await stripe.subscriptions.list({
+      customer: stripeCustomerId,
+      status: 'all',
+      limit: 100,
+    });
+    const recoveredSubscription = selectSingleReusableInitialSubscription(
+      customerSubscriptions.data,
+      customerSubscriptions.has_more,
+    );
+    if (recoveredSubscription) {
+      const recoveredSnapshot = snapshotStripeSubscription(recoveredSubscription, {
+        proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+        proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+        businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+        businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
       });
+      if (recoveredSnapshot.plan !== plan || recoveredSnapshot.billingInterval !== billingInterval) {
+        return NextResponse.json(
+          {
+            error: 'A different subscription already exists for this account. Refresh billing before trying again.',
+            code: 'STRIPE_SUBSCRIPTION_CONFLICT',
+          },
+          { status: 409 },
+        );
+      }
+      const recoveredPaymentMethodId = extractStripeId(recoveredSubscription.default_payment_method);
+      let existingDefaultPaymentMethodId = recoveredPaymentMethodId;
+      if (!existingDefaultPaymentMethodId) {
+        const recoveredCustomer = await stripe.customers.retrieve(stripeCustomerId);
+        if (recoveredCustomer.deleted) {
+          throw new Error(`Stripe customer ${stripeCustomerId} is deleted.`);
+        }
+        existingDefaultPaymentMethodId = extractStripeId(
+          recoveredCustomer.invoice_settings.default_payment_method,
+        );
+      }
+      const recoveredPaymentDecision = recoveredInitialPaymentMethodDecision({
+        subscriptionStatus: recoveredSubscription.status,
+        existingPaymentMethodId: existingDefaultPaymentMethodId,
+        requestedPaymentMethodId: paymentMethodId,
+      });
+      if (recoveredPaymentDecision === 'conflict') {
+        return NextResponse.json(
+          {
+            error: 'The existing subscription uses a different payment method. Refresh billing before trying again.',
+            code: 'STRIPE_PAYMENT_METHOD_CONFLICT',
+          },
+          { status: 409 },
+        );
+      }
+      if (recoveredPaymentDecision === 'replace_incomplete') {
+        console.log(
+          `[Stripe] Reusing incomplete subscription ${recoveredSubscription.id} with a replacement payment method`,
+        );
+      }
     }
 
     // ==========================================================================
@@ -169,22 +262,48 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     // ATTACH PAYMENT METHOD TO CUSTOMER (if not already attached)
     // ==========================================================================
-    if (paymentMethod.customer !== stripeCustomerId) {
+    const paymentMethodCustomerId = extractStripeId(paymentMethod.customer);
+    if (paymentMethodCustomerId && paymentMethodCustomerId !== stripeCustomerId) {
+      return NextResponse.json(
+        {
+          error: 'This payment method belongs to a different Stripe customer.',
+          code: 'STRIPE_PAYMENT_METHOD_OWNERSHIP_MISMATCH',
+        },
+        { status: 409 },
+      );
+    }
+    if (!paymentMethodCustomerId) {
       console.log(`[Stripe] Attaching PaymentMethod ${paymentMethodId} to customer ${stripeCustomerId}`);
       
       await stripe.paymentMethods.attach(paymentMethodId, {
         customer: stripeCustomerId,
+      }, {
+        idempotencyKey: paymentMethodMutationIdempotencyKey(
+          'attach',
+          stripeCustomerId,
+          paymentMethodId,
+        ),
       });
     }
 
     // ==========================================================================
     // SET AS DEFAULT PAYMENT METHOD
     // ==========================================================================
-    await stripe.customers.update(stripeCustomerId, {
-      invoice_settings: {
-        default_payment_method: paymentMethodId,
+    await stripe.customers.update(
+      stripeCustomerId,
+      {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
       },
-    });
+      {
+        idempotencyKey: paymentMethodMutationIdempotencyKey(
+          'make-default',
+          stripeCustomerId,
+          paymentMethodId,
+        ),
+      },
+    );
 
     console.log(`[Stripe] Set default payment method for customer ${stripeCustomerId}`);
 
@@ -214,12 +333,18 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      const promotionCustomerId = extractStripeId(promoCode.customer);
+      if (promotionCustomerId && promotionCustomerId !== stripeCustomerId) {
+        return NextResponse.json(
+          { error: 'This discount code is not available for this account.' },
+          { status: 400 },
+        );
+      }
     }
 
     const subscriptionParams: Stripe.SubscriptionCreateParams = {
       customer: stripeCustomerId,
       items: [{ price: priceId }],
-      trial_period_days: TRIAL_DAYS,
       default_payment_method: paymentMethodId,
       payment_behavior: 'default_incomplete', // Wait for payment confirmation if needed
       payment_settings: {
@@ -232,15 +357,36 @@ export async function POST(request: NextRequest) {
         billing_interval: billingInterval,
         ...(promotionCodeId ? { promotion_code_id: promotionCodeId } : {}),
       },
-      // Expand latest invoice for immediate access
-      expand: ['latest_invoice.payment_intent'],
+      // Stripe documents this as the first-payment confirmation source.
+      expand: ['latest_invoice.confirmation_secret'],
     };
+
+    if (initialTrialDays !== undefined) {
+      subscriptionParams.trial_period_days = initialTrialDays;
+    }
 
     if (promotionCodeId) {
       subscriptionParams.discounts = [{ promotion_code: promotionCodeId }];
     }
 
-    const subscription = await stripe.subscriptions.create(subscriptionParams);
+    const subscriptionCandidate = recoveredSubscription ?? await stripe.subscriptions.create(
+      subscriptionParams,
+      {
+        idempotencyKey: initialSubscriptionIdempotencyKey(
+          userId,
+          stripeCustomerId,
+          latestTerminalSubscriptionId(customerSubscriptions.data),
+        ),
+      },
+    );
+
+    // Always re-read after create/recovery. A browser may have confirmed the
+    // first invoice between requests, and the list response is not guaranteed
+    // to contain the expanded confirmation secret used for 3DS.
+    const subscription = await stripe.subscriptions.retrieve(
+      subscriptionCandidate.id,
+      { expand: ['latest_invoice.confirmation_secret'] },
+    );
 
     console.log(`[Stripe] Created subscription: ${subscription.id} with status: ${subscription.status}`);
 
@@ -253,185 +399,141 @@ export async function POST(request: NextRequest) {
     const cardExpMonth = card?.exp_month || null;
     const cardExpYear = card?.exp_year || null;
 
-    // ==========================================================================
-    // CALCULATE DATES
-    // Access subscription properties directly - Stripe returns timestamps in seconds
-    // Add defensive checks to prevent "Invalid time value" errors
-    // ==========================================================================
-    
-    // Safely extract timestamps from subscription object
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subObj = subscription as any;
-    
-    const trialEndTimestamp = subObj.trial_end;
-    const periodStartTimestamp = subObj.current_period_start;
-    const periodEndTimestamp = subObj.current_period_end;
-    
-    // Log for debugging
-    console.log(`[Stripe] Subscription timestamps - trial_end: ${trialEndTimestamp}, period_start: ${periodStartTimestamp}, period_end: ${periodEndTimestamp}`);
-    
-    // Convert Unix timestamps (seconds) to ISO strings with validation
-    const trialEnd = (typeof trialEndTimestamp === 'number' && trialEndTimestamp > 0)
-      ? new Date(trialEndTimestamp * 1000).toISOString()
+    const subscriptionSnapshot = snapshotStripeSubscription(subscription, {
+      proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+      proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+      businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+      businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
+    });
+    if (
+      subscriptionSnapshot.plan !== plan
+      || subscriptionSnapshot.billingInterval !== billingInterval
+    ) {
+      throw new Error(`Stripe subscription ${subscription.id} has an unexpected price.`);
+    }
+    if (subscriptionSnapshot.customerId !== stripeCustomerId) {
+      throw new Error(`Stripe subscription ${subscription.id} belongs to a different customer.`);
+    }
+    if (subscription.collection_method !== 'charge_automatically') {
+      throw new Error(`Stripe subscription ${subscription.id} does not use automatic card billing.`);
+    }
+    if (
+      subscriptionSnapshot.currentPeriodStartSeconds === null
+      || subscriptionSnapshot.currentPeriodEndSeconds === null
+    ) {
+      throw new Error(`Stripe subscription ${subscription.id} has no valid billing period.`);
+    }
+    const trialEnd = subscriptionSnapshot.trialEndSeconds
+      ? new Date(subscriptionSnapshot.trialEndSeconds * 1000).toISOString()
       : null;
-    
-    const currentPeriodStart = (typeof periodStartTimestamp === 'number' && periodStartTimestamp > 0)
-      ? new Date(periodStartTimestamp * 1000).toISOString()
-      : new Date().toISOString(); // Fallback to now
-    
-    const currentPeriodEnd = (typeof periodEndTimestamp === 'number' && periodEndTimestamp > 0)
-      ? new Date(periodEndTimestamp * 1000).toISOString()
-      : null; // Allow null if not available
+    const currentPeriodStart = new Date(
+      subscriptionSnapshot.currentPeriodStartSeconds * 1000,
+    ).toISOString();
+    const currentPeriodEnd = new Date(
+      subscriptionSnapshot.currentPeriodEndSeconds * 1000,
+    ).toISOString();
+    const latestInvoice = subscription.latest_invoice;
+    const confirmationSecret = extractInvoiceConfirmationClientSecret(latestInvoice);
+    const accessState = initialSubscriptionAccessState(
+      subscription.status,
+      confirmationSecret !== null,
+    );
 
-    // ==========================================================================
-    // UPDATE DATABASE
-    // ==========================================================================
-    // Update crewcast.subscriptions table
-    const existingSub = await sql`
-      SELECT id FROM crewcast.subscriptions WHERE user_id = ${userId}
-    `;
-
-    if (existingSub.length > 0) {
-      await sql`
-        UPDATE crewcast.subscriptions
-        SET
-          stripe_customer_id = ${stripeCustomerId},
-          stripe_subscription_id = ${subscription.id},
-          stripe_payment_method_id = ${paymentMethodId},
-          plan = ${plan},
-          status = ${subscription.status === 'trialing' ? 'trialing' : subscription.status},
-          billing_interval = ${billingInterval},
-          current_period_start = ${currentPeriodStart},
-          current_period_end = ${currentPeriodEnd},
-          trial_ends_at = ${trialEnd},
-          cancel_at_period_end = false,
-          card_last4 = ${cardLast4},
-          card_brand = ${cardBrand},
-          card_exp_month = ${cardExpMonth},
-          card_exp_year = ${cardExpYear},
-          updated_at = NOW()
-        WHERE user_id = ${userId}
-      `;
-    } else {
-      await sql`
-        INSERT INTO crewcast.subscriptions (
-          user_id,
-          stripe_customer_id,
-          stripe_subscription_id,
-          stripe_payment_method_id,
-          plan,
-          status,
-          billing_interval,
-          current_period_start,
-          current_period_end,
-          trial_ends_at,
-          cancel_at_period_end,
-          card_last4,
-          card_brand,
-          card_exp_month,
-          card_exp_year
-        ) VALUES (
-          ${userId},
-          ${stripeCustomerId},
-          ${subscription.id},
-          ${paymentMethodId},
-          ${plan},
-          ${subscription.status === 'trialing' ? 'trialing' : subscription.status},
-          ${billingInterval},
-          ${currentPeriodStart},
-          ${currentPeriodEnd},
-          ${trialEnd},
-          false,
-          ${cardLast4},
-          ${cardBrand},
-          ${cardExpMonth},
-          ${cardExpYear}
-        )
-      `;
+    let paidInvoiceContext: {
+      invoiceId: string;
+      periodStart: Date;
+      paidAt: string;
+    } | null = null;
+    if (subscription.status === 'active') {
+      const latestInvoiceId = extractStripeId(latestInvoice);
+      if (!latestInvoiceId) {
+        throw new Error(`Active Stripe subscription ${subscription.id} has no invoice.`);
+      }
+      const paidInvoice = await stripe.invoices.retrieve(latestInvoiceId);
+      if (extractStripeId(paidInvoice.customer) !== stripeCustomerId) {
+        throw new Error(`Stripe invoice ${latestInvoiceId} belongs to a different customer.`);
+      }
+      if (extractInvoiceSubscriptionId(paidInvoice) !== subscription.id) {
+        throw new Error(`Stripe invoice ${latestInvoiceId} belongs to a different subscription.`);
+      }
+      if (paidInvoice.status !== 'paid') {
+        throw new Error(`Active Stripe subscription ${subscription.id} has an unpaid latest invoice.`);
+      }
+      const servicePeriod = extractInvoiceSubscriptionServicePeriod(
+        paidInvoice,
+        subscription.id,
+      );
+      if (!servicePeriod) {
+        throw new Error(`Stripe invoice ${latestInvoiceId} has no subscription service period.`);
+      }
+      const paidAtSeconds = paidInvoice.status_transitions.paid_at ?? paidInvoice.created;
+      if (!Number.isSafeInteger(paidAtSeconds) || paidAtSeconds <= 0) {
+        throw new Error(`Stripe invoice ${latestInvoiceId} has no valid paid timestamp.`);
+      }
+      paidInvoiceContext = {
+        invoiceId: latestInvoiceId,
+        periodStart: new Date(servicePeriod.startSeconds * 1000),
+        paidAt: new Date(paidAtSeconds * 1000).toISOString(),
+      };
     }
 
-    // Update crewcast.users table
-    await sql`
-      UPDATE crewcast.users
-      SET
-        plan = ${plan},
-        has_subscription = true,
-        trial_start_date = NOW(),
-        trial_end_date = ${trialEnd},
-        billing_last4 = ${cardLast4},
-        billing_brand = ${cardBrand},
-        billing_expiry = ${cardExpMonth && cardExpYear ? `${String(cardExpMonth).padStart(2, '0')}/${String(cardExpYear).slice(-2)}` : null},
-        updated_at = NOW()
-      WHERE id = ${userId}
-    `;
+    const reconciliation = await reconcileInitialSubscription(sql, {
+      userId,
+      stripeCustomerId,
+      stripeSubscriptionId: subscription.id,
+      stripePaymentMethodId: paymentMethodId,
+      plan,
+      billingInterval,
+      status: subscription.status,
+      currentPeriodStart,
+      currentPeriodEnd,
+      trialEnd,
+      cancelAtPeriodEnd: subscriptionSnapshot.cancelAtPeriodEnd,
+      card: {
+        last4: cardLast4,
+        brand: cardBrand,
+        expMonth: cardExpMonth,
+        expYear: cardExpYear,
+      },
+      paidInvoice: paidInvoiceContext,
+    });
+    if (reconciliation.creditReset) {
+      console.log(
+        `[Stripe] Invoice ${paidInvoiceContext?.invoiceId} credit reconciliation: `
+        + reconciliation.creditReset,
+      );
+    }
 
-    console.log(`[Stripe] Subscription created for user ${userId}: ${subscription.id} (${subscription.status})`);
+    console.log(`[Stripe] Reconciled subscription ${subscription.id} for user ${userId} (${subscription.status})`);
 
-    // ==========================================================================
-    // INITIALIZE TRIAL CREDITS
-    // ==========================================================================
-    // 
-    // PROBLEM (Discovered January 20th, 2026):
-    // -----------------------------------------
-    // Credits were ONLY being initialized by the Stripe webhook handler
-    // (customer.subscription.created event in /pages/api/stripe/webhook.ts).
-    // 
-    // However, this caused a critical bug where credits were never created:
-    // 
-    // 1. RACE CONDITION: The webhook might arrive BEFORE this endpoint finishes
-    //    updating the database. When the webhook tries to look up the user by
-    //    stripe_customer_id, it finds nothing and exits early.
-    // 
-    // 2. WEBHOOK RELIABILITY: Webhooks can fail, be delayed, or not retry
-    //    if they return 200 (which ours does even on lookup failure).
-    // 
-    // 3. USER EXPERIENCE: User sees "subscription created successfully" but
-    //    has no credits, leading to confusion and support tickets.
-    // 
-    // SOLUTION:
-    // ---------
-    // Initialize credits DIRECTLY in this endpoint after the subscription is
-    // created and database is updated. This guarantees credits exist before
-    // we return success to the user.
-    // 
-    // The initializeTrialCredits() function is IDEMPOTENT (safe to call twice):
-    // - If credits already exist → skips and returns true
-    // - If user already had a trial → blocks and returns false
-    // - If called by both endpoint AND webhook → first wins, second skips
-    // 
-    // We keep the webhook initialization as a BACKUP for edge cases where
-    // this endpoint might fail after Stripe call but before credit init.
-    // 
-    // Authors: DevMentor AI + Human Developer
-    // Date: January 20th, 2026
-    // Related files: 
-    //   - /pages/api/stripe/webhook.ts (also calls initializeTrialCredits)
-    //   - /lib/credits.ts (initializeTrialCredits function)
-    // ==========================================================================
-    
-    if (subscription.status === 'trialing' && trialEnd) {
-      try {
-        // Convert ISO string back to Date for the credits function
-        const trialStartDate = new Date(currentPeriodStart);
-        const trialEndDate = new Date(trialEnd);
-        
-        const creditsInitialized = await initializeTrialCredits(userId, trialStartDate, trialEndDate);
-        
-        if (creditsInitialized) {
-          console.log(`[Stripe] ✅ Trial credits initialized for user ${userId}`);
-        } else {
-          // This happens if user already had a trial before (security check)
-          console.log(`[Stripe] ⚠️ Credits not initialized for user ${userId} (may have had previous trial)`);
-        }
-      } catch (creditError) {
-        // Log the error but DON'T fail the subscription creation
-        // The webhook can retry, or credits can be manually added
-        console.error(`[Stripe] ❌ Failed to initialize credits for user ${userId}:`, creditError);
-        // We intentionally don't throw here - subscription was created successfully
-        // Credits can be initialized later via webhook or manual intervention
-      }
-    } else {
-      console.log(`[Stripe] Skipping credit init - status: ${subscription.status}, trialEnd: ${trialEnd}`);
+    if (accessState === 'payment_action_required') {
+      return NextResponse.json(
+        {
+          error: 'Please confirm the payment to activate your subscription.',
+          code: 'PAYMENT_ACTION_REQUIRED',
+          clientSecret: confirmationSecret,
+          subscriptionId: subscription.id,
+        },
+        { status: 402 },
+      );
+    }
+    if (accessState === 'payment_pending') {
+      return NextResponse.json(
+        {
+          error: 'Your payment is still being prepared. Please try again shortly.',
+          code: 'PAYMENT_PENDING',
+        },
+        { status: 409 },
+      );
+    }
+    if (accessState === 'blocked') {
+      return NextResponse.json(
+        {
+          error: 'This Stripe subscription is not active. Please update your billing details.',
+          code: 'SUBSCRIPTION_NOT_ACTIVE',
+        },
+        { status: 409 },
+      );
     }
 
     // ==========================================================================
@@ -453,6 +555,12 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof StripeMutationRequestError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
     if (error instanceof StripeCustomerOwnershipError) {
       return NextResponse.json(
         { error: error.message, code: error.code },

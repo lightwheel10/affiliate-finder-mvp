@@ -263,7 +263,10 @@ export function useSubscription(userId: number | null) {
       const res = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, ...(opts ?? {}) }),
+        // A fresh ID distinguishes a later genuine cancel from a prior cancel
+        // in the same billing period. Stripe still safely deduplicates any
+        // transport retry made by this one server request.
+        body: JSON.stringify({ userId, requestId: crypto.randomUUID(), ...(opts ?? {}) }),
       });
       
       const data = await res.json();
@@ -300,7 +303,7 @@ export function useSubscription(userId: number | null) {
       const res = await fetch('/api/stripe/resume-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, requestId: crypto.randomUUID() }),
       });
       
       const data = await res.json();

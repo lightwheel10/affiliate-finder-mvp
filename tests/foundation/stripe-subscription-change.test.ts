@@ -138,6 +138,10 @@ test('creates a two-phase downgrade without changing the active phase', async ()
   assert.match(updateCall.options.idempotencyKey ?? '', /:operation-create$/);
   const update = updateCall.params;
   assert.equal(update.proration_behavior, 'none');
+  assert.equal(
+    (update.metadata as Stripe.MetadataParam).app_downgrade_operation_id,
+    'operation-create',
+  );
   assert.equal(update.phases?.length, 2);
   assert.equal(update.phases?.[0].items[0].price, 'price_business_month');
   assert.equal(update.phases?.[0].end_date, 1_802_592_000);
@@ -207,7 +211,7 @@ test('refuses to overwrite a schedule owned outside the application', async () =
   );
 });
 
-test('releases a newly attached schedule if phase configuration fails', async () => {
+test('keeps a newly attached schedule retryable if phase configuration fails', async () => {
   const managed = schedule({
     managed_by: MANAGED_PLAN_SCHEDULE_OWNER,
     change_kind: MANAGED_PLAN_SCHEDULE_KIND,
@@ -232,7 +236,7 @@ test('releases a newly attached schedule if phase configuration fails', async ()
     }),
     /forced update failure/,
   );
-  assert.equal(released, 1);
+  assert.equal(released, 0);
 });
 
 test('release helper refuses unmanaged schedules and releases managed ones', async () => {

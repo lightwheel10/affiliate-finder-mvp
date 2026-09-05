@@ -1,4 +1,5 @@
 import type Stripe from 'stripe';
+import { STRIPE_DOWNGRADE_OPERATION_METADATA_KEY } from './downgrade-operations';
 import { extractStripeId } from './subscription-state';
 
 export const MANAGED_PLAN_SCHEDULE_OWNER = 'affiliate-finder';
@@ -357,7 +358,6 @@ export async function ensureDeferredDowngradeSchedule(
   input: DeferredDowngradeInput,
 ): Promise<DeferredDowngradeResult> {
   const attachedScheduleId = subscriptionScheduleId(input.subscription);
-  let createdHere = false;
   let schedule: Stripe.SubscriptionSchedule;
 
   if (attachedScheduleId) {
@@ -376,11 +376,11 @@ export async function ensureDeferredDowngradeSchedule(
           managed_by: MANAGED_PLAN_SCHEDULE_OWNER,
           change_kind: MANAGED_PLAN_SCHEDULE_KIND,
           account_id: String(input.accountId),
+          [STRIPE_DOWNGRADE_OPERATION_METADATA_KEY]: input.operationId,
         },
       },
       { idempotencyKey: requestKey('create-plan-downgrade', input) },
     );
-    createdHere = true;
   }
 
   if (scheduleSubscriptionId(schedule) !== input.subscription.id) {
@@ -413,6 +413,7 @@ export async function ensureDeferredDowngradeSchedule(
           target_plan: input.targetPlan,
           target_billing_interval: input.targetBillingInterval,
           effective_at: String(effectiveAtSeconds),
+          [STRIPE_DOWNGRADE_OPERATION_METADATA_KEY]: input.operationId,
         },
         phases: [
           preservedCurrent,
@@ -429,19 +430,9 @@ export async function ensureDeferredDowngradeSchedule(
     }
     return { scheduleId: updated.id, effectiveAtSeconds };
   } catch (error) {
-    if (!createdHere) throw error;
-    try {
-      await schedules.release(
-        schedule.id,
-        {},
-        { idempotencyKey: requestKey('rollback-plan-downgrade', input) },
-      );
-    } catch (releaseError) {
-      throw new AggregateError(
-        [error, releaseError],
-        'Scheduling the downgrade failed and the temporary Stripe schedule could not be released.',
-      );
-    }
+    // Keep a newly attached, app-owned schedule available for an exact retry.
+    // Releasing it here would make Stripe return that now-released object for
+    // the same idempotency key and could permanently strand the downgrade.
     throw error;
   }
 }

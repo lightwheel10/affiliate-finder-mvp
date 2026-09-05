@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { stripe } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
@@ -6,16 +8,31 @@ import {
   assertLegacyAccountId,
   requireAuthenticatedAccount,
 } from '@/lib/auth/account';
-import { extractStripeId } from '@/lib/stripe/subscription-state';
+import { extractStripeId, snapshotStripeSubscription } from '@/lib/stripe/subscription-state';
 import {
   isManagedPlanSchedule,
   releaseManagedPlanSchedule,
   subscriptionScheduleId,
+  UnsupportedSubscriptionScheduleError,
 } from '@/lib/stripe/subscription-change';
 import {
   cancelPendingSubscriptionPlanChange,
   type SubscriptionPlanChangeSql,
 } from '@/lib/stripe/subscription-plan-changes-postgres';
+import {
+  readStripeMutationJson,
+  StripeMutationRequestError,
+} from '@/lib/stripe/mutation-request';
+import { subscriptionLifecycleMutationIdempotencyKey } from '@/lib/stripe/subscription-creation';
+
+const cancellationSchema = z.object({
+  userId: z.number().int().positive(),
+  // Optional during a rolling deployment so an already-open settings page is
+  // not broken. New clients send it; old clients get a safe server ID.
+  requestId: z.uuid().optional(),
+  reason: z.enum(['too_expensive', 'not_what_looking_for', 'didnt_find_enough', 'other']).optional(),
+  reasonText: z.string().trim().max(1_000).optional(),
+}).strict();
 
 // =============================================================================
 // POST /api/stripe/cancel-subscription
@@ -39,8 +56,14 @@ export async function POST(request: NextRequest) {
     // ==========================================================================
     const authenticated = await requireAuthenticatedAccount();
 
-    const body = await request.json();
-    const { userId: legacyUserId, reason, reasonText } = body;
+    const parsedBody = cancellationSchema.safeParse(await readStripeMutationJson(request));
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Invalid request input.', code: 'INVALID_INPUT' },
+        { status: 400 },
+      );
+    }
+    const { userId: legacyUserId, requestId, reason, reasonText } = parsedBody.data;
 
     // ==========================================================================
     // INPUT VALIDATION
@@ -64,9 +87,7 @@ export async function POST(request: NextRequest) {
     // Stored in crewcast.cancellation_reasons AND forwarded to Stripe's native
     // cancellation_details so it shows up in Stripe's churn analytics too.
     // ==========================================================================
-    const ALLOWED_REASONS = ['too_expensive', 'not_what_looking_for', 'didnt_find_enough', 'other'] as const;
-    const safeReason: string | null =
-      typeof reason === 'string' && (ALLOWED_REASONS as readonly string[]).includes(reason) ? reason : null;
+    const safeReason: string | null = reason ?? null;
     const safeReasonText: string | null =
       safeReason === 'other' && typeof reasonText === 'string' && reasonText.trim()
         ? reasonText.trim().slice(0, 1000)
@@ -128,59 +149,81 @@ export async function POST(request: NextRequest) {
     let releasedScheduleId: string | null = null;
     if (attachedScheduleId) {
       const attachedSchedule = await stripe.subscriptionSchedules.retrieve(attachedScheduleId);
-      if (isManagedPlanSchedule(attachedSchedule)) {
-        releasedScheduleId = await releaseManagedPlanSchedule(
-          stripe.subscriptionSchedules,
-          currentSubscription,
-          'subscription-canceled',
-        );
-      } else {
-        await stripe.subscriptionSchedules.release(
-          attachedScheduleId,
-          {},
-          { idempotencyKey: `release-for-cancel:${attachedScheduleId}`.slice(0, 255) },
+      if (!isManagedPlanSchedule(attachedSchedule)) {
+        throw new UnsupportedSubscriptionScheduleError(
+          'This subscription has a Stripe schedule that is not managed by this application.',
         );
       }
+      releasedScheduleId = await releaseManagedPlanSchedule(
+        stripe.subscriptionSchedules,
+        currentSubscription,
+        'subscription-canceled',
+      );
     }
 
     // 2026-08-03 (Paras): forward the survey answer to Stripe's native churn
     // analytics in the SAME update call — no extra request. Omitted entirely
     // when the user skipped the survey.
-    const subscription = await stripe.subscriptions.update(stripe_subscription_id, {
-      cancel_at_period_end: true,
-      ...(safeReason
-        ? {
-            cancellation_details: {
-              feedback: STRIPE_FEEDBACK[safeReason],
-              ...(safeReasonText ? { comment: safeReasonText } : {}),
-            },
-          }
-        : {}),
-    });
+    const subscription = await stripe.subscriptions.update(
+      stripe_subscription_id,
+      {
+        cancel_at_period_end: true,
+        ...(safeReason
+          ? {
+              cancellation_details: {
+                feedback: STRIPE_FEEDBACK[safeReason],
+                ...(safeReasonText ? { comment: safeReasonText } : {}),
+              },
+            }
+          : {}),
+      },
+      {
+        idempotencyKey: subscriptionLifecycleMutationIdempotencyKey(
+          'cancel-at-period-end',
+          stripe_customer_id,
+          stripe_subscription_id,
+          requestId ?? randomUUID(),
+        ),
+      },
+    );
 
-    // Access subscription properties safely with validation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subObj = subscription as any;
-    const periodEndTimestamp = typeof subObj.current_period_end === 'number' ? subObj.current_period_end : null;
-    const periodEndIso = periodEndTimestamp ? new Date(periodEndTimestamp * 1000).toISOString() : null;
+    const updatedSnapshot = snapshotStripeSubscription(subscription, {
+      proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+      proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+      businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+      businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
+    });
+    const periodEndIso = updatedSnapshot.currentPeriodEndSeconds
+      ? new Date(updatedSnapshot.currentPeriodEndSeconds * 1000).toISOString()
+      : null;
 
     // ==========================================================================
     // UPDATE DATABASE
     // ==========================================================================
-    await sql`
-      UPDATE crewcast.subscriptions
-      SET
-        cancel_at_period_end = true,
-        updated_at = NOW()
-      WHERE user_id = ${userId}
-    `;
-    if (releasedScheduleId) {
-      await cancelPendingSubscriptionPlanChange(
-        sql as unknown as SubscriptionPlanChangeSql,
-        userId,
-        releasedScheduleId,
-      );
-    }
+    await (sql as unknown as {
+      begin<T>(callback: (transaction: SubscriptionPlanChangeSql) => Promise<T>): Promise<T>;
+    }).begin(async (transaction) => {
+      const updated = await transaction<{ user_id: number }[]>`
+        UPDATE crewcast.subscriptions
+        SET
+          cancel_at_period_end = true,
+          updated_at = NOW()
+        WHERE user_id = ${userId}
+          AND stripe_customer_id = ${stripe_customer_id}
+          AND stripe_subscription_id = ${stripe_subscription_id}
+        RETURNING user_id
+      `;
+      if (updated.length !== 1) {
+        throw new Error('Cancellation did not update exactly one application subscription.');
+      }
+      if (releasedScheduleId) {
+        await cancelPendingSubscriptionPlanChange(
+          transaction,
+          userId,
+          releasedScheduleId,
+        );
+      }
+    });
 
     console.log(`[Stripe] Subscription ${stripe_subscription_id} set to cancel at period end`);
 
@@ -212,25 +255,29 @@ export async function POST(request: NextRequest) {
       subscription: {
         id: subscription.id,
         status: subscription.status,
-        cancelAtPeriodEnd: !!subObj.cancel_at_period_end,
+        cancelAtPeriodEnd: updatedSnapshot.cancelAtPeriodEnd,
         currentPeriodEnd: periodEndIso,
       },
     });
 
   } catch (error) {
+    if (error instanceof StripeMutationRequestError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
+    if (error instanceof UnsupportedSubscriptionScheduleError) {
+      return NextResponse.json(
+        { error: error.message, code: 'UNSUPPORTED_SUBSCRIPTION_SCHEDULE' },
+        { status: 409 },
+      );
+    }
     if (error instanceof AccountAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('[Stripe] Error canceling subscription:', error);
     
-    if (error instanceof Error && 'type' in error) {
-      const stripeError = error as { type: string; message: string };
-      return NextResponse.json(
-        { error: stripeError.message },
-        { status: 400 }
-      );
-    }
-
     return NextResponse.json(
       { error: 'Failed to cancel subscription' },
       { status: 500 }
