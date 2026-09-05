@@ -216,6 +216,22 @@
       "down": "0026_durable_stripe_credit_checkouts.down.sql",
       "upSha256": "2f8bb075c7fa7241f2c21c99946a24d2dc4c28b4ec2d35ea07a44deb23d1c3a1",
       "downSha256": "7dd00ae6a9a97c5d529e403ed00ff7ffa1d111c582335cbe2bfd518c46732c48"
+    },
+    {
+      "version": "0027",
+      "name": "durable_stripe_payment_method_updates",
+      "up": "0027_durable_stripe_payment_method_updates.up.sql",
+      "down": "0027_durable_stripe_payment_method_updates.down.sql",
+      "upSha256": "930dffa85b61eccff083ab6437d7dabc82b6119fd8da16aed209e0796d905c78",
+      "downSha256": "f9e67e41ec529a643e8eb6b15b84cd0a41deb55a01f8b7996cb7b2f5e5a1cc23"
+    },
+    {
+      "version": "0028",
+      "name": "resilient_stripe_payment_method_recovery",
+      "up": "0028_resilient_stripe_payment_method_recovery.up.sql",
+      "down": "0028_resilient_stripe_payment_method_recovery.down.sql",
+      "upSha256": "51ed4e81c2041196fe1c782456cc38485944b315f86d4161aa4e5b48865c0218",
+      "downSha256": "fa4a88658429278496a5ecaf4eb2e7ba3702af6379586b8eaf52a2767a23a4b7"
     }
   ]
 }

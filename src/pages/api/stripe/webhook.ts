@@ -96,6 +96,9 @@ import {
   recoverPreparedStripeDowngradeOperation,
   type StripeDowngradeOperationSql,
 } from '@/lib/stripe/downgrade-operations-postgres';
+import { recoverStripePaymentMethodUpdate } from '@/lib/stripe/payment-method-update-recovery';
+import type { StripePaymentMethodUpdateSql } from '@/lib/stripe/payment-method-update-postgres';
+import { readAuthoritativeStripeSubscriptionForCustomer } from '@/lib/stripe/payment-method-update-server';
 import { isPlanCapacityIncrease } from '@/lib/plans/catalog';
 import {
   restoreDowngradeArchivedCapacity,
@@ -364,6 +367,28 @@ async function withCurrentStripeSubscription<T>(
       ?? eventSubscriptionId;
     if (!currentSubscriptionId) {
       throw new Error(`No Stripe subscription is recorded for customer ${customerId}.`);
+    }
+
+    // Resolve Stripe's current subscription before recovery. If the durable
+    // operation points at an obsolete same-customer subscription, recovery
+    // abandons that operation instead of publishing the wrong card as current.
+    const paymentMethodRecovery = await recoverStripePaymentMethodUpdate(
+      transaction as unknown as StripePaymentMethodUpdateSql,
+      stripe,
+      {
+        userId: owner.user_id,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: currentSubscriptionId,
+      },
+    );
+    if (paymentMethodRecovery === 'completed') {
+      console.log(
+        `[Webhook] Recovered prepared payment-method update for user ${owner.user_id}.`,
+      );
+    } else if (paymentMethodRecovery === 'abandoned') {
+      console.warn(
+        `[Webhook] Abandoned obsolete or permanently invalid payment-method update for user ${owner.user_id}.`,
+      );
     }
 
     // Stripe is the source of truth. Retrieval occurs after taking the per-
@@ -976,15 +1001,53 @@ async function synchronizeCustomerPaymentMethod(
       throw new Error(`Stripe customer ${customerId} was deleted before card synchronization.`);
     }
 
-    let defaultPaymentMethodId = extractStripeId(
-      customer.invoice_settings.default_payment_method,
+    const authoritativeSubscription = await readAuthoritativeStripeSubscriptionForCustomer(
+      stripe,
+      customerId,
     );
-    if (!defaultPaymentMethodId && owners[0].stripe_subscription_id) {
-      const currentSubscription = await stripe.subscriptions.retrieve(
-        owners[0].stripe_subscription_id,
+    const currentSubscription = authoritativeSubscription
+      ?? (owners[0].stripe_subscription_id
+        ? await stripe.subscriptions.retrieve(owners[0].stripe_subscription_id)
+        : null);
+    if (
+      currentSubscription
+      && extractStripeId(currentSubscription.customer) !== customerId
+    ) {
+      throw new Error(
+        `Stripe subscription ${currentSubscription.id} belongs to a different customer.`,
       );
-      defaultPaymentMethodId = extractStripeId(currentSubscription.default_payment_method);
     }
+
+    // payment_method.attached and customer.updated can arrive while the route
+    // that started the update is gone. The prepared operation safely replays
+    // any missing Stripe step and commits the local card only after both Stripe
+    // defaults agree.
+    const paymentMethodRecovery = await recoverStripePaymentMethodUpdate(
+      transaction as unknown as StripePaymentMethodUpdateSql,
+      stripe,
+      {
+        userId: owners[0].user_id,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: currentSubscription?.id ?? null,
+      },
+    );
+    if (
+      paymentMethodRecovery === 'completed'
+      || paymentMethodRecovery === 'abandoned'
+    ) {
+      console.log(
+        paymentMethodRecovery === 'completed'
+          ? `[Webhook] Recovered prepared payment-method update for user ${owners[0].user_id}.`
+          : `[Webhook] Abandoned obsolete or permanently invalid payment-method update for user ${owners[0].user_id}.`,
+      );
+      return;
+    }
+
+    // The current subscription is what Stripe will actually invoice. Prefer
+    // its card over a customer-wide fallback when both are present.
+    const defaultPaymentMethodId = extractStripeId(
+      currentSubscription?.default_payment_method,
+    ) ?? extractStripeId(customer.invoice_settings.default_payment_method);
 
     // Attaching a card does not necessarily make it the customer's default.
     // If Stripe has no authoritative default yet, preserve the current display

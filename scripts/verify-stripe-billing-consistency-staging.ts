@@ -19,6 +19,13 @@ import {
 } from '../src/lib/stripe/credit-checkout-postgres';
 import type { CreditCheckoutIdentity } from '../src/lib/stripe/credit-checkout';
 import {
+  abandonStripePaymentMethodUpdateOperation,
+  completeStripePaymentMethodUpdateOperation,
+  prepareStripePaymentMethodUpdateOperation,
+  StripePaymentMethodUpdateConflictError,
+  type StripePaymentMethodUpdateOperation,
+} from '../src/lib/stripe/payment-method-update-postgres';
+import {
   reconcileInitialSubscription,
   type InitialSubscriptionDatabase,
 } from '../src/lib/stripe/initial-subscription-postgres';
@@ -77,6 +84,16 @@ async function verifyMigration(): Promise<void> {
       version: '0026',
       name: 'durable_stripe_credit_checkouts',
       file: '0026_durable_stripe_credit_checkouts.up.sql',
+    },
+    {
+      version: '0027',
+      name: 'durable_stripe_payment_method_updates',
+      file: '0027_durable_stripe_payment_method_updates.up.sql',
+    },
+    {
+      version: '0028',
+      name: 'resilient_stripe_payment_method_recovery',
+      file: '0028_resilient_stripe_payment_method_recovery.up.sql',
     },
   ];
   for (const migration of expectedMigrations) {
@@ -156,6 +173,56 @@ async function verifyMigration(): Promise<void> {
     triggers: 1,
     sessionIndexUnique: true,
   });
+
+  const paymentMethodRows = await sql<{
+    rls: boolean;
+    grants: number;
+    constraints: number;
+    triggers: number;
+    preparedIndexUnique: boolean;
+    hasAbandonedAt: boolean;
+    hasFailureCode: boolean;
+  }[]>`
+    SELECT
+      (SELECT relrowsecurity FROM pg_class
+        WHERE oid = 'crewcast.stripe_payment_method_update_operations'::regclass) AS rls,
+      (SELECT count(*) FROM information_schema.role_table_grants
+        WHERE table_schema = 'crewcast'
+          AND table_name = 'stripe_payment_method_update_operations'
+          AND grantee IN ('PUBLIC', 'anon', 'authenticated', 'service_role'))::integer AS grants,
+      (SELECT count(*) FROM pg_constraint
+        WHERE conrelid = 'crewcast.stripe_payment_method_update_operations'::regclass)::integer AS constraints,
+      (SELECT count(*) FROM pg_trigger
+        WHERE tgrelid = 'crewcast.stripe_payment_method_update_operations'::regclass
+          AND tgname = 'stripe_payment_method_update_operations_lifecycle'
+          AND NOT tgisinternal)::integer AS triggers,
+      (SELECT indisunique
+        FROM pg_index
+        WHERE indexrelid =
+          'crewcast.stripe_pm_update_one_prepared_user_key'::regclass
+      ) AS "preparedIndexUnique",
+      EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'crewcast'
+          AND table_name = 'stripe_payment_method_update_operations'
+          AND column_name = 'abandoned_at'
+      ) AS "hasAbandonedAt",
+      EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'crewcast'
+          AND table_name = 'stripe_payment_method_update_operations'
+          AND column_name = 'failure_code'
+      ) AS "hasFailureCode"
+  `;
+  assert.deepEqual(paymentMethodRows[0], {
+    rls: true,
+    grants: 0,
+    constraints: 9,
+    triggers: 1,
+    preparedIndexUnique: true,
+    hasAbandonedAt: true,
+    hasFailureCode: true,
+  });
 }
 
 async function removeInterruptedFixtures(): Promise<void> {
@@ -199,8 +266,8 @@ async function createFixture(): Promise<number> {
       current_period_end
     ) VALUES (
       ${users[0].id},
-      ${`cus_codex_${token}`},
-      ${`sub_codex_${token}`},
+      ${`cus_codex${token}`},
+      ${`sub_codex${token}`},
       'business',
       'active',
       'monthly',
@@ -214,8 +281,8 @@ function operationInput(userId: number, operationId: string) {
   return {
     operationId,
     userId,
-    stripeCustomerId: `cus_codex_${token}`,
-    stripeSubscriptionId: `sub_codex_${token}`,
+    stripeCustomerId: `cus_codex${token}`,
+    stripeSubscriptionId: `sub_codex${token}`,
     fromPlan: 'business' as const,
     fromBillingInterval: 'monthly' as const,
     sourcePeriodEndSeconds: 4_071_686_400,
@@ -231,7 +298,7 @@ async function prepareUnderAccountLock(userId: number, operationId: string) {
   return sql.begin(async (transaction) => {
     await transaction`
       SELECT pg_advisory_xact_lock(
-        hashtextextended(${`stripe-subscription:cus_codex_${token}`}, 0)
+        hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
       )
     `;
     return prepareStripeDowngradeOperation(transaction, operationInput(userId, operationId));
@@ -258,7 +325,7 @@ async function verifyDowngradeCrashRecovery(userId: number): Promise<void> {
     sql.begin(async (transaction) => {
       await transaction`
         SELECT pg_advisory_xact_lock(
-          hashtextextended(${`stripe-subscription:cus_codex_${token}`}, 0)
+          hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
         )
       `;
       await prepareStripeDowngradeOperation(transaction, {
@@ -288,7 +355,7 @@ async function verifyDowngradeCrashRecovery(userId: number): Promise<void> {
   const recovered = await sql.begin(async (transaction) => {
     await transaction`
       SELECT pg_advisory_xact_lock(
-        hashtextextended(${`stripe-subscription:cus_codex_${token}`}, 0)
+        hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
       )
     `;
     return recoverPreparedStripeDowngradeOperation(transaction, { userId, schedule });
@@ -338,7 +405,7 @@ async function verifyDowngradeCrashRecovery(userId: number): Promise<void> {
   const revisedOperation = await sql.begin(async (transaction) => {
     await transaction`
       SELECT pg_advisory_xact_lock(
-        hashtextextended(${`stripe-subscription:cus_codex_${token}`}, 0)
+        hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
       )
     `;
     return prepareStripeDowngradeOperation(transaction, {
@@ -386,6 +453,252 @@ async function verifyDowngradeCrashRecovery(userId: number): Promise<void> {
   });
 }
 
+function paymentMethodOperationInput(
+  userId: number,
+  operationId: string,
+  paymentMethodId = `pm_codex${token}`,
+) {
+  return {
+    operationId,
+    userId,
+    stripeCustomerId: `cus_codex${token}`,
+    stripeSubscriptionId: `sub_codex${token}`,
+    stripePaymentMethodId: paymentMethodId,
+  };
+}
+
+async function preparePaymentMethodUpdateUnderLock(
+  userId: number,
+  operationId: string,
+  paymentMethodId?: string,
+): Promise<StripePaymentMethodUpdateOperation> {
+  return sql.begin(async (transaction) => {
+    await transaction`
+      SELECT pg_advisory_xact_lock(
+        hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
+      )
+    `;
+    return prepareStripePaymentMethodUpdateOperation(
+      transaction,
+      paymentMethodOperationInput(userId, operationId, paymentMethodId),
+    );
+  });
+}
+
+async function verifyPaymentMethodUpdateCrashRecovery(userId: number): Promise<void> {
+  const preparedAttempts = await Promise.all(
+    Array.from({ length: 100 }, () =>
+      preparePaymentMethodUpdateUnderLock(userId, randomUUID())),
+  );
+  assert.equal(new Set(preparedAttempts.map((attempt) => attempt.operationId)).size, 1);
+  assert.equal(preparedAttempts[0].status, 'prepared');
+
+  const replacementOperation = await preparePaymentMethodUpdateUnderLock(
+    userId,
+    randomUUID(),
+    `pm_codexreplacement${token}`,
+  );
+  assert.equal(replacementOperation.status, 'prepared');
+  assert.notEqual(replacementOperation.operationId, preparedAttempts[0].operationId);
+  const superseded = await sql<{
+    status: string;
+    abandoned_at: string | null;
+    failure_code: string | null;
+  }[]>`
+    SELECT status, abandoned_at::text, failure_code
+    FROM crewcast.stripe_payment_method_update_operations
+    WHERE operation_id = ${preparedAttempts[0].operationId}::uuid
+  `;
+  assert.equal(superseded[0].status, 'abandoned');
+  assert.ok(superseded[0].abandoned_at);
+  assert.equal(superseded[0].failure_code, 'replaced_by_new_request');
+
+  await assert.rejects(
+    sql.begin(async (transaction) => {
+      await transaction`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
+        )
+      `;
+      return completeStripePaymentMethodUpdateOperation(transaction, {
+        operation: preparedAttempts[0],
+        card: { last4: '0000', brand: 'visa', expMonth: 1, expYear: 2035 },
+      });
+    }),
+    StripePaymentMethodUpdateConflictError,
+  );
+
+  const completionResults = await Promise.all(
+    Array.from({ length: 100 }, () => sql.begin(async (transaction) => {
+      await transaction`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
+        )
+      `;
+      return completeStripePaymentMethodUpdateOperation(transaction, {
+        operation: replacementOperation,
+        card: { last4: '3184', brand: 'visa', expMonth: 12, expYear: 2034 },
+      });
+    })),
+  );
+  assert.equal(completionResults.filter((result) => result === 'completed').length, 1);
+  assert.equal(
+    completionResults.filter((result) => result === 'already_completed').length,
+    99,
+  );
+
+  const firstState = await sql<{
+    operations: number;
+    completed: number;
+    abandoned: number;
+    subscriptionMethod: string | null;
+    subscriptionLast4: string | null;
+    userLast4: string | null;
+  }[]>`
+    SELECT
+      (SELECT count(*) FROM crewcast.stripe_payment_method_update_operations
+        WHERE user_id = ${userId})::integer AS operations,
+      (SELECT count(*) FROM crewcast.stripe_payment_method_update_operations
+        WHERE user_id = ${userId} AND status = 'completed')::integer AS completed,
+      (SELECT count(*) FROM crewcast.stripe_payment_method_update_operations
+        WHERE user_id = ${userId} AND status = 'abandoned')::integer AS abandoned,
+      (SELECT stripe_payment_method_id FROM crewcast.subscriptions
+        WHERE user_id = ${userId}) AS "subscriptionMethod",
+      (SELECT card_last4 FROM crewcast.subscriptions
+        WHERE user_id = ${userId}) AS "subscriptionLast4",
+      (SELECT billing_last4 FROM crewcast.users
+        WHERE id = ${userId}) AS "userLast4"
+  `;
+  assert.deepEqual(firstState[0], {
+    operations: 2,
+    completed: 1,
+    abandoned: 1,
+    subscriptionMethod: `pm_codexreplacement${token}`,
+    subscriptionLast4: '3184',
+    userLast4: '3184',
+  });
+
+  const rollbackOperation = await preparePaymentMethodUpdateUnderLock(
+    userId,
+    randomUUID(),
+    `pm_codexrollback${token}`,
+  );
+  await assert.rejects(
+    sql.begin(async (transaction) => {
+      await transaction`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
+        )
+      `;
+      await completeStripePaymentMethodUpdateOperation(transaction, {
+        operation: rollbackOperation,
+        card: { last4: '0341', brand: 'visa', expMonth: 1, expYear: 2035 },
+      });
+      throw new Error('synthetic crash after local completion');
+    }),
+    /synthetic crash/i,
+  );
+  const rolledBack = await sql<{
+    status: string;
+    method: string | null;
+    last4: string | null;
+  }[]>`
+    SELECT
+      (SELECT status FROM crewcast.stripe_payment_method_update_operations
+        WHERE operation_id = ${rollbackOperation.operationId}::uuid) AS status,
+      (SELECT stripe_payment_method_id FROM crewcast.subscriptions
+        WHERE user_id = ${userId}) AS method,
+      (SELECT card_last4 FROM crewcast.subscriptions
+        WHERE user_id = ${userId}) AS last4
+  `;
+  assert.deepEqual(rolledBack[0], {
+    status: 'prepared',
+    method: `pm_codexreplacement${token}`,
+    last4: '3184',
+  });
+
+  await sql.begin(async (transaction) => {
+    await transaction`
+      SELECT pg_advisory_xact_lock(
+        hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
+      )
+    `;
+    await completeStripePaymentMethodUpdateOperation(transaction, {
+      operation: rollbackOperation,
+      card: { last4: '0341', brand: 'visa', expMonth: 1, expYear: 2035 },
+    });
+  });
+  await assert.rejects(
+    sql`
+      UPDATE crewcast.stripe_payment_method_update_operations
+      SET stripe_payment_method_id = ${`pm_codexmutated${token}`}
+      WHERE operation_id = ${rollbackOperation.operationId}::uuid
+    `,
+    /payment-method update operation identity is immutable/i,
+  );
+
+  const abandonedOperation = await preparePaymentMethodUpdateUnderLock(
+    userId,
+    randomUUID(),
+    `pm_codexabandoned${token}`,
+  );
+  const abandonResults = await Promise.all(
+    Array.from({ length: 100 }, () => sql.begin(async (transaction) => {
+      await transaction`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
+        )
+      `;
+      return abandonStripePaymentMethodUpdateOperation(transaction, {
+        operation: abandonedOperation,
+        failureCode: 'invalidrequest',
+      });
+    })),
+  );
+  assert.equal(abandonResults.filter((result) => result === 'abandoned').length, 1);
+  assert.equal(
+    abandonResults.filter((result) => result === 'already_abandoned').length,
+    99,
+  );
+  const abandonedState = await sql<{
+    status: string;
+    completed_at: string | null;
+    abandoned_at: string | null;
+    failure_code: string | null;
+  }[]>`
+    SELECT status, completed_at::text, abandoned_at::text, failure_code
+    FROM crewcast.stripe_payment_method_update_operations
+    WHERE operation_id = ${abandonedOperation.operationId}::uuid
+  `;
+  assert.equal(abandonedState[0].status, 'abandoned');
+  assert.equal(abandonedState[0].completed_at, null);
+  assert.ok(abandonedState[0].abandoned_at);
+  assert.equal(abandonedState[0].failure_code, 'invalidrequest');
+
+  await assert.rejects(
+    sql.begin(async (transaction) => {
+      await transaction`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(${`stripe-subscription:cus_codex${token}`}, 0)
+        )
+      `;
+      return completeStripePaymentMethodUpdateOperation(transaction, {
+        operation: abandonedOperation,
+        card: { last4: '9999', brand: 'visa', expMonth: 1, expYear: 2035 },
+      });
+    }),
+    StripePaymentMethodUpdateConflictError,
+  );
+  await assert.rejects(
+    sql`
+      UPDATE crewcast.stripe_payment_method_update_operations
+      SET failure_code = 'mutated'
+      WHERE operation_id = ${abandonedOperation.operationId}::uuid
+    `,
+    /terminal Stripe payment-method update is immutable/i,
+  );
+}
+
 function initialSubscriptionInput(
   userId: number,
   input: {
@@ -402,9 +715,9 @@ function initialSubscriptionInput(
 ) {
   return {
     userId,
-    stripeCustomerId: `cus_codex_${token}`,
-    stripeSubscriptionId: `sub_codex_${token}`,
-    stripePaymentMethodId: `pm_codex_${token}`,
+    stripeCustomerId: `cus_codex${token}`,
+    stripeSubscriptionId: `sub_codex${token}`,
+    stripePaymentMethodId: `pm_codex${token}`,
     plan: 'business' as const,
     billingInterval: 'monthly' as const,
     cancelAtPeriodEnd: false,
@@ -793,6 +1106,7 @@ async function cleanup(): Promise<void> {
     users: number;
     downgrade_operations: number;
     credit_operations: number;
+    payment_method_operations: number;
     purchases: number;
   }[]>`
     SELECT
@@ -802,6 +1116,8 @@ async function cleanup(): Promise<void> {
         WHERE user_id = COALESCE(${removedAccountId}, -1))::integer AS downgrade_operations,
       (SELECT count(*) FROM crewcast.stripe_credit_checkout_operations
         WHERE user_id = COALESCE(${removedAccountId}, -1))::integer AS credit_operations,
+      (SELECT count(*) FROM crewcast.stripe_payment_method_update_operations
+        WHERE user_id = COALESCE(${removedAccountId}, -1))::integer AS payment_method_operations,
       (SELECT count(*) FROM crewcast.credit_purchases
         WHERE user_id = COALESCE(${removedAccountId}, -1))::integer AS purchases
   `;
@@ -809,6 +1125,7 @@ async function cleanup(): Promise<void> {
     users: 0,
     downgrade_operations: 0,
     credit_operations: 0,
+    payment_method_operations: 0,
     purchases: 0,
   });
 }
@@ -823,6 +1140,10 @@ async function main(): Promise<void> {
     console.log('Verified concurrent initial subscription reconciliation and rollback safety.');
     await verifyDowngradeCrashRecovery(accountId);
     console.log('Verified durable downgrade retries and crash recovery.');
+    await verifyPaymentMethodUpdateCrashRecovery(accountId);
+    console.log(
+      'Verified durable payment-method update retries, replacement, abandonment and crash recovery.',
+    );
     await verifyInvoiceCreditMonotonicity(accountId);
     console.log('Verified concurrent invoice credit reset idempotency.');
     await verifyCreditCheckoutCrashRecovery(accountId);
