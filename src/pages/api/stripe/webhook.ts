@@ -78,6 +78,7 @@ import {
   isZeroValueTrialStartInvoice,
   selectAuthoritativeCustomerSubscription,
 } from '@/lib/stripe/subscription-creation';
+import { decideStripeCustomerEventOwnership } from '@/lib/stripe/customer-event-ownership';
 import { assertMatchingTrialCredits } from '@/lib/stripe/initial-subscription-postgres';
 import {
   extractInvoiceSubscriptionId,
@@ -950,13 +951,27 @@ async function synchronizeCustomerPaymentMethod(
       LIMIT 2
       FOR UPDATE
     `;
-    if (owners.length !== 1) {
+    const customer = await stripe.customers.retrieve(customerId);
+    const ownershipDecision = decideStripeCustomerEventOwnership({
+      applicationOwnerCount: owners.length,
+      applicationAccountMarker: customer.deleted
+        ? null
+        : customer.metadata.neon_user_id,
+    });
+    if (ownershipDecision === 'ignore_external') {
+      console.log(`[Webhook] Ignoring external Stripe customer event for ${customerId}.`);
+      return;
+    }
+    if (ownershipDecision === 'retry_unreconciled') {
+      throw new Error(
+        `Stripe customer ${customerId} is marked for this application but is not linked yet.`,
+      );
+    }
+    if (ownershipDecision === 'reject_ambiguous') {
       throw new Error(
         `Expected one application account for Stripe customer ${customerId}; found ${owners.length}.`,
       );
     }
-
-    const customer = await stripe.customers.retrieve(customerId);
     if (customer.deleted) {
       throw new Error(`Stripe customer ${customerId} was deleted before card synchronization.`);
     }
