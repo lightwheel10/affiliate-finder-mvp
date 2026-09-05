@@ -61,7 +61,10 @@ import { AddCardModal } from '../../components/AddCardModal';
 import { Modal } from '../../components/Modal';
 // January 19th, 2026: Migrated from useNeonUser to useSupabaseUser
 import { useSupabaseUser } from '../../hooks/useSupabaseUser';
-import { useSubscription } from '../../hooks/useSubscription';
+import {
+  useSubscription,
+  type PendingPlanChangeData,
+} from '../../hooks/useSubscription';
 import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
 import { 
   User, 
@@ -139,7 +142,7 @@ export default function SettingsPage() {
   const { featureEnabled: brandLocationsEnabled } = useBrandLocation();
   
   const { userId, user: neonUser, refetch: refetchNeonUser, supabaseUser } = useSupabaseUser();
-  const { subscription, isLoading: subscriptionLoading, isTrialing, isPastDue, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
+  const { subscription, pendingPlanChange, isLoading: subscriptionLoading, isTrialing, isPastDue, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -361,6 +364,7 @@ export default function SettingsPage() {
                       isTrialing={isTrialing}
                       isPastDue={isPastDue}
                       daysLeftInTrial={daysLeftInTrial}
+                      pendingPlanChange={pendingPlanChange}
                       onUpgrade={() => setIsPricingModalOpen(true)}
                       onAddCard={() => setIsAddCardModalOpen(true)}
                       onCancelPlan={() => setIsCancelModalOpen(true)}
@@ -1009,6 +1013,7 @@ interface PlanSettingsProps {
   isTrialing: boolean;
   isPastDue?: boolean;
   daysLeftInTrial: number | null;
+  pendingPlanChange: PendingPlanChangeData | null;
   onUpgrade: () => void;
   onAddCard: () => void;
   onCancelPlan: () => void;
@@ -1112,9 +1117,9 @@ function AutoScanToggle({ userId, enabled, onChanged }: AutoScanToggleProps) {
   );
 }
 
-function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, daysLeftInTrial, onUpgrade, onAddCard, onCancelPlan, userId }: PlanSettingsProps) {
+function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, daysLeftInTrial, pendingPlanChange, onUpgrade, onAddCard, onCancelPlan, userId }: PlanSettingsProps) {
   // January 17, 2026: Added i18n support
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   // =========================================================================
   // INVOICE STATE & FETCHING
@@ -1239,6 +1244,26 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
   };
 
   const statusBadge = getStatusBadge();
+  const pendingChangeDate = pendingPlanChange
+    ? new Date(pendingPlanChange.effectiveAt)
+    : null;
+  const pendingChangeDateLabel = pendingChangeDate && Number.isFinite(pendingChangeDate.getTime())
+    ? pendingChangeDate.toLocaleDateString(language === 'de' ? 'de-DE' : 'en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : t.dashboard.settings.plan.scheduledPlanChange.periodEnd;
+  const pendingChangeIntervalLabel = pendingPlanChange?.billingInterval === 'annual'
+    ? t.dashboard.settings.plan.scheduledPlanChange.annual
+    : t.dashboard.settings.plan.scheduledPlanChange.monthly;
+  const pendingChangeDescription = pendingPlanChange && subscription
+    ? t.dashboard.settings.plan.scheduledPlanChange.description
+        .replace('{currentPlan}', getPlanDisplayName(subscription.plan))
+        .replace('{date}', pendingChangeDateLabel)
+        .replace('{nextPlan}', getPlanDisplayName(pendingPlanChange.plan))
+        .replace('{billingInterval}', pendingChangeIntervalLabel)
+    : null;
 
   return (
     <div className="space-y-8">
@@ -1336,6 +1361,22 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
             <div className="text-xs text-red-800 dark:text-red-300">
               <p className="font-semibold">{t.dashboard.settings.plan.paymentFailedBanner.title}</p>
               <p className="text-red-700 dark:text-red-400">{t.dashboard.settings.plan.paymentFailedBanner.subtitle}</p>
+            </div>
+          </div>
+        )}
+
+        {/* A deferred Stripe schedule keeps the current paid plan active until
+            the shown date. Surface that durable state so a successful
+            downgrade never looks like a failed click or an immediate change. */}
+        {pendingPlanChange && pendingChangeDescription && (
+          <div
+            role="status"
+            className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-500 rounded-xl"
+          >
+            <Clock size={14} className="text-blue-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-blue-800 dark:text-blue-300">
+              <p className="font-semibold">{t.dashboard.settings.plan.scheduledPlanChange.title}</p>
+              <p className="text-blue-700 dark:text-blue-400">{pendingChangeDescription}</p>
             </div>
           </div>
         )}

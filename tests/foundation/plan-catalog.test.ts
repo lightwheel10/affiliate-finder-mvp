@@ -60,3 +60,19 @@ test('English and German pricing copy stays synchronized with entitlements', () 
   assert.ok(de.landing.pricing.pro.features.includes('1 Markenprojekt'));
   assert.ok(de.landing.pricing.growth.features.includes('5 Markenprojekte'));
 });
+
+test('scheduled plan-change copy preserves every billing fact in both languages', () => {
+  for (const dictionary of [en, de]) {
+    const description = dictionary.dashboard.settings.plan.scheduledPlanChange.description;
+    assert.deepEqual(
+      [...description.matchAll(/\{([^}]+)\}/g)].map((match) => match[1]).sort(),
+      ['billingInterval', 'currentPlan', 'date', 'nextPlan'],
+    );
+
+    const sidebarStatus = dictionary.sidebar.planCard.scheduledChange;
+    assert.deepEqual(
+      [...sidebarStatus.matchAll(/\{([^}]+)\}/g)].map((match) => match[1]).sort(),
+      ['date', 'plan'],
+    );
+  }
+});

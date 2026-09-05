@@ -191,7 +191,7 @@ export const Sidebar: React.FC = () => {
   // January 19th, 2026: Migrated from Stack Auth useUser() + useNeonUser() to useSupabaseUser()
   // const user = useUser(); // Removed - Stack Auth
   const { userId, user, supabaseUser, userName: hookUserName, isLoading: userLoading, signOut } = useSupabaseUser();
-  const { subscription, isTrialing, isPastDue, daysLeftInTrial, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription(userId);
+  const { subscription, pendingPlanChange, isTrialing, isPastDue, daysLeftInTrial, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription(userId);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
@@ -272,6 +272,24 @@ export const Sidebar: React.FC = () => {
   const userName = user?.name || hookUserName || supabaseUser?.email?.split('@')[0] || 'User';
   const userEmail = supabaseUser?.email || user?.email || '';
   const userImageUrl = user?.profile_image_url || supabaseUser?.user_metadata?.avatar_url;
+  const pendingPlanDate = pendingPlanChange
+    ? new Date(pendingPlanChange.effectiveAt)
+    : null;
+  const pendingPlanDateLabel = pendingPlanDate && Number.isFinite(pendingPlanDate.getTime())
+    ? pendingPlanDate.toLocaleDateString(language === 'de' ? 'de-DE' : 'en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
+  const pendingPlanStatus = pendingPlanChange && pendingPlanDateLabel
+    ? t.sidebar.planCard.scheduledChange
+        .replace(
+          '{plan}',
+          pendingPlanChange.plan.charAt(0).toUpperCase() + pendingPlanChange.plan.slice(1),
+        )
+        .replace('{date}', pendingPlanDateLabel)
+    : null;
 
   // Show skeleton while user data is loading
   if (userLoading || subscriptionLoading) {
@@ -419,7 +437,9 @@ export const Sidebar: React.FC = () => {
                     'w-1.5 h-1.5 rounded-full',
                     subscription?.status === 'past_due' ? 'bg-red-500' : subscription?.status === 'canceled' ? 'bg-orange-500' : 'bg-green-500'
                   )}></span>
-                  {isTrialing 
+                  {pendingPlanStatus
+                    ? pendingPlanStatus
+                    : isTrialing
                     ? `${daysLeftInTrial} ${t.sidebar.planCard.daysLeft}`
                     : subscription?.status === 'active'
                       ? t.sidebar.planCard.activeSubscription

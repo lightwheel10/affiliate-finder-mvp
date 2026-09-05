@@ -928,6 +928,13 @@ export const de: Dictionary = {
         choosePlan: 'Plan wählen',
         upgradePlan: 'Plan upgraden',
         managePlan: 'Plan verwalten',
+        scheduledPlanChange: {
+          title: 'Planwechsel geplant',
+          description: 'Dein {currentPlan}-Plan bleibt bis zum {date} aktiv. Danach wechselt er zu {nextPlan} mit {billingInterval} Abrechnung.',
+          monthly: 'monatlicher',
+          annual: 'jährlicher',
+          periodEnd: 'Ende deines aktuellen Abrechnungszeitraums',
+        },
         trialEndingSoon: {
           title: 'Deine Testversion endet bald',
           subtitle: 'Füge eine Zahlungsmethode hinzu, um alle Funktionen weiter nutzen zu können.',
@@ -1145,6 +1152,7 @@ export const de: Dictionary = {
       planSuffix: 'Plan',
       daysLeft: 'Tage übrig',
       activeSubscription: 'Aktives Abonnement',
+      scheduledChange: '{plan} startet am {date}',
       upgradeAvailable: 'Upgrade verfügbar',
       managePlan: 'Plan verwalten',
       upgradePlan: 'Plan upgraden',

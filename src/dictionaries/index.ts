@@ -912,6 +912,13 @@ export interface Dictionary {
         choosePlan: string;
         upgradePlan: string;
         managePlan: string;
+        scheduledPlanChange: {
+          title: string;
+          description: string;
+          monthly: string;
+          annual: string;
+          periodEnd: string;
+        };
         trialEndingSoon: {
           title: string;
           subtitle: string;
@@ -1130,6 +1137,7 @@ export interface Dictionary {
       planSuffix: string;
       daysLeft: string;
       activeSubscription: string;
+      scheduledChange: string;
       upgradeAvailable: string;
       managePlan: string;
       upgradePlan: string;

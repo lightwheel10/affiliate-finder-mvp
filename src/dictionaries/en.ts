@@ -932,6 +932,13 @@ export const en: Dictionary = {
         choosePlan: 'Choose Plan',
         upgradePlan: 'Upgrade Plan',
         managePlan: 'Manage Plan',
+        scheduledPlanChange: {
+          title: 'Plan change scheduled',
+          description: 'Your {currentPlan} plan stays active until {date}. Then it changes to {nextPlan} with {billingInterval} billing.',
+          monthly: 'monthly',
+          annual: 'annual',
+          periodEnd: 'the end of your current billing period',
+        },
         trialEndingSoon: {
           title: 'Your trial is ending soon',
           subtitle: 'Add a payment method to continue using all features.',
@@ -1149,6 +1156,7 @@ export const en: Dictionary = {
       planSuffix: 'Plan',
       daysLeft: 'days left',
       activeSubscription: 'Active Subscription',
+      scheduledChange: '{plan} starts {date}',
       upgradeAvailable: 'Upgrade Available',
       managePlan: 'Manage Plan',
       upgradePlan: 'Upgrade Plan',
