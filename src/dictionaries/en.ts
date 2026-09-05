@@ -408,10 +408,17 @@ export const en: Dictionary = {
       termsUnavailable: "We couldn't confirm when you will be charged. No card can be submitted until this is checked.",
       termsChanged: 'Your billing terms changed. Please review them and click again to continue.',
       retryTerms: 'Try Again',
+      checkingExistingSubscription: 'Checking for an existing subscription...',
+      existingSubscriptionTitle: 'Your payment setup is complete',
+      existingSubscriptionBody: 'Your subscription already exists. Finish setting up your account without entering your card again.',
+      finishSetup: 'Finish Account Setup',
+      recoveryUnavailable: "We couldn't safely check your existing subscription. No card can be submitted until this is checked.",
+      subscriptionNeedsAttention: 'Your existing subscription needs attention. Please contact support before trying another card.',
       // April 28, 2026: payment-flow error messages.
       errors: {
         cardIncomplete: 'Please complete all card details',
         paymentFailed: 'Payment failed. Please try again.',
+        finishSetupFailed: 'Your subscription is safe, but account setup could not finish. Please try again.',
       },
     },
     // Analyzing Screen (between step 1 and 2)

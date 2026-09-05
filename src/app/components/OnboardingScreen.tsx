@@ -92,6 +92,13 @@ interface CheckoutTerms {
   chargeTiming: 'now' | 'after_trial';
 }
 
+type OnboardingRecoveryState =
+  | 'checking'
+  | 'collect_card'
+  | 'finish_onboarding'
+  | 'blocked'
+  | 'error';
+
 // Pricing plans data - matching PricingModal exactly
 // January 17, 2026: Plan details (name, description, features) are now translated
 // and accessed via t.onboarding.step5.plans in the render function
@@ -251,6 +258,35 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const [checkoutTerms, setCheckoutTerms] = useState<CheckoutTerms | null>(null);
   const [checkoutTermsLoading, setCheckoutTermsLoading] = useState(false);
   const [checkoutTermsError, setCheckoutTermsError] = useState(false);
+  const [onboardingRecoveryState, setOnboardingRecoveryState] = useState<OnboardingRecoveryState>('checking');
+
+  const loadOnboardingRecovery = useCallback(async (): Promise<void> => {
+    setOnboardingRecoveryState('checking');
+    setStripeError(null);
+    try {
+      const response = await fetch('/api/stripe/onboarding-recovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json().catch(() => ({})) as {
+        action?: 'collect_card' | 'finish_onboarding' | 'blocked';
+        error?: string;
+      };
+      if (
+        !response.ok
+        || (data.action !== 'collect_card'
+          && data.action !== 'finish_onboarding'
+          && data.action !== 'blocked')
+      ) {
+        throw new Error(data.error || 'Could not verify the existing subscription.');
+      }
+      setOnboardingRecoveryState(data.action);
+    } catch (error) {
+      console.error('[Stripe] Onboarding recovery check failed:', error);
+      setOnboardingRecoveryState('error');
+    }
+  }, []);
 
   const loadCheckoutTerms = useCallback(async (
     options: { silent?: boolean } = {},
@@ -288,10 +324,27 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   }, []);
 
   useEffect(() => {
-    if (step === 7 && !checkoutTerms && !checkoutTermsLoading && !checkoutTermsError) {
+    if (
+      step === 7
+      && onboardingRecoveryState === 'collect_card'
+      && !checkoutTerms
+      && !checkoutTermsLoading
+      && !checkoutTermsError
+    ) {
       void loadCheckoutTerms();
     }
-  }, [checkoutTerms, checkoutTermsError, checkoutTermsLoading, loadCheckoutTerms, step]);
+  }, [
+    checkoutTerms,
+    checkoutTermsError,
+    checkoutTermsLoading,
+    loadCheckoutTerms,
+    onboardingRecoveryState,
+    step,
+  ]);
+
+  useEffect(() => {
+    if (step === 7) void loadOnboardingRecovery();
+  }, [loadOnboardingRecovery, step]);
 
   // ==========================================================================
   // FINDING AFFILIATES STATE - January 15th, 2026
@@ -823,6 +876,64 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     onComplete();
   };
 
+  const finishOnboardingAfterSubscription = async (): Promise<void> => {
+    const onboardingRes = await fetch('/api/users/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        role,
+        brand,
+        targetCountry,
+        targetLanguage,
+        competitors,
+        topics,
+        affiliateTypes,
+      }),
+    });
+
+    if (!onboardingRes.ok) {
+      const onboardingError = await onboardingRes.json().catch(() => ({}));
+      console.error('[Stripe] Onboarding data save failed:', onboardingError);
+      throw new Error(
+        onboardingError.error || 'Failed to save your profile information. Please try again.',
+      );
+    }
+
+    // Payment/profile completion is durable before provider work starts. If the
+    // search fails, the honest retry screen remains available and never sends
+    // the customer back to card entry.
+    if (topics.length > 0) {
+      setIsFindingAffiliates(true);
+      setIsSearchComplete(false);
+      setSearchPrefetchError(false);
+
+      const searchSucceeded = await runOnboardingSearchPrefetch();
+      if (!searchSucceeded) {
+        setSearchPrefetchError(true);
+        return;
+      }
+
+      setIsSearchComplete(true);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    onComplete();
+  };
+
+  const handleFinishRecoveredOnboarding = async () => {
+    setIsLoading(true);
+    setStripeError(null);
+    try {
+      await finishOnboardingAfterSubscription();
+    } catch (error) {
+      console.error('[Stripe] Recovered onboarding completion failed:', error);
+      setStripeError(t.onboarding.step7.errors.finishSetupFailed);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // ==========================================================================
   // STRIPE PAYMENT FLOW (Step 7)
   // 
@@ -843,6 +954,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
 
     setIsLoading(true);
     setStripeError(null);
+    let subscriptionReady = false;
 
     try {
       // Re-read immediately before touching Stripe. If another successful
@@ -978,84 +1090,20 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         throw new Error('Your subscription is not active yet. Please try again shortly.');
       }
 
-      // Step 4: Complete onboarding data
-      const onboardingRes = await fetch('/api/users/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          role,
-          brand,
-          targetCountry,
-          targetLanguage,
-          competitors,
-          topics,
-          affiliateTypes,
-        }),
-      });
-
-      if (!onboardingRes.ok) {
-        // CRITICAL: Onboarding data must be saved for the user to have a complete profile.
-        // If this fails, throw an error to prevent marking user as onboarded.
-        // The subscription is already created, but we cannot proceed without profile data.
-        // Fixed December 2025 - previously this would silently continue and leave user in inconsistent state.
-        const onboardingError = await onboardingRes.json().catch(() => ({}));
-        console.error('[Stripe] Onboarding data save failed:', onboardingError);
-        throw new Error(onboardingError.error || 'Failed to save your profile information. Please try again.');
-      }
-
-      // ======================================================================
-      // PRE-FETCH AFFILIATES - January 15th, 2026
-      // Updated: January 30, 2026 - Non-blocking polling architecture
-      // 
-      // CRITICAL FEATURE: After payment succeeds and onboarding data is saved,
-      // we pre-fetch affiliate results so the user sees results immediately
-      // when they land on the dashboard.
-      // 
-      // FLOW (January 30, 2026 - Polling Architecture):
-      // 1. Payment succeeded ✓
-      // 2. Onboarding data saved ✓
-      // 3. If user has topics:
-      //    a) POST /api/scout/onboarding/start → get jobId
-      //    b) Poll /api/search/status?jobId=X every 3s
-      //    c) Wait for status='done' (results are saved by status endpoint)
-      // 4. Show FindingAffiliatesScreen while searching
-      // 5. Then call onComplete() to redirect to dashboard
-      // 
-      // WHY POLLING:
-      // - Old synchronous approach caused Vercel 504 timeouts
-      // - Enrichment actors took 60-90 seconds blocking
-      // - Polling allows non-blocking enrichment with no single request >10s
-      // 
-      // PAID CLIENT PROJECT - This feature MUST work correctly!
-      // ======================================================================
-      if (topics.length > 0) {
-        setIsFindingAffiliates(true);
-        setIsSearchComplete(false);
-        setSearchPrefetchError(false);
-
-        const searchSucceeded = await runOnboardingSearchPrefetch();
-        if (!searchSucceeded) {
-          // Payment and profile setup succeeded. Keep the user on an honest,
-          // recoverable search-error screen instead of displaying a false 100%
-          // completion state or asking them to enter payment details again.
-          setSearchPrefetchError(true);
-          return;
-        }
-
-        setIsSearchComplete(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      // Success - subscription, onboarding data, and affiliates all ready!
-      onComplete();
+      subscriptionReady = true;
+      setOnboardingRecoveryState('finish_onboarding');
+      await finishOnboardingAfterSubscription();
 
     } catch (error) {
       // April 28, 2026: i18n migration. The throws above (lines 819, 828, 848,
       // 877) carry English messages from server / Stripe — those are kept for
       // console.error logging only. The user sees a translated generic message.
       console.error('[Stripe] Payment flow error:', error);
-      setStripeError(t.onboarding.step7.errors.paymentFailed);
+      setStripeError(
+        subscriptionReady
+          ? t.onboarding.step7.errors.finishSetupFailed
+          : t.onboarding.step7.errors.paymentFailed,
+      );
       // February 9th, 2026: Reset here so user sees the error on Step 7, not a stuck loading screen
       setIsFindingAffiliates(false);
     } finally {
@@ -2288,6 +2336,90 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     : '';
     
   const renderStep7 = () => {
+    if (onboardingRecoveryState === 'checking') {
+      return (
+        <div
+          className="min-h-64 flex flex-col items-center justify-center gap-3 text-center"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2 className="h-6 w-6 animate-spin text-[#ffbf23]" />
+          <p className="text-sm text-[#425466] dark:text-gray-300">
+            {t.onboarding.step7.checkingExistingSubscription}
+          </p>
+        </div>
+      );
+    }
+
+    if (onboardingRecoveryState === 'error') {
+      return (
+        <div className="min-h-64 flex flex-col items-center justify-center gap-4 text-center">
+          <p className="max-w-sm text-sm text-red-600 dark:text-red-400">
+            {t.onboarding.step7.recoveryUnavailable}
+          </p>
+          <button
+            type="button"
+            onClick={() => void loadOnboardingRecovery()}
+            className="rounded-full bg-[#ffbf23] px-5 py-2 text-sm font-bold text-[#1A1D21] transition-[background-color,transform] hover:bg-[#e5ac20] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbf23] focus-visible:ring-offset-2"
+          >
+            {t.onboarding.step7.retryTerms}
+          </button>
+        </div>
+      );
+    }
+
+    if (onboardingRecoveryState === 'blocked') {
+      return (
+        <div className="min-h-64 flex flex-col items-center justify-center gap-4 text-center">
+          <p className="max-w-sm text-sm text-red-600 dark:text-red-400">
+            {t.onboarding.step7.subscriptionNeedsAttention}
+          </p>
+          <button
+            type="button"
+            onClick={() => void loadOnboardingRecovery()}
+            className="rounded-full border border-[#e6ebf1] px-5 py-2 text-sm font-bold text-[#425466] transition-[background-color,border-color,transform] hover:border-[#ffbf23] hover:bg-[#ffbf23]/5 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbf23] focus-visible:ring-offset-2 dark:border-gray-700 dark:text-gray-200"
+          >
+            {t.onboarding.step7.retryTerms}
+          </button>
+        </div>
+      );
+    }
+
+    if (onboardingRecoveryState === 'finish_onboarding') {
+      return (
+        <div
+          className="min-h-64 flex flex-col items-center justify-center gap-4 text-center"
+          aria-busy={isLoading}
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            <Check className="h-6 w-6" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-[#1A1D21] dark:text-white">
+              {t.onboarding.step7.existingSubscriptionTitle}
+            </h2>
+            <p className="max-w-sm text-sm text-[#425466] dark:text-gray-300">
+              {t.onboarding.step7.existingSubscriptionBody}
+            </p>
+          </div>
+          {stripeError && (
+            <p className="max-w-sm text-sm text-red-600 dark:text-red-400">
+              {stripeError}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => void handleFinishRecoveredOnboarding()}
+            className="flex items-center justify-center gap-2 rounded-full bg-[#ffbf23] px-6 py-3 text-sm font-bold text-[#1A1D21] shadow-yellow-glow-sm transition-[background-color,box-shadow,transform,opacity] hover:-translate-y-px hover:bg-[#e5ac20] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbf23] focus-visible:ring-offset-2"
+          >
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isLoading ? t.onboarding.step7.processing : t.onboarding.step7.finishSetup}
+          </button>
+        </div>
+      );
+    }
+
     if (checkoutTermsLoading || (!checkoutTerms && !checkoutTermsError)) {
       return (
         <div className="min-h-64 flex flex-col items-center justify-center gap-3 text-center">

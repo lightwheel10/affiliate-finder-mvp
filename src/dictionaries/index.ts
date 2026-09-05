@@ -395,6 +395,12 @@ export interface Dictionary {
       termsUnavailable: string;
       termsChanged: string;
       retryTerms: string;
+      checkingExistingSubscription: string;
+      existingSubscriptionTitle: string;
+      existingSubscriptionBody: string;
+      finishSetup: string;
+      recoveryUnavailable: string;
+      subscriptionNeedsAttention: string;
       // April 28, 2026: payment-flow error keys — previously hardcoded English.
       // `paymentFailed` is the user-facing message for any throw caught in the
       // Stripe submit handler; specific server / Stripe error text stays in
@@ -402,6 +408,7 @@ export interface Dictionary {
       errors: {
         cardIncomplete: string;
         paymentFailed: string;
+        finishSetupFailed: string;
       };
     };
     // Analyzing Screen (between step 1 and 2)

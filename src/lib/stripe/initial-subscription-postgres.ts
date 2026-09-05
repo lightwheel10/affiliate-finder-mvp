@@ -167,6 +167,21 @@ export async function reconcileInitialSubscription(
       )
     `;
 
+    // Every transaction that needs both rows must take the account root first
+    // and the subscription second. Onboarding already uses this order. Keeping
+    // billing on the same order prevents a webhook and onboarding request from
+    // each holding one row while waiting forever for the other.
+    const lockedAccounts = await transaction<{ id: number }>`
+      SELECT id
+      FROM crewcast.users
+      WHERE id = ${input.userId}
+      LIMIT 2
+      FOR UPDATE
+    `;
+    if (lockedAccounts.length !== 1) {
+      throw new Error(`Subscription reconciliation could not lock account ${input.userId}.`);
+    }
+
     const reconciledSubscriptions = await transaction<{ user_id: number }>`
       INSERT INTO crewcast.subscriptions (
         user_id,

@@ -272,6 +272,14 @@ interface SubscriptionOwnerRow {
   name: string | null;
 }
 
+type LockedSubscriptionOwnerRow = Omit<SubscriptionOwnerRow, 'email' | 'name'>;
+
+interface LockedAccountOwnerRow {
+  id: number;
+  email: string | null;
+  name: string | null;
+}
+
 interface CurrentSubscriptionContext {
   userId: number;
   email: string | null;
@@ -324,28 +332,61 @@ async function withCurrentStripeSubscription<T>(
       )
     `;
 
-    const owners = await transaction<SubscriptionOwnerRow>`
-      SELECT
-        subscriptions.user_id,
-        subscriptions.stripe_subscription_id,
-        subscriptions.plan,
-        subscriptions.billing_interval,
-        users.email,
-        users.name
-      FROM crewcast.subscriptions AS subscriptions
-      JOIN crewcast.users AS users ON users.id = subscriptions.user_id
-      WHERE subscriptions.stripe_customer_id = ${customerId}
-      ORDER BY subscriptions.id
+    // Discover the account without taking the subscription row lock. We then
+    // take every cross-table lock in the canonical order used by onboarding:
+    // account root first, subscription second. The final locked lookup below
+    // revalidates the customer mapping, so a concurrent change cannot be used.
+    const ownerCandidates = await transaction<{ user_id: number }>`
+      SELECT user_id
+      FROM crewcast.subscriptions
+      WHERE stripe_customer_id = ${customerId}
+      ORDER BY id
       LIMIT 2
-      FOR UPDATE OF subscriptions, users
     `;
-    if (owners.length !== 1) {
+    if (ownerCandidates.length !== 1) {
       // This is retryable: customer.subscription.created can beat the route that
       // records the new customer/subscription IDs in PostgreSQL.
-      throw new Error(`Expected one application account for Stripe customer ${customerId}; found ${owners.length}.`);
+      throw new Error(
+        `Expected one application account for Stripe customer ${customerId}; found ${ownerCandidates.length}.`,
+      );
     }
 
-    const owner = owners[0];
+    const accounts = await transaction<LockedAccountOwnerRow>`
+      SELECT id, email, name
+      FROM crewcast.users
+      WHERE id = ${ownerCandidates[0].user_id}
+      LIMIT 2
+      FOR UPDATE
+    `;
+    if (accounts.length !== 1) {
+      throw new Error(`Application account for Stripe customer ${customerId} no longer exists.`);
+    }
+
+    const owners = await transaction<LockedSubscriptionOwnerRow>`
+      SELECT
+        user_id,
+        stripe_subscription_id,
+        plan,
+        billing_interval
+      FROM crewcast.subscriptions
+      WHERE stripe_customer_id = ${customerId}
+      ORDER BY id
+      LIMIT 2
+      FOR UPDATE
+    `;
+    if (
+      owners.length !== 1
+      || owners[0].user_id !== ownerCandidates[0].user_id
+      || accounts[0].id !== ownerCandidates[0].user_id
+    ) {
+      throw new Error(`Stripe customer ${customerId} changed application owner while being synchronized.`);
+    }
+
+    const owner: SubscriptionOwnerRow = {
+      ...owners[0],
+      email: accounts[0].email,
+      name: accounts[0].name,
+    };
     const previousPlan = isSupportedPlan(owner.plan) ? owner.plan : null;
 
     // Do not blindly trust the subscription ID last written to PostgreSQL. A
@@ -965,7 +1006,7 @@ async function synchronizeCustomerPaymentMethod(
       )
     `;
 
-    const owners = await transaction<{
+    const ownerCandidates = await transaction<{
       user_id: number;
       stripe_subscription_id: string | null;
     }>`
@@ -974,11 +1015,10 @@ async function synchronizeCustomerPaymentMethod(
       WHERE stripe_customer_id = ${customerId}
       ORDER BY id
       LIMIT 2
-      FOR UPDATE
     `;
     const customer = await stripe.customers.retrieve(customerId);
     const ownershipDecision = decideStripeCustomerEventOwnership({
-      applicationOwnerCount: owners.length,
+      applicationOwnerCount: ownerCandidates.length,
       applicationAccountMarker: customer.deleted
         ? null
         : customer.metadata.neon_user_id,
@@ -994,11 +1034,41 @@ async function synchronizeCustomerPaymentMethod(
     }
     if (ownershipDecision === 'reject_ambiguous') {
       throw new Error(
-        `Expected one application account for Stripe customer ${customerId}; found ${owners.length}.`,
+        `Expected one application account for Stripe customer ${customerId}; found ${ownerCandidates.length}.`,
       );
     }
     if (customer.deleted) {
       throw new Error(`Stripe customer ${customerId} was deleted before card synchronization.`);
+    }
+
+    const accounts = await transaction<{ id: number }>`
+      SELECT id
+      FROM crewcast.users
+      WHERE id = ${ownerCandidates[0].user_id}
+      LIMIT 2
+      FOR UPDATE
+    `;
+    if (accounts.length !== 1) {
+      throw new Error(`Application account for Stripe customer ${customerId} no longer exists.`);
+    }
+
+    const owners = await transaction<{
+      user_id: number;
+      stripe_subscription_id: string | null;
+    }>`
+      SELECT user_id, stripe_subscription_id
+      FROM crewcast.subscriptions
+      WHERE stripe_customer_id = ${customerId}
+      ORDER BY id
+      LIMIT 2
+      FOR UPDATE
+    `;
+    if (
+      owners.length !== 1
+      || owners[0].user_id !== ownerCandidates[0].user_id
+      || accounts[0].id !== ownerCandidates[0].user_id
+    ) {
+      throw new Error(`Stripe customer ${customerId} changed application owner during card synchronization.`);
     }
 
     const authoritativeSubscription = await readAuthoritativeStripeSubscriptionForCustomer(

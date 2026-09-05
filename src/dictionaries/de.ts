@@ -404,10 +404,17 @@ export const de: Dictionary = {
       termsUnavailable: 'Wir konnten nicht bestätigen, wann die Abbuchung erfolgt. Bis zur Prüfung können keine Kartendaten gesendet werden.',
       termsChanged: 'Deine Abrechnungsbedingungen haben sich geändert. Bitte prüfe sie und klicke erneut, um fortzufahren.',
       retryTerms: 'Erneut versuchen',
+      checkingExistingSubscription: 'Ein bestehendes Abonnement wird geprüft...',
+      existingSubscriptionTitle: 'Deine Zahlungseinrichtung ist abgeschlossen',
+      existingSubscriptionBody: 'Dein Abonnement besteht bereits. Schließe die Kontoeinrichtung ab, ohne deine Kartendaten erneut einzugeben.',
+      finishSetup: 'Kontoeinrichtung abschließen',
+      recoveryUnavailable: 'Wir konnten dein bestehendes Abonnement nicht sicher prüfen. Bis zur Prüfung können keine Kartendaten gesendet werden.',
+      subscriptionNeedsAttention: 'Dein bestehendes Abonnement muss geprüft werden. Bitte kontaktiere den Support, bevor du eine andere Karte verwendest.',
       // 28. April 2026: Fehlertexte für den Zahlungsablauf.
       errors: {
         cardIncomplete: 'Bitte fülle alle Kartendaten aus',
         paymentFailed: 'Zahlung fehlgeschlagen. Bitte versuch es erneut.',
+        finishSetupFailed: 'Dein Abonnement ist sicher, aber die Kontoeinrichtung konnte nicht abgeschlossen werden. Bitte versuch es erneut.',
       },
     },
     // Analyzing Screen (between step 1 and 2)

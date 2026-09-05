@@ -83,6 +83,19 @@ export async function lockStripePaymentMethodUpdateOwner(
       hashtextextended(${`stripe-subscription:${input.stripeCustomerId}`}, 0)
     )
   `;
+  // Canonical cross-table lock order: account root, then subscription.
+  // Onboarding and every other billing writer use the same order so a Stripe
+  // webhook cannot deadlock an authenticated account request.
+  const users = await transaction<{ id: number }[]>`
+    SELECT id
+    FROM crewcast.users
+    WHERE id = ${input.userId}
+    LIMIT 2
+    FOR UPDATE
+  `;
+  if (users.length !== 1) {
+    throw new Error('Application account not found for payment-method update.');
+  }
   const owners = await transaction<{
     user_id: number;
     stripe_customer_id: string | null;
@@ -102,16 +115,6 @@ export async function lockStripePaymentMethodUpdateOwner(
     throw new StripePaymentMethodUpdateConflictError(
       'The account billing record changed while the payment method was being updated.',
     );
-  }
-  const users = await transaction<{ id: number }[]>`
-    SELECT id
-    FROM crewcast.users
-    WHERE id = ${input.userId}
-    LIMIT 2
-    FOR UPDATE
-  `;
-  if (users.length !== 1) {
-    throw new Error('Application account not found for payment-method update.');
   }
 }
 

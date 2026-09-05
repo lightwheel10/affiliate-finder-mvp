@@ -772,13 +772,16 @@ async function createDueBatch(
   batchId: string,
   scopedAccountId: number | null,
 ): Promise<Exclude<WeeklyScanClaimResult, { outcome: 'claimed' | 'idle' }> | null> {
-  const dueRows = await transaction<DueAccountRow>`
+  // Lock the account root before its subscription. Billing, onboarding,
+  // profile changes and deletion all use this same order. Two weekly workers
+  // still skip an account already claimed by another worker, but a Stripe
+  // webhook can no longer deadlock this transaction by taking the rows in the
+  // opposite order.
+  const dueAccounts = await transaction<{ user_id: unknown }>`
     SELECT
-      subscriptions.id AS subscription_id,
-      subscriptions.user_id,
-      subscriptions.next_auto_scan_at::text AS due_at
-    FROM crewcast.subscriptions AS subscriptions
-    JOIN crewcast.users AS users ON users.id = subscriptions.user_id
+      users.id AS user_id
+    FROM crewcast.users AS users
+    JOIN crewcast.subscriptions AS subscriptions ON subscriptions.user_id = users.id
     WHERE subscriptions.status = 'active'
       AND subscriptions.first_payment_at IS NOT NULL
       AND subscriptions.next_auto_scan_at IS NOT NULL
@@ -793,14 +796,37 @@ async function createDueBatch(
         FROM crewcast.weekly_auto_scan_batches AS batches
         WHERE batches.user_id = subscriptions.user_id
           AND batches.status IN ('pending', 'running')
-      )
+    )
     ORDER BY subscriptions.next_auto_scan_at, subscriptions.user_id
     LIMIT 1
-    FOR UPDATE OF subscriptions, users SKIP LOCKED
+    FOR UPDATE OF users SKIP LOCKED
   `;
-  if (dueRows.length === 0) return null;
+  if (dueAccounts.length === 0) return null;
+  if (dueAccounts.length !== 1) throw new Error('Due weekly scan account is not unique.');
+  const accountId = readPositiveInteger(dueAccounts[0].user_id, 'Due weekly scan account');
+
+  const dueRows = await transaction<DueAccountRow>`
+    SELECT
+      id AS subscription_id,
+      user_id,
+      next_auto_scan_at::text AS due_at
+    FROM crewcast.subscriptions
+    WHERE user_id = ${accountId}
+      AND status = 'active'
+      AND first_payment_at IS NOT NULL
+      AND next_auto_scan_at IS NOT NULL
+      AND next_auto_scan_at <= ${now.toISOString()}::timestamptz
+    ORDER BY id
+    LIMIT 2
+    FOR UPDATE
+  `;
+  if (dueRows.length === 0) {
+    throw new Error('Due weekly scan subscription changed after its account was locked.');
+  }
   if (dueRows.length !== 1) throw new Error('Due weekly scan account is not unique.');
-  const accountId = readPositiveInteger(dueRows[0].user_id, 'Due weekly scan account');
+  if (readPositiveInteger(dueRows[0].user_id, 'Due weekly scan account') !== accountId) {
+    throw new Error('Due weekly scan subscription belongs to a different account.');
+  }
   const subscriptionId = readPositiveInteger(
     dueRows[0].subscription_id,
     'Due weekly scan subscription',

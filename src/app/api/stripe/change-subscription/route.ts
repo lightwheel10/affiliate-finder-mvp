@@ -745,6 +745,14 @@ export async function POST(request: NextRequest) {
     capacityRestoration = await (sql as unknown as {
       begin<T>(callback: (transaction: UpgradeCapacitySql) => Promise<T>): Promise<T>;
     }).begin(async (transaction) => {
+      await lockStripeSubscriptionOwner(
+        transaction as unknown as SubscriptionPlanChangeSql,
+        {
+          userId,
+          stripeCustomerId: stripe_customer_id,
+          stripeSubscriptionId: stripe_subscription_id,
+        },
+      );
       const updatedSubscriptions = await transaction<{ user_id: number }[]>`
         UPDATE crewcast.subscriptions
         SET

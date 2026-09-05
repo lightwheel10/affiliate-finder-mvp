@@ -913,6 +913,74 @@ async function verifyInitialSubscriptionReconciliation(userId: number): Promise<
   assert.deepEqual(unlocked[0], { status: 'active', has_subscription: true });
 }
 
+async function verifyAccountFirstSubscriptionLockOrder(userId: number): Promise<void> {
+  let signalAccountLocked!: () => void;
+  let rejectAccountLock!: (error: unknown) => void;
+  const accountLocked = new Promise<void>((resolve, reject) => {
+    signalAccountLocked = resolve;
+    rejectAccountLock = reject;
+  });
+  let releaseAccountLock!: () => void;
+  const accountLockRelease = new Promise<void>((resolve) => {
+    releaseAccountLock = resolve;
+  });
+
+  const accountFirstContender = sql.begin(async (transaction) => {
+    const accounts = await transaction<{ id: number }[]>`
+      SELECT id
+      FROM crewcast.users
+      WHERE id = ${userId}
+      FOR UPDATE
+    `;
+    assert.equal(accounts.length, 1);
+    signalAccountLocked();
+    await accountLockRelease;
+
+    const subscriptions = await transaction<{ user_id: number }[]>`
+      SELECT user_id
+      FROM crewcast.subscriptions
+      WHERE user_id = ${userId}
+      FOR UPDATE
+    `;
+    assert.equal(subscriptions.length, 1);
+  }).catch((error) => {
+    rejectAccountLock(error);
+    throw error;
+  });
+
+  await accountLocked;
+  let reconciliationSettled = false;
+  const reconciliation = reconcileInitialSubscription(
+    sql as unknown as InitialSubscriptionDatabase,
+    initialSubscriptionInput(userId, {
+      status: 'active',
+      currentPeriodStart: '2098-01-01T00:00:00.000Z',
+      currentPeriodEnd: '2098-02-01T00:00:00.000Z',
+      trialEnd: null,
+      paidInvoice: {
+        invoiceId: `in_initial_${token}`,
+        periodStart: new Date('2098-01-01T00:00:00.000Z'),
+        paidAt: '2098-01-01T00:00:01.000Z',
+      },
+    }),
+  ).finally(() => {
+    reconciliationSettled = true;
+  });
+
+  try {
+    // Give reconciliation time to reach the account lock. It must wait there;
+    // taking the subscription first would create the exact production
+    // onboarding/webhook deadlock when the contender continues below.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(reconciliationSettled, false);
+  } finally {
+    releaseAccountLock();
+  }
+
+  const [, outcome] = await Promise.all([accountFirstContender, reconciliation]);
+  assert.equal(outcome.creditReset, 'duplicate_invoice');
+}
+
 async function verifyInvoiceCreditMonotonicity(userId: number): Promise<void> {
   const { resetCreditsForNewPeriod } = await import('../src/lib/credits');
   const simultaneous = await Promise.all(
@@ -1138,6 +1206,8 @@ async function main(): Promise<void> {
     accountId = await createFixture();
     await verifyInitialSubscriptionReconciliation(accountId);
     console.log('Verified concurrent initial subscription reconciliation and rollback safety.');
+    await verifyAccountFirstSubscriptionLockOrder(accountId);
+    console.log('Verified account-first billing lock order against the onboarding deadlock interleaving.');
     await verifyDowngradeCrashRecovery(accountId);
     console.log('Verified durable downgrade retries and crash recovery.');
     await verifyPaymentMethodUpdateCrashRecovery(accountId);
