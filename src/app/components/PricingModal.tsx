@@ -579,20 +579,30 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 <p className="text-xs text-[#425466] dark:text-gray-400 mb-4">
                   {t.pricingModal.trialMessage}
                 </p>
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   <button
+                    type="button"
                     onClick={() => handleTrialEndDecision(true)}
                     disabled={isLoading !== null}
-                    className="px-4 py-2 bg-[#ffbf23] text-[#1A1D21] text-xs font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all"
+                    className="px-4 py-2 bg-[#ffbf23] text-[#1A1D21] text-xs font-semibold rounded-full shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:shadow-yellow-glow hover:-translate-y-px transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbf23] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {t.pricingModal.endTrialStartBilling}
                   </button>
                   <button
+                    type="button"
+                    onClick={() => handleTrialEndDecision(false)}
+                    disabled={isLoading !== null}
+                    className="px-4 py-2 border border-[#ffbf23] bg-white text-[#1A1D21] text-xs font-semibold rounded-full hover:bg-[#ffbf23]/10 dark:bg-[#0f0f0f] dark:text-[#ffbf23] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbf23] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {t.pricingModal.keepTrialChangePlan}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setShowTrialEndOption(false);
                       setPendingPlanChange(null);
                     }}
-                    className="px-4 py-2 text-[#425466] text-xs font-semibold hover:text-[#0f172a] dark:hover:text-gray-300 transition-colors"
+                    className="px-4 py-2 text-[#425466] text-xs font-semibold hover:text-[#0f172a] dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffbf23] focus-visible:ring-offset-2"
                   >
                     {t.common.cancel}
                   </button>
