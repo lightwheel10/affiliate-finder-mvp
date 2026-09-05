@@ -87,6 +87,11 @@ interface SuggestedTopic {
   keyword: string;
 }
 
+interface CheckoutTerms {
+  trialDays: number;
+  chargeTiming: 'now' | 'after_trial';
+}
+
 // Pricing plans data - matching PricingModal exactly
 // January 17, 2026: Plan details (name, description, features) are now translated
 // and accessed via t.onboarding.step5.plans in the render function
@@ -243,6 +248,50 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   const [cardholderName, setCardholderName] = useState('');
   const [isCardReady, setIsCardReady] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
+  const [checkoutTerms, setCheckoutTerms] = useState<CheckoutTerms | null>(null);
+  const [checkoutTermsLoading, setCheckoutTermsLoading] = useState(false);
+  const [checkoutTermsError, setCheckoutTermsError] = useState(false);
+
+  const loadCheckoutTerms = useCallback(async (
+    options: { silent?: boolean } = {},
+  ): Promise<CheckoutTerms | null> => {
+    if (!options.silent) setCheckoutTermsLoading(true);
+    setCheckoutTermsError(false);
+    try {
+      const response = await fetch('/api/stripe/checkout-terms', { cache: 'no-store' });
+      const data = await response.json().catch(() => ({})) as Partial<CheckoutTerms> & {
+        error?: string;
+      };
+      if (
+        !response.ok
+        || !Number.isSafeInteger(data.trialDays)
+        || (data.trialDays as number) < 0
+        || (data.chargeTiming !== 'now' && data.chargeTiming !== 'after_trial')
+        || ((data.trialDays as number) === 0) !== (data.chargeTiming === 'now')
+      ) {
+        throw new Error(data.error || 'Could not confirm billing terms.');
+      }
+      const terms: CheckoutTerms = {
+        trialDays: data.trialDays as number,
+        chargeTiming: data.chargeTiming,
+      };
+      setCheckoutTerms(terms);
+      return terms;
+    } catch (error) {
+      console.error('[Stripe] Checkout terms error:', error);
+      setCheckoutTerms(null);
+      setCheckoutTermsError(true);
+      return null;
+    } finally {
+      if (!options.silent) setCheckoutTermsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step === 7 && !checkoutTerms && !checkoutTermsLoading && !checkoutTermsError) {
+      void loadCheckoutTerms();
+    }
+  }, [checkoutTerms, checkoutTermsError, checkoutTermsLoading, loadCheckoutTerms, step]);
 
   // ==========================================================================
   // FINDING AFFILIATES STATE - January 15th, 2026
@@ -796,6 +845,23 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     setStripeError(null);
 
     try {
+      // Re-read immediately before touching Stripe. If another successful
+      // request changed this account's trial history since the form loaded,
+      // show the new terms and require a fresh click instead of surprising the
+      // customer with different billing behavior.
+      const displayedTrialDays = checkoutTerms?.trialDays;
+      const latestCheckoutTerms = await loadCheckoutTerms({ silent: true });
+      if (!latestCheckoutTerms) {
+        throw new Error('Could not confirm billing terms before payment setup.');
+      }
+      if (
+        displayedTrialDays === undefined
+        || displayedTrialDays !== latestCheckoutTerms.trialDays
+      ) {
+        setStripeError(t.onboarding.step7.termsChanged);
+        return;
+      }
+
       // 2026-05-20 (paras): Read PostAffiliatePro tracking cookie if present,
       // so we can pass it to Stripe's customer.description. PAP's Stripe plugin
       // reads that field to attribute the sale to the right affiliate.
@@ -853,6 +919,7 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         billingInterval,
         paymentMethodId: setupResult.paymentMethodId,
         promotionCodeId: promotionCodeId || undefined,
+        expectedTrialDays: latestCheckoutTerms.trialDays,
       };
       const createSubscription = async () => {
         const response = await fetch('/api/stripe/create-subscription', {
@@ -871,6 +938,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
       };
 
       let subscriptionAttempt = await createSubscription();
+      if (subscriptionAttempt.data.code === 'CHECKOUT_TERMS_CHANGED') {
+        await loadCheckoutTerms();
+        throw new Error('Checkout terms changed before subscription creation.');
+      }
       if (subscriptionAttempt.data.code === 'PAYMENT_ACTION_REQUIRED') {
         if (!subscriptionAttempt.data.clientSecret) {
           throw new Error('Stripe could not start secure payment confirmation. Please try again.');
@@ -2216,12 +2287,42 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
     ? t.onboarding.step5.plans[selectedPlan as keyof typeof t.onboarding.step5.plans]?.name || ''
     : '';
     
-  const renderStep7 = () => (
-    <StripeProvider>
-      <Step7CardForm
+  const renderStep7 = () => {
+    if (checkoutTermsLoading || (!checkoutTerms && !checkoutTermsError)) {
+      return (
+        <div className="min-h-64 flex flex-col items-center justify-center gap-3 text-center">
+          <Loader2 className="h-6 w-6 animate-spin text-[#ffbf23]" />
+          <p className="text-sm text-[#425466] dark:text-gray-300">
+            {t.onboarding.step7.checkingTerms}
+          </p>
+        </div>
+      );
+    }
+
+    if (checkoutTermsError || !checkoutTerms) {
+      return (
+        <div className="min-h-64 flex flex-col items-center justify-center gap-4 text-center">
+          <p className="max-w-sm text-sm text-red-600 dark:text-red-400">
+            {t.onboarding.step7.termsUnavailable}
+          </p>
+          <button
+            type="button"
+            onClick={() => void loadCheckoutTerms()}
+            className="rounded-full bg-[#ffbf23] px-5 py-2 text-sm font-bold text-[#1A1D21]"
+          >
+            {t.onboarding.step7.retryTerms}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <StripeProvider>
+        <Step7CardForm
         selectedPlanName={selectedPlanName}
         selectedPlanPrice={selectedPlanPrice}
         billingInterval={billingInterval}
+        trialDays={checkoutTerms.trialDays}
         cardholderName={cardholderName}
         onCardholderNameChange={setCardholderName}
         isCardReady={isCardReady}
@@ -2239,9 +2340,10 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
         onResetDiscount={handleResetDiscount}
         onSubmit={handleStripeSubmit}
         isLoading={isLoading}
-      />
-    </StripeProvider>
-  );
+        />
+      </StripeProvider>
+    );
+  };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#fdfdfd] dark:bg-[#0a0a0a] font-sans py-4 px-4">

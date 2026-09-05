@@ -368,24 +368,33 @@ export interface Dictionary {
       secureCheckout: string;
       title: string;
       subtitle: string;
+      returningTitle: string;
+      returningSubtitle: string;
       selectedPlan: string;
       perMonth: string;
       billedAnnually: string;
       firstCharge: string;
+      chargeToday: string;
       discountLabel: string;
       discountPlaceholder: string;
       apply: string;
       applied: string;
       processing: string;
       startTrial: string;
+      subscribeNow: string;
       discountApplied: string;
       cardholderName: string;
       cardDetails: string;
       nameOnCard: string;
       // Trust messaging
       cancelAnytime: string;
+      cancelAnytimePaid: string;
       noChargeToday: string;
       secureFooter: string;
+      checkingTerms: string;
+      termsUnavailable: string;
+      termsChanged: string;
+      retryTerms: string;
       // April 28, 2026: payment-flow error keys — previously hardcoded English.
       // `paymentFailed` is the user-facing message for any throw caught in the
       // Stripe submit handler; specific server / Stripe error text stays in

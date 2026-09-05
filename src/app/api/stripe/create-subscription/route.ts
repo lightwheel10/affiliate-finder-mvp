@@ -14,7 +14,6 @@ import {
 import {
   initialSubscriptionIdempotencyKey,
   initialSubscriptionAccessState,
-  initialTrialDaysForAccount,
   latestTerminalSubscriptionId,
   paymentMethodMutationIdempotencyKey,
   recoveredInitialPaymentMethodDecision,
@@ -33,6 +32,10 @@ import {
   readStripeMutationJson,
   StripeMutationRequestError,
 } from '@/lib/stripe/mutation-request';
+import {
+  readInitialTrialDays,
+  type InitialTrialSql,
+} from '@/lib/stripe/initial-trial-postgres';
 
 // =============================================================================
 // POST /api/stripe/create-subscription
@@ -64,6 +67,9 @@ const createSubscriptionSchema = z.object({
   billingInterval: z.enum(['monthly', 'annual']),
   paymentMethodId: z.string().regex(/^pm_[A-Za-z0-9_]+$/).max(255),
   promotionCodeId: z.string().regex(/^promo_[A-Za-z0-9_]+$/).max(255).optional(),
+  // The server remains authoritative. This only prevents stale browser terms
+  // from becoming an unexpected charge.
+  expectedTrialDays: z.number().int().min(0).max(730).optional(),
   // Rolling-client compatibility only. This value is never billing authority.
   customerId: z.unknown().optional(),
 }).strict();
@@ -89,6 +95,7 @@ export async function POST(request: NextRequest) {
       billingInterval,
       paymentMethodId,
       promotionCodeId,
+      expectedTrialDays,
       customerId: providedCustomerId,
     } = parsedBody.data;
 
@@ -157,33 +164,26 @@ export async function POST(request: NextRequest) {
       providedCustomerId,
     );
 
-    // A trial belongs to the application account, not to a particular Stripe
-    // subscription. Either historical credit record is durable evidence that
-    // this account is returning and must be charged immediately.
-    const trialHistoryRows = await sql`
-      SELECT
-        EXISTS (
-          SELECT 1 FROM crewcast.user_credits WHERE user_id = ${userId}
-        ) AS has_credit_record,
-        EXISTS (
-          SELECT 1
-          FROM crewcast.credit_transactions
-          WHERE user_id = ${userId}
-            AND reason IN ('trial_start', 'trial_restart')
-        ) AS has_trial_grant
-    `;
+    // A trial belongs to the application account, not to a Stripe Customer or
+    // subscription. The same durable rule powers the pre-card checkout copy.
+    const initialTrialDays = await readInitialTrialDays(
+      sql as unknown as InitialTrialSql,
+      userId,
+      TRIAL_DAYS,
+    );
+    const authoritativeTrialDays = initialTrialDays ?? 0;
     if (
-      trialHistoryRows.length !== 1
-      || typeof trialHistoryRows[0].has_credit_record !== 'boolean'
-      || typeof trialHistoryRows[0].has_trial_grant !== 'boolean'
+      expectedTrialDays !== undefined
+      && expectedTrialDays !== authoritativeTrialDays
     ) {
-      throw new Error(`Could not determine trial history for user ${userId}.`);
+      return NextResponse.json(
+        {
+          error: 'Your billing terms changed before checkout. Please review them and try again.',
+          code: 'CHECKOUT_TERMS_CHANGED',
+        },
+        { status: 409 },
+      );
     }
-    const initialTrialDays = initialTrialDaysForAccount({
-      configuredTrialDays: TRIAL_DAYS,
-      hasCreditRecord: trialHistoryRows[0].has_credit_record,
-      hasTrialGrant: trialHistoryRows[0].has_trial_grant,
-    });
 
     // Stripe is also checked directly. This repairs the important case where
     // Stripe created the subscription but this server died before PostgreSQL

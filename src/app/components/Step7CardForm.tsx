@@ -34,6 +34,7 @@ interface Step7CardFormProps {
   selectedPlanName: string;
   selectedPlanPrice: number;
   billingInterval: 'monthly' | 'annual';
+  trialDays: number;
   
   // Card state (managed by parent)
   cardholderName: string;
@@ -65,6 +66,7 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
   selectedPlanName,
   selectedPlanPrice,
   billingInterval,
+  trialDays,
   cardholderName,
   onCardholderNameChange,
   isCardReady,
@@ -86,6 +88,8 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
   // Translation hook (January 9th, 2026)
   const { t } = useLanguage();
   const { confirmSetup, isProcessing, error: setupError } = useStripeCardSetup();
+  const hasTrial = trialDays > 0;
+  const withTrialDays = (value: string) => value.replace('{days}', String(trialDays));
 
   // Combine errors
   const displayError = stripeError || setupError;
@@ -102,10 +106,14 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
         </div>
 
         <h1 className="text-lg md:text-xl font-display text-[#0f172a] dark:text-white font-bold tracking-tight mb-1">
-          {t.onboarding.step7.title}
+          {hasTrial
+            ? withTrialDays(t.onboarding.step7.title)
+            : t.onboarding.step7.returningTitle}
         </h1>
         <p className="text-[#8898aa] dark:text-gray-400 text-sm">
-          {t.onboarding.step7.subtitle}
+          {hasTrial
+            ? t.onboarding.step7.subtitle
+            : t.onboarding.step7.returningSubtitle}
         </p>
       </div>
 
@@ -129,7 +137,9 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
         <div className="mt-3 pt-3 border-t border-[#ffbf23]/30 flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           <span className="text-xs text-[#425466] dark:text-gray-400">
-            {t.onboarding.step7.firstCharge}
+            {hasTrial
+              ? withTrialDays(t.onboarding.step7.firstCharge)
+              : t.onboarding.step7.chargeToday}
           </span>
         </div>
       </div>
@@ -246,14 +256,18 @@ export const Step7CardForm: React.FC<Step7CardFormProps> = ({
           ) : (
             <>
               <Lock size={14} />
-              {t.onboarding.step7.startTrial}
+              {hasTrial
+                ? withTrialDays(t.onboarding.step7.startTrial)
+                : t.onboarding.step7.subscribeNow}
             </>
           )}
         </button>
 
         {/* Trust Messaging - Added January 24th, 2026 */}
         <p className="text-center text-[11px] text-[#8898aa] dark:text-gray-400 mt-3">
-          {t.onboarding.step7.cancelAnytime}
+          {hasTrial
+            ? t.onboarding.step7.cancelAnytime
+            : t.onboarding.step7.cancelAnytimePaid}
         </p>
         <p className="text-center text-[10px] text-[#8898aa] dark:text-gray-500 mt-2">
           {t.onboarding.step7.secureFooter}
