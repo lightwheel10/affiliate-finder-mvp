@@ -9,6 +9,7 @@ import {
   groupActivePortfolioLocations,
   listActivePortfolioLocations,
   parseBrandLocationScopePreference,
+  readLocationSearchDefaults,
   resolveManagedPortfolioScope,
   resolveManagedPortfolioSelection,
   type ManagedBrand,
@@ -130,6 +131,45 @@ test('search market reuse stays inside one brand and ignores archived locations'
   assert.equal(findActiveBrandMarketLocation(targetBrand, 'gb', 'en')?.id, '12');
   assert.equal(findActiveBrandMarketLocation(targetBrand, 'us', 'en'), undefined);
   assert.equal(findActiveBrandMarketLocation(targetBrand, 'de', 'en'), undefined);
+});
+
+test('search modal loads saved market defaults and clears them for a new market', () => {
+  const germanLocation = location('11', '1', {
+    topics: ['German topic'],
+    competitors: ['german.example'],
+  });
+  const ukLocation = location('12', '1', {
+    countryCode: 'gb',
+    languageCode: 'en',
+    topics: ['UK topic', 'Second UK topic'],
+    competitors: ['uk.example'],
+  });
+  const targetBrand = brand('1', [germanLocation, ukLocation]);
+
+  assert.deepEqual(
+    readLocationSearchDefaults(
+      findActiveBrandMarketLocation(targetBrand, 'gb', 'en'),
+      5,
+      5,
+    ),
+    { keywords: ['UK topic', 'Second UK topic'], competitors: ['uk.example'] },
+  );
+  assert.deepEqual(
+    readLocationSearchDefaults(
+      findActiveBrandMarketLocation(targetBrand, 'fr', 'fr'),
+      5,
+      5,
+    ),
+    { keywords: [], competitors: [] },
+  );
+  assert.deepEqual(
+    readLocationSearchDefaults(
+      findActiveBrandMarketLocation(targetBrand, 'de', 'de'),
+      5,
+      5,
+    ),
+    { keywords: ['German topic'], competitors: ['german.example'] },
+  );
 });
 
 test('portfolio accepts a saved location only when it remains active', () => {

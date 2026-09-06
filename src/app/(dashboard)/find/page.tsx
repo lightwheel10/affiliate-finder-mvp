@@ -34,7 +34,7 @@
  * =============================================================================
  */
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 // =============================================================================
 // January 17th, 2026: Added useSearchParams for auto-open modal feature
 // When user clicks "Find Affiliates" button on other pages (discovered, saved,
@@ -97,6 +97,7 @@ import {
 } from '@/lib/markets/catalog';
 import {
   findActiveBrandMarketLocation,
+  readLocationSearchDefaults,
   type ManagedLocation,
 } from '@/lib/brand-locations/portfolio';
 
@@ -222,6 +223,9 @@ export default function FindNewPage() {
   // Editable competitors (pre-filled from onboarding, add/remove per run)
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState('');
+  const keywordsInitRef = useRef<'pending' | 'topics' | 'restored' | 'none'>('pending');
+  const competitorsInitRef = useRef<'pending' | 'done'>('pending');
+  const modalLocationKeyRef = useRef<string | null | undefined>(undefined);
   const [editBrand, setEditBrand] = useState(displayedBrandDomain);
   const [isEditingBrand, setIsEditingBrand] = useState(false);
   const [isSavingBrand, setIsSavingBrand] = useState(false);
@@ -261,6 +265,26 @@ export default function FindNewPage() {
     language === 'de' ? selectedSearchCountry?.nameDE : selectedSearchCountry?.name,
     language === 'de' ? selectedSearchLanguage?.nameDE : selectedSearchLanguage?.name,
   ].filter(Boolean).join(' · ');
+
+  const loadSearchLocationDefaults = useCallback((location?: ManagedLocation | null) => {
+    const defaults = readLocationSearchDefaults(location, MAX_KEYWORDS, MAX_COMPETITORS);
+    keywordsInitRef.current = defaults.keywords.length > 0 ? 'topics' : 'none';
+    competitorsInitRef.current = 'done';
+    setKeywords(defaults.keywords);
+    setKeywordInput('');
+    setCompetitors(defaults.competitors);
+    setCompetitorInput('');
+  }, []);
+
+  const selectSearchMarket = (countryCode: string, languageCode: string) => {
+    setSearchCountryCode(countryCode);
+    setSearchLanguageCode(languageCode);
+    loadSearchLocationDefaults(
+      findActiveBrandMarketLocation(activeBrand, countryCode, languageCode),
+    );
+    setSearchLocationError(null);
+    setIsConfirmingNewLocation(false);
+  };
 
   const formatSearchLocationError = (error: unknown): string => {
     if (!(error instanceof BrandLocationApiError)) {
@@ -359,23 +383,32 @@ export default function FindNewPage() {
   // A search always runs in one concrete market. If the dashboard is showing
   // several locations, activeLocation is the brand's deterministic default.
   useEffect(() => {
-    if (!isFindModalOpen || !brandLocationsEnabled) return;
+    if (!isFindModalOpen || !brandLocationsEnabled) {
+      modalLocationKeyRef.current = undefined;
+      return;
+    }
+    const locationKey = activeLocation
+      ? `${activeBrand?.id ?? ''}:${activeLocation.id}:${activeLocation.countryCode}:${activeLocation.languageCode}`
+      : null;
+    // Do not erase modal edits when the same portfolio record is revalidated.
+    if (modalLocationKeyRef.current === locationKey) return;
+    modalLocationKeyRef.current = locationKey;
     setSearchCountryCode(
       activeLocation?.countryCode ?? MARKET_COUNTRIES[0].isoCode,
     );
     setSearchLanguageCode(
       activeLocation?.languageCode ?? MARKET_LANGUAGES[0].isoCode,
     );
+    loadSearchLocationDefaults(activeLocation);
     setSearchLocationError(null);
     setIsConfirmingNewLocation(false);
     setIsCreatingSearchLocation(false);
   }, [
     activeBrand?.id,
-    activeLocation?.countryCode,
-    activeLocation?.id,
-    activeLocation?.languageCode,
+    activeLocation,
     brandLocationsEnabled,
     isFindModalOpen,
+    loadSearchLocationDefaults,
   ]);
 
   // Add keyword to list
@@ -443,8 +476,6 @@ export default function FindNewPage() {
   //   - 'none': No data to initialize from
   // 
   // ==========================================================================
-  const keywordsInitRef = useRef<'pending' | 'topics' | 'restored' | 'none'>('pending');
-  const competitorsInitRef = useRef<'pending' | 'done'>('pending');
   const previousLocationScopeRef = useRef<string | undefined>(undefined);
   const locationScopeKey = brandLocationsEnabled && activeBrand && locationScopeIds?.length
     ? `${activeBrand.id}:${locationScopeIds.join(',')}`
@@ -2206,9 +2237,7 @@ export default function FindNewPage() {
                   <select
                     value={searchCountryCode}
                     onChange={(event) => {
-                      setSearchCountryCode(event.target.value);
-                      setSearchLocationError(null);
-                      setIsConfirmingNewLocation(false);
+                      selectSearchMarket(event.target.value, searchLanguageCode);
                     }}
                     disabled={loading || isCreatingSearchLocation}
                     className="w-full rounded-lg border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -2225,9 +2254,7 @@ export default function FindNewPage() {
                   <select
                     value={searchLanguageCode}
                     onChange={(event) => {
-                      setSearchLanguageCode(event.target.value);
-                      setSearchLocationError(null);
-                      setIsConfirmingNewLocation(false);
+                      selectSearchMarket(searchCountryCode, event.target.value);
                     }}
                     disabled={loading || isCreatingSearchLocation}
                     className="w-full rounded-lg border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"

@@ -196,6 +196,18 @@ export function findActiveBrandMarketLocation(
   );
 }
 
+/** Return independent modal inputs for one saved location, or empty inputs for a new market. */
+export function readLocationSearchDefaults(
+  location: ManagedLocation | null | undefined,
+  maxKeywords: number,
+  maxCompetitors: number,
+): { keywords: string[]; competitors: string[] } {
+  return {
+    keywords: location?.topics.slice(0, maxKeywords) ?? [],
+    competitors: location?.competitors.slice(0, maxCompetitors) ?? [],
+  };
+}
+
 /**
  * Resolve a browser preference only after matching it against the authenticated
  * portfolio response. The preference chooses UI state; it never grants access.
