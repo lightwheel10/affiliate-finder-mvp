@@ -31,7 +31,7 @@ function OptionIcon({
   option: SearchMarketPickerOption;
   variant: SearchMarketPickerProps['variant'];
 }) {
-  if (variant === 'country' && option.flagUrl) {
+  if (option.flagUrl) {
     return (
       // These are tiny, size-specific flag assets; optimizing them adds overhead.
       // eslint-disable-next-line @next/next/no-img-element
@@ -158,6 +158,10 @@ export function SearchMarketPicker({
       >
         {selectedOption ? (
           <OptionIcon option={selectedOption} variant={variant} />
+        ) : variant === 'language' ? (
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#fff4d1] text-[#9a6b00] dark:bg-[#ffbf23]/10 dark:text-[#ffbf23]">
+            <Languages size={16} strokeWidth={2.25} />
+          </span>
         ) : (
           <Globe2 size={18} className="shrink-0 text-[#8898aa]" />
         )}

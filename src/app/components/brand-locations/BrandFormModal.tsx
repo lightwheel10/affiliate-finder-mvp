@@ -26,7 +26,7 @@ interface BrandFormModalProps {
   errorMessage: (error: unknown) => string;
 }
 
-const inputClassName = 'w-full rounded-lg border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white';
+const inputClassName = 'w-full rounded-xl border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] shadow-soft-sm outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white';
 
 export function BrandFormModal({
   isOpen,

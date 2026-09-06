@@ -56,6 +56,15 @@ test('market language names and ISO codes are unique', () => {
   assert.equal(getMarketLanguageByIsoCode('en')?.name, 'English');
 });
 
+test('every market language has a valid display flag', () => {
+  for (const language of MARKET_LANGUAGES) {
+    assert.ok(
+      getCountryFlagUrl(language.flagCountryCode),
+      `${language.name} has no valid flag`,
+    );
+  }
+});
+
 test('canonical location codes drive provider and post-filter location settings', () => {
   assert.equal(getMarketCountry('gb')?.name, 'United Kingdom');
   assert.deepEqual(getLocationConfig('gb', 'en'), {

@@ -1,15 +1,23 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Building2, Loader2 } from 'lucide-react';
 import { Modal } from '@/app/components/Modal';
+import {
+  SearchMarketPicker,
+  type SearchMarketPickerOption,
+} from '@/app/components/SearchMarketPicker';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   formatLineValues,
   parseUniqueLineValues,
 } from '@/lib/brand-locations/form-values';
 import { BRAND_LOCATION_MANAGEMENT_LIMITS } from '@/lib/brand-locations/limits';
-import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@/lib/markets/catalog';
+import {
+  getCountryFlagUrl,
+  MARKET_COUNTRIES,
+  MARKET_LANGUAGES,
+} from '@/lib/markets/catalog';
 import type { ManagedLocation } from '@/lib/brand-locations/portfolio';
 
 export interface LocationFormPayload {
@@ -28,7 +36,7 @@ interface LocationFormModalProps {
   errorMessage: (error: unknown) => string;
 }
 
-const fieldClassName = 'w-full rounded-lg border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white';
+const fieldClassName = 'w-full rounded-xl border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] shadow-soft-sm outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white';
 
 export function LocationFormModal({
   isOpen,
@@ -46,6 +54,24 @@ export function LocationFormModal({
   const [competitors, setCompetitors] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const countryOptions = useMemo<readonly SearchMarketPickerOption[]>(
+    () => MARKET_COUNTRIES.map((country) => ({
+      value: country.isoCode,
+      label: language === 'de' ? country.nameDE : country.name,
+      code: country.isoCode.toUpperCase(),
+      flagUrl: getCountryFlagUrl(country.isoCode),
+    })),
+    [language],
+  );
+  const languageOptions = useMemo<readonly SearchMarketPickerOption[]>(
+    () => MARKET_LANGUAGES.map((marketLanguage) => ({
+      value: marketLanguage.isoCode,
+      label: language === 'de' ? marketLanguage.nameDE : marketLanguage.name,
+      code: marketLanguage.isoCode.toUpperCase(),
+      flagUrl: getCountryFlagUrl(marketLanguage.flagCountryCode),
+    })),
+    [language],
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -97,42 +123,43 @@ export function LocationFormModal({
       width="max-w-2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        <p className="text-sm font-medium text-[#425466] dark:text-gray-300">{brandName}</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1.5 text-xs font-semibold uppercase tracking-wider text-[#8898aa]">
-            {copy.country}
-            <select
-              required
-              value={countryCode}
-              onChange={(event) => setCountryCode(event.target.value)}
-              disabled={isSaving}
-              className={fieldClassName}
-            >
-              <option value="" disabled>—</option>
-              {MARKET_COUNTRIES.map((country) => (
-                <option key={country.isoCode} value={country.isoCode}>
-                  {language === 'de' ? country.nameDE : country.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1.5 text-xs font-semibold uppercase tracking-wider text-[#8898aa]">
-            {copy.language}
-            <select
-              required
-              value={languageCode}
-              onChange={(event) => setLanguageCode(event.target.value)}
-              disabled={isSaving}
-              className={fieldClassName}
-            >
-              <option value="" disabled>—</option>
-              {MARKET_LANGUAGES.map((marketLanguage) => (
-                <option key={marketLanguage.isoCode} value={marketLanguage.isoCode}>
-                  {language === 'de' ? marketLanguage.nameDE : marketLanguage.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex items-center gap-3 rounded-xl border border-[#e6ebf1] bg-[#f6f9fc] px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/70">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#d39600] shadow-soft-sm dark:bg-gray-800 dark:text-[#ffbf23]">
+            <Building2 size={16} strokeWidth={2} />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-[#8898aa] dark:text-gray-500">
+              {copy.brandName}
+            </span>
+            <span className="block truncate text-sm font-semibold text-[#0f172a] dark:text-white">
+              {brandName}
+            </span>
+          </span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SearchMarketPicker
+            id="settings-location-country"
+            label={copy.country}
+            value={countryCode}
+            options={countryOptions}
+            onChange={setCountryCode}
+            searchPlaceholder={t.onboarding.common.search}
+            noResultsText={t.onboarding.common.noResults}
+            disabled={isSaving}
+            variant="country"
+          />
+          <SearchMarketPicker
+            id="settings-location-language"
+            label={copy.language}
+            value={languageCode}
+            options={languageOptions}
+            onChange={setLanguageCode}
+            searchPlaceholder={t.onboarding.common.search}
+            noResultsText={t.onboarding.common.noResults}
+            disabled={isSaving}
+            variant="language"
+            align="end"
+          />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1.5 text-xs font-semibold uppercase tracking-wider text-[#8898aa]">

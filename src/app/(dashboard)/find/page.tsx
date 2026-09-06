@@ -281,6 +281,7 @@ export default function FindNewPage() {
       value: marketLanguage.isoCode,
       label: language === 'de' ? marketLanguage.nameDE : marketLanguage.name,
       code: marketLanguage.isoCode.toUpperCase(),
+      flagUrl: getCountryFlagUrl(marketLanguage.flagCountryCode),
     })),
     [language],
   );
