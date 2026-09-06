@@ -82,6 +82,7 @@ import {
   SearchMarketPicker,
   type SearchMarketPickerOption,
 } from '@/app/components/SearchMarketPicker';
+import { SearchCriteriaEditor } from '@/app/components/SearchCriteriaEditor';
 import { SEARCH_INPUT_LIMITS } from '@/lib/plans/catalog';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -2242,158 +2243,38 @@ export default function FindNewPage() {
           )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Left Column — Keywords */}
-            <div className="flex flex-col">
-              <label htmlFor="affiliate-keyword" className="flex h-7 items-center gap-2 text-sm font-semibold text-[#0f172a] dark:text-gray-200">
-                <Search size={14} className="text-[#425466] dark:text-gray-400" strokeWidth={2} />
-                {t.dashboard.find.modal.keywordsLabel}
-                <span className="ml-auto text-xs font-semibold text-[#8898aa] tabular-nums">
-                  {keywords.length}/{MAX_KEYWORDS}
-                </span>
-              </label>
-              
-              <div className="relative mt-2">
-                <input
-                  id="affiliate-keyword"
-                  type="text"
-                  value={keywordInput}
-                  onChange={(e) => setKeywordInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addKeyword();
-                    }
-                  }}
-                  placeholder={t.dashboard.find.modal.keywordsPlaceholder}
-                  disabled={keywords.length >= MAX_KEYWORDS}
-                  className="h-10 w-full rounded-lg border border-[#e6ebf1] bg-white px-3 pr-[72px] text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#8898aa] focus:border-[#ffbf23]/60 focus:ring-2 focus:ring-[#ffbf23]/40 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                />
-                <button
-                  type="button"
-                  onClick={addKeyword}
-                  disabled={!keywordInput.trim() || keywords.length >= MAX_KEYWORDS}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md bg-[#ffbf23] px-3 py-1.5 text-xs font-semibold text-[#0f172a] transition-[background-color,transform] duration-150 hover:bg-[#e5ac20] active:scale-95 disabled:cursor-not-allowed disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none dark:disabled:bg-gray-800"
-                >
-                  {t.dashboard.find.modal.addButton}
-                </button>
-              </div>
-
-              <div className="mt-2 min-h-[128px] max-h-[128px] flex-1 space-y-1.5 overflow-y-auto rounded-xl border border-[#e6ebf1] bg-[#f6f9fc] p-2 no-scrollbar dark:border-gray-800 dark:bg-gray-900">
-                {keywords.length > 0 ? (
-                  keywords.map((kw, idx) => (
-                    <div
-                      key={kw}
-                      className="group flex items-center gap-2 rounded-lg border border-[#e6ebf1] bg-white px-2.5 py-1.5 text-sm transition-[border-color,background-color] duration-150 hover:border-[#cdd5df] dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
-                    >
-                      <span className="inline-flex items-center justify-center w-5 h-5 bg-[#ffbf23] text-[#0f172a] text-[10px] font-semibold rounded-full shadow-yellow-glow-sm shrink-0">
-                        {idx + 1}
-                      </span>
-                      <span className="text-[#0f172a] dark:text-gray-200 truncate flex-1 font-medium">{kw}</span>
-                      <button
-                        onClick={() => removeKeyword(kw)}
-                        aria-label={`Remove keyword ${kw}`}
-                        className="flex size-5 shrink-0 items-center justify-center rounded-full text-[#8898aa] transition-[background-color,color,transform] duration-150 hover:bg-red-50 hover:text-red-500 active:scale-95 dark:hover:bg-red-900/20"
-                      >
-                        <X size={12} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex items-center justify-center h-full text-[#8898aa] text-xs italic">
-                    {t.dashboard.find.modal.noKeywordsYet}
-                  </div>
-                )}
-              </div>
-
-              <div className="h-5 mt-1.5">
-                {keywords.length > 0 && (
-                  <button
-                    onClick={() => setKeywords([])}
-                    className="text-xs font-semibold text-[#8898aa] transition-colors duration-150 hover:text-red-500"
-                  >
-                    {t.dashboard.find.modal.clearAllKeywords}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column — Competitors (mirrors Keywords exactly) */}
-            <div className="flex flex-col">
-              <label htmlFor="affiliate-competitor" className="flex h-7 items-center gap-2 text-sm font-semibold text-[#0f172a] dark:text-gray-200">
-                {/* Inline arrow SVG kept (not a lucide icon); only colour + stroke tuned */}
-                <svg className="w-3.5 h-3.5 text-[#425466] dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                {t.dashboard.find.modal.competitorsInputLabel}
-                <span className="ml-auto text-xs font-semibold text-[#8898aa] tabular-nums">
-                  {competitors.length}/{MAX_COMPETITORS}
-                </span>
-              </label>
-              <div className="relative mt-2">
-                <input
-                  id="affiliate-competitor"
-                  type="text"
-                  value={competitorInput}
-                  onChange={(e) => setCompetitorInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addCompetitor();
-                    }
-                  }}
-                  placeholder={t.dashboard.find.modal.competitorsPlaceholder}
-                  disabled={competitors.length >= MAX_COMPETITORS}
-                  className="h-10 w-full rounded-lg border border-[#e6ebf1] bg-white px-3 pr-[72px] text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#8898aa] focus:border-[#ffbf23]/60 focus:ring-2 focus:ring-[#ffbf23]/40 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                />
-                <button
-                  type="button"
-                  onClick={addCompetitor}
-                  disabled={!competitorInput.trim() || competitors.length >= MAX_COMPETITORS}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md bg-[#ffbf23] px-3 py-1.5 text-xs font-semibold text-[#0f172a] transition-[background-color,transform] duration-150 hover:bg-[#e5ac20] active:scale-95 disabled:cursor-not-allowed disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none dark:disabled:bg-gray-800"
-                >
-                  {t.dashboard.find.modal.addCompetitorButton}
-                </button>
-              </div>
-              <div className="mt-2 min-h-[128px] max-h-[128px] flex-1 space-y-1.5 overflow-y-auto rounded-xl border border-[#e6ebf1] bg-[#f6f9fc] p-2 no-scrollbar dark:border-gray-800 dark:bg-gray-900">
-                {competitors.length > 0 ? (
-                  competitors.map((comp) => (
-                    <div
-                      key={comp}
-                      className="group flex items-center gap-2 rounded-lg border border-[#e6ebf1] bg-white px-2.5 py-1.5 text-sm transition-[border-color,background-color] duration-150 hover:border-[#cdd5df] dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
-                    >
-                      <img
-                        src={`https://www.google.com/s2/favicons?domain=${comp}&sz=16`}
-                        alt=""
-                        className="w-3.5 h-3.5 shrink-0"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                      <span className="text-[#0f172a] dark:text-gray-200 truncate flex-1 font-medium text-xs">{comp}</span>
-                      <button
-                        onClick={() => removeCompetitor(comp)}
-                        aria-label={`Remove competitor ${comp}`}
-                        className="flex size-5 shrink-0 items-center justify-center rounded-full text-[#8898aa] transition-[background-color,color,transform] duration-150 hover:bg-red-50 hover:text-red-500 active:scale-95 dark:hover:bg-red-900/20"
-                      >
-                        <X size={12} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex items-center justify-center h-full text-[#8898aa] text-xs italic">
-                    {t.dashboard.find.modal.noCompetitorsYet}
-                  </div>
-                )}
-              </div>
-              <div className="h-5 mt-1.5">
-                {competitors.length > 0 && (
-                  <button
-                    onClick={() => setCompetitors([])}
-                    className="text-xs font-semibold text-[#8898aa] transition-colors duration-150 hover:text-red-500"
-                  >
-                    {t.dashboard.find.modal.clearAllCompetitors}
-                  </button>
-                )}
-              </div>
-            </div>
+            <SearchCriteriaEditor
+              id="affiliate-keyword"
+              label={t.dashboard.find.modal.keywordsLabel}
+              values={keywords}
+              inputValue={keywordInput}
+              onInputChange={setKeywordInput}
+              onAdd={addKeyword}
+              onRemove={removeKeyword}
+              onClear={() => setKeywords([])}
+              maxItems={MAX_KEYWORDS}
+              placeholder={t.dashboard.find.modal.keywordsPlaceholder}
+              addLabel={t.dashboard.find.modal.addButton}
+              emptyLabel={t.dashboard.find.modal.noKeywordsYet}
+              clearLabel={t.dashboard.find.modal.clearAllKeywords}
+              variant="keyword"
+            />
+            <SearchCriteriaEditor
+              id="affiliate-competitor"
+              label={t.dashboard.find.modal.competitorsInputLabel}
+              values={competitors}
+              inputValue={competitorInput}
+              onInputChange={setCompetitorInput}
+              onAdd={addCompetitor}
+              onRemove={removeCompetitor}
+              onClear={() => setCompetitors([])}
+              maxItems={MAX_COMPETITORS}
+              placeholder={t.dashboard.find.modal.competitorsPlaceholder}
+              addLabel={t.dashboard.find.modal.addCompetitorButton}
+              emptyLabel={t.dashboard.find.modal.noCompetitorsYet}
+              clearLabel={t.dashboard.find.modal.clearAllCompetitors}
+              variant="competitor"
+            />
           </div>
 
           <p className="text-[11px] leading-4 text-[#8898aa] dark:text-gray-500">

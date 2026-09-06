@@ -7,11 +7,9 @@ import {
   SearchMarketPicker,
   type SearchMarketPickerOption,
 } from '@/app/components/SearchMarketPicker';
+import { SearchCriteriaEditor } from '@/app/components/SearchCriteriaEditor';
 import { useLanguage } from '@/contexts/LanguageContext';
-import {
-  formatLineValues,
-  parseUniqueLineValues,
-} from '@/lib/brand-locations/form-values';
+import { parseUniqueLineValues } from '@/lib/brand-locations/form-values';
 import { BRAND_LOCATION_MANAGEMENT_LIMITS } from '@/lib/brand-locations/limits';
 import {
   getCountryFlagUrl,
@@ -36,8 +34,6 @@ interface LocationFormModalProps {
   errorMessage: (error: unknown) => string;
 }
 
-const fieldClassName = 'w-full rounded-xl border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] shadow-soft-sm outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white';
-
 export function LocationFormModal({
   isOpen,
   brandName,
@@ -50,8 +46,10 @@ export function LocationFormModal({
   const copy = t.dashboard.brandLocations;
   const [countryCode, setCountryCode] = useState('');
   const [languageCode, setLanguageCode] = useState('');
-  const [topics, setTopics] = useState('');
-  const [competitors, setCompetitors] = useState('');
+  const [topics, setTopics] = useState<string[]>([]);
+  const [topicInput, setTopicInput] = useState('');
+  const [competitors, setCompetitors] = useState<string[]>([]);
+  const [competitorInput, setCompetitorInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const countryOptions = useMemo<readonly SearchMarketPickerOption[]>(
@@ -77,8 +75,10 @@ export function LocationFormModal({
     if (!isOpen) return;
     setCountryCode(location?.countryCode ?? '');
     setLanguageCode(location?.languageCode ?? '');
-    setTopics(formatLineValues(location?.topics ?? []));
-    setCompetitors(formatLineValues(location?.competitors ?? []));
+    setTopics(parseUniqueLineValues((location?.topics ?? []).join('\n')));
+    setTopicInput('');
+    setCompetitors(parseUniqueLineValues((location?.competitors ?? []).join('\n')));
+    setCompetitorInput('');
     setError(null);
     setIsSaving(false);
   }, [isOpen, location]);
@@ -87,8 +87,8 @@ export function LocationFormModal({
     event.preventDefault();
     setIsSaving(true);
     setError(null);
-    const parsedTopics = parseUniqueLineValues(topics);
-    const parsedCompetitors = parseUniqueLineValues(competitors);
+    const parsedTopics = parseUniqueLineValues(topics.join('\n'));
+    const parsedCompetitors = parseUniqueLineValues(competitors.join('\n'));
     const exceedsLimit =
       parsedTopics.length > BRAND_LOCATION_MANAGEMENT_LIMITS.topics
       || parsedCompetitors.length > BRAND_LOCATION_MANAGEMENT_LIMITS.competitors;
@@ -113,6 +113,28 @@ export function LocationFormModal({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const addTopic = () => {
+    const nextTopics = parseUniqueLineValues([...topics, topicInput].join('\n'));
+    if (nextTopics.length === topics.length || nextTopics.length > BRAND_LOCATION_MANAGEMENT_LIMITS.topics) return;
+    setTopics(nextTopics);
+    setTopicInput('');
+  };
+
+  const addCompetitor = () => {
+    const normalized = competitorInput
+      .trim()
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/.*$/, '')
+      .toLowerCase();
+    const nextCompetitors = parseUniqueLineValues([...competitors, normalized].join('\n'));
+    if (
+      nextCompetitors.length === competitors.length
+      || nextCompetitors.length > BRAND_LOCATION_MANAGEMENT_LIMITS.competitors
+    ) return;
+    setCompetitors(nextCompetitors);
+    setCompetitorInput('');
   };
 
   return (
@@ -162,33 +184,44 @@ export function LocationFormModal({
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-1.5 text-xs font-semibold uppercase tracking-wider text-[#8898aa]">
-            <span className="flex items-center justify-between gap-2">
-              <span>{copy.topics}</span>
-              <span className="normal-case tracking-normal">{copy.onePerLine}</span>
-            </span>
-            <textarea
-              rows={5}
-              value={topics}
-              onChange={(event) => setTopics(event.target.value)}
-              disabled={isSaving}
-              className={fieldClassName}
-            />
-          </label>
-          <label className="space-y-1.5 text-xs font-semibold uppercase tracking-wider text-[#8898aa]">
-            <span className="flex items-center justify-between gap-2">
-              <span>{copy.competitors}</span>
-              <span className="normal-case tracking-normal">{copy.onePerLine}</span>
-            </span>
-            <textarea
-              rows={5}
-              value={competitors}
-              onChange={(event) => setCompetitors(event.target.value)}
-              disabled={isSaving}
-              className={fieldClassName}
-            />
-          </label>
+          <SearchCriteriaEditor
+            id="settings-location-topic"
+            label={copy.topics}
+            values={topics}
+            inputValue={topicInput}
+            onInputChange={setTopicInput}
+            onAdd={addTopic}
+            onRemove={(topic) => setTopics((current) => current.filter((value) => value !== topic))}
+            onClear={() => setTopics([])}
+            maxItems={BRAND_LOCATION_MANAGEMENT_LIMITS.topics}
+            placeholder={t.dashboard.find.modal.keywordsPlaceholder}
+            addLabel={t.dashboard.find.modal.addButton}
+            emptyLabel={t.dashboard.find.modal.noKeywordsYet}
+            clearLabel={t.dashboard.find.modal.clearAllKeywords}
+            disabled={isSaving}
+            variant="keyword"
+          />
+          <SearchCriteriaEditor
+            id="settings-location-competitor"
+            label={copy.competitors}
+            values={competitors}
+            inputValue={competitorInput}
+            onInputChange={setCompetitorInput}
+            onAdd={addCompetitor}
+            onRemove={(competitor) => setCompetitors((current) => current.filter((value) => value !== competitor))}
+            onClear={() => setCompetitors([])}
+            maxItems={BRAND_LOCATION_MANAGEMENT_LIMITS.competitors}
+            placeholder={t.dashboard.find.modal.competitorsPlaceholder}
+            addLabel={t.dashboard.find.modal.addCompetitorButton}
+            emptyLabel={t.dashboard.find.modal.noCompetitorsYet}
+            clearLabel={t.dashboard.find.modal.clearAllCompetitors}
+            disabled={isSaving}
+            variant="competitor"
+          />
         </div>
+        <p className="text-[11px] leading-4 text-[#8898aa] dark:text-gray-500">
+          {t.dashboard.find.modal.keywordsHelper}
+        </p>
         {error && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
             {error}
