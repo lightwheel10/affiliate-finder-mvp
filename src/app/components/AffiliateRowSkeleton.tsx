@@ -20,7 +20,7 @@ import React from 'react';
  */
 export const AffiliateRowSkeleton: React.FC = () => {
   return (
-    <div className="grid grid-cols-12 gap-4 items-center p-4 min-h-[72px] bg-white dark:bg-[#0f0f0f] border-b border-[#e6ebf1] dark:border-gray-800 last:border-b-0 animate-pulse">
+    <div aria-hidden="true" className="grid grid-cols-12 gap-4 items-center p-4 min-h-[72px] bg-white dark:bg-[#0f0f0f] border-b border-[#e6ebf1] dark:border-gray-800 last:border-b-0 motion-safe:animate-pulse">
       {/* Checkbox — col-span-1 */}
       <div className="col-span-1 flex justify-center">
         <div className="w-4 h-4 rounded bg-[#f6f9fc] dark:bg-gray-800"></div>

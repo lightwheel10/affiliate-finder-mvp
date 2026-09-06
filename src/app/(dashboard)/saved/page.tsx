@@ -37,6 +37,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { AffiliateRow } from '../../components/AffiliateRow';
+import { AffiliateRowsSkeleton } from '../../components/LoadingSkeletons';
 import { ScanCountdown } from '../../components/ScanCountdown';
 import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
 import { Modal } from '../../components/Modal';
@@ -1119,7 +1120,9 @@ export default function SavedPage() {
 
           {/* Results Content */}
           <div className="flex-1">
-          {!loading && groupedResults.length > 0 ? (
+          {loading ? (
+            <AffiliateRowsSkeleton label={t.common.loading} />
+          ) : groupedResults.length > 0 ? (
             // 2026-06-14 (paras): one row per group (domain/creator). subItems
             // holds the other postings (shown via "+N more" + modals). Unsave/
             // delete/select act on the whole group.

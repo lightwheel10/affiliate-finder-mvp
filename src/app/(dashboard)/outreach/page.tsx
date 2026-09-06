@@ -51,6 +51,7 @@
  * =============================================================================
  */
 
+import { AffiliateRowsSkeleton } from '../../components/LoadingSkeletons';
 import { useState, useMemo, useEffect, useRef } from 'react';
 // =============================================================================
 // January 17th, 2026: Added Link for "Find Affiliates" button navigation
@@ -1870,19 +1871,9 @@ export default function OutreachPage() {
           {/* Results Content */}
           <div className="flex-1">
           
-          {/* =========================================================================
-              LOADING STATE — Smoover refresh (April 23rd, 2026) — Phase 2e
-              Ring weights dropped 4 → 3, gray track uses hairline #e6ebf1,
-              label uses muted #8898aa.
-              ========================================================================= */}
+          {/* Share the route fallback's columns while affiliate data loads. */}
           {loading && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="relative w-12 h-12 mx-auto">
-                <div className="absolute inset-0 border-[3px] border-[#e6ebf1] dark:border-gray-800 rounded-full"></div>
-                <div className="absolute inset-0 border-[3px] border-[#ffbf23] border-t-transparent rounded-full animate-spin"></div>
-              </div>
-              <p className="text-[#8898aa] text-sm mt-4 font-medium">{t.dashboard.outreach.loading}</p>
-            </div>
+            <AffiliateRowsSkeleton variant="outreach" label={t.dashboard.outreach.loading} />
           )}
           
           {/* =========================================================================
