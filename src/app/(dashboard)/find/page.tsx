@@ -2078,13 +2078,14 @@ export default function FindNewPage() {
                       Modal wrapper's own close-button pattern.
               Logic, API calls, optimistic state, error handling untouched.
               ===================================================================== */}
-          <div className="flex items-center gap-2 px-0 py-1">
-            <Globe size={14} className="text-[#8898aa] shrink-0" strokeWidth={2} />
-            <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-400">
-              {t.dashboard.find.modal.websiteLabel}:
-            </span>
-            {canEditBrandInline ? (
-              <div className="flex-1 flex items-center gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 py-1 sm:flex-1 sm:pb-2">
+              <Globe size={14} className="text-[#8898aa] shrink-0" strokeWidth={2} />
+              <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-400">
+                {t.dashboard.find.modal.websiteLabel}:
+              </span>
+              {canEditBrandInline ? (
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                 {isEditingBrand ? (
                   <>
                     {editBrand && (
@@ -2191,47 +2192,36 @@ export default function FindNewPage() {
                     </button>
                   </>
                 )}
-              </div>
-            ) : displayedBrandDomain ? (
-              <>
-                <img
-                  src={`https://www.google.com/s2/favicons?domain=${displayedBrandDomain}&sz=16`}
-                  alt=""
-                  className="w-4 h-4 shrink-0"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-                <span className="text-sm font-medium text-[#0f172a] dark:text-gray-300 truncate">{displayedBrandDomain}</span>
-              </>
-            ) : (
-              <span className="text-sm italic text-[#8898aa]">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
-            )}
-          </div>
-
-          {brandLocationsEnabled && (
-            <section className="rounded-xl border border-[#e6ebf1] bg-[#f6f9fc] p-4 dark:border-gray-800 dark:bg-gray-900/70">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white">
-                    {t.dashboard.find.modal.targetMarket}
-                  </h3>
-                  <p className="mt-1 max-w-xl text-xs leading-5 text-[#8898aa] dark:text-gray-400">
-                    {t.dashboard.find.modal.targetMarketHint}
-                  </p>
                 </div>
-                {searchCountryCode && searchLanguageCode && (
-                  <span className={cn(
-                    'rounded-full border px-2.5 py-1 text-[11px] font-semibold',
-                    matchingSearchLocation
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300'
-                      : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300',
-                  )}>
-                    {matchingSearchLocation
-                      ? t.dashboard.find.modal.savedLocation
-                      : t.dashboard.find.modal.newLocation}
-                  </span>
-                )}
-              </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              ) : displayedBrandDomain ? (
+                <>
+                  <img
+                    src={`https://www.google.com/s2/favicons?domain=${displayedBrandDomain}&sz=16`}
+                    alt=""
+                    className="w-4 h-4 shrink-0"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                  <span className="truncate text-sm font-medium text-[#0f172a] dark:text-gray-300">{displayedBrandDomain}</span>
+                </>
+              ) : (
+                <span className="text-sm italic text-[#8898aa]">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
+              )}
+              {brandLocationsEnabled && searchCountryCode && searchLanguageCode && (
+                <span className={cn(
+                  'rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+                  matchingSearchLocation
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300'
+                    : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300',
+                )}>
+                  {matchingSearchLocation
+                    ? t.dashboard.find.modal.savedLocation
+                    : t.dashboard.find.modal.newLocation}
+                </span>
+              )}
+            </div>
+
+            {brandLocationsEnabled && (
+              <div className="grid grid-cols-2 gap-2 sm:w-80 sm:shrink-0">
                 <label className="space-y-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
                   {t.dashboard.brandLocations.country}
                   <select
@@ -2240,7 +2230,7 @@ export default function FindNewPage() {
                       selectSearchMarket(event.target.value, searchLanguageCode);
                     }}
                     disabled={loading || isCreatingSearchLocation}
-                    className="w-full rounded-lg border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    className="h-9 w-full rounded-lg border border-[#d8e0e8] bg-white px-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                   >
                     {MARKET_COUNTRIES.map((country) => (
                       <option key={country.isoCode} value={country.isoCode}>
@@ -2257,7 +2247,7 @@ export default function FindNewPage() {
                       selectSearchMarket(searchCountryCode, event.target.value);
                     }}
                     disabled={loading || isCreatingSearchLocation}
-                    className="w-full rounded-lg border border-[#d8e0e8] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    className="h-9 w-full rounded-lg border border-[#d8e0e8] bg-white px-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                   >
                     {MARKET_LANGUAGES.map((marketLanguage) => (
                       <option key={marketLanguage.isoCode} value={marketLanguage.isoCode}>
@@ -2267,12 +2257,12 @@ export default function FindNewPage() {
                   </select>
                 </label>
               </div>
-              {searchLocationError && (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-                  {searchLocationError}
-                </p>
-              )}
-            </section>
+            )}
+          </div>
+          {brandLocationsEnabled && searchLocationError && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+              {searchLocationError}
+            </p>
           )}
 
           {/* =====================================================================
