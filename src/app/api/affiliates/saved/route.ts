@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbSavedAffiliate } from '@/lib/db';
-import { checkCredits, consumeCredits } from '@/lib/credits';
 import {
   affiliateRequestErrorResponse,
   resolveAffiliateReadRequestContext,
   resolveAffiliateRequestContext,
 } from '@/lib/affiliates/server';
+import { finalizeSavedAffiliateEmail } from '@/lib/affiliates/saved-email-postgres';
 // 2026-07-27 13:23 IST (Paras): defensive image re-hosting on save — see the
 // comment above the rehost call in POST for the full WHY.
 import { rehostImageIfNeeded } from '@/lib/image-storage';
@@ -356,126 +356,52 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // ==========================================================================
-    // IDEMPOTENCY CHECK - January 24, 2026
-    // 
-    // CRITICAL FIX: Prevent duplicate credit consumption when user clicks
-    // "Find Email" multiple times rapidly.
-    // 
-    // Before doing anything, check if this affiliate already has email_status='found'.
-    // If so, return success immediately WITHOUT consuming credits again.
-    // This makes the endpoint idempotent - multiple calls = same result.
-    // ==========================================================================
-    const existingRecord = await sql`
-      SELECT email_status, email FROM crewcast.saved_affiliates 
-      WHERE id = ${affiliateId}
-        AND user_id = ${scopedUserId}
-        AND brand_id = ${context.brandId}::bigint
-        AND brand_location_id = ${context.brandLocationId}::bigint
-    `;
+    const result = await finalizeSavedAffiliateEmail({
+      accountId: scopedUserId,
+      brandId: context.brandId,
+      brandLocationId: context.brandLocationId,
+      affiliateId,
+      emailStatus,
+      email: email || null,
+      provider,
+      enforceCredits: isCreditEnforcementEnabled(),
+    });
 
-    if (existingRecord.length === 0) {
-      console.log(`[PATCH /api/affiliates/saved] Affiliate ${affiliateId} not found for user ${userId}`);
-      return NextResponse.json(
-        { error: 'Affiliate not found' }, 
-        { status: 404 }
-      );
+    if (result.outcome === 'affiliate_not_found') {
+      return NextResponse.json({ error: 'Affiliate not found' }, { status: 404 });
     }
-
-    const currentStatus = existingRecord[0].email_status;
-    const currentEmail = existingRecord[0].email;
-
-    // If already 'found', return success without consuming credits
-    // This prevents duplicate charges from rapid clicks
-    if (currentStatus === 'found') {
-      console.log(`[PATCH /api/affiliates/saved] Affiliate ${affiliateId} already has email_status='found'. Skipping credit consumption (idempotent).`);
-      return NextResponse.json({ 
+    if (result.outcome === 'insufficient_credits') {
+      return NextResponse.json({
+        error: 'Insufficient email credits',
+        message: result.message,
+        remaining: result.remaining,
+        isUnlimited: result.isUnlimited,
+      }, { status: 402 });
+    }
+    if (result.outcome === 'in_progress') {
+      return NextResponse.json({
+        error: 'Email lookup already in progress',
+      }, { status: 409 });
+    }
+    if (result.outcome === 'already_processed') {
+      return NextResponse.json({
         success: true,
-        email: currentEmail || email || null,
+        email: result.email,
         status: 'found',
-        provider: provider,
+        provider,
         creditsConsumed: false,
         creditsRemaining: 0,
-        alreadyProcessed: true, // Flag to indicate this was a duplicate request
+        alreadyProcessed: true,
       });
     }
 
-    // ==========================================================================
-    // CREDIT CHECK - January 16, 2026
-    // 
-    // If an email was found (bio extraction succeeded), we charge 1 credit.
-    // If no email found, no credit is consumed (user shouldn't pay for failure).
-    // ==========================================================================
-    const enforceCredits = isCreditEnforcementEnabled();
-    let creditsConsumed = false;
-    let creditsRemaining = 0;
-
-    if (enforceCredits && emailStatus === 'found') {
-      // Check if user has sufficient email credits
-      const creditCheck = await checkCredits(scopedUserId, 'email', 1);
-      
-      if (!creditCheck.allowed) {
-        console.log(`[PATCH /api/affiliates/saved] User ${scopedUserId} has insufficient email credits`);
-        return NextResponse.json(
-          { 
-            error: 'Insufficient email credits',
-            message: creditCheck.message || 'You need more email credits to find this email.',
-            remaining: creditCheck.remaining,
-            isUnlimited: creditCheck.isUnlimited,
-          }, 
-          { status: 402 }
-        );
-      }
-    }
-
-    // Update the affiliate's email AND status in database
-    // CRITICAL FIX January 14, 2026: Must persist email to database!
-    // Without this, email only shows via optimistic update and is lost on refresh.
-    await sql`
-      UPDATE crewcast.saved_affiliates 
-      SET 
-        email = COALESCE(${email || null}, email),
-        email_status = ${emailStatus},
-        email_searched_at = NOW(),
-        email_provider = ${provider}
-      WHERE id = ${affiliateId}
-        AND user_id = ${scopedUserId}
-        AND brand_id = ${context.brandId}::bigint
-        AND brand_location_id = ${context.brandLocationId}::bigint
-    `;
-
-    // ==========================================================================
-    // CREDIT CONSUMPTION - January 16, 2026
-    // 
-    // Consume 1 email credit AFTER successful database update.
-    // Only consume if email was found (not for 'not_found' status).
-    // ==========================================================================
-    if (enforceCredits && emailStatus === 'found') {
-      const consumeResult = await consumeCredits(
-        scopedUserId,
-        'email',
-        1,
-        affiliateId.toString(),
-        'bio_extraction'
-      );
-      
-      if (consumeResult.success) {
-        creditsConsumed = true;
-        creditsRemaining = consumeResult.newBalance;
-        console.log(`[PATCH /api/affiliates/saved] User ${scopedUserId}: Consumed 1 email credit for bio extraction. Remaining: ${creditsRemaining}`);
-      } else {
-        // This shouldn't happen since we checked above, but log it
-        console.error(`[PATCH /api/affiliates/saved] Failed to consume credit for user ${scopedUserId} after check passed`);
-      }
-    }
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      email: email || null,
-      status: emailStatus,
-      provider: provider,
-      creditsConsumed,
-      creditsRemaining,
+      email: result.email,
+      status: result.status,
+      provider,
+      creditsConsumed: result.creditsConsumed,
+      creditsRemaining: result.creditsRemaining,
     });
   } catch (error) {
     const requestError = affiliateRequestErrorResponse(error);

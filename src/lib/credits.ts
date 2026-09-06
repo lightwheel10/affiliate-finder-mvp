@@ -104,6 +104,29 @@ export interface CreditCheckResult {
   message?: string;
 }
 
+export interface CreditConsumeResult {
+  success: boolean;
+  newBalance: number;
+}
+
+interface ConsumedCreditRow {
+  total: unknown;
+  used: unknown;
+  topup: unknown;
+}
+
+function readCreditInteger(value: unknown, label: string): number {
+  const parsed = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && /^-?[0-9]+$/.test(value)
+      ? Number(value)
+      : Number.NaN;
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(`${label} is not a safe integer.`);
+  }
+  return parsed;
+}
+
 export interface DbUserCredits {
   id: number;
   user_id: number;
@@ -362,34 +385,29 @@ export async function checkCredits(
  * @param referenceType - Optional reference type (e.g., 'search', 'affiliate')
  * @returns Object with success status and new balance
  */
-export async function consumeCredits(
+/**
+ * Deduct credits and append the matching audit row using an existing
+ * transaction. Database errors intentionally escape so the caller can roll
+ * back every related business write.
+ */
+export async function consumeCreditsInTransaction(
+  executor: CreditSqlExecutor,
   userId: number,
   creditType: CreditType,
   amount: number = 1,
   referenceId?: string,
   referenceType?: string
-): Promise<{ success: boolean; newBalance: number }> {
-  try {
-    if (amount <= 0 || !Number.isInteger(amount)) {
-      console.error(`[Credits] SECURITY: Invalid amount ${amount} rejected for user ${userId}`);
-      return { success: false, newBalance: 0 };
-    }
+): Promise<CreditConsumeResult> {
+  if (amount <= 0 || !Number.isInteger(amount)) {
+    throw new Error(`Invalid credit amount ${amount} for user ${userId}.`);
+  }
 
-    // 2026-08-04 (Paras): One guarded UPDATE per credit type — the WHERE
-    // clause IS the availability check (atomic; see function doc above).
-    // 0 rows updated = no credit row OR insufficient balance; either way
-    // nothing was deducted.
-    //
-    // The CASE expressions split the charge: subscription pool first
-    // (LEAST(amount, remaining sub)), overflow drains topup. Topup can never
-    // go negative — the WHERE guard proves sub-remaining + topup >= amount
-    // before any write happens. Unlimited plans (total = -1) always pass and
-    // only increment `used`; their topup is left untouched (COALESCE'd to 0,
-    // matching the old behavior for NULL topup columns).
-    let updateResult;
-    switch (creditType) {
-      case 'topic_search':
-        updateResult = await sql`
+  // The CASE expressions split the charge: subscription pool first, then
+  // top-up. The guarded UPDATE remains the atomic availability check.
+  let updateResult: readonly ConsumedCreditRow[];
+  switch (creditType) {
+    case 'topic_search':
+      updateResult = await executor<ConsumedCreditRow>`
           UPDATE crewcast.user_credits
           SET
             topic_search_credits_used = topic_search_credits_used + (CASE
@@ -408,10 +426,10 @@ export async function consumeCredits(
               OR GREATEST(0, topic_search_credits_total - topic_search_credits_used) + COALESCE(topic_search_credits_topup, 0) >= ${amount}
             )
           RETURNING topic_search_credits_total as total, topic_search_credits_used as used, topic_search_credits_topup as topup
-        `;
-        break;
-      case 'email':
-        updateResult = await sql`
+      `;
+      break;
+    case 'email':
+      updateResult = await executor<ConsumedCreditRow>`
           UPDATE crewcast.user_credits
           SET
             email_credits_used = email_credits_used + (CASE
@@ -430,10 +448,10 @@ export async function consumeCredits(
               OR GREATEST(0, email_credits_total - email_credits_used) + COALESCE(email_credits_topup, 0) >= ${amount}
             )
           RETURNING email_credits_total as total, email_credits_used as used, email_credits_topup as topup
-        `;
-        break;
-      case 'ai':
-        updateResult = await sql`
+      `;
+      break;
+    case 'ai':
+      updateResult = await executor<ConsumedCreditRow>`
           UPDATE crewcast.user_credits
           SET
             ai_credits_used = ai_credits_used + (CASE
@@ -452,32 +470,75 @@ export async function consumeCredits(
               OR GREATEST(0, ai_credits_total - ai_credits_used) + COALESCE(ai_credits_topup, 0) >= ${amount}
             )
           RETURNING ai_credits_total as total, ai_credits_used as used, ai_credits_topup as topup
-        `;
-        break;
-      default:
-        return { success: false, newBalance: 0 };
-    }
-
-    if (updateResult.length === 0) {
-      // Atomic guard rejected the deduction: insufficient credits, or the
-      // user has no credit row at all. Nothing was written.
-      console.error(`[Credits] Consume rejected for user ${userId}: insufficient ${creditType} credits or no credit record`);
+      `;
+      break;
+    default:
       return { success: false, newBalance: 0 };
+  }
+
+  if (updateResult.length === 0) {
+    return { success: false, newBalance: 0 };
+  }
+  if (updateResult.length !== 1) {
+    throw new Error(`Credit deduction returned ${updateResult.length} rows for user ${userId}.`);
+  }
+
+  const u = updateResult[0];
+  const total = readCreditInteger(u.total, 'Credit total');
+  const used = readCreditInteger(u.used, 'Used credits');
+  const topup = readCreditInteger(u.topup ?? 0, 'Top-up credits');
+  if (total < -1 || used < 0 || topup < 0) {
+    throw new Error(`Credit deduction returned invalid balances for user ${userId}.`);
+  }
+  const newBalance = total === -1 ? -1 : Math.max(0, total - used) + topup;
+
+  await executor`
+    INSERT INTO crewcast.credit_transactions (
+      user_id, credit_type, amount, balance_after, reason, reference_id, reference_type
+    ) VALUES (
+      ${userId}, ${creditType}, ${-amount}, ${newBalance}, 'usage', ${referenceId || null}, ${referenceType || null}
+    )
+  `;
+
+  return { success: true, newBalance };
+}
+
+export async function consumeCredits(
+  userId: number,
+  creditType: CreditType,
+  amount: number = 1,
+  referenceId?: string,
+  referenceType?: string
+): Promise<CreditConsumeResult> {
+  try {
+    const result = await runCreditTransaction(undefined, async (transaction) => {
+      // Lock the parent before user_credits. The usage-ledger foreign key also
+      // touches this parent row, so every credit consumer must keep this order
+      // to avoid a users <-> user_credits deadlock with account workflows.
+      const accounts = await transaction<{ id: unknown }>`
+        SELECT id
+        FROM crewcast.users
+        WHERE id = ${userId}
+        FOR KEY SHARE
+      `;
+      if (accounts.length !== 1) {
+        throw new Error(`Cannot consume credits for missing user ${userId}.`);
+      }
+      return consumeCreditsInTransaction(
+        transaction,
+        userId,
+        creditType,
+        amount,
+        referenceId,
+        referenceType,
+      );
+    });
+    if (!result.success) {
+      console.error(`[Credits] Consume rejected for user ${userId}: insufficient ${creditType} credits or no credit record`);
+      return result;
     }
-
-    const u = updateResult[0];
-    const newBalance = u.total === -1 ? -1 : Math.max(0, u.total - u.used) + (u.topup ?? 0);
-
-    await sql`
-      INSERT INTO crewcast.credit_transactions (
-        user_id, credit_type, amount, balance_after, reason, reference_id, reference_type
-      ) VALUES (
-        ${userId}, ${creditType}, ${-amount}, ${newBalance}, 'usage', ${referenceId || null}, ${referenceType || null}
-      )
-    `;
-
-    console.log(`[Credits] Consumed ${amount} ${creditType} credit(s) for user ${userId}. New balance: ${newBalance}`);
-    return { success: true, newBalance };
+    console.log(`[Credits] Consumed ${amount} ${creditType} credit(s) for user ${userId}. New balance: ${result.newBalance}`);
+    return result;
   } catch (error) {
     console.error('[Credits] Error consuming credits:', error);
     return { success: false, newBalance: 0 };

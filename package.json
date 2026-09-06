@@ -24,6 +24,7 @@
     "test:staging:weekly-persistence": "node --conditions=react-server --import tsx scripts/verify-weekly-affiliate-persistence-staging.ts",
     "test:staging:reconciliation": "node --conditions=react-server --import tsx scripts/verify-search-reconciliation-staging.ts",
     "test:staging:search-credits": "node --conditions=react-server --import tsx scripts/verify-search-credit-reservations-staging.ts",
+    "test:staging:saved-email-credits": "node --env-file=.env.staging.local --conditions=react-server --import tsx scripts/verify-saved-affiliate-email-credit-staging.ts",
     "test:staging:paid-search-migration": "node --import tsx scripts/verify-paid-search-migration-staging.ts",
     "fixture:staging:multi-location": "node --import tsx scripts/manage-ui-multi-location-fixture.ts",
     "operator:provision": "node --import tsx scripts/provision-search-reconciliation-operator.ts",

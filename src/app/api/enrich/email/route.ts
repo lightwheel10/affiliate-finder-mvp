@@ -64,7 +64,8 @@ import {
 // This ensures type safety when tracking API calls.
 // =============================================================================
 import { trackApiCall, API_COSTS, ApiService } from '@/app/services/tracking';
-import { checkCredits, consumeCredits, refundCredits } from '@/lib/credits';
+import { refundCredits } from '@/lib/credits';
+import { reserveSavedAffiliateEmailLookup } from '@/lib/affiliates/saved-email-postgres';
 import {
   affiliateRequestErrorResponse,
   resolveAffiliateRequestContext,
@@ -180,27 +181,7 @@ export async function POST(request: NextRequest) {
     refundUserId = userId;
     refundAffiliateId = String(affiliateId);
 
-    // ==========================================================================
-    // CREDIT CHECK (December 2025)
-    // Verify user has email credits before proceeding
-    // ==========================================================================
     const enforceCredits = isCreditEnforcementEnabled();
-    
-    if (enforceCredits) {
-      const creditCheck = await checkCredits(userId, 'email', 1);
-      
-      if (!creditCheck.allowed) {
-        console.log(`[Email Enrich] Credit check failed for user ${userId}: ${creditCheck.message}`);
-        return NextResponse.json({ 
-          error: creditCheck.message || 'Insufficient email credits',
-          creditError: true,
-          remaining: creditCheck.remaining,
-          isReadOnly: creditCheck.isReadOnly,
-        }, { status: 402 }); // Payment Required
-      }
-      
-      console.log(`[Email Enrich] Credit check passed for user ${userId}. Remaining: ${creditCheck.remaining}`);
-    }
 
     // Validate forced provider if specified
     // January 16, 2026: Added website_scraper as valid provider
@@ -232,52 +213,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ==========================================================================
-    // RESERVE CREDIT BEFORE THE PAID LOOKUP (2026-08-04, Paras)
-    //
-    // WHY: This route used to only CHECK credits (above) and consume them at
-    // the very end, after the paid Apollo/Lusha lookup — and only when an
-    // email was found. That gap meant N parallel requests could each pass the
-    // check and each trigger a paid lookup while only 1 credit existed; when
-    // the late consume then failed, the email was still saved and returned
-    // anyway. Security audit finding H3 (SECURITY_AUDIT.md).
-    //
-    // HOW: consumeCredits() is atomic as of PR #78 (availability check inside
-    // the UPDATE's WHERE clause), so this reservation is the real enforcement
-    // point: reserve 1 email credit NOW, run the lookup, refund if no email
-    // is found (or on error/exception — see the refund blocks below). Same
-    // reserve-then-refund pattern as /api/ai/outreach. The checkCredits()
-    // call above stays purely for a friendly early 402.
-    //
-    // Placed after all cheap validations so an invalid request can't consume,
-    // and before the email_status='searching' UPDATE so a rejected request
-    // doesn't leave the affiliate stuck in 'searching'.
-    // ==========================================================================
-    if (enforceCredits) {
-      const reserveResult = await consumeCredits(userId, 'email', 1, affiliateId.toString(), 'affiliate');
-      if (!reserveResult.success) {
-        return NextResponse.json({
-          error: 'Unable to reserve email credit. Please try again.',
-          creditError: true,
-          remaining: 0,
-        }, { status: 402 });
-      }
-      creditConsumed = true;
-      console.log(`💳 [Email Enrich] Reserved 1 email credit for user ${userId}. Balance: ${reserveResult.newBalance}`);
+    // Claim the affiliate and reserve its credit in one short transaction.
+    // This closes the race where the bio-email endpoint and this provider
+    // route could both charge the same affiliate before either stored `found`.
+    const reservation = await reserveSavedAffiliateEmailLookup({
+      accountId: userId,
+      brandId: context.brandId,
+      brandLocationId: context.brandLocationId,
+      affiliateId,
+      enforceCredits,
+    });
+    if (reservation.outcome === 'affiliate_not_found') {
+      return NextResponse.json({ error: 'Affiliate not found' }, { status: 404 });
+    }
+    if (reservation.outcome === 'insufficient_credits') {
+      return NextResponse.json({
+        error: reservation.message,
+        creditError: true,
+        remaining: reservation.remaining,
+        isReadOnly: reservation.isReadOnly,
+      }, { status: 402 });
+    }
+    if (reservation.outcome === 'in_progress') {
+      return NextResponse.json({
+        error: 'Email lookup already in progress',
+      }, { status: 409 });
+    }
+    if (reservation.outcome === 'already_processed') {
+      return NextResponse.json({
+        email: reservation.email,
+        emails: reservation.email ? [reservation.email] : [],
+        contacts: [],
+        status: 'found',
+        provider: 'cached',
+      });
     }
 
-    // ==========================================================================
-    // UPDATE STATUS TO SEARCHING
-    // ==========================================================================
-
-    await sql`
-      UPDATE crewcast.saved_affiliates 
-      SET email_status = 'searching'
-      WHERE id = ${affiliateId}
-        AND user_id = ${userId}
-        AND brand_id = ${context.brandId}::bigint
-        AND brand_location_id = ${context.brandLocationId}::bigint
-    `;
+    creditConsumed = reservation.creditsConsumed;
+    if (creditConsumed) {
+      console.log(`💳 [Email Enrich] Reserved 1 email credit for user ${userId}. Balance: ${reservation.creditsRemaining}`);
+    }
 
     // ==========================================================================
     // BUILD ENRICHMENT REQUEST WITH ALL AVAILABLE DATA
