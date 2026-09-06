@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql, DbDiscoveredAffiliate } from '@/lib/db';
 import {
   affiliateRequestErrorResponse,
+  MAX_AFFILIATE_MUTATION_BODY_BYTES,
+  readAffiliateMutationJson,
   resolveAffiliateReadRequestContext,
   resolveAffiliateRequestContext,
 } from '@/lib/affiliates/server';
@@ -68,7 +70,7 @@ export async function GET(request: NextRequest) {
 // POST /api/affiliates/discovered - Save a discovered affiliate
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_AFFILIATE_MUTATION_BODY_BYTES);
     const {
       userId,
       searchKeyword,
@@ -257,7 +259,7 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_AFFILIATE_MUTATION_BODY_BYTES);
     const {
       userId,
       brandLocationId,

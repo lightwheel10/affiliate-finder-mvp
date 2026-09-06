@@ -16,18 +16,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import {
   affiliateRequestErrorResponse,
+  assertAffiliateLinkBatch,
+  assertAffiliateObjectBatch,
+  MAX_AFFILIATE_BATCH_BODY_BYTES,
+  readAffiliateMutationJson,
   resolveAffiliateRequestContext,
 } from '@/lib/affiliates/server';
+import {
+  AFFILIATE_DELETE_BATCH_MAX_ITEMS,
+  DISCOVERED_AFFILIATE_BATCH_MAX_ITEMS,
+} from '@/lib/affiliates/mutation-limits';
 
 // POST /api/affiliates/discovered/batch - Batch save discovered affiliates
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_AFFILIATE_BATCH_BODY_BYTES);
     const { userId, brandLocationId, searchKeyword, affiliates } = body;
 
     if (!userId || !searchKeyword || !affiliates || !Array.isArray(affiliates)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+    assertAffiliateObjectBatch(affiliates, DISCOVERED_AFFILIATE_BATCH_MAX_ITEMS);
 
     const context = await resolveAffiliateRequestContext({
       legacyAccountId: userId,
@@ -185,12 +194,13 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_AFFILIATE_BATCH_BODY_BYTES);
     const { userId, brandLocationId, links } = body;
 
     if (!userId || !links || !Array.isArray(links) || links.length === 0) {
       return NextResponse.json({ error: 'Missing required fields: userId and links array' }, { status: 400 });
     }
+    assertAffiliateLinkBatch(links, AFFILIATE_DELETE_BATCH_MAX_ITEMS);
 
     const context = await resolveAffiliateRequestContext({
       legacyAccountId: userId,

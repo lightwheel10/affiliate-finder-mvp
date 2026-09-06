@@ -941,18 +941,12 @@ export default function OutreachPage() {
       // Build the request with optional selectedContact
       const requestBody: Record<string, unknown> = {
         affiliateId: affiliate.id,
-        affiliate: affiliate,
         brandLocationId: affiliate.brandLocationId,
       };
       
       // If a specific contact was provided, include it
       if (contact) {
-        requestBody.selectedContact = {
-          email: contact.email,
-          firstName: contact.firstName,
-          lastName: contact.lastName,
-          title: contact.title,
-        };
+        requestBody.selectedContactEmail = contact.email;
       }
       
       // Call the AI outreach API
@@ -1188,7 +1182,6 @@ export default function OutreachPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             affiliateId: id,
-            affiliate: affiliate,
             brandLocationId: affiliate.brandLocationId,
           }),
         });

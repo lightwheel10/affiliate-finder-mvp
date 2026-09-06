@@ -68,6 +68,8 @@ import { refundCredits } from '@/lib/credits';
 import { reserveSavedAffiliateEmailLookup } from '@/lib/affiliates/saved-email-postgres';
 import {
   affiliateRequestErrorResponse,
+  MAX_AFFILIATE_MUTATION_BODY_BYTES,
+  readAffiliateMutationJson,
   resolveAffiliateRequestContext,
 } from '@/lib/affiliates/server';
 
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
   let refundAffiliateId = 'unknown';
 
   try {
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_AFFILIATE_MUTATION_BODY_BYTES);
     const { 
       affiliateId, 
       userId: legacyUserId,

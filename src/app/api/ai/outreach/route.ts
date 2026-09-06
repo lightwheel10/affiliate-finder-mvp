@@ -25,9 +25,7 @@
  * generate an email for.
  * 
  * New request parameters:
- * - selectedContact: { email, firstName, lastName, title } - Optional override
- *   for the contact to address in the email. If provided, uses this instead of
- *   the affiliate's primary email/personName.
+ * - selectedContactEmail: string - Optional stored contact to address.
  * 
  * Credits: 1 AI credit per email generated (regardless of which contact)
  * 
@@ -40,6 +38,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import {
   affiliateRequestErrorResponse,
+  MAX_OUTREACH_MUTATION_BODY_BYTES,
+  readAffiliateMutationJson,
   resolveAffiliateRequestContext,
 } from '@/lib/affiliates/server';
 import {
@@ -55,6 +55,87 @@ import {
   UserBusinessContext,
   AffiliateData
 } from '@/lib/n8n-ai-outreach';
+
+interface StoredOutreachContact {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  title: string | null;
+}
+
+function optionalStoredString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+/** Resolve a browser selection only from the owned affiliate's stored result. */
+export function resolveStoredOutreachContact(
+  rawEmailResults: unknown,
+  requestedEmail: string,
+  primaryEmail?: unknown,
+  primaryPersonName?: unknown,
+): StoredOutreachContact | null {
+  const normalizedEmail = requestedEmail.trim().toLowerCase();
+  if (!normalizedEmail) return null;
+  if (
+    typeof primaryEmail === 'string'
+    && primaryEmail.trim().toLowerCase() === normalizedEmail
+  ) {
+    return {
+      email: primaryEmail.trim(),
+      firstName: optionalStoredString(primaryPersonName),
+      lastName: null,
+      title: null,
+    };
+  }
+
+  let emailResults = rawEmailResults;
+  if (typeof emailResults === 'string') {
+    try {
+      emailResults = JSON.parse(emailResults);
+    } catch {
+      return null;
+    }
+  }
+  if (!emailResults || typeof emailResults !== 'object' || Array.isArray(emailResults)) return null;
+
+  const result = emailResults as Record<string, unknown>;
+  if (Array.isArray(result.contacts)) {
+    for (const candidate of result.contacts) {
+      if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+      const contact = candidate as Record<string, unknown>;
+      if (!Array.isArray(contact.emails)) continue;
+      const storedEmail = contact.emails.find(
+        (email): email is string => typeof email === 'string'
+          && email.trim().toLowerCase() === normalizedEmail,
+      );
+      if (storedEmail) {
+        return {
+          email: storedEmail.trim(),
+          firstName: optionalStoredString(contact.firstName),
+          lastName: optionalStoredString(contact.lastName),
+          title: optionalStoredString(contact.title),
+        };
+      }
+    }
+  }
+
+  if (Array.isArray(result.emails)) {
+    const storedEmail = result.emails.find(
+      (email): email is string => typeof email === 'string'
+        && email.trim().toLowerCase() === normalizedEmail,
+    );
+    if (storedEmail) {
+      return {
+        email: storedEmail.trim(),
+        firstName: optionalStoredString(result.firstName),
+        lastName: optionalStoredString(result.lastName),
+        title: optionalStoredString(result.title),
+      };
+    }
+  }
+
+  return null;
+}
 
 // =============================================================================
 // CONFIGURATION
@@ -163,11 +244,12 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     // STEP 2: PARSE REQUEST BODY
     // =========================================================================
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_OUTREACH_MUTATION_BODY_BYTES);
     const {
       affiliateId,
-      affiliate: affiliateData,
-      selectedContact,
+      affiliate: legacyAffiliateData,
+      selectedContactEmail,
+      selectedContact: legacySelectedContact,
       userId: legacyUserId,
       brandLocationId,
     } = body;
@@ -175,21 +257,22 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     // MULTI-CONTACT SUPPORT (December 25, 2025)
     // 
-    // selectedContact is an optional object containing:
-    // - email: string (required) - The specific contact's email
-    // - firstName: string - Contact's first name
-    // - lastName: string - Contact's last name  
-    // - title: string - Contact's job title (e.g., "Marketing Director")
-    //
-    // When provided, this overrides the affiliate's primary email/personName
-    // to generate a more personalized email for the specific contact.
+    // The browser sends only the chosen email. Older clients may still send
+    // selectedContact.email; names and titles always come from the stored row.
     // =========================================================================
 
-    const requestedAffiliateId = Number(affiliateId ?? affiliateData?.id);
+    const requestedAffiliateId = Number(affiliateId ?? legacyAffiliateData?.id);
     if (!Number.isSafeInteger(requestedAffiliateId) || requestedAffiliateId <= 0) {
       return NextResponse.json(
         { error: 'A valid affiliateId is required' },
         { status: 400 }
+      );
+    }
+    const requestedContactEmail = selectedContactEmail ?? legacySelectedContact?.email;
+    if (requestedContactEmail !== undefined && typeof requestedContactEmail !== 'string') {
+      return NextResponse.json(
+        { error: 'selectedContactEmail must be a string' },
+        { status: 400 },
       );
     }
 
@@ -217,6 +300,68 @@ export async function POST(request: NextRequest) {
 
     const user = users[0];
     const userId = context.accountId;
+
+    // Load the account/location-owned affiliate before reserving a credit. The
+    // browser now sends only its ID, and a row deleted before this read cannot
+    // create a lease or charge that has nothing left to release against.
+    const affiliates = await sql`
+      SELECT
+        id, person_name, email, domain, source, title, snippet, link,
+        keyword, discovery_method_type, discovery_method_value,
+        instagram_username, instagram_bio, instagram_followers,
+        tiktok_username, tiktok_bio, tiktok_followers,
+        channel_name, channel_subscribers, email_results
+      FROM crewcast.saved_affiliates
+      WHERE id = ${requestedAffiliateId}
+        AND user_id = ${userId}
+        AND brand_id = ${context.brandId}::bigint
+        AND brand_location_id = ${context.brandLocationId}::bigint
+    `;
+
+    if (affiliates.length === 0) {
+      return NextResponse.json(
+        { error: 'Affiliate not found' },
+        { status: 404 }
+      );
+    }
+
+    const a = affiliates[0];
+    const affiliate: AffiliateData = {
+      id: a.id,
+      personName: a.person_name,
+      email: a.email,
+      domain: a.domain,
+      source: a.source,
+      title: a.title,
+      snippet: a.snippet || '',
+      link: a.link ?? null,
+      keyword: a.keyword,
+      discoveryMethodType: a.discovery_method_type,
+      discoveryMethodValue: a.discovery_method_value,
+      instagramUsername: a.instagram_username,
+      instagramBio: a.instagram_bio,
+      instagramFollowers: a.instagram_followers,
+      tiktokUsername: a.tiktok_username,
+      tiktokBio: a.tiktok_bio,
+      tiktokFollowers: a.tiktok_followers,
+      channelName: a.channel_name,
+      channelSubscribers: a.channel_subscribers,
+    };
+    const selectedContact = requestedContactEmail === undefined
+      ? null
+      : resolveStoredOutreachContact(
+          a.email_results,
+          requestedContactEmail,
+          a.email,
+          a.person_name,
+        );
+    if (requestedContactEmail !== undefined && !selectedContact) {
+      return NextResponse.json(
+        { error: 'Selected contact is not available for this affiliate' },
+        { status: 400 },
+      );
+    }
+
     const enforceCredits = isCreditEnforcementEnabled();
     const reservationInput: OutreachGenerationInput = {
       accountId: userId,
@@ -263,84 +408,6 @@ export async function POST(request: NextRequest) {
     console.log(`[AI Outreach] Reserved generation for affiliate ${requestedAffiliateId}. New balance: ${reservation.lease.creditsRemaining}`);
 
     // =========================================================================
-    // STEP 5: GET AFFILIATE DATA
-    // Either from request body or fetch from database
-    // =========================================================================
-    let affiliate: AffiliateData;
-
-    if (affiliateData) {
-      // Affiliate data provided directly in request
-      affiliate = {
-        // The database-owned ID is authoritative; never let request data point
-        // the paid generation at a different affiliate than the locked row.
-        id: requestedAffiliateId,
-        personName: affiliateData.personName || null,
-        email: affiliateData.email || null,
-        domain: affiliateData.domain,
-        source: affiliateData.source,
-        title: affiliateData.title,
-        snippet: affiliateData.snippet || '',
-        link: affiliateData.link || null,
-        keyword: affiliateData.keyword || null,
-        discoveryMethodType: affiliateData.discoveryMethod?.type || null,
-        discoveryMethodValue: affiliateData.discoveryMethod?.value || null,
-        instagramUsername: affiliateData.instagramUsername || null,
-        instagramBio: affiliateData.instagramBio || null,
-        instagramFollowers: affiliateData.instagramFollowers || null,
-        tiktokUsername: affiliateData.tiktokUsername || null,
-        tiktokBio: affiliateData.tiktokBio || null,
-        tiktokFollowers: affiliateData.tiktokFollowers || null,
-        channelName: affiliateData.channel?.name || null,
-        channelSubscribers: affiliateData.channel?.subscribers || null,
-      };
-    } else {
-      // Fetch affiliate from database
-      const affiliates = await sql`
-        SELECT 
-          id, person_name, email, domain, source, title, snippet, link,
-          keyword, discovery_method_type, discovery_method_value,
-          instagram_username, instagram_bio, instagram_followers,
-          tiktok_username, tiktok_bio, tiktok_followers,
-          channel_name, channel_subscribers
-        FROM crewcast.saved_affiliates
-        WHERE id = ${affiliateId}
-          AND user_id = ${userId}
-          AND brand_id = ${context.brandId}::bigint
-          AND brand_location_id = ${context.brandLocationId}::bigint
-      `;
-
-      if (affiliates.length === 0) {
-        return NextResponse.json(
-          { error: 'Affiliate not found' },
-          { status: 404 }
-        );
-      }
-
-      const a = affiliates[0];
-      affiliate = {
-        id: a.id,
-        personName: a.person_name,
-        email: a.email,
-        domain: a.domain,
-        source: a.source,
-        title: a.title,
-        snippet: a.snippet || '',
-        link: a.link ?? null,
-        keyword: a.keyword,
-        discoveryMethodType: a.discovery_method_type,
-        discoveryMethodValue: a.discovery_method_value,
-        instagramUsername: a.instagram_username,
-        instagramBio: a.instagram_bio,
-        instagramFollowers: a.instagram_followers,
-        tiktokUsername: a.tiktok_username,
-        tiktokBio: a.tiktok_bio,
-        tiktokFollowers: a.tiktok_followers,
-        channelName: a.channel_name,
-        channelSubscribers: a.channel_subscribers,
-      };
-    }
-    
-    // =========================================================================
     // STEP 5.5: APPLY SELECTED CONTACT OVERRIDE (December 25, 2025)
     // 
     // If a specific contact was selected from the multi-contact picker,
@@ -348,8 +415,8 @@ export async function POST(request: NextRequest) {
     // information. This allows generating personalized emails for different
     // contacts at the same company.
     //
-    // The selectedContact object comes from emailResults.contacts[] which
-    // Lusha provides when multiple contacts are found.
+    // The selected contact was matched against emailResults stored for this
+    // exact account/brand/location affiliate before the credit reservation.
     // =========================================================================
     let contactEmail = affiliate.email;
     
@@ -636,7 +703,7 @@ export async function PATCH(request: NextRequest) {
     // =========================================================================
     // STEP 2: PARSE REQUEST BODY
     // =========================================================================
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_OUTREACH_MUTATION_BODY_BYTES);
     const {
       affiliateId,
       contactEmail,

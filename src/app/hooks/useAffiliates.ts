@@ -22,6 +22,13 @@ import useSWR, { mutate as globalMutate } from 'swr';
 import { useNeonUser } from './useNeonUser';
 import { ResultItem, SimilarWebData } from '../types';
 import { affiliateIdentityKey } from '../utils/affiliate-grouping';
+import {
+  AFFILIATE_BATCH_BODY_MAX_BYTES,
+  AFFILIATE_DELETE_BATCH_MAX_ITEMS,
+  chunkAffiliateMutationItems,
+  DISCOVERED_AFFILIATE_BATCH_MAX_ITEMS,
+  SAVED_AFFILIATE_BATCH_MAX_ITEMS,
+} from '@/lib/affiliates/mutation-limits';
 
 // =============================================================================
 // SHARED BIO-EMAIL EXTRACTOR — 2026-06-15 (paras)
@@ -111,7 +118,9 @@ function resolveAffiliateMutationLocationId(
 function groupAffiliatesByLocation(
   affiliates: readonly ResultItem[],
   locationIds: AffiliateLocationScope,
-): Map<string | undefined, ResultItem[]> {
+  maxItems: number,
+  serializeBody: (locationId: string | undefined, items: readonly ResultItem[]) => string,
+): Array<readonly [string | undefined, string]> {
   const grouped = new Map<string | undefined, ResultItem[]>();
   for (const affiliate of affiliates) {
     const locationId = resolveAffiliateMutationLocationId(affiliate, locationIds);
@@ -119,7 +128,14 @@ function groupAffiliatesByLocation(
     if (existing) existing.push(affiliate);
     else grouped.set(locationId, [affiliate]);
   }
-  return grouped;
+  return Array.from(grouped.entries()).flatMap(([locationId, items]) =>
+    chunkAffiliateMutationItems(
+      items,
+      maxItems,
+      AFFILIATE_BATCH_BODY_MAX_BYTES,
+      (chunk) => serializeBody(locationId, chunk),
+    ).map((chunk) => [locationId, chunk.body] as const)
+  );
 }
 
 function rawAffiliateIdentityKey(affiliate: {
@@ -1062,19 +1078,26 @@ export function useSavedAffiliates(locationIds?: AffiliateLocationScope, enabled
     let savedCount = 0;
     let duplicateCount = 0;
     let firstError: unknown;
+    let attemptedBatch = false;
 
     try {
-      const batches = groupAffiliatesByLocation(affiliates, locationIds);
-      for (const [targetBrandLocationId, locationAffiliates] of batches) {
+      const batches = groupAffiliatesByLocation(
+        affiliates,
+        locationIds,
+        SAVED_AFFILIATE_BATCH_MAX_ITEMS,
+        (targetBrandLocationId, affiliateChunk) => JSON.stringify({
+          userId,
+          brandLocationId: targetBrandLocationId,
+          affiliates: affiliateChunk.map(buildAffiliatePayloadWithoutUserId),
+        }),
+      );
+      for (const [targetBrandLocationId, body] of batches) {
         try {
+          attemptedBatch = true;
           const response = await fetch('/api/affiliates/saved/batch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              brandLocationId: targetBrandLocationId,
-              affiliates: locationAffiliates.map(buildAffiliatePayloadWithoutUserId),
-            }),
+            body,
           });
           const data = await response.json();
           if (!response.ok || data.error) {
@@ -1084,7 +1107,7 @@ export function useSavedAffiliates(locationIds?: AffiliateLocationScope, enabled
           duplicateCount += data.duplicateCount || 0;
         } catch (error) {
           firstError ??= error;
-          console.error('Error bulk saving affiliates for location:', targetBrandLocationId, error);
+          console.error('Error bulk saving affiliate chunk for location:', targetBrandLocationId, error);
         }
       }
     } catch (error) {
@@ -1092,7 +1115,13 @@ export function useSavedAffiliates(locationIds?: AffiliateLocationScope, enabled
       console.error('Error preparing bulk saved-affiliate request:', error);
     }
 
-    if (savedCount > 0) mutate();
+    if (attemptedBatch) {
+      try {
+        await mutate();
+      } catch (error) {
+        firstError ??= error;
+      }
+    }
     return { savedCount, duplicateCount, ...(firstError ? { error: firstError } : {}) };
   }, [userId, locationIds, mutate]);
 
@@ -1518,17 +1547,22 @@ export function useSavedAffiliates(locationIds?: AffiliateLocationScope, enabled
     let removedCount = 0;
     let firstError: unknown;
     try {
-      const batches = groupAffiliatesByLocation(affiliates, locationIds);
-      for (const [targetBrandLocationId, locationAffiliates] of batches) {
+      const batches = groupAffiliatesByLocation(
+        affiliates,
+        locationIds,
+        AFFILIATE_DELETE_BATCH_MAX_ITEMS,
+        (targetBrandLocationId, affiliateChunk) => JSON.stringify({
+          userId,
+          brandLocationId: targetBrandLocationId,
+          links: affiliateChunk.map((affiliate) => affiliate.link),
+        }),
+      );
+      for (const [targetBrandLocationId, body] of batches) {
         try {
           const response = await fetch('/api/affiliates/saved/batch', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              brandLocationId: targetBrandLocationId,
-              links: locationAffiliates.map((affiliate) => affiliate.link),
-            }),
+            body,
           });
           const data = await response.json();
           if (!response.ok || data.error) {
@@ -1537,7 +1571,7 @@ export function useSavedAffiliates(locationIds?: AffiliateLocationScope, enabled
           removedCount += data.count || 0;
         } catch (error) {
           firstError ??= error;
-          console.error('Error bulk removing affiliates for location:', targetBrandLocationId, error);
+          console.error('Error bulk removing affiliate chunk for location:', targetBrandLocationId, error);
         }
       }
     } catch (error) {
@@ -1689,26 +1723,31 @@ export function useDiscoveredAffiliates(locationIds?: AffiliateLocationScope, en
     if (!userId || affiliates.length === 0) return;
 
     try {
-      const batches = groupAffiliatesByLocation(affiliates, locationIds);
-      for (const [targetBrandLocationId, locationAffiliates] of batches) {
+      const batches = groupAffiliatesByLocation(
+        affiliates,
+        locationIds,
+        DISCOVERED_AFFILIATE_BATCH_MAX_ITEMS,
+        (targetBrandLocationId, affiliateChunk) => JSON.stringify({
+          userId,
+          brandLocationId: targetBrandLocationId,
+          searchKeyword,
+          affiliates: affiliateChunk.map(buildAffiliatePayloadWithoutUserId),
+        }),
+      );
+      for (const [, body] of batches) {
         const response = await fetch('/api/affiliates/discovered/batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            brandLocationId: targetBrandLocationId,
-            searchKeyword,
-            affiliates: locationAffiliates.map(buildAffiliatePayloadWithoutUserId),
-          }),
+          body,
         });
         if (!response.ok) throw new Error('Failed to batch save discovered affiliates');
       }
 
-      // Revalidate cache to get fresh data (updates ALL components)
-      mutate();
     } catch (err) {
       console.error('Error batch saving discovered affiliates:', err);
     }
+    // Earlier chunks may already be committed when a later request fails.
+    await mutate();
   }, [userId, locationIds, mutate]);
 
   // ===========================================================================
@@ -1777,17 +1816,22 @@ export function useDiscoveredAffiliates(locationIds?: AffiliateLocationScope, en
     let removedCount = 0;
     let firstError: unknown;
     try {
-      const batches = groupAffiliatesByLocation(affiliates, locationIds);
-      for (const [targetBrandLocationId, locationAffiliates] of batches) {
+      const batches = groupAffiliatesByLocation(
+        affiliates,
+        locationIds,
+        AFFILIATE_DELETE_BATCH_MAX_ITEMS,
+        (targetBrandLocationId, affiliateChunk) => JSON.stringify({
+          userId,
+          brandLocationId: targetBrandLocationId,
+          links: affiliateChunk.map((affiliate) => affiliate.link),
+        }),
+      );
+      for (const [targetBrandLocationId, body] of batches) {
         try {
           const response = await fetch('/api/affiliates/discovered/batch', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              brandLocationId: targetBrandLocationId,
-              links: locationAffiliates.map((affiliate) => affiliate.link),
-            }),
+            body,
           });
           const data = await response.json();
           if (!response.ok || data.error) {
@@ -1796,7 +1840,7 @@ export function useDiscoveredAffiliates(locationIds?: AffiliateLocationScope, en
           removedCount += data.count || 0;
         } catch (error) {
           firstError ??= error;
-          console.error('Error bulk removing discovered affiliates for location:', targetBrandLocationId, error);
+          console.error('Error bulk removing discovered affiliate chunk for location:', targetBrandLocationId, error);
         }
       }
     } catch (error) {

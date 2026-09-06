@@ -16,8 +16,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import {
   affiliateRequestErrorResponse,
+  assertAffiliateLinkBatch,
+  assertAffiliateObjectBatch,
+  MAX_AFFILIATE_BATCH_BODY_BYTES,
+  readAffiliateMutationJson,
   resolveAffiliateRequestContext,
 } from '@/lib/affiliates/server';
+import {
+  AFFILIATE_DELETE_BATCH_MAX_ITEMS,
+  SAVED_AFFILIATE_BATCH_MAX_ITEMS,
+} from '@/lib/affiliates/mutation-limits';
 // 2026-07-27 13:23 IST (Paras): defensive image re-hosting on save — see the
 // comment above the rehost block in POST for the full WHY.
 import { rehostImageIfNeeded } from '@/lib/image-storage';
@@ -46,12 +54,13 @@ export const maxDuration = 60;
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_AFFILIATE_BATCH_BODY_BYTES);
     const { userId, brandLocationId, affiliates } = body;
 
     if (!userId || !affiliates || !Array.isArray(affiliates)) {
       return NextResponse.json({ error: 'Missing required fields: userId and affiliates array' }, { status: 400 });
     }
+    assertAffiliateObjectBatch(affiliates, SAVED_AFFILIATE_BATCH_MAX_ITEMS);
 
     const context = await resolveAffiliateRequestContext({
       legacyAccountId: userId,
@@ -272,12 +281,13 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readAffiliateMutationJson(request, MAX_AFFILIATE_BATCH_BODY_BYTES);
     const { userId, brandLocationId, links } = body;
 
     if (!userId || !links || !Array.isArray(links) || links.length === 0) {
       return NextResponse.json({ error: 'Missing required fields: userId and links array' }, { status: 400 });
     }
+    assertAffiliateLinkBatch(links, AFFILIATE_DELETE_BATCH_MAX_ITEMS);
 
     const context = await resolveAffiliateRequestContext({
       legacyAccountId: userId,
