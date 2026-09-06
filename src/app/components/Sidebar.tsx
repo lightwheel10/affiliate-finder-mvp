@@ -50,6 +50,7 @@ import { cn } from '@/lib/utils';
 // Now using useSupabaseUser hook which provides supabaseUser and signOut
 import { Modal } from './Modal';
 import { PricingModal } from './PricingModal';
+import { SidebarPlanSkeleton } from './LoadingSkeletons';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSavedAffiliates, useDiscoveredAffiliates } from '../hooks/useAffiliates';
@@ -94,8 +95,10 @@ const SidebarSkeleton: React.FC = () => (
       {/* January 21st, 2026: Removed selecdoo AI tagline per client request */}
     </div>
 
+    <BrandLocationSwitcher />
+
     {/* Navigation Skeleton */}
-    <nav className="flex-1 p-4 space-y-6 overflow-y-auto animate-pulse">
+    <nav aria-hidden="true" className="flex-1 p-4 space-y-6 overflow-y-auto motion-safe:animate-pulse">
       <div>
         <div className="h-3 w-20 bg-[#e6ebf1] dark:bg-gray-800 rounded mb-3 ml-2"></div>
         <div className="space-y-1">
@@ -113,19 +116,13 @@ const SidebarSkeleton: React.FC = () => (
       </div>
     </nav>
 
-    {/* Bottom Section Skeleton — SMOOVER: hairline divider + off-white bg */}
-    <div className="p-4 border-t border-[#e6ebf1] dark:border-gray-800 bg-[#f6f9fc] dark:bg-[#0a0a0a] animate-pulse">
-      {/* Plan Card Skeleton — SMOOVER: rounded-2xl with soft shadow */}
-      <div className="bg-gradient-to-br from-[#0f172a] to-[#1a1a1a] p-4 rounded-2xl mb-4 border border-gray-800 shadow-soft-lg">
-        <div className="space-y-2">
-          <div className="h-3 w-20 bg-gray-700 rounded"></div>
-          <div className="h-2 w-24 bg-gray-700 rounded"></div>
-          <div className="h-7 w-full bg-gray-700 rounded-full mt-3"></div>
-        </div>
-      </div>
-
+    <div className="px-4 pb-4">
+      <div aria-hidden="true" className="mb-4 h-10 rounded-full bg-[#f6f9fc] dark:bg-[#111] border border-[#e6ebf1] dark:border-gray-800 motion-safe:animate-pulse" />
+      <SidebarPlanSkeleton />
+    </div>
+    <div aria-hidden="true" className="p-4 border-t border-[#e6ebf1] dark:border-gray-800 bg-[#f6f9fc] dark:bg-[#0a0a0a] motion-safe:animate-pulse">
       {/* Profile Skeleton */}
-      <div className="flex items-center gap-3 px-1">
+      <div className="flex items-center gap-3 px-2 py-2">
         <div className="w-8 h-8 rounded-full bg-[#e6ebf1] dark:bg-gray-700"></div>
         <div className="flex-1 space-y-1.5">
           <div className="h-3 w-16 bg-[#e6ebf1] dark:bg-gray-700 rounded"></div>
@@ -292,7 +289,7 @@ export const Sidebar: React.FC = () => {
     : null;
 
   // Show skeleton while user data is loading
-  if (userLoading || subscriptionLoading) {
+  if (userLoading) {
     return <SidebarSkeleton />;
   }
 
@@ -413,6 +410,7 @@ export const Sidebar: React.FC = () => {
           </div>
 
           {/* Plan Card — SMOOVER (April 23rd, 2026): rounded-2xl gradient card, soft drop shadow, yellow-glow on hover. Logic UNCHANGED. */}
+          {subscriptionLoading ? <SidebarPlanSkeleton /> : (
           <div 
             className="bg-gradient-to-br from-[#0f172a] to-[#1a1a1a] p-4 rounded-2xl text-white border border-gray-800 shadow-soft-lg cursor-pointer hover:shadow-yellow-glow hover:-translate-y-0.5 transition-all duration-300"
             onClick={() => setIsPricingModalOpen(true)}
@@ -462,6 +460,7 @@ export const Sidebar: React.FC = () => {
                     : t.sidebar.planCard.upgradePlan} <ChevronRight size={10} />
             </button>
           </div>
+          )}
         </div>
 
         {/* User Profile Section — SMOOVER (April 23rd, 2026): hairline divider, brand off-white background */}

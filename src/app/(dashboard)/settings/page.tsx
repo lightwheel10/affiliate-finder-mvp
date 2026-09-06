@@ -101,6 +101,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useBrandLocation } from '@/contexts/BrandLocationContext';
 import { useBlockedDomains } from '../../hooks/useBlockedDomains';
+import { BrandSettingsSkeleton, SettingsPanelSkeleton } from '../../components/LoadingSkeletons';
 
 // Keep the ordinary Profile/Billing Settings path light. The larger portfolio
 // editor is downloaded only after the user opens its dedicated tab.
@@ -108,9 +109,7 @@ const BrandLocationSettingsPanel = dynamic(
   () => import('../../components/brand-locations/BrandLocationSettingsPanel')
     .then((module) => module.BrandLocationSettingsPanel),
   {
-    loading: () => (
-      <div className="h-64 animate-pulse rounded-2xl bg-[#f6f9fc] dark:bg-gray-900" aria-hidden="true" />
-    ),
+    loading: () => <BrandSettingsSkeleton />,
   },
 );
 
@@ -1201,11 +1200,7 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-[#8898aa]" />
-      </div>
-    );
+    return <SettingsPanelSkeleton variant="plan" />;
   }
 
   // Format plan name for display
