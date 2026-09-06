@@ -64,6 +64,7 @@ import {
   Save,
   Loader2,
   X,
+  MapPin,
   Clock,  // Added January 6th, 2026 for neo-brutalist header
   Pencil, // Added April 25, 2026 — replaces the ASCII ✎ glyph used in the Find Affiliates modal brand-edit button (smoover Phase 2g, chunk 2)
 } from 'lucide-react';
@@ -77,6 +78,10 @@ import { Platform, type SearchResult } from '../../services/search';
 import { extractDiscoveryMethod } from '@/app/utils/localized-search';
 // April 28, 2026: Unified search predicate (Find/Discovered/Saved) — see utils/affiliate-search.ts
 import { affiliateMatchesSearchQuery } from '@/app/utils/affiliate-search';
+import {
+  SearchMarketPicker,
+  type SearchMarketPickerOption,
+} from '@/app/components/SearchMarketPicker';
 import { SEARCH_INPUT_LIMITS } from '@/lib/plans/catalog';
 // =============================================================================
 // i18n SUPPORT (January 9th, 2026)
@@ -91,6 +96,7 @@ import {
 import { affiliateIdentityKey } from '@/app/utils/affiliate-grouping';
 import {
   getMarketCountryByIsoCode,
+  getCountryFlagUrl,
   getMarketLanguageByIsoCode,
   MARKET_COUNTRIES,
   MARKET_LANGUAGES,
@@ -261,6 +267,23 @@ export default function FindNewPage() {
   );
   const selectedSearchCountry = getMarketCountryByIsoCode(searchCountryCode);
   const selectedSearchLanguage = getMarketLanguageByIsoCode(searchLanguageCode);
+  const searchCountryOptions = useMemo<readonly SearchMarketPickerOption[]>(
+    () => MARKET_COUNTRIES.map((country) => ({
+      value: country.isoCode,
+      label: language === 'de' ? country.nameDE : country.name,
+      code: country.isoCode.toUpperCase(),
+      flagUrl: getCountryFlagUrl(country.isoCode),
+    })),
+    [language],
+  );
+  const searchLanguageOptions = useMemo<readonly SearchMarketPickerOption[]>(
+    () => MARKET_LANGUAGES.map((marketLanguage) => ({
+      value: marketLanguage.isoCode,
+      label: language === 'de' ? marketLanguage.nameDE : marketLanguage.name,
+      code: marketLanguage.isoCode.toUpperCase(),
+    })),
+    [language],
+  );
   const selectedSearchMarketLabel = [
     language === 'de' ? selectedSearchCountry?.nameDE : selectedSearchCountry?.name,
     language === 'de' ? selectedSearchLanguage?.nameDE : selectedSearchLanguage?.name,
@@ -2033,14 +2056,18 @@ export default function FindNewPage() {
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-xl border border-[#e6ebf1] bg-[#f8fafc] p-3 sm:flex-row sm:items-end dark:border-gray-800 dark:bg-gray-900/60">
-            <div className="flex min-w-0 flex-wrap items-center gap-2 py-1 sm:flex-1 sm:pb-2">
-              <Globe size={14} className="text-[#8898aa] shrink-0" strokeWidth={2} />
-              <span className="text-xs font-semibold text-[#8898aa] dark:text-gray-400">
-                {t.dashboard.find.modal.websiteLabel}:
+          <section className="relative z-20 rounded-2xl border border-[#e6ebf1] bg-[#f8fafc] p-2.5 shadow-soft-sm dark:border-gray-800 dark:bg-white/[0.025]">
+            <div className="flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1 px-1 pb-2.5">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
+                <MapPin size={14} className="text-[#ffbf23]" strokeWidth={2.25} />
+                {t.dashboard.find.modal.targetMarket}
               </span>
+              <span className="hidden h-3.5 w-px bg-[#d8e0e8] sm:block dark:bg-gray-700" aria-hidden="true" />
+              <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-[#8898aa] dark:text-gray-500">
+                <Globe size={12} className="shrink-0" strokeWidth={2} />
+                <span className="sr-only">{t.dashboard.find.modal.websiteLabel}:</span>
               {canEditBrandInline ? (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="flex min-w-0 flex-1 items-center gap-2">
                 {isEditingBrand ? (
                   <>
                     {editBrand && (
@@ -2056,7 +2083,7 @@ export default function FindNewPage() {
                       value={editBrand}
                       onChange={(e) => setEditBrand(e.target.value)}
                       placeholder={user?.brand || 'example.com'}
-                      className="flex-1 rounded-lg border border-[#e6ebf1] bg-white px-2.5 py-1.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#8898aa] focus:border-[#ffbf23]/60 focus:ring-2 focus:ring-[#ffbf23]/40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                      className="min-w-28 flex-1 rounded-lg border border-[#e6ebf1] bg-white px-2 py-1 text-xs text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#8898aa] focus:border-[#ffbf23]/60 focus:ring-2 focus:ring-[#ffbf23]/40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
                       onKeyDown={async (e) => {
                         if (e.key === 'Enter' && hasBrandChange && !isSavingBrand && userId) {
                           e.preventDefault();
@@ -2131,7 +2158,7 @@ export default function FindNewPage() {
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
                     )}
-                    <span className="text-sm font-medium text-[#0f172a] dark:text-gray-300 truncate">
+                    <span className="truncate font-medium text-[#425466] dark:text-gray-300">
                       {user?.brand || editBrand || t.dashboard.find.modal.notSetDuringOnboarding}
                     </span>
                     <button
@@ -2147,7 +2174,7 @@ export default function FindNewPage() {
                     </button>
                   </>
                 )}
-                </div>
+                </span>
               ) : displayedBrandDomain ? (
                 <>
                   <img
@@ -2156,18 +2183,22 @@ export default function FindNewPage() {
                     className="w-4 h-4 shrink-0"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
-                  <span className="truncate text-sm font-medium text-[#0f172a] dark:text-gray-300">{displayedBrandDomain}</span>
+                  <span className="truncate font-medium text-[#425466] dark:text-gray-300">{displayedBrandDomain}</span>
                 </>
               ) : (
-                <span className="text-sm italic text-[#8898aa]">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
+                <span className="italic text-[#8898aa]">{t.dashboard.find.modal.notSetDuringOnboarding}</span>
               )}
+              </span>
               {brandLocationsEnabled && searchCountryCode && searchLanguageCode && (
                 <span className={cn(
-                  'rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+                  'ml-auto inline-flex min-h-6 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
                   matchingSearchLocation
                     ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300'
                     : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300',
                 )}>
+                  {matchingSearchLocation
+                    ? <Check size={11} strokeWidth={2.75} />
+                    : <Plus size={11} strokeWidth={2.5} />}
                   {matchingSearchLocation
                     ? t.dashboard.find.modal.savedLocation
                     : t.dashboard.find.modal.newLocation}
@@ -2176,44 +2207,33 @@ export default function FindNewPage() {
             </div>
 
             {brandLocationsEnabled && (
-              <div className="grid grid-cols-2 gap-2 sm:w-80 sm:shrink-0">
-                <label className="space-y-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
-                  {t.dashboard.brandLocations.country}
-                  <select
-                    value={searchCountryCode}
-                    onChange={(event) => {
-                      selectSearchMarket(event.target.value, searchLanguageCode);
-                    }}
-                    disabled={loading || isCreatingSearchLocation}
-                    className="h-9 w-full rounded-lg border border-[#d8e0e8] bg-white px-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                  >
-                    {MARKET_COUNTRIES.map((country) => (
-                      <option key={country.isoCode} value={country.isoCode}>
-                        {language === 'de' ? country.nameDE : country.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
-                  {t.dashboard.brandLocations.language}
-                  <select
-                    value={searchLanguageCode}
-                    onChange={(event) => {
-                      selectSearchMarket(searchCountryCode, event.target.value);
-                    }}
-                    disabled={loading || isCreatingSearchLocation}
-                    className="h-9 w-full rounded-lg border border-[#d8e0e8] bg-white px-2.5 text-sm text-[#0f172a] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#ffbf23] focus:ring-2 focus:ring-[#ffbf23]/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                  >
-                    {MARKET_LANGUAGES.map((marketLanguage) => (
-                      <option key={marketLanguage.isoCode} value={marketLanguage.isoCode}>
-                        {language === 'de' ? marketLanguage.nameDE : marketLanguage.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <SearchMarketPicker
+                  id="affiliate-country-picker"
+                  label={t.dashboard.brandLocations.country}
+                  value={searchCountryCode}
+                  options={searchCountryOptions}
+                  onChange={(countryCode) => selectSearchMarket(countryCode, searchLanguageCode)}
+                  searchPlaceholder={t.onboarding.common.search}
+                  noResultsText={t.onboarding.common.noResults}
+                  disabled={loading || isCreatingSearchLocation}
+                  variant="country"
+                />
+                <SearchMarketPicker
+                  id="affiliate-language-picker"
+                  label={t.dashboard.brandLocations.language}
+                  value={searchLanguageCode}
+                  options={searchLanguageOptions}
+                  onChange={(languageCode) => selectSearchMarket(searchCountryCode, languageCode)}
+                  searchPlaceholder={t.onboarding.common.search}
+                  noResultsText={t.onboarding.common.noResults}
+                  disabled={loading || isCreatingSearchLocation}
+                  variant="language"
+                  align="end"
+                />
               </div>
             )}
-          </div>
+          </section>
           {brandLocationsEnabled && searchLocationError && (
             <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
               {searchLocationError}
