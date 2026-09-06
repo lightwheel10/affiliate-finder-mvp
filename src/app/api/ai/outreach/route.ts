@@ -38,11 +38,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { checkCredits, consumeCredits, refundCredits } from '@/lib/credits';
 import {
   affiliateRequestErrorResponse,
   resolveAffiliateRequestContext,
 } from '@/lib/affiliates/server';
+import {
+  releaseOutreachGeneration,
+  reserveOutreachGeneration,
+  type OutreachGenerationInput,
+  type OutreachGenerationLease,
+} from '@/lib/affiliates/outreach-generation-postgres';
 import { 
   generateOutreachEmail, 
   generateRequestId,
@@ -139,9 +144,20 @@ async function scrapeAffiliatePage(url: string): Promise<string | null> {
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  let creditConsumed = false;
-  let refundUserId: number | null = null;
-  let refundAffiliateId = 'unknown';
+  let activeReservation: {
+    input: OutreachGenerationInput;
+    lease: OutreachGenerationLease;
+  } | null = null;
+
+  const releaseActiveReservation = async (): Promise<void> => {
+    if (!activeReservation) return;
+    const reservation = activeReservation;
+    const released = await releaseOutreachGeneration(
+      reservation.input,
+      reservation.lease,
+    );
+    if (released) activeReservation = null;
+  };
   
   try {
     // =========================================================================
@@ -169,9 +185,10 @@ export async function POST(request: NextRequest) {
     // to generate a more personalized email for the specific contact.
     // =========================================================================
 
-    if (!affiliateId && !affiliateData) {
+    const requestedAffiliateId = Number(affiliateId ?? affiliateData?.id);
+    if (!Number.isSafeInteger(requestedAffiliateId) || requestedAffiliateId <= 0) {
       return NextResponse.json(
-        { error: 'affiliateId or affiliate data is required' },
+        { error: 'A valid affiliateId is required' },
         { status: 400 }
       );
     }
@@ -200,212 +217,50 @@ export async function POST(request: NextRequest) {
 
     const user = users[0];
     const userId = context.accountId;
-    refundUserId = userId;
-
-    // =========================================================================
-    // STEP 3.5: CHECK IF GENERATION IS ALREADY IN PROGRESS (January 24th, 2026)
-    // 
-    // PURPOSE: Prevents duplicate credit consumption when:
-    // - User clicks "Generate", navigates away, comes back, clicks again
-    // - User has multiple browser tabs open
-    // - Any scenario where duplicate requests might be sent
-    // 
-    // HOW IT WORKS:
-    // 1. Check if ai_generation_started_at is recent (< 60 seconds)
-    // 2. AND ai_generated_at is older than ai_generation_started_at (not completed yet)
-    // 3. If both true → Generation is in progress → Block this request
-    // 
-    // WHY 60 SECONDS:
-    // - AI generation typically takes 15-25 seconds
-    // - 60 seconds gives buffer for slow generations
-    // - After 60 seconds, user can retry (timeout scenario)
-    // 
-    // This also sets ai_generation_started_at = NOW() to "lock" this affiliate
-    // for subsequent requests.
-    // =========================================================================
-    const requestedAffiliateId = affiliateId || affiliateData?.id;
-    refundAffiliateId = requestedAffiliateId?.toString() || 'unknown';
-    
-    // =========================================================================
-    // STEP 3.5a: CHECK IF GENERATION IS IN PROGRESS (January 24th, 2026)
-    // 
-    // Only performs the CHECK here. The lock UPDATE is moved to AFTER credit
-    // consumption (STEP 4.5) to prevent blocking retries if credits fail.
-    // =========================================================================
-    if (requestedAffiliateId) {
-      try {
-        // Check if generation is currently in progress
-        const existingRecord = await sql`
-          SELECT 
-            ai_generation_started_at,
-            ai_generated_at,
-            ai_generated_message
-          FROM crewcast.saved_affiliates 
-          WHERE id = ${requestedAffiliateId} 
-            AND user_id = ${userId}
-            AND brand_id = ${context.brandId}::bigint
-            AND brand_location_id = ${context.brandLocationId}::bigint
-        `;
-        if (existingRecord.length !== 1) {
-          return NextResponse.json(
-            { error: 'Affiliate not found' },
-            { status: 404 },
-          );
-        }
-
-        {
-          const record = existingRecord[0];
-          const now = Date.now();
-          const startedAt = record.ai_generation_started_at 
-            ? new Date(record.ai_generation_started_at).getTime() 
-            : 0;
-          const generatedAt = record.ai_generated_at 
-            ? new Date(record.ai_generated_at).getTime() 
-            : 0;
-          
-          // Generation is IN PROGRESS if:
-          // - Started recently (within 60 seconds)
-          // - AND not completed yet (generated_at is before started_at or null)
-          const isInProgress = startedAt > 0 && 
-            (now - startedAt) < 60000 && 
-            (generatedAt === 0 || generatedAt < startedAt);
-          
-          if (isInProgress) {
-            const elapsedSeconds = Math.round((now - startedAt) / 1000);
-            console.log(`[AI Outreach] ⚠️ Generation already in progress for affiliate ${requestedAffiliateId} (started ${elapsedSeconds}s ago). Blocking duplicate.`);
-            
-            return NextResponse.json({
-              success: false,
-              error: 'Email generation is already in progress. Please wait for it to complete.',
-              inProgress: true,
-              startedSecondsAgo: elapsedSeconds,
-              creditsConsumed: false,
-            }, { status: 409 }); // 409 Conflict
-          }
-        }
-        
-        // NOTE: Lock UPDATE moved to STEP 4.5 (after credit consumption)
-        // This prevents setting lock when credits are insufficient
-        
-      } catch (lockError) {
-        // Fail closed: ownership/lock uncertainty must not reserve a credit or
-        // launch a paid generation request.
-        console.error('[AI Outreach] Failed to verify the affiliate generation lock:', lockError);
-        return NextResponse.json(
-          { error: 'Unable to verify affiliate state. Please try again.' },
-          { status: 503 },
-        );
-      }
-    }
-
-    // =========================================================================
-    // STEP 4: CHECK AND CONSUME AI CREDITS UPFRONT (Updated January 24th, 2026)
-    // 
-    // CRITICAL FIX: Previously we checked credits here but consumed AFTER n8n.
-    // This caused a TOCTOU (Time-of-Check to Time-of-Use) race condition:
-    // 
-    // BEFORE (Bug):
-    // 1. Check: User has 1 credit, 2 concurrent requests both pass
-    // 2. Both call n8n and generate emails (~20 seconds)
-    // 3. Consume: Only 1st succeeds (atomic UPDATE), 2nd fails silently
-    // Result: 2 emails generated, 1 credit consumed!
-    // 
-    // AFTER (Fixed):
-    // 1. Check: User has 1 credit
-    // 2. Consume IMMEDIATELY after check (atomic reservation)
-    // 3. Call n8n to generate email
-    // 4. If n8n fails → REFUND the credit
-    // Result: 1 credit = 1 email, always
-    // 
-    // The credit is now "reserved" before the long-running n8n call.
-    // If generation fails, we refund. This guarantees credit integrity.
-    // =========================================================================
     const enforceCredits = isCreditEnforcementEnabled();
-    if (enforceCredits) {
-      const creditCheck = await checkCredits(userId, 'ai', 1);
-      
-      if (!creditCheck.allowed) {
-        console.log(`[AI Outreach] Credit check failed for user ${userId}: ${creditCheck.message}`);
-        return NextResponse.json({ 
-          error: creditCheck.message || 'Insufficient AI credits',
-          creditError: true,
-          remaining: creditCheck.remaining,
-          isReadOnly: creditCheck.isReadOnly,
-        }, { status: 402 }); // Payment Required
-      }
-      
-      // =========================================================================
-      // CONSUME CREDIT IMMEDIATELY (Atomic reservation)
-      // 
-      // This prevents race conditions where multiple requests pass the check
-      // but only some get charged. By consuming NOW, we guarantee:
-      // - If consumption fails → Return error (user sees insufficient credits)
-      // - If consumption succeeds → Credit is reserved, proceed with generation
-      // - If generation fails later → Refund the credit
-      // =========================================================================
-      const consumeResult = await consumeCredits(
-        userId, 
-        'ai', 
-        1, 
-        requestedAffiliateId?.toString() || 'unknown', 
-        'outreach'
+    const reservationInput: OutreachGenerationInput = {
+      accountId: userId,
+      brandId: context.brandId,
+      brandLocationId: context.brandLocationId,
+      affiliateId: requestedAffiliateId,
+      enforceCredits,
+    };
+    let reservation;
+    try {
+      reservation = await reserveOutreachGeneration(reservationInput);
+    } catch (reservationError) {
+      console.error('[AI Outreach] Failed to reserve generation safely:', reservationError);
+      return NextResponse.json(
+        { error: 'Unable to start generation safely. Please try again.' },
+        { status: 503 },
       );
-      
-      if (!consumeResult.success) {
-        console.log(`[AI Outreach] Credit consumption failed for user ${userId} (race condition protection)`);
-        return NextResponse.json({ 
-          error: 'Unable to reserve AI credit. Please try again.',
-          creditError: true,
-          remaining: 0,
-        }, { status: 402 });
-      }
-      
-      creditConsumed = true; // Mark as consumed for potential refund
-      console.log(`[AI Outreach] 💳 Reserved 1 AI credit for user ${userId}. New balance: ${consumeResult.newBalance}`);
     }
 
-    // =========================================================================
-    // STEP 4.5: SET GENERATION LOCK (January 24th, 2026)
-    // 
-    // NOW we set the lock, AFTER credit consumption succeeded.
-    // This ensures we don't block retries if credits were insufficient.
-    // 
-    // Previous flow (bug): Lock → Credit check → (fail) → Lock remains!
-    // New flow (fixed): Credit check → (fail) → No lock set, immediate retry
-    //                   Credit check → (pass) → Lock set → Generate
-    // =========================================================================
-    if (requestedAffiliateId) {
-      try {
-        const lockedAffiliates = await sql`
-          UPDATE crewcast.saved_affiliates
-          SET ai_generation_started_at = NOW()
-          WHERE id = ${requestedAffiliateId}
-            AND user_id = ${userId}
-            AND brand_id = ${context.brandId}::bigint
-            AND brand_location_id = ${context.brandLocationId}::bigint
-          RETURNING id
-        `;
-        if (lockedAffiliates.length !== 1) {
-          throw new Error('The affiliate location changed before generation was locked.');
-        }
-        console.log(`[AI Outreach] 🔒 Marked generation as started for affiliate ${requestedAffiliateId}`);
-      } catch (lockError) {
-        console.error('[AI Outreach] Failed to lock generation:', lockError);
-        if (creditConsumed) {
-          await refundCredits(
-            userId,
-            'ai',
-            1,
-            requestedAffiliateId.toString(),
-            'outreach_lock_failed',
-          );
-        }
-        return NextResponse.json(
-          { error: 'Unable to start generation safely. Please try again.' },
-          { status: 503 },
-        );
-      }
+    if (reservation.outcome === 'affiliate_not_found') {
+      return NextResponse.json({ error: 'Affiliate not found' }, { status: 404 });
     }
+    if (reservation.outcome === 'in_progress') {
+      console.log(`[AI Outreach] Generation already in progress for affiliate ${requestedAffiliateId} (started ${reservation.startedSecondsAgo}s ago). Blocking duplicate.`);
+      return NextResponse.json({
+        success: false,
+        error: 'Email generation is already in progress. Please wait for it to complete.',
+        inProgress: true,
+        startedSecondsAgo: reservation.startedSecondsAgo,
+        creditsConsumed: false,
+      }, { status: 409 });
+    }
+    if (reservation.outcome === 'insufficient_credits') {
+      console.log(`[AI Outreach] Credit reservation failed for user ${userId}: ${reservation.message}`);
+      return NextResponse.json({
+          error: reservation.message,
+          creditError: true,
+          remaining: reservation.remaining,
+          isReadOnly: reservation.isReadOnly,
+        }, { status: 402 });
+    }
+
+    activeReservation = { input: reservationInput, lease: reservation.lease };
+    console.log(`[AI Outreach] Reserved generation for affiliate ${requestedAffiliateId}. New balance: ${reservation.lease.creditsRemaining}`);
 
     // =========================================================================
     // STEP 5: GET AFFILIATE DATA
@@ -416,7 +271,9 @@ export async function POST(request: NextRequest) {
     if (affiliateData) {
       // Affiliate data provided directly in request
       affiliate = {
-        id: affiliateData.id || affiliateId,
+        // The database-owned ID is authoritative; never let request data point
+        // the paid generation at a different affiliate than the locked row.
+        id: requestedAffiliateId,
         personName: affiliateData.personName || null,
         email: affiliateData.email || null,
         domain: affiliateData.domain,
@@ -575,18 +432,7 @@ export async function POST(request: NextRequest) {
       // it when generation fails. This ensures users only pay for successful
       // email generation.
       // =========================================================================
-      if (creditConsumed) {
-        const refundResult = await refundCredits(
-          userId,
-          'ai',
-          1,
-          requestedAffiliateId?.toString() || 'unknown',
-          'outreach_failed'
-        );
-        if (refundResult.success) {
-          console.log(`[AI Outreach] ↩️ Refunded 1 AI credit for user ${userId} due to n8n failure`);
-        }
-      }
+      await releaseActiveReservation();
       
       return NextResponse.json(
         { error: result.error || 'Failed to generate email' },
@@ -607,18 +453,7 @@ export async function POST(request: NextRequest) {
       // =========================================================================
       // REFUND CREDIT ON EMPTY MESSAGE (January 24th, 2026)
       // =========================================================================
-      if (creditConsumed) {
-        const refundResult = await refundCredits(
-          userId,
-          'ai',
-          1,
-          requestedAffiliateId?.toString() || 'unknown',
-          'outreach_empty'
-        );
-        if (refundResult.success) {
-          console.log(`[AI Outreach] ↩️ Refunded 1 AI credit for user ${userId} due to empty message`);
-        }
-      }
+      await releaseActiveReservation();
       
       return NextResponse.json(
         { error: 'AI returned an empty message. Please try again.' },
@@ -701,7 +536,7 @@ export async function POST(request: NextRequest) {
       // - WRONG: ARRAY[${emailKey}] or ${'{' + emailKey + '}'}::text[]
       // - RIGHT: ${[emailKey]}::text[]  (pass JS array directly)
       // =====================================================================
-      await sql`
+      const savedMessages = await sql`
         UPDATE crewcast.saved_affiliates
         SET 
           ai_generated_message = ${result.message},
@@ -717,7 +552,14 @@ export async function POST(request: NextRequest) {
           AND user_id = ${userId}
           AND brand_id = ${context.brandId}::bigint
           AND brand_location_id = ${context.brandLocationId}::bigint
+          AND ai_generation_started_at = ${activeReservation.lease.startedAt}::timestamptz
+          AND (ai_generated_at IS NULL OR ai_generated_at < ai_generation_started_at)
+        RETURNING id
       `;
+      if (savedMessages.length !== 1) {
+        throw new Error('The outreach generation lease was lost before the message was saved.');
+      }
+      activeReservation = null;
       console.log(`[AI Outreach] 💾 Saved message for affiliate ${affiliate.id}, contact: ${emailKey}`);
     } catch (saveError) {
       // Log but don't fail - the message was generated successfully
@@ -756,20 +598,11 @@ export async function POST(request: NextRequest) {
     // The refund identifiers are initialized before parsing so an unexpected
     // failure can be compensated without out-of-scope variables or ts-ignore.
     // =========================================================================
-    if (creditConsumed && refundUserId !== null) {
+    if (activeReservation) {
       try {
-        const refundResult = await refundCredits(
-          refundUserId,
-          'ai',
-          1,
-          refundAffiliateId,
-          'outreach_error'
-        );
-        if (refundResult.success) {
-          console.log(`[AI Outreach] ↩️ Refunded 1 AI credit for user ${refundUserId} due to error`);
-        }
+        await releaseActiveReservation();
       } catch (refundError) {
-        console.error('[AI Outreach] ⚠️ Failed to refund credit after error:', refundError);
+        console.error('[AI Outreach] Failed to release generation credit after error:', refundError);
       }
     }
     

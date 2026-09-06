@@ -65,6 +65,7 @@ next-env.d.ts
 !/scripts/verify-paid-search-migration-staging.ts
 !/scripts/verify-search-credit-reservations-staging.ts
 !/scripts/verify-saved-affiliate-email-credit-staging.ts
+!/scripts/verify-outreach-generation-credit-staging.ts
 !/scripts/verify-search-reconciliation-staging.ts
 !/scripts/verify-stripe-webhook-events-staging.ts
 !/scripts/verify-stripe-billing-consistency-staging.ts
