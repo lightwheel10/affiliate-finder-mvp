@@ -550,7 +550,7 @@ export const en: Dictionary = {
         processing: 'Processing securely...',
         successTitle: 'Capacity updated',
         increaseSuccess: 'The new room is ready. Archived items stay archived until you choose to restore them.',
-        decreaseSuccess: 'Your new limit is active. Items that no longer fit were safely archived, not deleted.',
+        decreaseSuccess: 'Your new limit is active. If anything no longer fit, it was safely archived, not deleted.',
         reviewArchived: 'Review archived items',
         done: 'Done',
         chooseTitle: 'Choose what stays active',

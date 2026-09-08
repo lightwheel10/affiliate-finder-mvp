@@ -546,7 +546,7 @@ export const de: Dictionary = {
         processing: 'Sichere Verarbeitung...',
         successTitle: 'Kapazität aktualisiert',
         increaseSuccess: 'Der neue Platz ist verfügbar. Archivierte Einträge bleiben archiviert, bis Sie sie selbst wiederherstellen.',
-        decreaseSuccess: 'Das neue Limit ist aktiv. Nicht passende Einträge wurden sicher archiviert und nicht gelöscht.',
+        decreaseSuccess: 'Das neue Limit ist aktiv. Falls Einträge nicht mehr hineinpassten, wurden sie sicher archiviert und nicht gelöscht.',
         reviewArchived: 'Archivierte Einträge prüfen',
         done: 'Fertig',
         chooseTitle: 'Auswählen, was aktiv bleibt',

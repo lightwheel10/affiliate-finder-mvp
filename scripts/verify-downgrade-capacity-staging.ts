@@ -52,6 +52,8 @@ const sql = postgres(databaseUrl, {
   idle_timeout: 10,
 });
 const token = randomUUID().replaceAll('-', '');
+const stripeCustomerId = `cus_codex${token}`;
+const stripeSubscriptionId = `sub_codex${token}`;
 let accountId: number | null = null;
 
 async function removeInterruptedSyntheticFixtures(): Promise<void> {
@@ -138,8 +140,8 @@ async function createFixture() {
       next_auto_scan_at
     ) VALUES (
       ${accountId},
-      ${`cus_codex_${token}`},
-      ${`sub_codex_${token}`},
+      ${stripeCustomerId},
+      ${stripeSubscriptionId},
       'business',
       'active',
       'monthly',
@@ -180,6 +182,7 @@ async function verifySelectionAndReconciliation(
   await assert.rejects(
     sql.begin((transaction) => prepareDowngradeCapacitySelection(transaction, {
       userId: accountId!,
+      stripeCustomerId,
       targetPlan: 'pro',
     })),
     (error: unknown) => error instanceof DowngradeCapacityError
@@ -203,6 +206,7 @@ async function verifySelectionAndReconciliation(
   const pending = await sql.begin(async (transaction) => {
     const capacity = await prepareDowngradeCapacitySelection(transaction, {
       userId: accountId!,
+      stripeCustomerId,
       targetPlan: 'pro',
       requestedSelection: {
         brandIds: [selectedBrandId],
@@ -211,7 +215,7 @@ async function verifySelectionAndReconciliation(
     });
     return recordDeferredPlanChange(transaction, {
       userId: accountId!,
-      stripeSubscriptionId: `sub_codex_${token}`,
+      stripeSubscriptionId,
       stripeScheduleId: scheduleId,
       fromPlan: 'business',
       fromBillingInterval: 'monthly',
@@ -254,7 +258,8 @@ async function verifySelectionAndReconciliation(
 
   const waiting = await synchronizePendingSubscriptionPlanChange(sql, {
     userId: accountId,
-    stripeSubscriptionId: `sub_codex_${token}`,
+    stripeCustomerId,
+    stripeSubscriptionId,
     stripeScheduleId: scheduleId,
     currentPlan: 'business',
     currentBillingInterval: 'monthly',
@@ -274,7 +279,8 @@ async function verifySelectionAndReconciliation(
     `;
     return synchronizePendingSubscriptionPlanChange(transaction, {
       userId: accountId!,
-      stripeSubscriptionId: `sub_codex_${token}`,
+      stripeCustomerId,
+      stripeSubscriptionId,
       stripeScheduleId: scheduleId,
       currentPlan: 'pro',
       currentBillingInterval: 'monthly',
@@ -354,8 +360,9 @@ async function verifySelectionAndReconciliation(
     transaction,
     {
       userId: accountId!,
+      stripeCustomerId,
       targetPlan: 'pro',
-      stripeSubscriptionId: `sub_codex_${token}`,
+      stripeSubscriptionId,
     },
   ));
   assert.deepEqual(tooSmall, {
@@ -379,8 +386,9 @@ async function verifySelectionAndReconciliation(
   await assert.rejects(
     sql.begin((transaction) => restoreDowngradeArchivedCapacity(transaction, {
       userId: accountId!,
+      stripeCustomerId,
       targetPlan: 'pro',
-      stripeSubscriptionId: `sub_wrong_${token}`,
+      stripeSubscriptionId: `sub_wrong${token}`,
     })),
     /stale Stripe subscription/,
   );
@@ -403,8 +411,9 @@ async function verifySelectionAndReconciliation(
     Array.from({ length: concurrentAttemptCount }, () => sql.begin(
       (transaction) => restoreDowngradeArchivedCapacity(transaction, {
         userId: accountId!,
+        stripeCustomerId,
         targetPlan: 'business',
-        stripeSubscriptionId: `sub_codex_${token}`,
+        stripeSubscriptionId,
       }),
     )),
   );
@@ -480,8 +489,9 @@ async function verifySelectionAndReconciliation(
     transaction,
     {
       userId: accountId!,
+      stripeCustomerId,
       targetPlan: 'business',
-      stripeSubscriptionId: `sub_codex_${token}`,
+      stripeSubscriptionId,
     },
   ));
   assert.deepEqual(restorationReplay, {
@@ -498,8 +508,9 @@ async function verifySelectionAndReconciliation(
     transaction,
     {
       userId: accountId!,
+      stripeCustomerId,
       targetPlan: 'business',
-      stripeSubscriptionId: `sub_codex_${token}`,
+      stripeSubscriptionId,
     },
   ));
   assert.equal(afterManualArchive.status, 'none');
@@ -518,7 +529,8 @@ async function verifySelectionAndReconciliation(
 
   const replay = await synchronizePendingSubscriptionPlanChange(sql, {
     userId: accountId,
-    stripeSubscriptionId: `sub_codex_${token}`,
+    stripeCustomerId,
+    stripeSubscriptionId,
     stripeScheduleId: scheduleId,
     currentPlan: 'pro',
     currentBillingInterval: 'monthly',
