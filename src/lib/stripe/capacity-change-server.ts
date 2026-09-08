@@ -354,6 +354,56 @@ export async function readCapacityChangeOutcome(
   );
 }
 
+/**
+ * Retries an open capacity invoice with the customer's current default card.
+ * Stripe keeps the same invoice and PaymentIntent, so this cannot create a
+ * second subscription or charge for the same capacity operation.
+ */
+export async function retryPendingCapacityInvoicePayment(
+  stripeClient: CapacityChangeStripeClient,
+  input: {
+    operationId: string;
+    stripeInvoiceId: string;
+    stripeCustomerId: string;
+    customer: Stripe.Customer;
+  },
+): Promise<void> {
+  const paymentMethodId = extractStripeId(
+    input.customer.invoice_settings.default_payment_method,
+  );
+  if (!paymentMethodId) return;
+  if (!/^pm_[A-Za-z0-9]+$/.test(paymentMethodId)) {
+    throw new Error('Stripe customer default payment method is invalid.');
+  }
+
+  const invoice = await stripeClient.invoices.retrieve(input.stripeInvoiceId);
+  if (extractStripeId(invoice.customer) !== input.stripeCustomerId) {
+    throw new Error('Pending capacity invoice belongs to another Stripe customer.');
+  }
+  if (invoice.status !== 'open') return;
+
+  try {
+    await stripeClient.invoices.pay(
+      input.stripeInvoiceId,
+      { payment_method: paymentMethodId, off_session: false },
+      {
+        idempotencyKey:
+          `capacity-payment-retry:v1:${input.operationId.toLowerCase()}:${paymentMethodId}`,
+      },
+    );
+  } catch (error) {
+    // A declined replacement card leaves the durable operation recoverable.
+    // The caller re-reads Stripe and returns the normal customer-facing error.
+    if (
+      error
+      && typeof error === 'object'
+      && 'type' in error
+      && error.type === 'StripeCardError'
+    ) return;
+    throw error;
+  }
+}
+
 export async function applyCapacityChange(
   stripeClient: CapacityChangeStripeClient,
   input: {

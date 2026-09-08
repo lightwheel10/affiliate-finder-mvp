@@ -31,6 +31,7 @@ import {
   readAuthoritativeCapacityBillingState,
   readCapacityBaseSubscriptionState,
   readCapacityChangeOutcome,
+  retryPendingCapacityInvoicePayment,
   type AppliedCapacityChange,
   type AuthoritativeCapacityBillingState,
   type CapacityBaseSubscriptionState,
@@ -507,6 +508,15 @@ async function handleConfirm(
     if (!operation.stripeSubscriptionId) {
       throw new Error('Pending capacity payment has no Stripe subscription.');
     }
+    if (!operation.stripeInvoiceId) {
+      throw new Error('Pending capacity payment has no Stripe invoice.');
+    }
+    await retryPendingCapacityInvoicePayment(stripe, {
+      operationId: operation.operationId,
+      stripeInvoiceId: operation.stripeInvoiceId,
+      stripeCustomerId: owner.stripeCustomerId,
+      customer: state.capacity.customer,
+    });
     try {
       outcome = await readCapacityChangeOutcome(stripe, {
         stripeSubscriptionId: operation.stripeSubscriptionId,

@@ -7,6 +7,7 @@ import {
   readAuthoritativeCapacityBillingState,
   readCapacityBaseSubscriptionState,
   readCapacityChangeOutcome,
+  retryPendingCapacityInvoicePayment,
   type CapacityChangeStripeClient,
 } from '../../src/lib/stripe/capacity-change-server';
 import type { PaidCapacityQuantities } from '../../src/lib/stripe/capacity-subscription';
@@ -419,4 +420,96 @@ test('a canceled zero-capacity operation is recoverable after a route timeout', 
   });
   assert.equal(result.status, 'applied');
   assert.equal(result.snapshot.status, 'canceled');
+});
+
+test('an open capacity invoice retries with the customer current default card', async () => {
+  const calls: Array<{ paymentMethod?: string; key?: string }> = [];
+  const currentCustomer = {
+    ...customer(),
+    invoice_settings: { default_payment_method: 'pm_replacement' },
+  } as Stripe.Customer;
+  const fakeStripe = {
+    invoices: {
+      retrieve: async () => ({
+        id: 'in_pending',
+        customer: 'cus_account',
+        status: 'open',
+      } as Stripe.Invoice),
+      pay: async (
+        _id: string,
+        params: Stripe.InvoicePayParams,
+        options: Stripe.RequestOptions,
+      ) => {
+        calls.push({
+          paymentMethod: params.payment_method,
+          key: options.idempotencyKey,
+        });
+        return { id: 'in_pending', status: 'paid' } as Stripe.Invoice;
+      },
+    },
+  } as unknown as CapacityChangeStripeClient;
+
+  await retryPendingCapacityInvoicePayment(fakeStripe, {
+    operationId,
+    stripeInvoiceId: 'in_pending',
+    stripeCustomerId: 'cus_account',
+    customer: currentCustomer,
+  });
+
+  assert.deepEqual(calls, [{
+    paymentMethod: 'pm_replacement',
+    key: `capacity-payment-retry:v1:${operationId}:pm_replacement`,
+  }]);
+});
+
+test('a declined replacement card keeps the capacity operation recoverable', async () => {
+  const currentCustomer = {
+    ...customer(),
+    invoice_settings: { default_payment_method: 'pm_declined' },
+  } as Stripe.Customer;
+  const fakeStripe = {
+    invoices: {
+      retrieve: async () => ({
+        id: 'in_pending',
+        customer: 'cus_account',
+        status: 'open',
+      } as Stripe.Invoice),
+      pay: async () => {
+        throw { type: 'StripeCardError' };
+      },
+    },
+  } as unknown as CapacityChangeStripeClient;
+
+  await assert.doesNotReject(retryPendingCapacityInvoicePayment(fakeStripe, {
+    operationId,
+    stripeInvoiceId: 'in_pending',
+    stripeCustomerId: 'cus_account',
+    customer: currentCustomer,
+  }));
+});
+
+test('a pending capacity invoice cannot be retried for another customer', async () => {
+  const currentCustomer = {
+    ...customer(),
+    invoice_settings: { default_payment_method: 'pm_replacement' },
+  } as Stripe.Customer;
+  const fakeStripe = {
+    invoices: {
+      retrieve: async () => ({
+        id: 'in_pending',
+        customer: 'cus_other',
+        status: 'open',
+      } as Stripe.Invoice),
+      pay: async () => {
+        throw new Error('payment must not run');
+      },
+    },
+  } as unknown as CapacityChangeStripeClient;
+
+  await assert.rejects(retryPendingCapacityInvoicePayment(fakeStripe, {
+    operationId,
+    stripeInvoiceId: 'in_pending',
+    stripeCustomerId: 'cus_account',
+    customer: currentCustomer,
+  }), /another Stripe customer/i);
 });
