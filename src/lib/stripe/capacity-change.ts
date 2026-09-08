@@ -244,6 +244,17 @@ export function capacityInvoicePreviewParams(input: {
     throw new Error('Paid-capacity subscription belongs to another Stripe customer.');
   }
   capacityChangeDirection(input.current, target);
+  if (target.extraBrands === 0 && target.extraLocations === 0) {
+    return {
+      customer: input.stripeCustomerId,
+      subscription: input.current.subscriptionId,
+      discounts: '',
+      subscription_details: {
+        cancel_now: true,
+        proration_behavior: 'always_invoice',
+      },
+    };
+  }
   return {
     customer: input.stripeCustomerId,
     subscription: input.current.subscriptionId,

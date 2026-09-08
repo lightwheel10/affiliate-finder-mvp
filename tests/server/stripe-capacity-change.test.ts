@@ -233,6 +233,62 @@ test('invoice preview returns only verified EUR amounts with no inherited discou
   });
 });
 
+test('zero-capacity invoice preview simulates canceling the subscription', async () => {
+  const previewCalls: Stripe.InvoiceCreatePreviewParams[] = [];
+  const fakeStripe = {
+    invoices: {
+      createPreview: async (params: Stripe.InvoiceCreatePreviewParams) => {
+        previewCalls.push(params);
+        return {
+          customer: 'cus_account',
+          currency: 'eur',
+          amount_due: 0,
+          total: -2_000,
+          total_discount_amounts: [],
+          lines: {
+            data: [{
+              amount: -2_000,
+              discount_amounts: [],
+              parent: { subscription_item_details: { proration: true } },
+            }],
+          },
+        } as unknown as Stripe.Invoice;
+      },
+    },
+  } as unknown as CapacityChangeStripeClient;
+
+  const quote = await previewCapacityInvoice(fakeStripe, {
+    stripeCustomerId: 'cus_account',
+    current: {
+      subscriptionId: 'sub_capacity',
+      customerId: 'cus_account',
+      status: 'active',
+      brandItemId: null,
+      locationItemId: 'si_location',
+      extraBrands: 0,
+      extraLocations: 2,
+      currentPeriodEndSeconds: 1_802_592_000,
+      cancelAtSeconds: null,
+      cancelAtPeriodEnd: false,
+    },
+    target: { extraBrands: 0, extraLocations: 0 },
+    prorationDateSeconds: 1_800_000_000,
+    prices,
+  });
+
+  assert.deepEqual(previewCalls[0]?.subscription_details, {
+    cancel_now: true,
+    proration_behavior: 'always_invoice',
+  });
+  assert.deepEqual(quote, {
+    currency: 'eur',
+    amountDueNowCents: 0,
+    totalCents: -2_000,
+    prorationCents: -2_000,
+    monthlySubtotalCents: 0,
+  });
+});
+
 test('new subscription is payment-gated and returns its 3DS confirmation secret', async () => {
   const incomplete = capacitySubscription(
     { extraBrands: 1, extraLocations: 2 },
@@ -361,6 +417,69 @@ test('pure reduction applies immediately and removes a zero-quantity item', asyn
     { id: 'si_brand', deleted: true },
     { id: 'si_location', quantity: 3 },
   ]);
+});
+
+test('removing the last capacity item cancels instead of creating an empty subscription', async () => {
+  const canceled = capacitySubscription(
+    { extraBrands: 0, extraLocations: 2 },
+    { status: 'canceled' },
+  );
+  let updateCalled = false;
+  let cancelCall: {
+    id: string;
+    params: Stripe.SubscriptionCancelParams;
+    key?: string;
+  } | null = null;
+  const fakeStripe = {
+    subscriptions: {
+      update: async () => {
+        updateCalled = true;
+        throw new Error('update must not run');
+      },
+      cancel: async (
+        id: string,
+        params: Stripe.SubscriptionCancelParams,
+        options: Stripe.RequestOptions,
+      ) => {
+        cancelCall = { id, params, key: options.idempotencyKey };
+        return canceled;
+      },
+    },
+  } as unknown as CapacityChangeStripeClient;
+
+  const result = await applyCapacityChange(fakeStripe, {
+    operationId,
+    userId: 42,
+    stripeCustomerId: 'cus_account',
+    current: {
+      subscriptionId: 'sub_capacity',
+      customerId: 'cus_account',
+      status: 'active',
+      brandItemId: null,
+      locationItemId: 'si_location',
+      extraBrands: 0,
+      extraLocations: 2,
+      currentPeriodEndSeconds: 1_802_592_000,
+      cancelAtSeconds: null,
+      cancelAtPeriodEnd: false,
+    },
+    target: { extraBrands: 0, extraLocations: 0 },
+    prorationDateSeconds: 1_800_000_000,
+    prices,
+  });
+
+  assert.equal(updateCalled, false);
+  assert.deepEqual(cancelCall, {
+    id: 'sub_capacity',
+    params: {
+      invoice_now: true,
+      prorate: true,
+      expand: ['latest_invoice'],
+    },
+    key: `capacity-change:v1:${operationId}:cancel`,
+  });
+  assert.equal(result.status, 'applied');
+  assert.equal(result.snapshot.status, 'canceled');
 });
 
 test('a mismatched Stripe pending update is never treated as this request', async () => {
