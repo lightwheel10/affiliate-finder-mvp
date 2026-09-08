@@ -94,13 +94,21 @@ async function verifyContentionAndCompletion(): Promise<void> {
   const winner = claimed[0];
   assert.equal(winner.outcome, 'claimed');
 
+  assert.deepEqual(
+    await store.claim({ ...receipt, payloadSha256: 'f'.repeat(64) }),
+    { outcome: 'busy' },
+    'a signed Stripe retry may have a different raw-body digest',
+  );
   await assert.rejects(
-    store.claim({ ...receipt, payloadSha256: 'f'.repeat(64) }),
+    store.claim({ ...receipt, eventType: 'invoice.payment_failed' }),
     /conflicting immutable data/i,
   );
 
   await store.complete(receipt.eventId, winner.claimToken);
-  assert.deepEqual(await store.claim(receipt), { outcome: 'completed' });
+  assert.deepEqual(
+    await store.claim({ ...receipt, payloadSha256: 'e'.repeat(64) }),
+    { outcome: 'completed' },
+  );
   await assert.rejects(
     store.complete(receipt.eventId, winner.claimToken),
     /lost ownership/i,

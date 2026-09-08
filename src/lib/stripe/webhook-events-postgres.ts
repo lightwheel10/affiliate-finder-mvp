@@ -45,11 +45,14 @@ function assertMatchingReceipt(row: WebhookEventRow, event: StripeWebhookEnvelop
     row.event_type !== event.eventType
     || row.object_id !== event.objectId
     || row.livemode !== event.livemode
-    || row.payload_sha256 !== event.payloadSha256
     || !sameInstant(row.event_created_at, expectedCreatedAt)
   ) {
     throw new Error('A Stripe event ID was replayed with conflicting immutable data.');
   }
+
+  // Stripe can change delivery-only Event fields such as `pending_webhooks`
+  // between signed retries. Keep the first raw-body digest for audit, but use
+  // Stripe's event ID plus stable event fields for duplicate detection.
 }
 
 export function createStripeWebhookEventStore(
