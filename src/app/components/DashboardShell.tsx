@@ -1,7 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { DashboardRouteSkeleton } from './LoadingSkeletons';
 import { Sidebar } from '@/app/components/Sidebar';
 import { useBrandLocation } from '@/contexts/BrandLocationContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,12 +26,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         className="ml-64 flex h-screen flex-1 flex-col overflow-x-hidden bg-white dark:bg-[#050505]"
       >
         {featureEnabled && isLoading ? (
-          <div className="flex h-full items-center justify-center" role="status">
-            <div className="flex items-center gap-3 text-sm font-medium text-[#425466] dark:text-gray-300">
-              <Loader2 size={18} className="animate-spin text-[#ffbf23]" />
-              {t.dashboard.brandLocations.loadingPortfolio}
-            </div>
-          </div>
+          <DashboardRouteSkeleton />
         ) : featureEnabled && (!isReady || error) ? (
           <div className="flex h-full items-center justify-center px-6">
             <div className="max-w-md rounded-2xl border border-red-100 bg-red-50 p-6 text-center dark:border-red-900/40 dark:bg-red-950/20">

@@ -17,6 +17,7 @@ import {
   Search,
 } from 'lucide-react';
 import { Modal } from '@/app/components/Modal';
+import { BrandSettingsSkeleton } from '@/app/components/LoadingSkeletons';
 import {
   BrandFormModal,
   type BrandFormPayload,
@@ -219,6 +220,7 @@ export function BrandLocationSettingsPanel() {
 
   return (
     <>
+      {!error && (isLoading || !portfolio) ? <BrandSettingsSkeleton /> : (
       <section className="space-y-6">
         <header className="flex flex-col gap-4 border-b border-[#e6ebf1] pb-6 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -260,13 +262,6 @@ export function BrandLocationSettingsPanel() {
                 <RefreshCw size={14} />
                 {t.common.retry}
               </button>
-            </div>
-          ) : isLoading || !portfolio ? (
-            <div className="flex min-h-64 items-center justify-center" role="status">
-              <Loader2 size={20} className="animate-spin text-[#ffbf23]" />
-              <span className="ml-3 text-sm font-medium text-[#425466] dark:text-gray-300">
-                {copy.loadingPortfolio}
-              </span>
             </div>
           ) : activeBrands.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#d8e0e8] bg-white p-10 text-center dark:border-gray-800 dark:bg-[#0f0f0f]">
@@ -330,6 +325,7 @@ export function BrandLocationSettingsPanel() {
             </section>
           )}
       </section>
+      )}
 
       <BrandFormModal
         isOpen={brandEditor.isOpen}
