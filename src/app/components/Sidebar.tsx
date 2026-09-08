@@ -269,6 +269,18 @@ export const Sidebar: React.FC = () => {
   const userName = user?.name || hookUserName || supabaseUser?.email?.split('@')[0] || 'User';
   const userEmail = supabaseUser?.email || user?.email || '';
   const userImageUrl = user?.profile_image_url || supabaseUser?.user_metadata?.avatar_url;
+  const getPlanDisplayName = (plan: string) => {
+    const names: Record<string, string> = {
+      free_trial: t.dashboard.settings.plan.freeTrial,
+      pro: t.dashboard.settings.plan.pro,
+      business: t.dashboard.settings.plan.growth,
+      enterprise: t.dashboard.settings.plan.enterprise,
+    };
+    return names[plan] || plan;
+  };
+  const currentPlanName = subscription
+    ? getPlanDisplayName(subscription.plan)
+    : 'Free';
   const pendingPlanDate = pendingPlanChange
     ? new Date(pendingPlanChange.effectiveAt)
     : null;
@@ -283,7 +295,7 @@ export const Sidebar: React.FC = () => {
     ? t.sidebar.planCard.scheduledChange
         .replace(
           '{plan}',
-          pendingPlanChange.plan.charAt(0).toUpperCase() + pendingPlanChange.plan.slice(1),
+          getPlanDisplayName(pendingPlanChange.plan),
         )
         .replace('{date}', pendingPlanDateLabel)
     : null;
@@ -421,14 +433,9 @@ export const Sidebar: React.FC = () => {
               </div>
               <div>
                 <h5 className="font-display font-bold text-xs uppercase tracking-wide text-[#ffbf23]">
-                  {isTrialing 
-                    ? `${subscription?.plan || 'Trial'} ${t.sidebar.planCard.planSuffix}`
-                    : subscription?.status === 'active'
-                      ? `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} ${t.sidebar.planCard.planSuffix}`
-                      : subscription?.status === 'past_due' || subscription?.status === 'canceled'
-                        ? `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} ${t.sidebar.planCard.planSuffix}`
-                        : 'Free Plan'
-                  }
+                  {(isTrialing || subscription?.status === 'active' || subscription?.status === 'past_due' || subscription?.status === 'canceled')
+                    ? `${currentPlanName} ${t.sidebar.planCard.planSuffix}`
+                    : 'Free Plan'}
                 </h5>
                 <p className="text-[10px] text-gray-300 flex items-center gap-1">
                   <span className={cn(

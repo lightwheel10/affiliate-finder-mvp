@@ -342,43 +342,70 @@ export function PaidCapacityManager({
       ? t.dashboard.settings.plan.growth
       : t.dashboard.settings.plan.pro;
     const maximumLabel = maximum < 0 ? t.dashboard.brandLocations.unlimited : maximum;
+    const usagePercentage = maximum > 0
+      ? Math.min(100, Math.round((active / maximum) * 100))
+      : 0;
 
     return (
-      <article className="rounded-2xl border border-[#e6ebf1] bg-white p-4 shadow-soft-sm dark:border-gray-800 dark:bg-[#0f0f0f]">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fff4d1] text-[#0f172a] dark:bg-[#ffbf23]/10 dark:text-[#ffbf23]">
-            {isBrand ? <Building2 size={18} /> : <Globe2 size={18} />}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
-              {isBrand ? copy.brandCapacity : copy.locationCapacity}
-            </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-[#0f172a] dark:text-white">
-              {active} / {maximumLabel}
-              <span className="ml-1.5 text-xs font-medium text-[#8898aa]">
-                {isBrand ? copy.brands : copy.locations}
-              </span>
-            </p>
-            {overview && item && (
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#8898aa]">
-                <span>{copy.included.replace('{count}', String(includedCapacity(kind))).replace('{plan}', planName)}</span>
-                <span>·</span>
-                <span>{copy.paidExtra.replace('{count}', String(paidExtra))}</span>
-                <span>·</span>
-                <span>{copy.monthlyUnit.replace('{price}', String(item.monthlyEur))}</span>
-              </div>
-            )}
+      <article className="rounded-2xl bg-[#f8fafc] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:bg-gray-900/70 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff4d1] text-[#b57900] dark:bg-[#ffbf23]/10 dark:text-[#ffbf23]">
+              {isBrand
+                ? <Building2 size={18} strokeWidth={2} />
+                : <Globe2 size={18} strokeWidth={2} />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
+                {isBrand ? copy.brandCapacity : copy.locationCapacity}
+              </p>
+              <p className="mt-0.5 text-xs text-[#596579] dark:text-gray-400">
+                {copy.usage
+                  .replace('{used}', String(active))
+                  .replace('{total}', String(maximumLabel))}
+              </p>
+            </div>
           </div>
+
           {overview && item && (
             <button
               type="button"
               onClick={() => openEditor(kind)}
               disabled={!canChange || isSubmitting}
               title={!overview.canPurchase && paidExtra === 0 ? copy.purchaseUnavailable : undefined}
-              className="shrink-0 rounded-full border border-[#d8e0e8] bg-white px-3.5 py-2 text-xs font-semibold text-[#425466] outline-none transition-[background-color,border-color,scale] duration-150 hover:border-[#ffbf23] hover:bg-[#fffaf0] focus-visible:ring-2 focus-visible:ring-[#ffbf23]/60 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-[#ffbf23]/10"
+              className="min-h-9 shrink-0 rounded-full border border-[#d8e0e8] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#425466] outline-none transition-[background-color,border-color,scale] duration-150 hover:border-[#ffbf23] hover:bg-[#fffaf0] focus-visible:ring-2 focus-visible:ring-[#ffbf23]/60 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-[#ffbf23]/10"
             >
-              {copy.change}
+              {paidExtra > 0 ? copy.manageExtras : copy.addCapacity}
             </button>
+          )}
+        </div>
+
+        <div className="mt-5">
+          <div
+            role="progressbar"
+            aria-label={isBrand ? copy.brandCapacity : copy.locationCapacity}
+            aria-valuemin={0}
+            aria-valuemax={maximum > 0 ? maximum : undefined}
+            aria-valuenow={maximum > 0 ? active : undefined}
+            className="h-2 overflow-hidden rounded-full bg-[#e6ebf1] dark:bg-gray-800"
+          >
+            <div
+              className="h-full rounded-full bg-[#ffbf23] transition-[width] duration-150"
+              style={{ width: `${usagePercentage}%` }}
+            />
+          </div>
+          {overview && item && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#596579] dark:text-gray-400">
+              <span>{copy.included.replace('{count}', String(includedCapacity(kind))).replace('{plan}', planName)}</span>
+              {paidExtra > 0 && (
+                <>
+                  <span aria-hidden="true" className="text-[#b6c0cc]">·</span>
+                  <span>{copy.paidExtra.replace('{count}', String(paidExtra))}</span>
+                </>
+              )}
+              <span aria-hidden="true" className="text-[#b6c0cc]">·</span>
+              <span>{copy.monthlyUnit.replace('{price}', String(item.monthlyEur))}</span>
+            </div>
           )}
         </div>
       </article>

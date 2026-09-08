@@ -506,12 +506,15 @@ export interface Dictionary {
         description: string;
         brandCapacity: string;
         locationCapacity: string;
+        usage: string;
         brands: string;
         locations: string;
         included: string;
         paidExtra: string;
         monthlyUnit: string;
         change: string;
+        addCapacity: string;
+        manageExtras: string;
         loading: string;
         unavailable: string;
         retry: string;
@@ -995,6 +998,7 @@ export interface Dictionary {
         noPaymentMethod: {
           title: string;
           trialSubtitle: string;
+          activeSubtitle: string;
           defaultSubtitle: string;
         };
         addPaymentMethod: string;
@@ -1096,6 +1100,13 @@ export interface Dictionary {
         choosePack: string;           // "Choose a Pack"
         mostPopular: string;          // "Most Popular"
         creditsLabel: string;         // "credits" — small label under the count
+        currentBalance: string;
+        remaining: string;
+        perCredit: string;
+        purchaseSummary: string;
+        total: string;
+        selectPackToContinue: string;
+        continueToCheckout: string;
         buyNow: string;               // "Buy Now"
         benefits: {
           neverExpire: { title: string; description: string };
