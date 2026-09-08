@@ -14,6 +14,10 @@ import type {
   UpdateBrandInput,
   UpdateLocationInput,
 } from '@/lib/brand-locations/management-input';
+import {
+  effectiveCapacityLimits,
+  type PaidCapacityQuantities,
+} from '@/lib/stripe/capacity-subscription';
 
 export type BrandLocationManagementErrorCode =
   | 'INVALID_IDENTIFIER'
@@ -52,6 +56,10 @@ export interface CapacitySubscription {
 
 export interface ManagementEntitlements {
   plan: PlanId;
+  includedBrands: number;
+  includedLocationsPerAccount: number;
+  paidExtraBrands: number;
+  paidExtraLocations: number;
   maxBrands: number;
   maxLocationsPerAccount: number;
 }
@@ -129,6 +137,7 @@ export function normalizeManagementId(value: unknown, label: string): string {
 
 export function resolveCapacityEntitlements(
   subscription: CapacitySubscription | null,
+  paidCapacity: PaidCapacityQuantities = { extraBrands: 0, extraLocations: 0 },
 ): ManagementEntitlements {
   if (
     !subscription
@@ -150,11 +159,20 @@ export function resolveCapacityEntitlements(
   }
 
   const plan = subscription.plan as PlanId;
+  // Trial users keep their included plan allowance but cannot inherit or buy
+  // paid add-ons. Only an active paid base subscription can use extra capacity.
+  const usablePaidCapacity = subscription.status === 'active'
+    ? paidCapacity
+    : { extraBrands: 0, extraLocations: 0 };
+  const limits = effectiveCapacityLimits(plan, usablePaidCapacity);
+  const included = PLAN_CATALOG[plan].entitlements;
   return {
     plan,
-    maxBrands: PLAN_CATALOG[plan].entitlements.maxBrands,
-    maxLocationsPerAccount:
-      PLAN_CATALOG[plan].entitlements.maxLocationsPerAccount,
+    includedBrands: included.maxBrands,
+    includedLocationsPerAccount: included.maxLocationsPerAccount,
+    paidExtraBrands: usablePaidCapacity.extraBrands,
+    paidExtraLocations: usablePaidCapacity.extraLocations,
+    ...limits,
   };
 }
 

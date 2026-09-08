@@ -22,6 +22,17 @@ export interface DowngradeCapacityAssessment {
   selectionRequired: boolean;
 }
 
+export interface ExplicitCapacityLimits {
+  maxBrands: number;
+  maxLocations: number;
+}
+
+export interface CapacityAssessment extends ExplicitCapacityLimits {
+  activeBrands: number;
+  activeLocations: number;
+  selectionRequired: boolean;
+}
+
 export type DowngradeCapacityErrorCode =
   | 'DOWNGRADE_SELECTION_REQUIRED'
   | 'INVALID_DOWNGRADE_SELECTION'
@@ -32,7 +43,7 @@ export class DowngradeCapacityError extends Error {
     public readonly code: DowngradeCapacityErrorCode,
     public readonly status: number,
     message: string,
-    public readonly assessment?: DowngradeCapacityAssessment,
+    public readonly assessment?: CapacityAssessment | DowngradeCapacityAssessment,
   ) {
     super(message);
     this.name = 'DowngradeCapacityError';
@@ -66,6 +77,23 @@ function targetLimits(targetPlan: PurchasablePlanId) {
     maxBrands: Number(entitlements.maxBrands),
     maxLocations: Number(entitlements.maxLocationsPerAccount),
   };
+}
+
+function assertCapacityLimits(limits: ExplicitCapacityLimits): void {
+  if (!Number.isSafeInteger(limits.maxBrands) || limits.maxBrands < 1) {
+    throw new DowngradeCapacityError(
+      'DOWNGRADE_CAPACITY_INTEGRITY_ERROR',
+      500,
+      'Target brand capacity is invalid.',
+    );
+  }
+  if (!Number.isSafeInteger(limits.maxLocations) || limits.maxLocations < 1) {
+    throw new DowngradeCapacityError(
+      'DOWNGRADE_CAPACITY_INTEGRITY_ERROR',
+      500,
+      'Target location capacity is invalid.',
+    );
+  }
 }
 
 function indexActiveCapacity(activeBrands: readonly ActiveBrandCapacity[]) {
@@ -107,17 +135,34 @@ export function assessDowngradeCapacity(
   activeBrands: readonly ActiveBrandCapacity[],
   targetPlan: PurchasablePlanId,
 ): DowngradeCapacityAssessment {
-  const { brandIds, locationOwner } = indexActiveCapacity(activeBrands);
   const { maxBrands, maxLocations } = targetLimits(targetPlan);
-  const activeLocations = locationOwner.size;
-  return {
-    targetPlan,
+  const assessment = assessCapacityAgainstLimits(activeBrands, {
     maxBrands,
     maxLocations,
+  });
+  return {
+    targetPlan,
+    ...assessment,
+  };
+}
+
+/**
+ * Shared assessment for both a base-plan downgrade and a paid add-on
+ * reduction. Keeping one validator prevents the two billing paths from
+ * disagreeing about which active rows fit inside the target capacity.
+ */
+export function assessCapacityAgainstLimits(
+  activeBrands: readonly ActiveBrandCapacity[],
+  limits: ExplicitCapacityLimits,
+): CapacityAssessment {
+  assertCapacityLimits(limits);
+  const { brandIds, locationOwner } = indexActiveCapacity(activeBrands);
+  return {
+    ...limits,
     activeBrands: brandIds.length,
-    activeLocations,
+    activeLocations: locationOwner.size,
     selectionRequired:
-      brandIds.length > maxBrands || activeLocations > maxLocations,
+      brandIds.length > limits.maxBrands || locationOwner.size > limits.maxLocations,
   };
 }
 
@@ -131,8 +176,22 @@ export function validateDowngradeRetentionSelection(
   targetPlan: PurchasablePlanId,
   selection: DowngradeRetentionSelection,
 ): DowngradeRetentionSelection {
-  const { brandIds: activeBrandIds, locationOwner } = indexActiveCapacity(activeBrands);
   const { maxBrands, maxLocations } = targetLimits(targetPlan);
+  return validateRetentionSelectionAgainstLimits(
+    activeBrands,
+    { maxBrands, maxLocations },
+    selection,
+  );
+}
+
+export function validateRetentionSelectionAgainstLimits(
+  activeBrands: readonly ActiveBrandCapacity[],
+  limits: ExplicitCapacityLimits,
+  selection: DowngradeRetentionSelection,
+): DowngradeRetentionSelection {
+  assertCapacityLimits(limits);
+  const { brandIds: activeBrandIds, locationOwner } = indexActiveCapacity(activeBrands);
+  const { maxBrands, maxLocations } = limits;
   assertUniqueIdentifiers(selection.brandIds, 'Selected brand ID');
   assertUniqueIdentifiers(selection.locationIds, 'Selected location ID');
 
@@ -200,6 +259,26 @@ export function resolveDowngradeRetentionSelection(
   selection: DowngradeRetentionSelection;
 } {
   const assessment = assessDowngradeCapacity(activeBrands, targetPlan);
+  const resolved = resolveRetentionSelectionAgainstLimits(
+    activeBrands,
+    {
+      maxBrands: assessment.maxBrands,
+      maxLocations: assessment.maxLocations,
+    },
+    requestedSelection,
+  );
+  return { assessment, selection: resolved.selection };
+}
+
+export function resolveRetentionSelectionAgainstLimits(
+  activeBrands: readonly ActiveBrandCapacity[],
+  limits: ExplicitCapacityLimits,
+  requestedSelection?: DowngradeRetentionSelection,
+): {
+  assessment: CapacityAssessment;
+  selection: DowngradeRetentionSelection;
+} {
+  const assessment = assessCapacityAgainstLimits(activeBrands, limits);
   if (!assessment.selectionRequired) {
     return {
       assessment,
@@ -219,10 +298,78 @@ export function resolveDowngradeRetentionSelection(
   }
   return {
     assessment,
-    selection: validateDowngradeRetentionSelection(
+    selection: validateRetentionSelectionAgainstLimits(
       activeBrands,
-      targetPlan,
+      limits,
       requestedSelection,
     ),
   };
+}
+
+/**
+ * Chooses a recoverable keep-list only when Stripe removes paid capacity while
+ * no customer is present. Brands must be ordered default-first then oldest;
+ * locationPriority must contain every active location default-first then oldest.
+ * Customer-requested reductions continue to require an explicit keep-list.
+ */
+export function selectAutomaticRetentionAfterCapacityLoss(
+  activeBrands: readonly ActiveBrandCapacity[],
+  limits: ExplicitCapacityLimits,
+  locationPriority: readonly string[],
+): DowngradeRetentionSelection {
+  assertCapacityLimits(limits);
+  const { brandIds: activeBrandIds, locationOwner } = indexActiveCapacity(activeBrands);
+  if (
+    locationPriority.length !== locationOwner.size
+    || new Set(locationPriority).size !== locationPriority.length
+    || locationPriority.some((locationId) => !locationOwner.has(locationId))
+  ) {
+    throw new DowngradeCapacityError(
+      'DOWNGRADE_CAPACITY_INTEGRITY_ERROR',
+      500,
+      'Automatic capacity retention received an invalid location priority.',
+    );
+  }
+
+  const brandIds = activeBrandIds.slice(
+    0,
+    Math.min(activeBrandIds.length, limits.maxBrands, limits.maxLocations),
+  );
+  const retainedBrandSet = new Set(brandIds);
+  const locationIds: string[] = [];
+  const retainedLocationSet = new Set<string>();
+
+  for (const brandId of brandIds) {
+    const preferredLocation = locationPriority.find(
+      (locationId) => locationOwner.get(locationId) === brandId,
+    );
+    if (!preferredLocation) {
+      throw new DowngradeCapacityError(
+        'DOWNGRADE_CAPACITY_INTEGRITY_ERROR',
+        500,
+        `Automatic capacity retention found no location for brand ${brandId}.`,
+      );
+    }
+    locationIds.push(preferredLocation);
+    retainedLocationSet.add(preferredLocation);
+  }
+
+  for (const locationId of locationPriority) {
+    if (locationIds.length >= limits.maxLocations) break;
+    const ownerBrandId = locationOwner.get(locationId);
+    if (
+      ownerBrandId
+      && retainedBrandSet.has(ownerBrandId)
+      && !retainedLocationSet.has(locationId)
+    ) {
+      locationIds.push(locationId);
+      retainedLocationSet.add(locationId);
+    }
+  }
+
+  return validateRetentionSelectionAgainstLimits(
+    activeBrands,
+    limits,
+    { brandIds, locationIds },
+  );
 }

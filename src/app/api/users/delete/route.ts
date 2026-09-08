@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import {
+  stripe,
+  STRIPE_BASE_PRICE_CONFIGURATION,
+  STRIPE_CAPACITY_PRICE_CONFIGURATION,
+} from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import {
@@ -8,6 +12,15 @@ import {
 } from '@/lib/auth/account';
 import { deletePostgresAccountData } from '@/lib/users/delete-account-postgres';
 import { deleteOnboardingSuggestionIdentityGuard } from '@/lib/suggestions/analysis-postgres';
+import { selectAuthoritativeCustomerSubscription } from '@/lib/stripe/subscription-creation';
+import { extractStripeId, snapshotStripeSubscription } from '@/lib/stripe/subscription-state';
+import { cancelCapacityAfterBaseEnded } from '@/lib/stripe/capacity-lifecycle-server';
+
+const TERMINAL_SUBSCRIPTION_STATUSES = new Set([
+  'incomplete_expired',
+  'canceled',
+  'unpaid',
+]);
 
 // =============================================================================
 // DELETE /api/users/delete
@@ -18,7 +31,7 @@ import { deleteOnboardingSuggestionIdentityGuard } from '@/lib/suggestions/analy
 // Permanently deletes a user account. This action is IRREVERSIBLE.
 // 
 // What gets deleted:
-// 1. Stripe subscription (canceled immediately, no refund)
+// 1. Stripe base and paid-capacity subscriptions (canceled immediately, no refund)
 // 2. All saved_affiliates for this user
 // 3. All discovered_affiliates for this user
 // 4. All searches for this user
@@ -142,25 +155,78 @@ export async function POST(request: NextRequest) {
     console.log(`[DeleteAccount] Starting account deletion for user ${userId} (${userData.email})`);
 
     // ==========================================================================
-    // STEP 1: CANCEL STRIPE SUBSCRIPTION (if exists)
-    // January 13th, 2026: Simple approach - cancel immediately, no refund
+    // STEP 1: CANCEL EVERY APPLICATION STRIPE SUBSCRIPTION (if any)
+    // Do not erase ownership records unless Stripe proves recurring billing is
+    // already terminal. Otherwise a failed provider call could orphan a charge.
     // ==========================================================================
-    const subscriptions = await sql`
+    const subscriptions = await sql<{
+      stripe_subscription_id: string | null;
+      stripe_customer_id: string | null;
+    }[]>`
       SELECT stripe_subscription_id, stripe_customer_id
       FROM crewcast.subscriptions
       WHERE user_id = ${userId}
+      LIMIT 2
     `;
+    if (subscriptions.length > 1) {
+      throw new Error('Account has more than one application subscription record.');
+    }
 
-    if (subscriptions.length > 0 && subscriptions[0].stripe_subscription_id) {
-      const { stripe_subscription_id } = subscriptions[0];
-      
-      try {
-        console.log(`[DeleteAccount] Canceling Stripe subscription ${stripe_subscription_id}`);
-        await stripe.subscriptions.cancel(stripe_subscription_id);
-        console.log(`[DeleteAccount] Stripe subscription canceled successfully`);
-      } catch (stripeError) {
-        // Log but don't fail - subscription might already be canceled
-        console.error('[DeleteAccount] Error canceling Stripe subscription:', stripeError);
+    if (subscriptions.length === 1) {
+      const storedSubscriptionId = subscriptions[0].stripe_subscription_id;
+      const customerId = subscriptions[0].stripe_customer_id;
+      let baseSubscriptionId = storedSubscriptionId;
+
+      if (customerId) {
+        const customerSubscriptions = await stripe.subscriptions.list({
+          customer: customerId,
+          status: 'all',
+          limit: 100,
+        });
+        const authoritativeBase = selectAuthoritativeCustomerSubscription(
+          customerSubscriptions.data,
+          customerSubscriptions.has_more,
+          STRIPE_BASE_PRICE_CONFIGURATION,
+        );
+        baseSubscriptionId = authoritativeBase?.id ?? baseSubscriptionId;
+
+        if (baseSubscriptionId) {
+          await cancelCapacityAfterBaseEnded(
+            stripe,
+            {
+              userId,
+              stripeCustomerId: customerId,
+              stripeBaseSubscriptionId: baseSubscriptionId,
+            },
+            STRIPE_CAPACITY_PRICE_CONFIGURATION,
+          );
+        }
+      }
+
+      if (baseSubscriptionId) {
+        const currentBase = await stripe.subscriptions.retrieve(baseSubscriptionId);
+        const currentBaseSnapshot = snapshotStripeSubscription(
+          currentBase,
+          STRIPE_BASE_PRICE_CONFIGURATION,
+        );
+        if (
+          currentBaseSnapshot.subscriptionId !== baseSubscriptionId
+          || (customerId && currentBaseSnapshot.customerId !== customerId)
+          || !currentBaseSnapshot.plan
+        ) {
+          throw new Error('The account base subscription failed Stripe ownership validation.');
+        }
+        if (!TERMINAL_SUBSCRIPTION_STATUSES.has(currentBaseSnapshot.status)) {
+          console.log(`[DeleteAccount] Canceling Stripe base subscription ${baseSubscriptionId}`);
+          const canceledBase = await stripe.subscriptions.cancel(baseSubscriptionId);
+          if (
+            canceledBase.status !== 'canceled'
+            || extractStripeId(canceledBase.customer) !== currentBaseSnapshot.customerId
+          ) {
+            throw new Error('Stripe did not cancel the account base subscription.');
+          }
+          console.log('[DeleteAccount] Stripe base subscription canceled successfully');
+        }
       }
     }
 

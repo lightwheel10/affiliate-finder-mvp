@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sql } from '@/lib/db';
-import { stripe } from '@/lib/stripe';
+import { stripe, STRIPE_BASE_PRICE_CONFIGURATION } from '@/lib/stripe';
 import { AccountAccessError, requireAuthenticatedAccount } from '@/lib/auth/account';
 import { requireServerOwnedStripeCustomerId } from '@/lib/stripe-customer-ownership';
 import {
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     const subscription = selectSingleReusableInitialSubscription(
       candidates.data,
       candidates.has_more,
+      STRIPE_BASE_PRICE_CONFIGURATION,
     );
     if (!subscription) return response('collect_card');
 
@@ -75,12 +76,7 @@ export async function POST(request: NextRequest) {
       userId: authenticated.account.id,
       stripeCustomerId,
       subscription,
-      prices: {
-        proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
-        proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
-        businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
-        businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
-      },
+      prices: STRIPE_BASE_PRICE_CONFIGURATION,
     });
     return NextResponse.json(
       {

@@ -2,7 +2,9 @@ import 'server-only';
 
 import type postgres from 'postgres';
 import { resolveRestoredLocationSchedule } from '@/lib/brand-locations/restored-location-schedule';
-import { PLAN_CATALOG, UNLIMITED, type PlanId } from '@/lib/plans/catalog';
+import { UNLIMITED, type PlanId } from '@/lib/plans/catalog';
+import { effectiveCapacityLimits } from '@/lib/stripe/capacity-subscription';
+import { readEffectivePaidCapacity } from '@/lib/stripe/capacity-entitlements-postgres';
 
 export type UpgradeCapacitySql = postgres.Sql;
 
@@ -34,6 +36,7 @@ interface AccountRow {
 interface SubscriptionRow {
   plan: unknown;
   status: unknown;
+  stripe_customer_id: unknown;
   stripe_subscription_id: unknown;
   first_payment_at: unknown;
   next_auto_scan_at: unknown;
@@ -111,6 +114,7 @@ export async function restoreDowngradeArchivedCapacity(
   transaction: UpgradeCapacitySql,
   input: {
     userId: number;
+    stripeCustomerId: string;
     targetPlan: PlanId;
     stripeSubscriptionId: string;
   },
@@ -127,7 +131,13 @@ export async function restoreDowngradeArchivedCapacity(
   }
 
   const subscriptions = await transaction<SubscriptionRow[]>`
-    SELECT plan, status, stripe_subscription_id, first_payment_at, next_auto_scan_at
+    SELECT
+      plan,
+      status,
+      stripe_customer_id,
+      stripe_subscription_id,
+      first_payment_at,
+      next_auto_scan_at
     FROM crewcast.subscriptions
     WHERE user_id = ${input.userId}
     ORDER BY id
@@ -147,6 +157,14 @@ export async function restoreDowngradeArchivedCapacity(
   if (subscription.stripe_subscription_id !== input.stripeSubscriptionId) {
     throw new Error('Upgrade restoration refused a stale Stripe subscription.');
   }
+  if (subscription.stripe_customer_id !== input.stripeCustomerId) {
+    throw new Error('Upgrade restoration refused a stale Stripe customer.');
+  }
+
+  const paidCapacity = await readEffectivePaidCapacity(transaction, {
+    userId: input.userId,
+    stripeCustomerId: input.stripeCustomerId,
+  });
 
   const brandRows = await transaction<BrandRow[]>`
     SELECT
@@ -266,7 +284,7 @@ export async function restoreDowngradeArchivedCapacity(
     };
   }
 
-  const entitlements = PLAN_CATALOG[input.targetPlan].entitlements;
+  const entitlements = effectiveCapacityLimits(input.targetPlan, paidCapacity);
   if (
     !fitsLimit(resultingBrands.length, entitlements.maxBrands)
     || !fitsLimit(resultingLocations.length, entitlements.maxLocationsPerAccount)

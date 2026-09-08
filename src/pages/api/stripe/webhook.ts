@@ -54,7 +54,11 @@ import { buffer } from 'micro';
 import { createHash } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
-import { stripe } from '@/lib/stripe';
+import {
+  stripe,
+  STRIPE_BASE_PRICE_CONFIGURATION,
+  STRIPE_CAPACITY_PRICE_CONFIGURATION,
+} from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
   initializeTrialCredits,
@@ -105,6 +109,25 @@ import {
   type UpgradeCapacityRestorationOutcome,
   type UpgradeCapacitySql,
 } from '@/lib/stripe/upgrade-capacity-postgres';
+import {
+  persistStripeCapacitySubscriptionSnapshot,
+  synchronizeStripeCapacitySubscription,
+  type CapacitySubscriptionSyncDatabase,
+} from '@/lib/stripe/capacity-subscription-sync-server';
+import {
+  finalizePaidCapacityInvoiceOperation,
+  type CapacityRecoveryDatabase,
+} from '@/lib/stripe/capacity-change-recovery-server';
+import {
+  cancelCapacityAfterBaseEnded,
+  resumeCapacityWithBase,
+  scheduleCapacityAtBaseEnd,
+  type CapacityLifecycleResult,
+} from '@/lib/stripe/capacity-lifecycle-server';
+import {
+  cancelInterruptedCapacityChangesForBaseLifecycle,
+  type CapacityChangeSql,
+} from '@/lib/stripe/capacity-change-postgres';
 // 2026-05-01: n8n transactional email integration removed (unreliable in production). See git history.
 // 2026-05-03/04: Resend integration. Wired below: payment-success, subscription-canceled,
 // credits-added. Welcome lives in src/app/api/users/route.ts. Pending: trial-ending, scan-summary.
@@ -293,12 +316,7 @@ interface CurrentSubscriptionContext {
 }
 
 function stripePriceConfiguration() {
-  return {
-    proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
-    proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
-    businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
-    businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
-  };
+  return STRIPE_BASE_PRICE_CONFIGURATION;
 }
 
 function isSupportedPlan(value: string): value is CurrentSubscriptionContext['plan'] {
@@ -307,6 +325,96 @@ function isSupportedPlan(value: string): value is CurrentSubscriptionContext['pl
 
 function unixSecondsToIso(value: number | null): string | null {
   return value === null ? null : new Date(value * 1000).toISOString();
+}
+
+async function synchronizeCapacitySubscription(
+  eventSubscription: Stripe.Subscription,
+): Promise<boolean> {
+  return synchronizeStripeCapacitySubscription(
+    sql as unknown as CapacitySubscriptionSyncDatabase,
+    stripe,
+    eventSubscription,
+    STRIPE_CAPACITY_PRICE_CONFIGURATION,
+  );
+}
+
+/**
+ * Keeps the isolated monthly add-on from outliving its required base plan.
+ * Stripe is re-read by the lifecycle helper; the resulting private mirror and
+ * any safely interrupted payment operation settle under the base-plan lock.
+ */
+async function reconcileCapacityWithBaseSubscription(
+  transaction: StripeWebhookSqlExecutor,
+  context: CurrentSubscriptionContext,
+): Promise<void> {
+  const identity = {
+    userId: context.userId,
+    stripeCustomerId: context.snapshot.customerId,
+    stripeBaseSubscriptionId: context.snapshot.subscriptionId,
+  };
+  let result: CapacityLifecycleResult | null = null;
+  let invalidatesOpenChange = false;
+
+  if (context.snapshot.status === 'active') {
+    if (context.snapshot.cancelAtPeriodEnd) {
+      result = await scheduleCapacityAtBaseEnd(
+        stripe,
+        {
+          ...identity,
+          baseEndsAtSeconds: context.snapshot.currentPeriodEndSeconds,
+        },
+        STRIPE_CAPACITY_PRICE_CONFIGURATION,
+      );
+      invalidatesOpenChange = true;
+    } else {
+      result = await resumeCapacityWithBase(
+        stripe,
+        identity,
+        STRIPE_CAPACITY_PRICE_CONFIGURATION,
+      );
+    }
+  } else if (context.snapshot.status === 'past_due') {
+    if (context.snapshot.cancelAtPeriodEnd) {
+      result = await scheduleCapacityAtBaseEnd(
+        stripe,
+        {
+          ...identity,
+          baseEndsAtSeconds: context.snapshot.currentPeriodEndSeconds,
+        },
+        STRIPE_CAPACITY_PRICE_CONFIGURATION,
+      );
+      invalidatesOpenChange = true;
+    }
+  } else if (
+    context.snapshot.status === 'canceled'
+    || context.snapshot.status === 'unpaid'
+    || context.snapshot.status === 'incomplete_expired'
+  ) {
+    result = await cancelCapacityAfterBaseEnded(
+      stripe,
+      identity,
+      STRIPE_CAPACITY_PRICE_CONFIGURATION,
+    );
+    invalidatesOpenChange = true;
+  }
+
+  if (!result) return;
+  if (result.snapshot) {
+    await persistStripeCapacitySubscriptionSnapshot(
+      transaction as unknown as CapacityChangeSql,
+      context.userId,
+      result.snapshot,
+    );
+  }
+  if (invalidatesOpenChange) {
+    await cancelInterruptedCapacityChangesForBaseLifecycle(
+      transaction as unknown as CapacityChangeSql,
+      {
+        userId: context.userId,
+        interruptedInvoiceId: result.interruptedInvoiceId,
+      },
+    );
+  }
 }
 
 /**
@@ -402,6 +510,7 @@ async function withCurrentStripeSubscription<T>(
     const authoritativeSubscription = selectAuthoritativeCustomerSubscription(
       customerSubscriptions.data,
       customerSubscriptions.has_more,
+      stripePriceConfiguration(),
     );
     const currentSubscriptionId = authoritativeSubscription?.id
       ?? owner.stripe_subscription_id
@@ -502,6 +611,7 @@ async function withCurrentStripeSubscription<T>(
           transaction as unknown as UpgradeCapacitySql,
           {
             userId: owner.user_id,
+            stripeCustomerId: customerId,
             targetPlan: plan,
             stripeSubscriptionId: snapshot.subscriptionId,
           },
@@ -533,6 +643,7 @@ async function withCurrentStripeSubscription<T>(
       transaction as unknown as SubscriptionPlanChangeSql,
       {
         userId: owner.user_id,
+        stripeCustomerId: customerId,
         stripeSubscriptionId: snapshot.subscriptionId,
         stripeScheduleId: snapshot.scheduleId,
         currentPlan: plan,
@@ -642,6 +753,10 @@ async function handleSubscriptionUpdate(
   previousAttributes?: Partial<Stripe.Subscription> // 2026-05-03: for cancel-transition detection
 ) {
   console.log(`[Webhook] Processing subscription update: ${subscription.id}, status: ${subscription.status}`);
+  if (await synchronizeCapacitySubscription(subscription)) {
+    console.log(`[Webhook] Capacity subscription ${subscription.id} synchronized without changing base-plan credits.`);
+    return;
+  }
   const customerId = extractStripeId(subscription.customer);
   if (!customerId) throw new Error(`Stripe subscription ${subscription.id} has no customer ID.`);
 
@@ -653,6 +768,8 @@ async function handleSubscriptionUpdate(
         console.log(`[Webhook] Ignored stale subscription event for ${subscription.id}; current subscription is ${context.snapshot.subscriptionId}`);
         return null;
       }
+
+      await reconcileCapacityWithBaseSubscription(transaction, context);
 
       if (context.capacityRestoration.status !== 'none') {
         console.log(
@@ -732,12 +849,17 @@ async function handleSubscriptionUpdate(
  */
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   console.log(`[Webhook] Processing subscription cancellation: ${subscription.id}`);
+  if (await synchronizeCapacitySubscription(subscription)) {
+    console.log(`[Webhook] Canceled capacity subscription ${subscription.id} synchronized.`);
+    return;
+  }
   const customerId = extractStripeId(subscription.customer);
   if (!customerId) throw new Error(`Stripe subscription ${subscription.id} has no customer ID.`);
   await withCurrentStripeSubscription(
     customerId,
     subscription.id,
-    async (_transaction, context) => {
+    async (transaction, context) => {
+      await reconcileCapacityWithBaseSubscription(transaction, context);
       console.log(`[Webhook] Subscription truth synchronized for user ${context.userId}: ${context.snapshot.status}`);
     },
   );
@@ -753,6 +875,9 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
  */
 async function handleTrialWillEnd(subscription: Stripe.Subscription) {
   console.log(`[Webhook] Trial will end soon for subscription: ${subscription.id}`);
+  if (await synchronizeCapacitySubscription(subscription)) {
+    return;
+  }
   
   const customerId = typeof subscription.customer === 'string' 
     ? subscription.customer 
@@ -807,6 +932,17 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const eventSubscriptionId = extractInvoiceSubscriptionId(invoice);
   if (!eventSubscriptionId) {
     console.log(`[Webhook] Ignoring non-subscription paid invoice ${invoice.id}.`);
+    return;
+  }
+  const eventSubscription = await stripe.subscriptions.retrieve(eventSubscriptionId);
+  if (await synchronizeCapacitySubscription(eventSubscription)) {
+    await finalizePaidCapacityInvoiceOperation(
+      sql as unknown as CapacityRecoveryDatabase,
+      eventSubscription,
+      invoice.id,
+      STRIPE_CAPACITY_PRICE_CONFIGURATION,
+    );
+    console.log(`[Webhook] Paid capacity invoice ${invoice.id} synchronized without resetting plan credits.`);
     return;
   }
   const amountPaid = typeof invoiceObject.amount_paid === 'number'
@@ -963,6 +1099,12 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     return;
   }
 
+  const eventSubscription = await stripe.subscriptions.retrieve(eventSubscriptionId);
+  if (await synchronizeCapacitySubscription(eventSubscription)) {
+    console.log(`[Webhook] Failed capacity invoice ${invoice.id} synchronized without changing the base plan.`);
+    return;
+  }
+
   await withCurrentStripeSubscription(
     customerId,
     eventSubscriptionId,
@@ -1074,6 +1216,7 @@ async function synchronizeCustomerPaymentMethod(
     const authoritativeSubscription = await readAuthoritativeStripeSubscriptionForCustomer(
       stripe,
       customerId,
+      stripePriceConfiguration(),
     );
     const currentSubscription = authoritativeSubscription
       ?? (owners[0].stripe_subscription_id

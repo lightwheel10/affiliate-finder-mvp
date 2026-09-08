@@ -10,6 +10,13 @@ import {
   type PaymentMethodUpdateStripeClient,
 } from '../../src/lib/stripe/payment-method-update-server';
 
+const basePrices = {
+  proMonthly: 'price_pro_month',
+  proAnnual: 'price_pro_year',
+  businessMonthly: 'price_business_month',
+  businessAnnual: 'price_business_year',
+};
+
 test('replayable Stripe card update uses deterministic writes and converges', async () => {
   const calls: Array<{ name: string; idempotencyKey?: string }> = [];
   const input: StripePaymentMethodUpdateIdentity = {
@@ -136,12 +143,14 @@ test('the current Stripe subscription wins over an old local subscription', asyn
     customer: 'cus_customer123',
     status: 'canceled',
     created: 1_900_000_000,
+    items: { data: [{ price: { id: basePrices.proMonthly } }] },
   } as Stripe.Subscription;
   const currentSubscription = {
     id: 'sub_current123',
     customer: 'cus_customer123',
     status: 'active',
     created: 1_800_000_000,
+    items: { data: [{ price: { id: basePrices.proMonthly } }] },
   } as Stripe.Subscription;
   const fakeStripe = {
     subscriptions: {
@@ -156,6 +165,7 @@ test('the current Stripe subscription wins over an old local subscription', asyn
     (await readAuthoritativeStripeSubscriptionForCustomer(
       fakeStripe,
       'cus_customer123',
+      basePrices,
     ))?.id,
     currentSubscription.id,
   );
@@ -163,7 +173,7 @@ test('the current Stripe subscription wins over an old local subscription', asyn
     assertStripePaymentMethodUpdateSubscriptionIsCurrent(fakeStripe, {
       stripeCustomerId: 'cus_customer123',
       stripeSubscriptionId: oldSubscription.id,
-    }),
+    }, basePrices),
     (error: unknown) => (
       error instanceof Error
       && 'code' in error
@@ -174,6 +184,43 @@ test('the current Stripe subscription wins over an old local subscription', asyn
     assertStripePaymentMethodUpdateSubscriptionIsCurrent(fakeStripe, {
       stripeCustomerId: 'cus_customer123',
       stripeSubscriptionId: currentSubscription.id,
-    }),
+    }, basePrices),
+  );
+});
+
+test('an existing Enterprise subscription remains eligible for payment-method updates', async () => {
+  const enterpriseSubscription = {
+    id: 'sub_enterprise123',
+    customer: 'cus_customer123',
+    status: 'active',
+    created: 1_800_000_000,
+    metadata: { plan: 'enterprise' },
+    items: { data: [{ price: { id: 'price_custom_enterprise' } }] },
+  } as unknown as Stripe.Subscription;
+  const capacitySubscription = {
+    id: 'sub_capacity123',
+    customer: 'cus_customer123',
+    status: 'active',
+    created: 1_900_000_000,
+    metadata: {
+      plan: 'enterprise',
+      subscription_kind: 'capacity_addons',
+    },
+    items: { data: [{ price: { id: 'price_extra_brand' } }] },
+  } as unknown as Stripe.Subscription;
+  const fakeStripe = {
+    subscriptions: {
+      list: async () => ({
+        data: [capacitySubscription, enterpriseSubscription],
+        has_more: false,
+      }),
+    },
+  } as unknown as PaymentMethodUpdateStripeClient;
+
+  await assert.doesNotReject(
+    assertStripePaymentMethodUpdateSubscriptionIsCurrent(fakeStripe, {
+      stripeCustomerId: 'cus_customer123',
+      stripeSubscriptionId: enterpriseSubscription.id,
+    }, basePrices),
   );
 });

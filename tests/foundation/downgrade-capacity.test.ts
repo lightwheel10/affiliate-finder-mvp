@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   DowngradeCapacityError,
+  assessCapacityAgainstLimits,
   assessDowngradeCapacity,
+  resolveRetentionSelectionAgainstLimits,
   resolveDowngradeRetentionSelection,
+  selectAutomaticRetentionAfterCapacityLoss,
   validateDowngradeRetentionSelection,
   type ActiveBrandCapacity,
 } from '../../src/lib/plans/downgrade-capacity';
@@ -150,4 +153,73 @@ test('fails closed on malformed or cross-brand active capacity input', () => {
     'DOWNGRADE_CAPACITY_INTEGRITY_ERROR',
     500,
   );
+});
+
+test('paid-capacity reductions reuse the same explicit keep-list rules', () => {
+  assert.deepEqual(assessCapacityAgainstLimits(capacity, {
+    maxBrands: 2,
+    maxLocations: 3,
+  }), {
+    maxBrands: 2,
+    maxLocations: 3,
+    activeBrands: 3,
+    activeLocations: 4,
+    selectionRequired: true,
+  });
+  assert.deepEqual(resolveRetentionSelectionAgainstLimits(
+    capacity,
+    { maxBrands: 2, maxLocations: 3 },
+    {
+      brandIds: ['20', '10'],
+      locationIds: ['201', '102', '101'],
+    },
+  ).selection, {
+    brandIds: ['10', '20'],
+    locationIds: ['101', '102', '201'],
+  });
+});
+
+test('paid-capacity reduction limits fail closed when misconfigured', () => {
+  expectCapacityError(
+    () => assessCapacityAgainstLimits(capacity, { maxBrands: 0, maxLocations: 3 }),
+    'DOWNGRADE_CAPACITY_INTEGRITY_ERROR',
+    500,
+  );
+  expectCapacityError(
+    () => assessCapacityAgainstLimits(capacity, { maxBrands: 2, maxLocations: 1.5 }),
+    'DOWNGRADE_CAPACITY_INTEGRITY_ERROR',
+    500,
+  );
+});
+
+test('involuntary capacity loss keeps priority brands and one priority location per brand', () => {
+  assert.deepEqual(selectAutomaticRetentionAfterCapacityLoss(
+    [
+      { id: '20', locationIds: ['202', '201'] },
+      { id: '10', locationIds: ['102', '101'] },
+      { id: '30', locationIds: ['301'] },
+    ],
+    { maxBrands: 2, maxLocations: 3 },
+    ['202', '102', '101', '201', '301'],
+  ), {
+    brandIds: ['20', '10'],
+    locationIds: ['202', '102', '101'],
+  });
+});
+
+test('involuntary capacity loss rejects an incomplete or duplicated priority list', () => {
+  const active = [
+    { id: '10', locationIds: ['101', '102'] },
+  ];
+  for (const priority of [['101'], ['101', '101']] as const) {
+    expectCapacityError(
+      () => selectAutomaticRetentionAfterCapacityLoss(
+        active,
+        { maxBrands: 1, maxLocations: 1 },
+        priority,
+      ),
+      'DOWNGRADE_CAPACITY_INTEGRITY_ERROR',
+      500,
+    );
+  }
 });

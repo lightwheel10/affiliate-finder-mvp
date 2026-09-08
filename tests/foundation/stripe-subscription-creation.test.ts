@@ -20,12 +20,25 @@ import {
 } from '../../src/lib/stripe/subscription-creation';
 import { stripeDowngradeRequestFingerprint } from '../../src/lib/stripe/downgrade-operations';
 
+const basePrices = {
+  proMonthly: 'price_pro_month',
+  proAnnual: 'price_pro_year',
+  businessMonthly: 'price_business_month',
+  businessAnnual: 'price_business_year',
+};
+
 function subscription(
   id: string,
   status: Stripe.Subscription.Status,
   created = 1_800_000_000,
+  priceId = basePrices.proMonthly,
 ): Stripe.Subscription {
-  return { id, status, created } as Stripe.Subscription;
+  return {
+    id,
+    status,
+    created,
+    items: { data: [{ price: { id: priceId } }] },
+  } as Stripe.Subscription;
 }
 
 test('offers the configured trial exactly once and validates Stripe limits', () => {
@@ -261,27 +274,70 @@ test('reuses exactly one live subscription and ignores terminal subscriptions', 
     selectSingleReusableInitialSubscription([
       subscription('sub_old', 'canceled'),
       subscription('sub_current', 'trialing'),
-    ], false)?.id,
+    ], false, basePrices)?.id,
     'sub_current',
   );
   assert.equal(
     selectSingleReusableInitialSubscription([
       subscription('sub_old', 'incomplete_expired'),
-    ], false),
+    ], false, basePrices),
     null,
   );
   assert.equal(latestTerminalSubscriptionId([
     subscription('sub_older_expired', 'incomplete_expired', 1_700_000_000),
     subscription('sub_latest_canceled', 'canceled', 1_800_000_000),
-  ]), 'sub_latest_canceled');
+  ], basePrices), 'sub_latest_canceled');
   assert.equal(selectAuthoritativeCustomerSubscription([
     subscription('sub_old_local', 'canceled', 1_900_000_000),
     subscription('sub_new_paid', 'active', 1_800_000_000),
-  ], false)?.id, 'sub_new_paid');
+  ], false, basePrices)?.id, 'sub_new_paid');
   assert.equal(selectAuthoritativeCustomerSubscription([
     subscription('sub_older_expired', 'incomplete_expired', 1_700_000_000),
     subscription('sub_latest_canceled', 'canceled', 1_800_000_000),
-  ], false)?.id, 'sub_latest_canceled');
+  ], false, basePrices)?.id, 'sub_latest_canceled');
+});
+
+test('base subscription recovery ignores the separate capacity subscription', () => {
+  const capacity = subscription('sub_capacity', 'active', 1_900_000_000, 'price_extra_brand');
+  capacity.metadata = { subscription_kind: 'capacity_addons' };
+  assert.equal(selectAuthoritativeCustomerSubscription([
+    subscription('sub_base', 'active'),
+    capacity,
+  ], false, basePrices)?.id, 'sub_base');
+  assert.equal(selectSingleReusableInitialSubscription([
+    capacity,
+  ], false, basePrices), null);
+});
+
+test('base subscription recovery preserves Enterprise without mistaking add-ons for Enterprise', () => {
+  const enterprise = subscription(
+    'sub_enterprise',
+    'active',
+    1_800_000_000,
+    'price_custom_enterprise',
+  );
+  enterprise.metadata = { plan: 'enterprise' };
+  const capacity = subscription(
+    'sub_capacity',
+    'active',
+    1_900_000_000,
+    'price_extra_brand',
+  );
+  capacity.metadata = {
+    plan: 'enterprise',
+    subscription_kind: 'capacity_addons',
+  };
+
+  assert.equal(selectAuthoritativeCustomerSubscription([
+    enterprise,
+    capacity,
+  ], false, basePrices)?.id, enterprise.id);
+  assert.equal(selectSingleReusableInitialSubscription([
+    enterprise,
+  ], false, basePrices)?.id, enterprise.id);
+  assert.equal(selectSingleReusableInitialSubscription([
+    capacity,
+  ], false, basePrices), null);
 });
 
 test('fails closed for ambiguous or truncated Stripe subscription state', () => {
@@ -289,11 +345,11 @@ test('fails closed for ambiguous or truncated Stripe subscription state', () => 
     () => selectSingleReusableInitialSubscription([
       subscription('sub_one', 'active'),
       subscription('sub_two', 'past_due'),
-    ], false),
-    /more than one live subscription/i,
+    ], false, basePrices),
+    /more than one live base subscription/i,
   );
   assert.throws(
-    () => selectSingleReusableInitialSubscription([], true),
+    () => selectSingleReusableInitialSubscription([], true, basePrices),
     /truncated subscription list/i,
   );
 });

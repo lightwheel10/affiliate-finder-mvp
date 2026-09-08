@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import type postgres from 'postgres';
 import { z } from 'zod';
-import { stripe } from '@/lib/stripe';
+import { stripe, STRIPE_BASE_PRICE_CONFIGURATION } from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
   AccountAccessError,
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       await assertStripePaymentMethodUpdateSubscriptionIsCurrent(stripe, {
         stripeCustomerId,
         stripeSubscriptionId: subscriptionRow.stripe_subscription_id,
-      });
+      }, STRIPE_BASE_PRICE_CONFIGURATION);
       return prepareStripePaymentMethodUpdateOperation(
         transaction as StripePaymentMethodUpdateSql,
         {

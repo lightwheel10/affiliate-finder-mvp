@@ -66,6 +66,7 @@ import {
   type PendingPlanChangeData,
 } from '../../hooks/useSubscription';
 import { CURRENCY_SYMBOL } from '@/lib/stripe-client';
+import type { ManagedPortfolio } from '@/lib/brand-locations/portfolio';
 import { 
   User, 
   CreditCard, 
@@ -114,6 +115,16 @@ const BrandLocationSettingsPanel = dynamic(
   },
 );
 
+const PaidCapacityManager = dynamic(
+  () => import('../../components/paid-capacity/PaidCapacityManager')
+    .then((module) => module.PaidCapacityManager),
+  {
+    loading: () => (
+      <div className="h-32 animate-pulse rounded-2xl bg-[#f6f9fc] dark:bg-gray-900" aria-hidden="true" />
+    ),
+  },
+);
+
 type SettingsTab = 'profile' | 'brands' | 'plan' | 'buy_credits' | 'security' | 'blocked_domains';
 
 const SETTINGS_TABS = new Set<SettingsTab>([
@@ -139,7 +150,10 @@ export default function SettingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
-  const { featureEnabled: brandLocationsEnabled } = useBrandLocation();
+  const {
+    featureEnabled: brandLocationsEnabled,
+    portfolio: brandPortfolio,
+  } = useBrandLocation();
   
   const { userId, user: neonUser, refetch: refetchNeonUser, supabaseUser } = useSupabaseUser();
   const { subscription, pendingPlanChange, isLoading: subscriptionLoading, isTrialing, isPastDue, daysLeftInTrial, refetch: refetchSubscription, cancelSubscription, resumeSubscription } = useSubscription(userId);
@@ -369,6 +383,9 @@ export default function SettingsPage() {
                       onAddCard={() => setIsAddCardModalOpen(true)}
                       onCancelPlan={() => setIsCancelModalOpen(true)}
                       userId={userId}
+                      brandPortfolio={brandPortfolio}
+                      brandLocationsEnabled={brandLocationsEnabled}
+                      onReviewArchived={() => changeTab('brands')}
                     />
                   )}
                   {activeTab === 'buy_credits' && (
@@ -1018,6 +1035,9 @@ interface PlanSettingsProps {
   onAddCard: () => void;
   onCancelPlan: () => void;
   userId: number | null; // Added December 2025 for invoice fetching
+  brandPortfolio: ManagedPortfolio | undefined;
+  brandLocationsEnabled: boolean;
+  onReviewArchived: () => void;
 }
 
 // =============================================================================
@@ -1117,7 +1137,21 @@ function AutoScanToggle({ userId, enabled, onChanged }: AutoScanToggleProps) {
   );
 }
 
-function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, daysLeftInTrial, pendingPlanChange, onUpgrade, onAddCard, onCancelPlan, userId }: PlanSettingsProps) {
+function PlanSettings({
+  subscription,
+  isLoading,
+  isTrialing,
+  isPastDue = false,
+  daysLeftInTrial,
+  pendingPlanChange,
+  onUpgrade,
+  onAddCard,
+  onCancelPlan,
+  userId,
+  brandPortfolio,
+  brandLocationsEnabled,
+  onReviewArchived,
+}: PlanSettingsProps) {
   // January 17, 2026: Added i18n support
   const { t, language } = useLanguage();
   
@@ -1392,6 +1426,15 @@ function PlanSettings({ subscription, isLoading, isTrialing, isPastDue = false, 
           </div>
         )}
       </div>
+
+      {brandLocationsEnabled && (
+        <PaidCapacityManager
+          userId={userId}
+          portfolio={brandPortfolio}
+          placement="billing"
+          onReviewArchived={onReviewArchived}
+        />
+      )}
 
       {/* Payment Method — smoover refresh (April 25th, 2026).
           h3 drops font-black uppercase. Filled-state row migrates to soft

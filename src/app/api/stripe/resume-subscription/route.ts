@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { stripe } from '@/lib/stripe';
+import {
+  stripe,
+  STRIPE_CAPACITY_PRICE_CONFIGURATION,
+} from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
   AccountAccessError,
@@ -14,6 +17,9 @@ import {
   StripeMutationRequestError,
 } from '@/lib/stripe/mutation-request';
 import { subscriptionLifecycleMutationIdempotencyKey } from '@/lib/stripe/subscription-creation';
+import { resumeCapacityWithBase } from '@/lib/stripe/capacity-lifecycle-server';
+import { persistStripeCapacitySubscriptionSnapshot } from '@/lib/stripe/capacity-subscription-sync-server';
+import type { CapacityChangeSql } from '@/lib/stripe/capacity-change-postgres';
 
 const resumeSubscriptionSchema = z.object({
   userId: z.number().int().positive(),
@@ -134,23 +140,58 @@ export async function POST(request: NextRequest) {
     const periodEndIso = updatedSnapshot.currentPeriodEndSeconds
       ? new Date(updatedSnapshot.currentPeriodEndSeconds * 1000).toISOString()
       : null;
+    const capacityLifecycle = await resumeCapacityWithBase(
+      stripe,
+      {
+        userId,
+        stripeCustomerId: stripe_customer_id,
+        stripeBaseSubscriptionId: stripe_subscription_id,
+      },
+      STRIPE_CAPACITY_PRICE_CONFIGURATION,
+    );
 
     // ==========================================================================
     // UPDATE DATABASE
     // ==========================================================================
-    const updated = await sql<{ user_id: number }[]>`
-      UPDATE crewcast.subscriptions
-      SET
-        cancel_at_period_end = false,
-        updated_at = NOW()
-      WHERE user_id = ${userId}
-        AND stripe_customer_id = ${stripe_customer_id}
-        AND stripe_subscription_id = ${stripe_subscription_id}
-      RETURNING user_id
-    `;
-    if (updated.length !== 1) {
-      throw new Error('Resume did not update exactly one application subscription.');
-    }
+    await (sql as unknown as {
+      begin<T>(callback: (transaction: CapacityChangeSql) => Promise<T>): Promise<T>;
+    }).begin(async (transaction) => {
+      await transaction`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(${`stripe-subscription:${stripe_customer_id}`}, 0)
+        )
+      `;
+      const lockedAccounts = await transaction<{ id: number }[]>`
+        SELECT id
+        FROM crewcast.users
+        WHERE id = ${userId}
+        LIMIT 2
+        FOR UPDATE
+      `;
+      if (lockedAccounts.length !== 1) {
+        throw new Error('Resume account ownership changed during billing update.');
+      }
+      const updated = await transaction<{ user_id: number }[]>`
+        UPDATE crewcast.subscriptions
+        SET
+          cancel_at_period_end = false,
+          updated_at = NOW()
+        WHERE user_id = ${userId}
+          AND stripe_customer_id = ${stripe_customer_id}
+          AND stripe_subscription_id = ${stripe_subscription_id}
+        RETURNING user_id
+      `;
+      if (updated.length !== 1) {
+        throw new Error('Resume did not update exactly one application subscription.');
+      }
+      if (capacityLifecycle.snapshot) {
+        await persistStripeCapacitySubscriptionSnapshot(
+          transaction,
+          userId,
+          capacityLifecycle.snapshot,
+        );
+      }
+    });
 
     console.log(`[Stripe] Subscription ${stripe_subscription_id} resumed`);
 

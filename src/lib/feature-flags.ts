@@ -5,3 +5,9 @@ export function isMultiBrandLocationsEnabled(): boolean {
       .toLowerCase() === "true"
   );
 }
+
+/** Paid capacity is unusable unless the underlying management feature is on. */
+export function isPaidCapacityEnabled(): boolean {
+  return isMultiBrandLocationsEnabled()
+    && process.env.PAID_CAPACITY_ENABLED?.trim().toLowerCase() === 'true';
+}

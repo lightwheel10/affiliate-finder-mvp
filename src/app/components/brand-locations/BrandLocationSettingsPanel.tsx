@@ -30,6 +30,7 @@ import {
   requestBrandLocationApi,
   useBrandPortfolio,
 } from '@/app/hooks/useBrandPortfolio';
+import { PaidCapacityManager } from '@/app/components/paid-capacity/PaidCapacityManager';
 import { useSupabaseUser } from '@/app/hooks/useSupabaseUser';
 import { useBrandLocation } from '@/contexts/BrandLocationContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -60,7 +61,7 @@ function hasCapacity(current: number, maximum: number): boolean {
 export function BrandLocationSettingsPanel() {
   const { language, t } = useLanguage();
   const copy = t.dashboard.brandLocations;
-  const { supabaseUser } = useSupabaseUser();
+  const { userId, supabaseUser } = useSupabaseUser();
   const {
     portfolio: activePortfolio,
     activeLocation,
@@ -239,22 +240,13 @@ export function BrandLocationSettingsPanel() {
         </header>
 
           {capacity && (
-            <section className="grid gap-3 sm:grid-cols-2" aria-label={copy.planCapacity}>
-              <CapacityCard
-                icon={<Building2 size={17} />}
-                current={capacity.activeBrands}
-                maximum={capacity.maxBrands}
-                label={copy.brandsUsed}
-                unlimitedLabel={copy.unlimited}
-              />
-              <CapacityCard
-                icon={<Globe2 size={17} />}
-                current={capacity.activeLocations}
-                maximum={capacity.maxLocationsPerAccount}
-                label={copy.locationsUsed}
-                unlimitedLabel={copy.unlimited}
-              />
-            </section>
+            <PaidCapacityManager
+              userId={userId}
+              portfolio={portfolio}
+              placement="management"
+              onChanged={refresh}
+              onReviewArchived={() => setShowArchived(true)}
+            />
           )}
 
           {error ? (
@@ -392,33 +384,6 @@ export function BrandLocationSettingsPanel() {
         </div>
       </Modal>
     </>
-  );
-}
-
-function CapacityCard({
-  icon,
-  current,
-  maximum,
-  label,
-  unlimitedLabel,
-}: {
-  icon: React.ReactNode;
-  current: number;
-  maximum: number;
-  label: string;
-  unlimitedLabel: string;
-}) {
-  const maximumLabel = maximum < 0 ? unlimitedLabel : maximum.toString();
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-[#e6ebf1] bg-white px-4 py-3 shadow-soft-sm dark:border-gray-800 dark:bg-[#0f0f0f]">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#fff4d1] text-[#0f172a] dark:bg-[#ffbf23]/10 dark:text-[#ffbf23]">
-        {icon}
-      </span>
-      <div>
-        <p className="text-sm font-bold tabular-nums text-[#0f172a] dark:text-white">{current} / {maximumLabel}</p>
-        <p className="text-xs text-[#8898aa]">{label}</p>
-      </div>
-    </div>
   );
 }
 

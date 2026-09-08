@@ -148,6 +148,26 @@ function planFromPriceId(
   return null;
 }
 
+/**
+ * Identifies the application's base subscription without confusing it with
+ * the separate capacity add-on subscription. Pro and Business are proven by
+ * configured price identity. Enterprise has no configured catalogue price in
+ * this application, so its existing explicit plan metadata remains the narrow
+ * compatibility fallback used by snapshotStripeSubscription below.
+ */
+export function isConfiguredBasePlanSubscription(
+  subscription: StripeSubscriptionLike,
+  prices: SubscriptionPriceConfiguration,
+): boolean {
+  const items = subscription.items?.data;
+  if (!Array.isArray(items) || items.length !== 1) return false;
+  if (subscription.metadata?.subscription_kind === 'capacity_addons') return false;
+
+  const priceId = extractStripeId(items[0]?.price);
+  if (planFromPriceId(priceId, prices) !== null) return true;
+  return priceId !== null && readPlan(subscription.metadata?.plan) === 'enterprise';
+}
+
 export function snapshotStripeSubscription(
   subscription: StripeSubscriptionLike,
   prices: SubscriptionPriceConfiguration,

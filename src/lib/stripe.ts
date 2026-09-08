@@ -1,5 +1,8 @@
 import Stripe from 'stripe';
+import { isPaidCapacityEnabled } from './feature-flags';
 import { PLAN_CATALOG } from './plans/catalog';
+import type { SubscriptionPriceConfiguration } from './stripe/subscription-state';
+import type { CapacityPriceConfiguration } from './stripe/capacity-subscription';
 
 // =============================================================================
 // STRIPE SERVER-SIDE CONFIGURATION
@@ -30,6 +33,26 @@ export const STRIPE_PRICE_IDS = {
     annual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL!,
   },
 } as const;
+
+/** One shared server-side catalogue for identifying the account's base plan. */
+export const STRIPE_BASE_PRICE_CONFIGURATION: SubscriptionPriceConfiguration = {
+  proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+  proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+  businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+  businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
+};
+
+/**
+ * Capacity prices stay server-only. The feature remains unavailable until both
+ * prices are configured and both the paid-capacity and underlying
+ * brand/location feature switches are explicitly true.
+ */
+export const STRIPE_CAPACITY_PRICE_CONFIGURATION: CapacityPriceConfiguration = {
+  extraBrandMonthly: process.env.STRIPE_PRICE_EXTRA_BRAND_MONTHLY,
+  extraLocationMonthly: process.env.STRIPE_PRICE_EXTRA_LOCATION_MONTHLY,
+};
+
+export const PAID_CAPACITY_ENABLED = isPaidCapacityEnabled();
 
 // =============================================================================
 // PLAN DETAILS (for reference and validation)

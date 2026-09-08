@@ -36,6 +36,10 @@ export interface ManagedBrand {
 
 export interface ManagedCapacity {
   plan: PlanId;
+  includedBrands: number;
+  includedLocationsPerAccount: number;
+  paidExtraBrands: number;
+  paidExtraLocations: number;
   maxBrands: number;
   maxLocationsPerAccount: number;
   activeBrands: number;

@@ -10,7 +10,10 @@ import {
   type StripePaymentMethodUpdateIdentity,
 } from './payment-method-update';
 import { selectAuthoritativeCustomerSubscription } from './subscription-creation';
-import { extractStripeId } from './subscription-state';
+import {
+  extractStripeId,
+  type SubscriptionPriceConfiguration,
+} from './subscription-state';
 
 export type PaymentMethodUpdateStripeClient = Pick<
   Stripe,
@@ -21,6 +24,7 @@ export type PaymentMethodUpdateStripeClient = Pick<
 export async function readAuthoritativeStripeSubscriptionForCustomer(
   stripeClient: PaymentMethodUpdateStripeClient,
   stripeCustomerId: string,
+  prices: SubscriptionPriceConfiguration,
 ): Promise<Stripe.Subscription | null> {
   const subscriptions = await stripeClient.subscriptions.list({
     customer: stripeCustomerId,
@@ -30,6 +34,7 @@ export async function readAuthoritativeStripeSubscriptionForCustomer(
   const subscription = selectAuthoritativeCustomerSubscription(
     subscriptions.data,
     subscriptions.has_more,
+    prices,
   );
   if (subscription && extractStripeId(subscription.customer) !== stripeCustomerId) {
     throw new StripePaymentMethodUpdateError(
@@ -44,10 +49,12 @@ export async function readAuthoritativeStripeSubscriptionForCustomer(
 export async function assertStripePaymentMethodUpdateSubscriptionIsCurrent(
   stripeClient: PaymentMethodUpdateStripeClient,
   input: { stripeCustomerId: string; stripeSubscriptionId: string | null },
+  prices: SubscriptionPriceConfiguration,
 ): Promise<void> {
   const current = await readAuthoritativeStripeSubscriptionForCustomer(
     stripeClient,
     input.stripeCustomerId,
+    prices,
   );
   if ((current?.id ?? null) !== input.stripeSubscriptionId) {
     throw new StripePaymentMethodUpdateError(

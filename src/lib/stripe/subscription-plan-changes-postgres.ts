@@ -285,6 +285,7 @@ export async function synchronizePendingSubscriptionPlanChange(
   executor: SubscriptionPlanChangeSql,
   input: {
     userId: number;
+    stripeCustomerId: string;
     stripeSubscriptionId: string;
     stripeScheduleId: string | null;
     currentPlan: PendingSubscriptionPlanChange['fromPlan'];
@@ -307,6 +308,7 @@ export async function synchronizePendingSubscriptionPlanChange(
       if (pending.capacitySelectionVersion === 1) {
         await reconcileAppliedDowngradeCapacity(transaction, {
           userId: input.userId,
+          stripeCustomerId: input.stripeCustomerId,
           planChangeId: pending.id,
           targetPlan: pending.toPlan,
           selection: {

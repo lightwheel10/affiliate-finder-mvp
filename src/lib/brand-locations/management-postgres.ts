@@ -20,8 +20,15 @@ import type {
   ManagedLocation,
   ManagedPortfolio,
 } from '@/lib/brand-locations/portfolio';
-import { assertNotRetainedByPendingDowngrade } from '@/lib/stripe/downgrade-capacity-postgres';
+import {
+  assertNoOpenPaidCapacityReduction,
+  assertNotRetainedByPendingDowngrade,
+} from '@/lib/stripe/downgrade-capacity-postgres';
 import { resolveRestoredLocationSchedule } from '@/lib/brand-locations/restored-location-schedule';
+import {
+  effectivePaidCapacity,
+  type PaidCapacityQuantities,
+} from '@/lib/stripe/capacity-subscription';
 
 export type {
   ManagedBrand,
@@ -40,9 +47,17 @@ interface AccountRow {
 interface SubscriptionRow {
   plan: unknown;
   status: unknown;
+  stripe_customer_id: unknown;
   stripe_subscription_id: unknown;
   first_payment_at: unknown;
   next_auto_scan_at: unknown;
+}
+
+interface PaidCapacityRow {
+  stripe_customer_id: unknown;
+  status: unknown;
+  extra_brand_quantity: unknown;
+  extra_location_quantity: unknown;
 }
 
 interface BrandRow {
@@ -257,6 +272,7 @@ async function readSubscription(
     SELECT
       plan,
       status,
+      stripe_customer_id,
       stripe_subscription_id,
       first_payment_at,
       next_auto_scan_at
@@ -269,17 +285,71 @@ async function readSubscription(
   return oneOrNull(rows, 'Subscription lookup');
 }
 
+async function readPaidCapacity(
+  executor: SqlClient,
+  accountId: number,
+  lock: boolean,
+): Promise<PaidCapacityRow | null> {
+  const rows = await executor<PaidCapacityRow[]>`
+    SELECT
+      stripe_customer_id,
+      status,
+      extra_brand_quantity,
+      extra_location_quantity
+    FROM crewcast.stripe_capacity_subscriptions
+    WHERE user_id = ${accountId}
+    LIMIT 2
+    ${lock ? executor`FOR UPDATE` : executor``}
+  `;
+  return oneOrNull(rows, 'Paid capacity lookup');
+}
+
+function resolvePaidCapacity(
+  subscription: SubscriptionRow,
+  capacity: PaidCapacityRow | null,
+): PaidCapacityQuantities {
+  if (!capacity) return { extraBrands: 0, extraLocations: 0 };
+
+  const baseCustomerId = readString(
+    subscription.stripe_customer_id,
+    'Base Stripe customer ID',
+  );
+  const capacityCustomerId = readString(
+    capacity.stripe_customer_id,
+    'Capacity Stripe customer ID',
+  );
+  if (baseCustomerId !== capacityCustomerId) {
+    throw integrityError('Base and capacity subscriptions belong to different Stripe customers.');
+  }
+
+  return effectivePaidCapacity(
+    readString(capacity.status, 'Capacity subscription status'),
+    {
+      extraBrands: readCount(capacity.extra_brand_quantity, 'Extra brand quantity'),
+      extraLocations: readCount(
+        capacity.extra_location_quantity,
+        'Extra location quantity',
+      ),
+    },
+  );
+}
+
 async function requireCapacityEntitlements(
   transaction: SqlClient,
   accountId: number,
 ): Promise<{ entitlements: ManagementEntitlements; subscription: SubscriptionRow }> {
+  // The account row is already locked by every mutation caller. Lock billing
+  // rows in a fixed order as well, preventing concurrent entitlement changes
+  // and create/restore requests from observing different capacity generations.
   const subscription = await readSubscription(transaction, accountId, true);
+  const paidCapacity = await readPaidCapacity(transaction, accountId, true);
   const entitlements = resolveCapacityEntitlements(subscription && {
     plan: subscription.plan,
     status: subscription.status,
     stripeSubscriptionId: subscription.stripe_subscription_id,
-  });
+  }, subscription ? resolvePaidCapacity(subscription, paidCapacity) : undefined);
   if (!subscription) throw integrityError('Capacity validation lost its subscription row.');
+  await assertNoOpenPaidCapacityReduction(transaction, accountId);
   return { entitlements, subscription };
 }
 
@@ -436,7 +506,7 @@ export async function listManagedPortfolio(
   database: SqlClient = sql as SqlClient,
 ): Promise<ManagedPortfolio> {
   return withManagementReadSnapshot(database, async (snapshot) => {
-    const [brandRows, locationRows, subscription, countRows] = await Promise.all([
+    const [brandRows, locationRows, subscription, paidCapacity, countRows] = await Promise.all([
       snapshot<BrandRow[]>`
       SELECT ${BRAND_COLUMNS}
       FROM crewcast.brands
@@ -454,6 +524,7 @@ export async function listManagedPortfolio(
       LIMIT ${MANAGEMENT_RESOURCE_LIMITS.maxRetainedLocationsPerAccount + 1}
     `,
       readSubscription(snapshot, accountId, false),
+      readPaidCapacity(snapshot, accountId, false),
       snapshot<{ active_brands: unknown; active_locations: unknown }[]>`
       SELECT
         (SELECT count(*) FROM crewcast.brands
@@ -494,7 +565,7 @@ export async function listManagedPortfolio(
           plan: subscription.plan,
           status: subscription.status,
           stripeSubscriptionId: subscription.stripe_subscription_id,
-        });
+        }, resolvePaidCapacity(subscription, paidCapacity));
         const counts = oneOrNull(countRows, 'Portfolio capacity count');
         if (!counts) throw integrityError('Portfolio capacity count returned no row.');
         capacity = {
@@ -886,6 +957,7 @@ export async function archiveManagedLocation(
         scan_claimed_at = NULL,
         scan_lease_expires_at = NULL,
         capacity_archived_by_plan_change_id = NULL,
+        capacity_archived_by_addon_operation_id = NULL,
         archived_at = statement_timestamp()
       WHERE id = ${locationId}::bigint
         AND user_id = ${accountId}
@@ -965,6 +1037,7 @@ export async function restoreManagedLocation(
           auto_scan_enabled = ${schedule.autoScanEnabled},
           next_auto_scan_at = ${schedule.nextAutoScanAt},
           capacity_archived_by_plan_change_id = NULL,
+          capacity_archived_by_addon_operation_id = NULL,
           archived_at = NULL
         WHERE id = ${locationId}::bigint
           AND user_id = ${accountId}
@@ -1079,6 +1152,7 @@ export async function archiveManagedBrand(
         scan_claimed_at = NULL,
         scan_lease_expires_at = NULL,
         capacity_archived_by_plan_change_id = NULL,
+        capacity_archived_by_addon_operation_id = NULL,
         archived_at = statement_timestamp()
       WHERE user_id = ${accountId}
         AND brand_id = ${brandId}::bigint
@@ -1089,6 +1163,7 @@ export async function archiveManagedBrand(
       SET
         is_default = false,
         capacity_archived_by_plan_change_id = NULL,
+        capacity_archived_by_addon_operation_id = NULL,
         archived_at = statement_timestamp()
       WHERE id = ${brandId}::bigint
         AND user_id = ${accountId}
@@ -1134,6 +1209,7 @@ export async function restoreManagedBrand(
         SET
           is_default = ${activeBrands === 0},
           capacity_archived_by_plan_change_id = NULL,
+          capacity_archived_by_addon_operation_id = NULL,
           archived_at = NULL
         WHERE id = ${brandId}::bigint
           AND user_id = ${accountId}

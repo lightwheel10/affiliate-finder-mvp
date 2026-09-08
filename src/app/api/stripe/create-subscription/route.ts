@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { stripe, getPriceId, isValidPlan, isValidInterval, TRIAL_DAYS } from '@/lib/stripe';
+import {
+  stripe,
+  getPriceId,
+  isValidPlan,
+  isValidInterval,
+  STRIPE_BASE_PRICE_CONFIGURATION,
+  TRIAL_DAYS,
+} from '@/lib/stripe';
 import { sql } from '@/lib/db';
 import {
   AccountAccessError,
@@ -196,14 +203,13 @@ export async function POST(request: NextRequest) {
     const recoveredSubscription = selectSingleReusableInitialSubscription(
       customerSubscriptions.data,
       customerSubscriptions.has_more,
+      STRIPE_BASE_PRICE_CONFIGURATION,
     );
     if (recoveredSubscription) {
-      const recoveredSnapshot = snapshotStripeSubscription(recoveredSubscription, {
-        proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
-        proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
-        businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
-        businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
-      });
+      const recoveredSnapshot = snapshotStripeSubscription(
+        recoveredSubscription,
+        STRIPE_BASE_PRICE_CONFIGURATION,
+      );
       if (recoveredSnapshot.plan !== plan || recoveredSnapshot.billingInterval !== billingInterval) {
         return NextResponse.json(
           {
@@ -353,6 +359,7 @@ export async function POST(request: NextRequest) {
       },
       metadata: {
         neon_user_id: userId.toString(),
+        subscription_kind: 'base_plan',
         plan: plan,
         billing_interval: billingInterval,
         ...(promotionCodeId ? { promotion_code_id: promotionCodeId } : {}),
@@ -375,7 +382,10 @@ export async function POST(request: NextRequest) {
         idempotencyKey: initialSubscriptionIdempotencyKey(
           userId,
           stripeCustomerId,
-          latestTerminalSubscriptionId(customerSubscriptions.data),
+          latestTerminalSubscriptionId(
+            customerSubscriptions.data,
+            STRIPE_BASE_PRICE_CONFIGURATION,
+          ),
         ),
       },
     );
@@ -399,12 +409,10 @@ export async function POST(request: NextRequest) {
     const cardExpMonth = card?.exp_month || null;
     const cardExpYear = card?.exp_year || null;
 
-    const subscriptionSnapshot = snapshotStripeSubscription(subscription, {
-      proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
-      proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
-      businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
-      businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
-    });
+    const subscriptionSnapshot = snapshotStripeSubscription(
+      subscription,
+      STRIPE_BASE_PRICE_CONFIGURATION,
+    );
     if (
       subscriptionSnapshot.plan !== plan
       || subscriptionSnapshot.billingInterval !== billingInterval

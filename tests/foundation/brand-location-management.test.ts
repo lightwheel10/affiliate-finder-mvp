@@ -38,7 +38,15 @@ test('capacity comes only from a real active or trialing subscription row', () =
       status: 'trialing',
       stripeSubscriptionId: 'sub_pro',
     }),
-    { plan: 'pro', maxBrands: 1, maxLocationsPerAccount: 2 },
+    {
+      plan: 'pro',
+      includedBrands: 1,
+      includedLocationsPerAccount: 2,
+      paidExtraBrands: 0,
+      paidExtraLocations: 0,
+      maxBrands: 1,
+      maxLocationsPerAccount: 2,
+    },
   );
   assert.deepEqual(
     resolveCapacityEntitlements({
@@ -46,7 +54,15 @@ test('capacity comes only from a real active or trialing subscription row', () =
       status: 'active',
       stripeSubscriptionId: 'sub_business',
     }),
-    { plan: 'business', maxBrands: 5, maxLocationsPerAccount: 5 },
+    {
+      plan: 'business',
+      includedBrands: 5,
+      includedLocationsPerAccount: 5,
+      paidExtraBrands: 0,
+      paidExtraLocations: 0,
+      maxBrands: 5,
+      maxLocationsPerAccount: 5,
+    },
   );
 
   for (const subscription of [
@@ -70,6 +86,38 @@ test('capacity comes only from a real active or trialing subscription row', () =
     'MANAGEMENT_INTEGRITY_ERROR',
     500,
   );
+});
+
+test('paid capacity adds to active plans but never to a trial', () => {
+  assert.deepEqual(resolveCapacityEntitlements({
+    plan: 'pro',
+    status: 'active',
+    stripeSubscriptionId: 'sub_pro',
+  }, {
+    extraBrands: 2,
+    extraLocations: 4,
+  }), {
+    plan: 'pro',
+    includedBrands: 1,
+    includedLocationsPerAccount: 2,
+    paidExtraBrands: 2,
+    paidExtraLocations: 4,
+    maxBrands: 3,
+    maxLocationsPerAccount: 6,
+  });
+
+  const trial = resolveCapacityEntitlements({
+    plan: 'pro',
+    status: 'trialing',
+    stripeSubscriptionId: 'sub_trial',
+  }, {
+    extraBrands: 2,
+    extraLocations: 4,
+  });
+  assert.equal(trial.maxBrands, 1);
+  assert.equal(trial.maxLocationsPerAccount, 2);
+  assert.equal(trial.paidExtraBrands, 0);
+  assert.equal(trial.paidExtraLocations, 0);
 });
 
 test('account-wide brand and location limits fail closed at the exact boundary', () => {

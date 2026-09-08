@@ -47,6 +47,11 @@ import {
 } from '@/lib/stripe/upgrade-capacity-postgres';
 import { immediateSubscriptionChangeIdempotencyKey } from '@/lib/stripe/subscription-creation';
 import {
+  assertNoOpenPaidCapacityChange,
+  CapacityChangeOperationConflictError,
+  type CapacityChangeSql,
+} from '@/lib/stripe/capacity-change-postgres';
+import {
   readStripeMutationJson,
   StripeMutationRequestError,
 } from '@/lib/stripe/mutation-request';
@@ -379,19 +384,6 @@ export async function POST(request: NextRequest) {
       console.log(`[Stripe Change] User ${userId} is ending trial early on ${newPlan} ${newBillingInterval}`);
     }
 
-    // Get the subscription item ID (we need this to update the price)
-    // A subscription can have multiple items, but we only have one (the plan)
-    const subscriptionItemId = stripeSubscription.items.data[0]?.id;
-    const sourcePriceId = extractStripeId(stripeSubscription.items.data[0]?.price);
-    
-    if (!subscriptionItemId || !sourcePriceId) {
-      console.error(`[Stripe Change] No subscription item found for subscription ${stripe_subscription_id}`);
-      return NextResponse.json(
-        { error: 'Invalid subscription structure' },
-        { status: 500 }
-      );
-    }
-
     // =========================================================================
     // STEP 9: DETERMINE UPGRADE VS DOWNGRADE
     // This affects proration behavior
@@ -445,8 +437,13 @@ export async function POST(request: NextRequest) {
           stripeCustomerId: stripe_customer_id,
           stripeSubscriptionId: stripe_subscription_id,
         });
+        await assertNoOpenPaidCapacityChange(
+          transaction as unknown as CapacityChangeSql,
+          userId,
+        );
         const capacity = await prepareDowngradeCapacitySelection(transaction, {
           userId,
+          stripeCustomerId: stripe_customer_id,
           targetPlan: newPlan,
           requestedSelection: downgradeRetention as DowngradeRetentionSelection | undefined,
         });
@@ -475,8 +472,13 @@ export async function POST(request: NextRequest) {
           stripeCustomerId: stripe_customer_id,
           stripeSubscriptionId: stripe_subscription_id,
         });
+        await assertNoOpenPaidCapacityChange(
+          transaction as unknown as CapacityChangeSql,
+          userId,
+        );
         const capacity = await prepareDowngradeCapacitySelection(transaction, {
           userId,
+          stripeCustomerId: stripe_customer_id,
           targetPlan: newPlan,
           requestedSelection: downgradeRetention as DowngradeRetentionSelection | undefined,
         });
@@ -602,21 +604,78 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // A customer can change direction while a managed downgrade is pending.
-    // Release only schedules created by this application; an unknown Stripe
-    // schedule is never overwritten or silently discarded.
-    const releasedScheduleId = await releaseManagedPlanSchedule(
-      stripe.subscriptionSchedules,
-      stripeSubscription,
-      `immediate-change-${newPlan}-${newBillingInterval}`,
-    );
-    if (releasedScheduleId) {
-      await cancelPendingSubscriptionPlanChange(
-        sql as unknown as SubscriptionPlanChangeSql,
+    const immediateResult = await (sql as unknown as {
+      begin<T>(callback: (transaction: SubscriptionPlanChangeSql) => Promise<T>): Promise<T>;
+    }).begin(async (transaction) => {
+      // Hold the same account-scoped lock used by capacity purchases for the
+      // complete Stripe mutation. This prevents a plan change and add-on
+      // payment from making conflicting decisions from two stale snapshots.
+      await lockStripeSubscriptionOwner(transaction, {
         userId,
-        releasedScheduleId,
+        stripeCustomerId: stripe_customer_id,
+        stripeSubscriptionId: stripe_subscription_id,
+      });
+      await assertNoOpenPaidCapacityChange(
+        transaction as unknown as CapacityChangeSql,
+        userId,
       );
-    }
+
+      stripeSubscription = await stripe.subscriptions.retrieve(stripe_subscription_id);
+      const lockedSnapshot = snapshotStripeSubscription(stripeSubscription, {
+        proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+        proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
+        businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+        businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
+      });
+      if (
+        lockedSnapshot.customerId !== stripe_customer_id
+        || lockedSnapshot.plan !== effectiveCurrentPlan
+        || lockedSnapshot.billingInterval !== effectiveCurrentInterval
+        || !isPlanChangeEligibleSubscriptionStatus(lockedSnapshot.status)
+      ) {
+        throw new PendingSubscriptionChangeConflictError();
+      }
+      const lockedPaymentAction = await readPendingPaymentAction(
+        stripeSubscription,
+        newPriceId,
+      );
+      if (lockedPaymentAction) {
+        return {
+          response: NextResponse.json(
+            {
+              error: 'Please confirm the payment to finish this plan change.',
+              code: 'PAYMENT_ACTION_REQUIRED',
+              clientSecret: lockedPaymentAction.clientSecret,
+              invoiceId: lockedPaymentAction.invoiceId,
+            },
+            { status: 402 },
+          ),
+        } as const;
+      }
+
+      // A customer can change direction while a managed downgrade is pending.
+      // Release only schedules created by this application; an unknown Stripe
+      // schedule is never overwritten or silently discarded.
+      const releasedScheduleId = await releaseManagedPlanSchedule(
+        stripe.subscriptionSchedules,
+        stripeSubscription,
+        `immediate-change-${newPlan}-${newBillingInterval}`,
+      );
+      if (releasedScheduleId) {
+        await cancelPendingSubscriptionPlanChange(
+          transaction,
+          userId,
+          releasedScheduleId,
+        );
+      }
+
+      // Re-read item identity under the lock. Stripe may replace item objects
+      // while attaching or releasing a managed schedule.
+      const subscriptionItemId = stripeSubscription.items.data[0]?.id;
+      const sourcePriceId = extractStripeId(stripeSubscription.items.data[0]?.price);
+      if (!subscriptionItemId || !sourcePriceId) {
+        throw new Error('The current Stripe base subscription has no valid plan item.');
+      }
 
     // =========================================================================
     // STEP 11: UPDATE SUBSCRIPTION IN STRIPE
@@ -626,109 +685,117 @@ export async function POST(request: NextRequest) {
     // Upgrades and same-plan interval changes use Stripe prorations.
     // =========================================================================
 
-    const updateParams: Stripe.SubscriptionUpdateParams = {
-      items: [{
-        id: subscriptionItemId,
-        price: newPriceId,
-      }],
+      const updateParams: Stripe.SubscriptionUpdateParams = {
+        items: [{
+          id: subscriptionItemId,
+          price: newPriceId,
+        }],
       // Stripe's documented pending-update flow keeps the old plan in force
       // until the upgrade/interval-change invoice is actually paid.
       payment_behavior: 'pending_if_incomplete',
       proration_behavior: 'always_invoice',
       expand: ['latest_invoice.confirmation_secret'],
-    };
+      };
 
     // Every branch reaching this point is an immediate, potentially chargeable
     // change. `always_invoice` above attempts the prorated payment now; the old
     // `create_prorations` value could defer it until a later invoice.
-    if (isUpgrade || isSamePlanIntervalChange) {
-      console.log(`[Stripe Change] Applying an immediate, payment-gated prorated change`);
-    }
+      if (isUpgrade || isSamePlanIntervalChange) {
+        console.log(`[Stripe Change] Applying an immediate, payment-gated prorated change`);
+      }
 
     // Handle trial ending option
-    if (isTrialing && endTrialNow) {
+      if (isTrialing && endTrialNow) {
       // User wants to end trial and start paying immediately
-      updateParams.trial_end = 'now';
-      console.log(`[Stripe Change] Ending trial immediately for user ${userId}`);
-    }
+        updateParams.trial_end = 'now';
+        console.log(`[Stripe Change] Ending trial immediately for user ${userId}`);
+      }
 
     // `cancel_at_period_end` is not supported inside Stripe pending updates.
     // Clear it separately and idempotently before attempting the paid change.
-    if (stripeSnapshot.cancelAtPeriodEnd) {
-      stripeSubscription = await stripe.subscriptions.update(
+      if (lockedSnapshot.cancelAtPeriodEnd) {
+        stripeSubscription = await stripe.subscriptions.update(
         stripe_subscription_id,
         { cancel_at_period_end: false },
         {
           idempotencyKey:
-            `resume-for-plan-change:${stripe_subscription_id}:${stripeSnapshot.currentPeriodEndSeconds ?? 'unknown'}`
+            `resume-for-plan-change:${stripe_subscription_id}:${lockedSnapshot.currentPeriodEndSeconds ?? 'unknown'}`
               .slice(0, 255),
         },
       );
-      console.log(`[Stripe Change] Removing pending cancellation`);
-    }
+        console.log(`[Stripe Change] Removing pending cancellation`);
+      }
 
     // =========================================================================
     // STEP 11: EXECUTE THE UPDATE
     // =========================================================================
     console.log(`[Stripe Change] Updating subscription ${stripe_subscription_id} with new price ${newPriceId}`);
     
-    let updatedSubscription;
-    const stripeChangeIdempotencyKey = immediateSubscriptionChangeIdempotencyKey({
-      accountId: userId,
-      stripeCustomerId: stripe_customer_id,
-      stripeSubscriptionId: stripe_subscription_id,
-      sourcePriceId,
-      sourceStatus: stripeSubscription.status,
-      sourcePeriodEndSeconds: stripeSnapshot.currentPeriodEndSeconds,
-      attachedScheduleId: stripeSnapshot.scheduleId,
-    });
-    try {
-      updatedSubscription = await stripe.subscriptions.update(
+      let updatedSubscription;
+      const stripeChangeIdempotencyKey = immediateSubscriptionChangeIdempotencyKey({
+        accountId: userId,
+        stripeCustomerId: stripe_customer_id,
+        stripeSubscriptionId: stripe_subscription_id,
+        sourcePriceId,
+        sourceStatus: stripeSubscription.status,
+        sourcePeriodEndSeconds: lockedSnapshot.currentPeriodEndSeconds,
+        attachedScheduleId: lockedSnapshot.scheduleId,
+      });
+      try {
+        updatedSubscription = await stripe.subscriptions.update(
         stripe_subscription_id,
         updateParams,
         {
           idempotencyKey: stripeChangeIdempotencyKey,
         },
       );
-    } catch (error) {
-      console.error(`[Stripe Change] Failed to update subscription in Stripe:`, error);
+      } catch (error) {
+        console.error(`[Stripe Change] Failed to update subscription in Stripe:`, error);
       
       // Handle specific Stripe errors
-      if (error instanceof Error && 'type' in error) {
-        const stripeError = error as { type: string; message: string; code?: string };
+        if (error instanceof Error && 'type' in error) {
+          const stripeError = error as { type: string; message: string; code?: string };
         
-        if (stripeError.code === 'card_declined') {
-          return NextResponse.json(
-            { error: 'Your card was declined. Please update your payment method.' },
-            { status: 400 }
-          );
-        }
-        
-        return NextResponse.json(
-          { error: stripeError.message },
-          { status: 400 }
-        );
-      }
-      
-      return NextResponse.json(
-        { error: 'Failed to update subscription' },
-        { status: 500 }
-      );
-    }
+          if (stripeError.code === 'card_declined') {
+            return {
+              response: NextResponse.json(
+                { error: 'Your card was declined. Please update your payment method.' },
+                { status: 400 },
+              ),
+            } as const;
+          }
 
-    const paymentAction = await readPendingPaymentAction(updatedSubscription, newPriceId);
-    if (paymentAction) {
-      console.log(`[Stripe Change] Payment action required before applying ${newPlan}/${newBillingInterval}`);
-      return NextResponse.json(
-        {
-          error: 'Please confirm the payment to finish this plan change.',
-          code: 'PAYMENT_ACTION_REQUIRED',
-          clientSecret: paymentAction.clientSecret,
-          invoiceId: paymentAction.invoiceId,
-        },
-        { status: 402 },
-      );
-    }
+          return {
+            response: NextResponse.json(
+              { error: stripeError.message },
+              { status: 400 },
+            ),
+          } as const;
+        }
+
+        return {
+          response: NextResponse.json(
+            { error: 'Failed to update subscription' },
+            { status: 500 },
+          ),
+        } as const;
+      }
+
+      const paymentAction = await readPendingPaymentAction(updatedSubscription, newPriceId);
+      if (paymentAction) {
+        console.log(`[Stripe Change] Payment action required before applying ${newPlan}/${newBillingInterval}`);
+        return {
+          response: NextResponse.json(
+            {
+              error: 'Please confirm the payment to finish this plan change.',
+              code: 'PAYMENT_ACTION_REQUIRED',
+              clientSecret: paymentAction.clientSecret,
+              invoiceId: paymentAction.invoiceId,
+            },
+            { status: 402 },
+          ),
+        } as const;
+      }
 
     console.log(`[Stripe Change] Payment confirmed and subscription updated to ${newPlan}/${newBillingInterval}`);
 
@@ -737,42 +804,31 @@ export async function POST(request: NextRequest) {
     // Note: The webhook will also update our database, but we do it here
     // for immediate consistency. The webhook acts as a backup/sync.
     // =========================================================================
-    const updatedSnapshot = snapshotStripeSubscription(updatedSubscription, {
+      const updatedSnapshot = snapshotStripeSubscription(updatedSubscription, {
       proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
       proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL,
       businessMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
       businessAnnual: process.env.STRIPE_PRICE_BUSINESS_ANNUAL,
     });
-    if (
+      if (
       updatedSnapshot.plan !== newPlan
       || updatedSnapshot.billingInterval !== newBillingInterval
-    ) {
-      throw new Error('Stripe did not apply the requested subscription price.');
-    }
-    const newStatus = updatedSnapshot.status;
-    const periodEndIso = updatedSnapshot.currentPeriodEndSeconds
-      ? new Date(updatedSnapshot.currentPeriodEndSeconds * 1000).toISOString()
-      : null;
-    const trialEndIso = updatedSnapshot.trialEndSeconds
-      ? new Date(updatedSnapshot.trialEndSeconds * 1000).toISOString()
-      : null;
+      ) {
+        throw new Error('Stripe did not apply the requested subscription price.');
+      }
+      const newStatus = updatedSnapshot.status;
+      const periodEndIso = updatedSnapshot.currentPeriodEndSeconds
+        ? new Date(updatedSnapshot.currentPeriodEndSeconds * 1000).toISOString()
+        : null;
+      const trialEndIso = updatedSnapshot.trialEndSeconds
+        ? new Date(updatedSnapshot.trialEndSeconds * 1000).toISOString()
+        : null;
 
-    let capacityRestoration: UpgradeCapacityRestorationOutcome = {
-      status: 'none',
-      restoredBrands: 0,
-      restoredLocations: 0,
-    };
-    capacityRestoration = await (sql as unknown as {
-      begin<T>(callback: (transaction: UpgradeCapacitySql) => Promise<T>): Promise<T>;
-    }).begin(async (transaction) => {
-      await lockStripeSubscriptionOwner(
-        transaction as unknown as SubscriptionPlanChangeSql,
-        {
-          userId,
-          stripeCustomerId: stripe_customer_id,
-          stripeSubscriptionId: stripe_subscription_id,
-        },
-      );
+      let capacityRestoration: UpgradeCapacityRestorationOutcome = {
+        status: 'none',
+        restoredBrands: 0,
+        restoredLocations: 0,
+      };
       const updatedSubscriptions = await transaction<{ user_id: number }[]>`
         UPDATE crewcast.subscriptions
         SET
@@ -804,14 +860,35 @@ export async function POST(request: NextRequest) {
       // archived manually. The shared function is idempotent, so the Stripe
       // webhook can safely run the same recovery as a delayed backup.
       if (restoresCapacity && (newStatus === 'active' || newStatus === 'trialing')) {
-        return restoreDowngradeArchivedCapacity(transaction, {
+        capacityRestoration = await restoreDowngradeArchivedCapacity(
+          transaction as unknown as UpgradeCapacitySql,
+          {
           userId,
+          stripeCustomerId: stripe_customer_id,
           targetPlan: newPlan,
           stripeSubscriptionId: stripe_subscription_id,
-        });
+          },
+        );
       }
-      return capacityRestoration;
+      return {
+        updatedSubscription,
+        updatedSnapshot,
+        newStatus,
+        periodEndIso,
+        trialEndIso,
+        capacityRestoration,
+      } as const;
     });
+
+    if ('response' in immediateResult) return immediateResult.response;
+    const {
+      updatedSubscription,
+      updatedSnapshot,
+      newStatus,
+      periodEndIso,
+      trialEndIso,
+      capacityRestoration,
+    } = immediateResult;
 
     console.log(`[Stripe Change] Database updated for user ${userId}`);
 
@@ -1030,6 +1107,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     if (error instanceof StripeDowngradeOperationConflictError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
+    if (error instanceof CapacityChangeOperationConflictError) {
       return NextResponse.json(
         { error: error.message, code: error.code },
         { status: error.status },

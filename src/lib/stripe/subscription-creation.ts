@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
+import {
+  isConfiguredBasePlanSubscription,
+  type SubscriptionPriceConfiguration,
+} from './subscription-state';
 
 const REUSABLE_INITIAL_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
   'active',
@@ -287,29 +291,33 @@ export function isReusableInitialSubscriptionStatus(
 }
 
 /**
- * Fail closed when Stripe contains more than one live subscription. Picking one
- * would hide a possible double charge and make the database disagreement worse.
+ * Fail closed when Stripe contains more than one live base-plan subscription.
+ * Separate capacity add-ons and unrelated external subscriptions are ignored.
  */
 export function selectSingleReusableInitialSubscription(
   subscriptions: readonly Stripe.Subscription[],
   hasMore: boolean,
+  prices: SubscriptionPriceConfiguration,
 ): Stripe.Subscription | null {
   if (hasMore) {
     throw new Error('Stripe returned a truncated subscription list; refusing to guess which subscription is current.');
   }
   const reusable = subscriptions.filter((subscription) =>
-    isReusableInitialSubscriptionStatus(subscription.status));
+    isConfiguredBasePlanSubscription(subscription, prices)
+    && isReusableInitialSubscriptionStatus(subscription.status));
   if (reusable.length > 1) {
-    throw new Error('Stripe has more than one live subscription for this customer.');
+    throw new Error('Stripe has more than one live base subscription for this customer.');
   }
   return reusable[0] ?? null;
 }
 
 export function latestTerminalSubscriptionId(
   subscriptions: readonly Stripe.Subscription[],
+  prices: SubscriptionPriceConfiguration,
 ): string | null {
   const terminal = subscriptions.filter((subscription) =>
-    !isReusableInitialSubscriptionStatus(subscription.status));
+    isConfiguredBasePlanSubscription(subscription, prices)
+    && !isReusableInitialSubscriptionStatus(subscription.status));
   if (terminal.length === 0) return null;
 
   let latest = terminal[0];
@@ -333,10 +341,11 @@ export function latestTerminalSubscriptionId(
 export function selectAuthoritativeCustomerSubscription(
   subscriptions: readonly Stripe.Subscription[],
   hasMore: boolean,
+  prices: SubscriptionPriceConfiguration,
 ): Stripe.Subscription | null {
-  const reusable = selectSingleReusableInitialSubscription(subscriptions, hasMore);
+  const reusable = selectSingleReusableInitialSubscription(subscriptions, hasMore, prices);
   if (reusable) return reusable;
-  const terminalId = latestTerminalSubscriptionId(subscriptions);
+  const terminalId = latestTerminalSubscriptionId(subscriptions, prices);
   return terminalId === null
     ? null
     : subscriptions.find((subscription) => subscription.id === terminalId) ?? null;

@@ -240,6 +240,14 @@
       "down": "0029_durable_downgrade_schedule_attachment.down.sql",
       "upSha256": "79124afce27833b8bdad5c649acef42c0d99e8572da40c422aaf2c320ba0c65d",
       "downSha256": "5558c114d21515fb86c2375905163bba4eda0167c07e71c57f282e03c8db15c0"
+    },
+    {
+      "version": "0030",
+      "name": "paid_capacity_subscriptions",
+      "up": "0030_paid_capacity_subscriptions.up.sql",
+      "down": "0030_paid_capacity_subscriptions.down.sql",
+      "upSha256": "d965bc46c089bda833a4d10e5c3bf822060f4d7493fcb3922ccf84265a27929e",
+      "downSha256": "408e5da8ffe8c5849ef0174886d2c79ac782131bd0ab52a30e27d800a859a664"
     }
   ]
 }
