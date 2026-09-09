@@ -66,6 +66,11 @@ export interface AffiliateGroup {
   subItems: ResultItem[];
 }
 
+/** Returns every database record represented by one visible affiliate row. */
+export function affiliateGroupItems(group: AffiliateGroup): ResultItem[] {
+  return [group.main, ...group.subItems];
+}
+
 /**
  * Collapses a flat, already-sorted list of postings into groups. Insertion
  * order is preserved (Map keeps first-seen order), so when the input is sorted
@@ -80,6 +85,63 @@ export function groupAffiliates(items: ResultItem[]): AffiliateGroup[] {
     else groups.set(key, [item]);
   }
   return Array.from(groups.values()).map(arr => ({ main: arr[0], subItems: arr.slice(1) }));
+}
+
+export interface AffiliateGroupSelectionSummary {
+  /** Visible affiliate rows selected by the user. */
+  selectedGroups: AffiliateGroup[];
+  /** Database records hidden inside those visible rows. */
+  selectedItems: ResultItem[];
+  /** Number shown to the user: one per domain/creator and location. */
+  selectedGroupCount: number;
+  /** Selected visible rows for which every underlying record is complete. */
+  completeGroupCount: number;
+  /** Selected visible rows that still contain at least one actionable record. */
+  actionableGroupCount: number;
+  /** Incomplete database records to send to the mutation API. */
+  actionableItems: ResultItem[];
+}
+
+/**
+ * Builds the single source of truth for grouped bulk actions.
+ *
+ * The UI always talks in visible affiliate groups, while mutation APIs still
+ * receive the exact underlying records. Keeping both units in this named
+ * summary prevents a raw posting count from being presented as an affiliate
+ * count (for example, 78 postings hidden inside 69 visible affiliates).
+ */
+export function summarizeAffiliateGroupSelection(
+  groups: readonly AffiliateGroup[],
+  selectedGroupKeys: ReadonlySet<string>,
+  isItemComplete: (item: ResultItem) => boolean,
+): AffiliateGroupSelectionSummary {
+  const selectedGroups = groups.filter(group => selectedGroupKeys.has(groupKeyOf(group.main)));
+  const selectedItems: ResultItem[] = [];
+  const actionableItems: ResultItem[] = [];
+  let completeGroupCount = 0;
+  let actionableGroupCount = 0;
+
+  for (const group of selectedGroups) {
+    const items = affiliateGroupItems(group);
+    selectedItems.push(...items);
+
+    const incompleteItems = items.filter(item => !isItemComplete(item));
+    if (incompleteItems.length === 0) {
+      completeGroupCount += 1;
+    } else {
+      actionableGroupCount += 1;
+      actionableItems.push(...incompleteItems);
+    }
+  }
+
+  return {
+    selectedGroups,
+    selectedItems,
+    selectedGroupCount: selectedGroups.length,
+    completeGroupCount,
+    actionableGroupCount,
+    actionableItems,
+  };
 }
 
 /**

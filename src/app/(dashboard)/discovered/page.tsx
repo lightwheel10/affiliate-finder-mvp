@@ -67,10 +67,12 @@ import { affiliateMatchesSearchQuery } from '../../utils/affiliate-search';
 // 2026-06-14 (paras): group postings by domain (web) / creator (social).
 // David's request. See utils/affiliate-grouping.ts.
 import {
+  affiliateGroupItems,
   affiliateIdentityKey,
   groupAffiliates,
   groupCountsBySource,
   groupKeyOf,
+  summarizeAffiliateGroupSelection,
   type AffiliateGroup,
 } from '../../utils/affiliate-grouping';
 import { useNeonUser } from '../../hooks/useNeonUser';
@@ -111,7 +113,7 @@ export default function DiscoveredPage() {
   // ============================================================================
   // BULK SELECTION STATE (Added Dec 2025)
   // ============================================================================
-  const [selectedAffiliateKeys, setSelectedAffiliateKeys] = useState<Set<string>>(new Set());
+  const [selectedAffiliateGroupKeys, setSelectedAffiliateGroupKeys] = useState<Set<string>>(new Set());
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   
@@ -121,8 +123,8 @@ export default function DiscoveredPage() {
   const [savingLinks, setSavingLinks] = useState<Set<string>>(new Set());
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [bulkSaveResult, setBulkSaveResult] = useState<{
-    savedCount: number;
-    duplicateCount: number;
+    savedGroupCount: number;
+    alreadySavedGroupCount: number;
     show: boolean;
   } | null>(null);
   
@@ -276,19 +278,19 @@ export default function DiscoveredPage() {
     }
   };
 
-  const toggleSelectGroup = (items: ResultItem[]) => {
-    const keys = items.map(affiliateIdentityKey);
-    setSelectedAffiliateKeys(prev => {
+  const toggleSelectGroup = (group: AffiliateGroup) => {
+    const key = groupKeyOf(group.main);
+    setSelectedAffiliateGroupKeys(prev => {
       const next = new Set(prev);
-      const selected = next.has(keys[0]);
-      keys.forEach((key) => { if (selected) next.delete(key); else next.add(key); });
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
 
   const handleGroupDelete = async (items: ResultItem[]) => {
     await removeDiscoveredAffiliatesBulk(items);
-    setDeleteResult({ count: items.length, show: true });
+    setDeleteResult({ count: 1, show: true });
     setTimeout(() => {
       setDeleteResult(prev => prev ? { ...prev, show: false } : null);
     }, 3000);
@@ -298,39 +300,37 @@ export default function DiscoveredPage() {
   // BULK SELECTION HANDLERS (Added Dec 2025)
   // ============================================================================
   const selectAllVisible = () => {
-    setSelectedAffiliateKeys(prev => {
+    setSelectedAffiliateGroupKeys(prev => {
       const newSet = new Set(prev);
-      filteredResults.forEach((item) => newSet.add(affiliateIdentityKey(item)));
+      groupedResults.forEach((group) => newSet.add(groupKeyOf(group.main)));
       return newSet;
     });
   };
   
   const deselectAllVisible = () => {
-    setSelectedAffiliateKeys(prev => {
+    setSelectedAffiliateGroupKeys(prev => {
       const newSet = new Set(prev);
-      filteredResults.forEach((item) => newSet.delete(affiliateIdentityKey(item)));
+      visibleAffiliateGroupKeys.forEach((key) => newSet.delete(key));
       return newSet;
     });
   };
 
   const handleBulkSave = async () => {
-    if (visibleSelectedAffiliateKeys.size === 0) return;
+    if (selectedAffiliateSummary.actionableGroupCount === 0) return;
     setIsBulkSaving(true);
-    setSavingLinks(new Set(visibleSelectedAffiliateKeys));
+    setSavingLinks(new Set(selectedAffiliateSummary.selectedItems.map(affiliateIdentityKey)));
     
     try {
-      const affiliatesToSave = discoveredAffiliates.filter((item) =>
-        visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
-      );
-      const result = await saveAffiliatesBulk(affiliatesToSave);
+      const result = await saveAffiliatesBulk(selectedAffiliateSummary.actionableItems);
+      if (result.error) throw result.error;
       
       // =======================================================================
       // SUCCESS STATE - January 16, 2026
       // Sets state to show custom neo-brutalist toast JSX
       // =======================================================================
       setBulkSaveResult({
-        savedCount: result.savedCount,
-        duplicateCount: result.duplicateCount,
+        savedGroupCount: selectedAffiliateSummary.actionableGroupCount,
+        alreadySavedGroupCount: selectedAffiliateSummary.completeGroupCount,
         show: true
       });
       
@@ -338,9 +338,9 @@ export default function DiscoveredPage() {
         setBulkSaveResult(prev => prev ? { ...prev, show: false } : null);
       }, 4000);
       
-      setSelectedAffiliateKeys(prev => {
+      setSelectedAffiliateGroupKeys(prev => {
         const newSet = new Set(prev);
-        visibleSelectedAffiliateKeys.forEach((key) => newSet.delete(key));
+        visibleSelectedAffiliateGroupKeys.forEach((key) => newSet.delete(key));
         return newSet;
       });
     } catch (err) {
@@ -355,22 +355,19 @@ export default function DiscoveredPage() {
   };
 
   const handleBulkDelete = () => {
-    if (visibleSelectedAffiliateKeys.size === 0) return;
+    if (selectedAffiliateSummary.selectedGroupCount === 0) return;
     setIsDeleteModalOpen(true);
   };
 
   const confirmBulkDelete = async () => {
-    if (visibleSelectedAffiliateKeys.size === 0) return;
-    const affiliatesToDelete = filteredResults.filter((item) =>
-      visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
-    );
-    const deleteCount = affiliatesToDelete.length;
+    if (selectedAffiliateSummary.selectedGroupCount === 0) return;
+    const deleteCount = selectedAffiliateSummary.selectedGroupCount;
     setIsBulkDeleting(true);
     try {
-      await removeDiscoveredAffiliatesBulk(affiliatesToDelete);
-      setSelectedAffiliateKeys(prev => {
+      await removeDiscoveredAffiliatesBulk(selectedAffiliateSummary.selectedItems);
+      setSelectedAffiliateGroupKeys(prev => {
         const newSet = new Set(prev);
-        visibleSelectedAffiliateKeys.forEach((key) => newSet.delete(key));
+        visibleSelectedAffiliateGroupKeys.forEach((key) => newSet.delete(key));
         return newSet;
       });
       setIsDeleteModalOpen(false);
@@ -488,40 +485,42 @@ export default function DiscoveredPage() {
   }, [discoveredAffiliates, activeFilter, searchQuery, advancedFilters, isBlocked]);
 
   // 2026-06-14 (paras): collapse the flat filtered list into domain/creator
-  // groups for rendering. Selection remains location-aware in aggregate views.
+  // groups for rendering. The group key includes the location, so identical
+  // domains or creators in different markets remain independent affiliates.
   const groupedResults = useMemo(() => groupAffiliates(filteredResults), [filteredResults]);
 
-  const visibleSelectedAffiliateKeys = useMemo(() => {
-    const visibleKeys = new Set(filteredResults.map(affiliateIdentityKey));
-    const visible = new Set<string>();
-    selectedAffiliateKeys.forEach((key) => {
-      if (visibleKeys.has(key)) {
-        visible.add(key);
-      }
-    });
-    return visible;
-  }, [selectedAffiliateKeys, filteredResults]);
+  const visibleAffiliateGroupKeys = useMemo(
+    () => new Set(groupedResults.map(group => groupKeyOf(group.main))),
+    [groupedResults],
+  );
 
-  // ==========================================================================
-  // 2026-08-03 (Paras): SELECTED GROUP COUNT (display only)
-  // Same as saved/page.tsx: the bulk bar label shows selected GROUPS
-  // (creators/domains) to match the grouped rows and filter chips. Selection
-  // and all bulk handlers remain tied to the exact location-specific row.
-  // ==========================================================================
-  const selectedGroupCount = useMemo(() => {
-    const keys = new Set<string>();
-    filteredResults.forEach(r => {
-      if (visibleSelectedAffiliateKeys.has(affiliateIdentityKey(r))) keys.add(groupKeyOf(r));
+  const visibleSelectedAffiliateGroupKeys = useMemo(() => {
+    const selected = new Set<string>();
+    selectedAffiliateGroupKeys.forEach((key) => {
+      if (visibleAffiliateGroupKeys.has(key)) selected.add(key);
     });
-    return keys.size;
-  }, [filteredResults, visibleSelectedAffiliateKeys]);
+    return selected;
+  }, [selectedAffiliateGroupKeys, visibleAffiliateGroupKeys]);
+
+  // One source of truth separates the visible affiliate count from the exact
+  // database records represented by those rows. User-facing labels use group
+  // counts; mutation APIs receive the underlying records.
+  const selectedAffiliateSummary = useMemo(
+    () => summarizeAffiliateGroupSelection(
+      groupedResults,
+      visibleSelectedAffiliateGroupKeys,
+      isAffiliateSaved,
+    ),
+    [groupedResults, visibleSelectedAffiliateGroupKeys, isAffiliateSaved],
+  );
+
+  const allVisibleGroupsSelected = groupedResults.length > 0
+    && visibleSelectedAffiliateGroupKeys.size === groupedResults.length;
 
   const [isBulkBlocking, setIsBulkBlocking] = useState(false);
   const handleBulkBlockDomains = useCallback(async () => {
-    if (visibleSelectedAffiliateKeys.size === 0) return;
-    const selectedItems = filteredResults.filter((item) =>
-      selectedAffiliateKeys.has(affiliateIdentityKey(item)),
-    );
+    if (selectedAffiliateSummary.selectedGroupCount === 0) return;
+    const selectedItems = selectedAffiliateSummary.selectedItems;
     const domainsToBlock = [...new Set(selectedItems.map(r => normalizeDomainForCompare(r.domain)))];
     const canAdd = Math.max(0, 10 - blockedDomains.length);
     const toBlock = domainsToBlock.slice(0, canAdd);
@@ -534,11 +533,13 @@ export default function DiscoveredPage() {
       for (const domain of toBlock) {
         await blockDomain(domain);
       }
-      setSelectedAffiliateKeys(prev => {
+      setSelectedAffiliateGroupKeys(prev => {
         const next = new Set(prev);
-        selectedItems
-          .filter(r => toBlock.includes(normalizeDomainForCompare(r.domain)))
-          .forEach(r => next.delete(affiliateIdentityKey(r)));
+        selectedAffiliateSummary.selectedGroups
+          .filter(group => affiliateGroupItems(group).some(
+            item => toBlock.includes(normalizeDomainForCompare(item.domain)),
+          ))
+          .forEach(group => next.delete(groupKeyOf(group.main)));
         return next;
       });
       toast.success(toBlock.length === 1 ? t.dashboard.find.bulkActions.blockDomainDone : `${toBlock.length} ${t.dashboard.find.bulkActions.blockDomainsDone}`);
@@ -547,7 +548,7 @@ export default function DiscoveredPage() {
     } finally {
       setIsBulkBlocking(false);
     }
-  }, [visibleSelectedAffiliateKeys.size, filteredResults, selectedAffiliateKeys, blockedDomains.length, blockDomain, t.dashboard.find.bulkActions]);
+  }, [selectedAffiliateSummary, blockedDomains.length, blockDomain, t.dashboard.find.bulkActions]);
 
   // 2026-06-14 (paras): tab badges now count GROUPS (distinct domains/creators),
   // not individual postings — matches the grouped row display.
@@ -767,15 +768,7 @@ export default function DiscoveredPage() {
             Mirror of /find bulk bar (same structure, same translations).
             See find/page.tsx for full rationale.
             ============================================================================= */}
-        {visibleSelectedAffiliateKeys.size > 0 && (() => {
-          const selectedItems = filteredResults.filter((item) =>
-            visibleSelectedAffiliateKeys.has(affiliateIdentityKey(item)),
-          );
-          const alreadySavedCount = selectedItems.filter(isAffiliateSaved).length;
-          const newToSaveCount = selectedItems.length - alreadySavedCount;
-          const allVisibleSelected = visibleSelectedAffiliateKeys.size === filteredResults.length;
-          
-          return (
+        {selectedAffiliateSummary.selectedGroupCount > 0 && (
           <div className="mb-4 flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 rounded-2xl shadow-soft-sm">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
@@ -784,21 +777,20 @@ export default function DiscoveredPage() {
                   <Check size={14} className="text-[#0f172a]" strokeWidth={2.5} />
                 </div>
                 <span className="text-sm font-semibold text-[#0f172a] dark:text-white">
-                  {/* 2026-08-03 (Paras): group count, not link count — see selectedGroupCount */}
-                  {selectedGroupCount} {t.dashboard.find.bulkActions.selected}
+                  {selectedAffiliateSummary.selectedGroupCount} {t.dashboard.find.bulkActions.selected}
                 </span>
-                {alreadySavedCount > 0 && (
+                {selectedAffiliateSummary.completeGroupCount > 0 && (
                   <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                    {alreadySavedCount} {t.dashboard.find.bulkActions.alreadyInPipeline}
+                    {selectedAffiliateSummary.completeGroupCount} {t.dashboard.find.bulkActions.alreadyInPipeline}
                   </span>
                 )}
               </div>
               <div className="h-4 w-px bg-[#e6ebf1] dark:bg-gray-800"></div>
               <button
-                onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
+                onClick={allVisibleGroupsSelected ? deselectAllVisible : selectAllVisible}
                 className="text-xs font-semibold text-[#8898aa] hover:text-[#0f172a] dark:hover:text-white transition-colors"
               >
-                {allVisibleSelected ? t.dashboard.find.bulkActions.deselectAll : t.dashboard.find.bulkActions.selectAllVisible}
+                {allVisibleGroupsSelected ? t.dashboard.find.bulkActions.deselectAll : t.dashboard.find.bulkActions.selectAllVisible}
               </button>
             </div>
             <div className="flex items-center gap-2">
@@ -832,22 +824,21 @@ export default function DiscoveredPage() {
               {/* Save — primary yellow CTA */}
               <button
                 onClick={handleBulkSave}
-                disabled={isBulkSaving || newToSaveCount === 0}
+                disabled={isBulkSaving || selectedAffiliateSummary.actionableGroupCount === 0}
                 className={cn(
                   "flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-full transition-all",
-                  newToSaveCount === 0
+                  selectedAffiliateSummary.actionableGroupCount === 0
                     ? "bg-[#f6f9fc] dark:bg-gray-800 text-[#8898aa] border border-[#e6ebf1] dark:border-gray-700 cursor-not-allowed"
                     : "bg-[#ffbf23] text-[#0f172a] shadow-yellow-glow-sm hover:bg-[#e5ac20] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 )}
-                title={newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${t.dashboard.find.bulkActions.saveToPipeline} (${newToSaveCount})`}
+                title={selectedAffiliateSummary.actionableGroupCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${t.dashboard.find.bulkActions.saveToPipeline} (${selectedAffiliateSummary.actionableGroupCount})`}
               >
                 {isBulkSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} strokeWidth={2} />}
-                {newToSaveCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${newToSaveCount} ${t.dashboard.find.bulkActions.saveToPipeline}`}
+                {selectedAffiliateSummary.actionableGroupCount === 0 ? t.dashboard.find.bulkActions.allAlreadySaved : `${selectedAffiliateSummary.actionableGroupCount} ${t.dashboard.find.bulkActions.saveToPipeline}`}
               </button>
             </div>
           </div>
-          );
-        })()}
+        )}
 
         {/* =============================================================================
             TABLE AREA — smoover refresh (April 25, 2026)
@@ -874,8 +865,8 @@ export default function DiscoveredPage() {
             <div className="col-span-1 flex justify-center">
               <input
                 type="checkbox"
-                checked={filteredResults.length > 0 && visibleSelectedAffiliateKeys.size === filteredResults.length}
-                onChange={() => visibleSelectedAffiliateKeys.size === filteredResults.length ? deselectAllVisible() : selectAllVisible()}
+                checked={allVisibleGroupsSelected}
+                onChange={() => allVisibleGroupsSelected ? deselectAllVisible() : selectAllVisible()}
                 className="accent-[#ffbf23] w-4 h-4"
               />
             </div>
@@ -898,6 +889,7 @@ export default function DiscoveredPage() {
               const item = group.main;
               const groupItems = [item, ...group.subItems];
               const itemKey = affiliateIdentityKey(item);
+              const groupKey = groupKeyOf(item);
               return (
               <AffiliateRow
                 key={groupKeyOf(item)}
@@ -925,8 +917,8 @@ export default function DiscoveredPage() {
                 channel={item.channel}
                 duration={item.duration}
                 personName={item.personName}
-                isSelected={selectedAffiliateKeys.has(itemKey)}
-                onSelect={() => toggleSelectGroup(groupItems)}
+                isSelected={selectedAffiliateGroupKeys.has(groupKey)}
+                onSelect={() => toggleSelectGroup(group)}
                 isSaving={savingLinks.has(itemKey)}
                 onDelete={() => handleGroupDelete(groupItems)}
                 affiliateData={item}
@@ -962,7 +954,7 @@ export default function DiscoveredPage() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmBulkDelete}
-        itemCount={visibleSelectedAffiliateKeys.size}
+        itemCount={selectedAffiliateSummary.selectedGroupCount}
         isDeleting={isBulkDeleting}
         itemType="affiliate"
       />
@@ -987,16 +979,16 @@ export default function DiscoveredPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white">
-                  {bulkSaveResult.savedCount > 0
-                    ? `${bulkSaveResult.savedCount} ${t.dashboard.find.toasts.affiliatesSaved}`
+                  {bulkSaveResult.savedGroupCount > 0
+                    ? `${bulkSaveResult.savedGroupCount} ${t.dashboard.find.toasts.affiliatesSaved}`
                     : t.dashboard.find.toasts.noNewAffiliatesSaved
                   }
                 </h4>
                 <p className="text-xs text-[#425466] dark:text-gray-400 mt-0.5">
-                  {bulkSaveResult.savedCount > 0 && t.dashboard.find.toasts.addedToPipeline}
-                  {bulkSaveResult.duplicateCount > 0 && (
+                  {bulkSaveResult.savedGroupCount > 0 && t.dashboard.find.toasts.addedToPipeline}
+                  {bulkSaveResult.alreadySavedGroupCount > 0 && (
                     <span className="block text-amber-600 font-semibold mt-1">
-                      {bulkSaveResult.duplicateCount} {t.dashboard.find.toasts.alreadyInPipeline}
+                      {bulkSaveResult.alreadySavedGroupCount} {t.dashboard.find.toasts.alreadyInPipeline}
                     </span>
                   )}
                 </p>
