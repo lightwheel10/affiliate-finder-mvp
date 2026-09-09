@@ -1868,7 +1868,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
           <h3 id="credit-balance-heading" className="mb-3 text-sm font-semibold text-[#0f172a] dark:text-white">
             {t.dashboard.settings.buyCredits.currentBalance}
           </h3>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-2">
             {creditsLoading
               ? Array.from({ length: 3 }, (_, index) => (
                   <div key={index} aria-hidden="true" className="h-16 animate-pulse rounded-xl bg-[#f6f9fc] dark:bg-gray-900" />
@@ -1932,7 +1932,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
         <h3 id="credit-pack-heading" className="mb-3 text-sm font-semibold text-[#0f172a] dark:text-white">
           {t.dashboard.settings.buyCredits.choosePack}
         </h3>
-        <div className={cn('grid gap-3', currentPacks.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3')}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-3">
           {currentPacks.map((pack, idx) => {
             const isPopular = idx === 1;
             const isSelected = selectedPackId === pack.id;
@@ -2018,7 +2018,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
         </button>
       </section>
 
-      <div className="grid gap-3 border-t border-[#e6ebf1] pt-4 text-xs text-[#596579] dark:border-gray-800 dark:text-gray-400 sm:grid-cols-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3 border-t border-[#e6ebf1] pt-4 text-xs text-[#596579] dark:border-gray-800 dark:text-gray-400">
         {[
           { icon: <Clock size={15} strokeWidth={2} />, benefit: t.dashboard.settings.buyCredits.benefits.neverExpire },
           { icon: <Zap size={15} strokeWidth={2} />, benefit: t.dashboard.settings.buyCredits.benefits.instantDelivery },

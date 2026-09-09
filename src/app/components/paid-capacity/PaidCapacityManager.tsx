@@ -475,7 +475,7 @@ export function PaidCapacityManager({
         </p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-3">
         {renderCapacityCard('brand')}
         {renderCapacityCard('location')}
       </div>
