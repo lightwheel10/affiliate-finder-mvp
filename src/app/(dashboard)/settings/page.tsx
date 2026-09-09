@@ -344,8 +344,7 @@ export default function SettingsPage() {
             <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e6ebf1] bg-white shadow-soft-sm dark:border-gray-800 dark:bg-[#0f0f0f]">
               <div className="p-5 sm:p-6 lg:p-8">
                 <div className={cn(
-                  activeTab === 'brands' && 'max-w-none',
-                  (activeTab === 'plan' || activeTab === 'buy_credits') && 'max-w-3xl',
+                  (activeTab === 'brands' || activeTab === 'plan' || activeTab === 'buy_credits') && 'max-w-none',
                   activeTab !== 'brands' && activeTab !== 'plan' && activeTab !== 'buy_credits' && 'max-w-2xl',
                 )}>
                   {/* January 13th, 2026: Removed tab title and description as per user request */}
