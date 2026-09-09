@@ -347,13 +347,13 @@ export function PaidCapacityManager({
       : 0;
 
     return (
-      <article className="rounded-2xl bg-[#f8fafc] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:bg-gray-900/70 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+      <article className="rounded-xl bg-[#f8fafc] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:bg-gray-900/70 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fff4d1] text-[#b57900] dark:bg-[#ffbf23]/10 dark:text-[#ffbf23]">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#fff4d1] text-[#b57900] dark:bg-[#ffbf23]/10 dark:text-[#ffbf23]">
               {isBrand
-                ? <Building2 size={18} strokeWidth={2} />
-                : <Globe2 size={18} strokeWidth={2} />}
+                ? <Building2 size={17} strokeWidth={2} />
+                : <Globe2 size={17} strokeWidth={2} />}
             </span>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
@@ -380,14 +380,14 @@ export function PaidCapacityManager({
           )}
         </div>
 
-        <div className="mt-5">
+        <div className="mt-3">
           <div
             role="progressbar"
             aria-label={isBrand ? copy.brandCapacity : copy.locationCapacity}
             aria-valuemin={0}
             aria-valuemax={maximum > 0 ? maximum : undefined}
             aria-valuenow={maximum > 0 ? active : undefined}
-            className="h-2 overflow-hidden rounded-full bg-[#e6ebf1] dark:bg-gray-800"
+            className="h-1.5 overflow-hidden rounded-full bg-[#e6ebf1] dark:bg-gray-800"
           >
             <div
               className="h-full rounded-full bg-[#ffbf23] transition-[width] duration-150"
@@ -395,7 +395,7 @@ export function PaidCapacityManager({
             />
           </div>
           {overview && item && (
-            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#596579] dark:text-gray-400">
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#596579] dark:text-gray-400">
               <span>{copy.included.replace('{count}', String(includedCapacity(kind))).replace('{plan}', planName)}</span>
               {paidExtra > 0 && (
                 <>
@@ -430,7 +430,7 @@ export function PaidCapacityManager({
   const limits = targetLimits();
 
   return (
-    <section className={placement === 'billing' ? 'space-y-4' : 'space-y-3'} aria-label={copy.title}>
+    <section className="space-y-3" aria-label={copy.title}>
       {placement === 'billing' && (
         <header>
           <h3 className="text-base font-semibold text-[#0f172a] dark:text-white">{copy.title}</h3>

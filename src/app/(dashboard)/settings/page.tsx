@@ -345,7 +345,7 @@ export default function SettingsPage() {
               <div className="p-5 sm:p-6 lg:p-8">
                 <div className={cn(
                   activeTab === 'brands' && 'max-w-none',
-                  (activeTab === 'plan' || activeTab === 'buy_credits') && 'max-w-5xl',
+                  (activeTab === 'plan' || activeTab === 'buy_credits') && 'max-w-3xl',
                   activeTab !== 'brands' && activeTab !== 'plan' && activeTab !== 'buy_credits' && 'max-w-2xl',
                 )}>
                   {/* January 13th, 2026: Removed tab title and description as per user request */}
@@ -1300,7 +1300,7 @@ function PlanSettings({
     : null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <header>
         <h2 id="plan-billing-heading" className="font-display text-2xl font-bold tracking-tight text-[#0f172a] dark:text-white">
           {t.dashboard.settings.tabs.plan.label}
@@ -1312,20 +1312,19 @@ function PlanSettings({
 
       <section
         aria-labelledby="current-plan-heading"
-        className="relative overflow-hidden rounded-3xl bg-[#121417] p-5 text-white shadow-soft-lg ring-1 ring-white/10 sm:p-6"
+        className="rounded-2xl bg-[#121212] p-4 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
       >
-        <div aria-hidden="true" className="absolute -right-16 -top-20 size-56 rounded-full bg-[#ffbf23]/10 blur-3xl" />
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#ffbf23] text-[#121417] shadow-yellow-glow-sm">
-              <Zap size={20} strokeWidth={2.25} />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#ffbf23] text-[#121417]">
+              <Zap size={17} strokeWidth={2.25} />
             </span>
             <div className="min-w-0">
               <p id="current-plan-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">
                 {t.dashboard.settings.plan.currentPlan}
               </p>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <span className="font-display text-2xl font-bold tracking-tight">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="font-display text-xl font-bold tracking-tight">
                   {subscription ? getPlanDisplayName(subscription.plan) : t.dashboard.settings.plan.noPlan}
                 </span>
                 {subscription && (
@@ -1337,7 +1336,7 @@ function PlanSettings({
                   </span>
                 )}
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-white/65">
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/65">
                 {subscription?.formattedPrice && (
                   <span className="font-semibold text-white">
                     {subscription.formattedPrice}
@@ -1368,7 +1367,7 @@ function PlanSettings({
             <button
               type="button"
               onClick={onUpgrade}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-full bg-[#ffbf23] px-5 py-2.5 text-sm font-semibold text-[#121417] shadow-yellow-glow-sm outline-none transition-[background-color,scale] duration-150 hover:bg-[#e5ac20] focus-visible:ring-2 focus-visible:ring-white/80 active:scale-[0.96] sm:self-center"
+              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full bg-[#ffbf23] px-4 py-2 text-sm font-semibold text-[#121417] outline-none transition-[background-color,scale] duration-150 hover:bg-[#e5ac20] focus-visible:ring-2 focus-visible:ring-white/80 active:scale-[0.96] sm:self-center"
             >
               <Zap size={16} strokeWidth={2} />
               {!subscription
@@ -1435,7 +1434,7 @@ function PlanSettings({
           {t.dashboard.settings.plan.paymentMethod}
         </h3>
         {subscription?.card_last4 ? (
-          <div className="flex flex-col gap-4 rounded-2xl bg-[#f6f9fc] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:bg-gray-900 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-xl bg-[#f6f9fc] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:bg-gray-900 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#596579] shadow-soft-sm dark:bg-gray-800 dark:text-gray-300">
                 <CreditCard size={18} strokeWidth={1.75} />
@@ -1460,7 +1459,7 @@ function PlanSettings({
             </button>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 rounded-2xl border border-dashed border-[#d8e0e8] bg-[#f6f9fc] p-4 dark:border-gray-700 dark:bg-gray-900/60 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-xl border border-dashed border-[#d8e0e8] bg-[#f6f9fc] p-4 dark:border-gray-700 dark:bg-gray-900/60 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#8898aa] shadow-soft-sm dark:bg-gray-800">
                 <CreditCard size={18} strokeWidth={1.75} />
@@ -1807,19 +1806,14 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
   ] : [];
 
   return (
-    <div className="space-y-8">
-      <header className="flex items-start justify-between gap-5">
-        <div>
-          <h2 className="font-display text-2xl font-bold tracking-tight text-[#0f172a] dark:text-white">
-            {t.dashboard.settings.tabs.buyCredits.label}
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-[#596579] dark:text-gray-400">
-            {t.dashboard.settings.buyCredits.header.description}
-          </p>
-        </div>
-        <span className="hidden size-11 shrink-0 items-center justify-center rounded-xl bg-[#fff4d1] text-[#b57900] dark:bg-[#ffbf23]/10 dark:text-[#ffbf23] sm:flex">
-          <Coins size={20} strokeWidth={2} />
-        </span>
+    <div className="space-y-6">
+      <header>
+        <h2 className="font-display text-2xl font-bold tracking-tight text-[#0f172a] dark:text-white">
+          {t.dashboard.settings.tabs.buyCredits.label}
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-[#596579] dark:text-gray-400">
+          {t.dashboard.settings.buyCredits.header.description}
+        </p>
       </header>
 
       {creditPurchaseSuccess && (
@@ -1875,19 +1869,19 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
           <h3 id="credit-balance-heading" className="mb-3 text-sm font-semibold text-[#0f172a] dark:text-white">
             {t.dashboard.settings.buyCredits.currentBalance}
           </h3>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-3">
             {creditsLoading
               ? Array.from({ length: 3 }, (_, index) => (
-                  <div key={index} aria-hidden="true" className="h-[74px] animate-pulse rounded-2xl bg-[#f6f9fc] dark:bg-gray-900" />
+                  <div key={index} aria-hidden="true" className="h-16 animate-pulse rounded-xl bg-[#f6f9fc] dark:bg-gray-900" />
                 ))
               : balanceCards.map((balance) => (
-                  <article key={balance.id} className="flex items-center gap-3 rounded-2xl bg-[#f8fafc] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:bg-gray-900/70 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-                    <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-xl', balance.tone)}>
+                  <article key={balance.id} className="flex items-center gap-2.5 rounded-xl bg-[#f8fafc] p-3 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:bg-gray-900/70 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+                    <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', balance.tone)}>
                       {balance.icon}
                     </span>
                     <div className="min-w-0">
                       <p className="truncate text-xs font-medium text-[#596579] dark:text-gray-400">{balance.label}</p>
-                      <p className="mt-0.5 text-xl font-bold tabular-nums text-[#0f172a] dark:text-white">
+                      <p className="text-lg font-bold tabular-nums text-[#0f172a] dark:text-white">
                         {balance.value}
                         <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#8898aa]">
                           {t.dashboard.settings.buyCredits.remaining}
@@ -1904,7 +1898,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
         <h3 id="credit-type-heading" className="mb-3 text-sm font-semibold text-[#0f172a] dark:text-white">
           {t.dashboard.settings.buyCredits.selectType}
         </h3>
-        <div aria-label={t.dashboard.settings.buyCredits.selectType} className="grid gap-1 rounded-2xl bg-[#f1f4f8] p-1.5 dark:bg-gray-900 sm:grid-cols-3">
+        <div aria-label={t.dashboard.settings.buyCredits.selectType} className="grid gap-1 rounded-xl bg-[#f1f4f8] p-1 dark:bg-gray-900 sm:grid-cols-3">
           {categories.map((cat) => (
             <button
               type="button"
@@ -1917,7 +1911,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
               }}
               disabled={purchasingId !== null}
               className={cn(
-                "flex min-h-11 items-center gap-2 rounded-xl px-3.5 py-2.5 text-left outline-none transition-[background-color,color,box-shadow,scale] duration-150 focus-visible:ring-2 focus-visible:ring-[#ffbf23]/60 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60",
+                "flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left outline-none transition-[background-color,color,box-shadow,scale] duration-150 focus-visible:ring-2 focus-visible:ring-[#ffbf23]/60 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60",
                 selectedCategory === cat.id
                   ? "bg-white text-[#0f172a] shadow-soft-sm dark:bg-[#191919] dark:text-white"
                   : "text-[#596579] hover:bg-white/60 hover:text-[#0f172a] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -1952,8 +1946,8 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
                 onClick={() => setSelectedPackId(pack.id)}
                 disabled={purchasingId !== null}
                 className={cn(
-                  "group relative rounded-2xl p-5 text-left outline-none shadow-[0_0_0_1px_rgba(15,23,42,0.08)] transition-[background-color,box-shadow,scale] duration-150 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.13),0_6px_18px_rgba(15,23,42,0.08)] focus-visible:ring-2 focus-visible:ring-[#ffbf23]/60 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#121212] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.09)] dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.14)]",
-                  isSelected && "bg-[#fffaf0] shadow-[0_0_0_2px_#ffbf23,0_8px_24px_rgba(255,191,35,0.12)] dark:bg-[#ffbf23]/10 dark:shadow-[0_0_0_2px_#ffbf23]",
+                  "group relative rounded-xl p-4 text-left outline-none shadow-[0_0_0_1px_rgba(15,23,42,0.08)] transition-[background-color,box-shadow,scale] duration-150 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.13)] focus-visible:ring-2 focus-visible:ring-[#ffbf23]/60 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#121212] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.09)] dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.14)]",
+                  isSelected && "bg-[#fffaf0] shadow-[0_0_0_2px_#ffbf23] dark:bg-[#ffbf23]/10 dark:shadow-[0_0_0_2px_#ffbf23]",
                   !isSelected && "bg-white"
                 )}
               >
@@ -1972,14 +1966,14 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
                     </span>
                   )}
                 </div>
-                <div className="mt-5">
-                  <p className="font-display text-3xl font-bold tracking-tight text-[#0f172a] dark:text-white">
+                <div className="mt-3">
+                  <p className="font-display text-2xl font-bold tracking-tight text-[#0f172a] dark:text-white">
                     {pack.credits}
                     <span className="ml-1.5 text-xs font-semibold uppercase tracking-wider text-[#8898aa]">
                       {t.dashboard.settings.buyCredits.creditsLabel}
                     </span>
                   </p>
-                  <p className="mt-4 text-2xl font-bold tracking-tight text-[#0f172a] dark:text-white">
+                  <p className="mt-2.5 text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">
                     {CURRENCY_SYMBOL}{pack.price}
                   </p>
                   <p className="mt-1 text-xs text-[#596579] dark:text-gray-400">
@@ -1992,22 +1986,22 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
         </div>
       </section>
 
-      <section aria-live="polite" className="rounded-3xl bg-[#121417] p-5 text-white shadow-soft-lg ring-1 ring-white/10 sm:flex sm:items-center sm:justify-between sm:gap-5 sm:p-6">
+      <section aria-live="polite" className="rounded-xl bg-[#f8fafc] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:bg-gray-900/70 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] sm:flex sm:items-center sm:justify-between sm:gap-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/50">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8898aa]">
             {t.dashboard.settings.buyCredits.purchaseSummary}
           </p>
           {selectedPack ? (
             <>
-              <p className="mt-1.5 text-lg font-semibold">
+              <p className="mt-1 text-base font-semibold text-[#0f172a] dark:text-white">
                 {selectedPack.credits} {selectedCategoryDetails.label}
               </p>
-              <p className="mt-1 text-sm text-white/60">
+              <p className="mt-0.5 text-sm text-[#596579] dark:text-gray-400">
                 {t.dashboard.settings.buyCredits.total}: {CURRENCY_SYMBOL}{selectedPack.price}
               </p>
             </>
           ) : (
-            <p className="mt-1.5 text-sm text-white/65">
+            <p className="mt-1 text-sm text-[#596579] dark:text-gray-400">
               {t.dashboard.settings.buyCredits.selectPackToContinue}
             </p>
           )}
@@ -2016,7 +2010,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
           type="button"
           onClick={() => selectedPack && void handlePurchase(selectedPack.id)}
           disabled={!selectedPack || purchasingId !== null || !userId || isTrialing}
-          className="mt-5 inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[#ffbf23] px-5 py-2.5 text-sm font-semibold text-[#121417] shadow-yellow-glow-sm outline-none transition-[background-color,scale,opacity] duration-150 hover:bg-[#e5ac20] focus-visible:ring-2 focus-visible:ring-white/80 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-45 sm:mt-0 sm:w-auto"
+          className="mt-4 inline-flex min-h-10 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[#ffbf23] px-4 py-2 text-sm font-semibold text-[#121417] outline-none transition-[background-color,scale,opacity] duration-150 hover:bg-[#e5ac20] focus-visible:ring-2 focus-visible:ring-[#ffbf23]/60 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-45 sm:mt-0 sm:w-auto"
         >
           {purchasingId !== null
             ? <Loader2 size={16} className="animate-spin" />
@@ -2025,7 +2019,7 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
         </button>
       </section>
 
-      <div className="grid gap-4 border-t border-[#e6ebf1] pt-6 text-xs text-[#596579] dark:border-gray-800 dark:text-gray-400 sm:grid-cols-3">
+      <div className="grid gap-3 border-t border-[#e6ebf1] pt-4 text-xs text-[#596579] dark:border-gray-800 dark:text-gray-400 sm:grid-cols-3">
         {[
           { icon: <Clock size={15} strokeWidth={2} />, benefit: t.dashboard.settings.buyCredits.benefits.neverExpire },
           { icon: <Zap size={15} strokeWidth={2} />, benefit: t.dashboard.settings.buyCredits.benefits.instantDelivery },
