@@ -222,24 +222,18 @@ export function BrandLocationSettingsPanel() {
     <>
       {!error && (isLoading || !portfolio) ? <BrandSettingsSkeleton /> : (
       <section className="space-y-6">
-        <header className="flex flex-col gap-4 border-b border-[#e6ebf1] pb-6 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-display text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">
-            {copy.pageTitle}
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#8898aa]">{copy.pageSubtitle}</p>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setBrandEditor({ isOpen: true, brand: null })}
+            disabled={!canAddBrand}
+            title={!canAddBrand ? copy.errors.planLimit : undefined}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#ffbf23] px-4 py-2 text-sm font-semibold text-[#0f172a] shadow-yellow-glow-sm transition-[background-color,scale] duration-150 hover:bg-[#e5ac20] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={16} />
+            {copy.addBrand}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setBrandEditor({ isOpen: true, brand: null })}
-          disabled={!canAddBrand}
-          title={!canAddBrand ? copy.errors.planLimit : undefined}
-          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#ffbf23] px-4 py-2 text-sm font-semibold text-[#0f172a] shadow-yellow-glow-sm transition-[background-color,scale] duration-150 hover:bg-[#e5ac20] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Plus size={16} />
-          {copy.addBrand}
-        </button>
-        </header>
 
           {capacity && (
             <PaidCapacityManager

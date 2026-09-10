@@ -84,11 +84,7 @@ export function BrandSettingsSkeleton() {
   return (
     <div role="status" aria-busy="true" className="space-y-6">
       <span className="sr-only">{t.dashboard.brandLocations.loadingPortfolio}</span>
-      <div className="flex flex-col gap-4 border-b border-[#e6ebf1] pb-6 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-3">
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-4 w-80 max-w-full" />
-        </div>
+      <div className="flex justify-end">
         <Skeleton className="h-10 w-28 shrink-0 rounded-full" />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

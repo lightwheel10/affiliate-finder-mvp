@@ -261,19 +261,17 @@ export default function SettingsPage() {
     id: SettingsTab;
     label: string;
     icon: React.ReactNode;
-    description: string;
   }> = [
-    { id: 'profile', label: t.dashboard.settings.tabs.profile.label, icon: <User size={16} />, description: t.dashboard.settings.tabs.profile.description },
+    { id: 'profile', label: t.dashboard.settings.tabs.profile.label, icon: <User size={16} /> },
     ...(brandLocationsEnabled ? [{
       id: 'brands' as const,
       label: t.dashboard.settings.tabs.brandsLocations.label,
       icon: <Building2 size={16} />,
-      description: t.dashboard.settings.tabs.brandsLocations.description,
     }] : []),
-    { id: 'plan', label: t.dashboard.settings.tabs.plan.label, icon: <CreditCard size={16} />, description: t.dashboard.settings.tabs.plan.description },
-    { id: 'buy_credits', label: t.dashboard.settings.tabs.buyCredits.label, icon: <Coins size={16} />, description: t.dashboard.settings.tabs.buyCredits.description },
-    { id: 'blocked_domains', label: t.dashboard.settings.tabs.blockedDomains.label, icon: <Ban size={16} />, description: t.dashboard.settings.tabs.blockedDomains.description },
-    { id: 'security', label: t.dashboard.settings.tabs.security.label, icon: <Shield size={16} />, description: t.dashboard.settings.tabs.security.description },
+    { id: 'plan', label: t.dashboard.settings.tabs.plan.label, icon: <CreditCard size={16} /> },
+    { id: 'buy_credits', label: t.dashboard.settings.tabs.buyCredits.label, icon: <Coins size={16} /> },
+    { id: 'blocked_domains', label: t.dashboard.settings.tabs.blockedDomains.label, icon: <Ban size={16} /> },
+    { id: 'security', label: t.dashboard.settings.tabs.security.label, icon: <Shield size={16} /> },
   ];
 
   // ==========================================================================
@@ -292,10 +290,9 @@ export default function SettingsPage() {
   //   Hairline #e6ebf1 border + rounded-2xl + shadow-soft-sm. Matches
   //   onboarding card shell + Message Viewer modal.
   //
-  // TAB CONTENTS — Each of the 5 tab sub-components (ProfileSettings /
-  //   PlanSettings / BuyCreditsSettings / BlockedDomainsSettings /
-  //   SecuritySettings) will be migrated in subsequent PRs. The shell above
-  //   now renders their (still-brutalist) contents inside a smoover frame.
+  // TAB CONTENTS — The shared Settings header above is the only visible
+  //   page-level heading. A screen-reader-only heading names the active tab;
+  //   visible tab content begins directly with its controls or sections.
   //
   // Note: The outer container with Sidebar is handled by the dashboard layout.
   // This component only renders the header and main content area.
@@ -347,6 +344,9 @@ export default function SettingsPage() {
                   (activeTab === 'brands' || activeTab === 'plan' || activeTab === 'buy_credits') && 'max-w-none',
                   activeTab !== 'brands' && activeTab !== 'plan' && activeTab !== 'buy_credits' && 'max-w-2xl',
                 )}>
+                  <h2 className="sr-only">
+                    {tabs.find((tab) => tab.id === activeTab)?.label}
+                  </h2>
                   {/* January 13th, 2026: Removed tab title and description as per user request */}
                   {activeTab === 'profile' && (
                     <>
@@ -1300,15 +1300,6 @@ function PlanSettings({
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 id="plan-billing-heading" className="font-display text-2xl font-bold tracking-tight text-[#0f172a] dark:text-white">
-          {t.dashboard.settings.tabs.plan.label}
-        </h2>
-        <p className="mt-1 text-sm leading-6 text-[#596579] dark:text-gray-400">
-          {t.dashboard.settings.tabs.plan.description}
-        </p>
-      </header>
-
       <section
         aria-labelledby="current-plan-heading"
         className="rounded-2xl bg-[#121212] p-4 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
@@ -1806,15 +1797,6 @@ function BuyCreditsSettings({ userId, isTrialing = false, creditPurchaseSuccess 
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="font-display text-2xl font-bold tracking-tight text-[#0f172a] dark:text-white">
-          {t.dashboard.settings.tabs.buyCredits.label}
-        </h2>
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-[#596579] dark:text-gray-400">
-          {t.dashboard.settings.buyCredits.header.description}
-        </p>
-      </header>
-
       {creditPurchaseSuccess && (
         <div role="status" className="flex items-center justify-between rounded-xl border border-green-500 bg-green-50 p-4 dark:bg-green-900/20">
           <span className="text-sm font-semibold text-green-800 dark:text-green-200">{t.dashboard.settings.buyCredits.callouts.successAdded}</span>
@@ -2064,7 +2046,6 @@ function BlockedDomainsSettings() {
   }, []);
 
   const st = t.dashboard.settings.blockedDomains;
-  const title = st.title;
   const description = st.description;
   const counter = st.counter;
   const emptyTitle = st.emptyTitle;
@@ -2083,11 +2064,9 @@ function BlockedDomainsSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Header — smoover refresh (April 25th, 2026). Title drops uppercase + font-black; body text + counter soften to smoover tokens. */}
-      <div>
-        <h2 className="text-lg font-semibold text-[#0f172a] dark:text-white">{title}</h2>
-        <p className="mt-1 text-sm text-[#425466] dark:text-gray-400">{description}</p>
-        <p className="mt-2 text-xs font-medium text-[#8898aa] dark:text-gray-500">
+      <div className="space-y-1">
+        <p className="text-sm text-[#425466] dark:text-gray-400">{description}</p>
+        <p className="text-xs font-medium text-[#8898aa] dark:text-gray-500">
           {counter.replace('{count}', String(count))}
         </p>
       </div>
