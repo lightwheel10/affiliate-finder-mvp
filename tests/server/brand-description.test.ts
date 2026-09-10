@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  BRAND_DESCRIPTION_PROVIDER_BUDGET_MS,
   brandDescriptionRequestSchema,
   buildBrandDescriptionPrompt,
 } from '../../src/lib/brand-locations/brand-description';
+
+test('brand description providers leave headroom inside the 30-second route limit', () => {
+  assert.ok(BRAND_DESCRIPTION_PROVIDER_BUDGET_MS <= 25_000);
+});
 
 test('brand description requests accept only bounded supported input', () => {
   assert.equal(brandDescriptionRequestSchema.safeParse({

@@ -6,9 +6,14 @@ import { normalizeBrandDomain } from '@/lib/brands/domain';
 import { probePublicWebsite } from '@/lib/network/public-website';
 
 const FIRECRAWL_API_URL = 'https://api.firecrawl.dev/v1/scrape';
-const FIRECRAWL_TIMEOUT_MS = 15_000;
+const WEBSITE_PROBE_TIMEOUT_MS = 4_000;
+const FIRECRAWL_TIMEOUT_MS = 10_000;
+const ANTHROPIC_TIMEOUT_MS = 8_000;
 const MAX_WEBSITE_CONTENT_LENGTH = 6_000;
 const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
+
+export const BRAND_DESCRIPTION_PROVIDER_BUDGET_MS =
+  WEBSITE_PROBE_TIMEOUT_MS + FIRECRAWL_TIMEOUT_MS + ANTHROPIC_TIMEOUT_MS;
 
 export const brandDescriptionRequestSchema = z.object({
   brandName: z.string().trim().max(255),
@@ -133,7 +138,10 @@ export async function generateBrandDescription(
     // The probe validates every DNS answer and redirect before Firecrawl sees
     // the URL. GET is used because some otherwise valid sites reject HEAD; the
     // probe destroys the response immediately and never downloads the body.
-    await probePublicWebsite(`https://${domain}`, { method: 'GET', timeoutMs: 5_000 });
+    await probePublicWebsite(`https://${domain}`, {
+      method: 'GET',
+      timeoutMs: WEBSITE_PROBE_TIMEOUT_MS,
+    });
   } catch (error) {
     throw new BrandDescriptionError(
       'WEBSITE_UNAVAILABLE',
@@ -153,7 +161,14 @@ export async function generateBrandDescription(
   }
 
   const websiteContent = await scrapeWebsite(domain);
-  const client = new Anthropic({ apiKey });
+  // Keep the full provider chain comfortably inside the route's 30-second
+  // execution window. Automatic SDK retries would otherwise outlive Vercel's
+  // request and leave the user with an uncontrolled timeout.
+  const client = new Anthropic({
+    apiKey,
+    timeout: ANTHROPIC_TIMEOUT_MS,
+    maxRetries: 0,
+  });
   try {
     const tool: Anthropic.Tool = {
       name: 'return_brand_description',
