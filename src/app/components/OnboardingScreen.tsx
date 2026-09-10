@@ -55,6 +55,7 @@ import { StripeProvider } from './StripeProvider';
 import { Step7CardForm } from './Step7CardForm';
 import { AnalyzingScreen } from './AnalyzingScreen';
 import { FindingAffiliatesScreen } from './FindingAffiliatesScreen';
+import { PlatformLogo } from './PlatformLogo';
 import { CURRENCY_SYMBOL, getStripe } from '@/lib/stripe-client';
 import {
   MARKET_COUNTRIES as countries,
@@ -441,11 +442,11 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
   //   2. Re-adding a platform later (e.g. if we ever build a LinkedIn scraper)
   //      is a one-line edit, not a refactor.
   const AFFILIATE_TYPES = [
-    t.onboarding.step6.types.publishersBloggers,
-    t.onboarding.step6.types.instagram,
-    t.onboarding.step6.types.tiktok,
-    t.onboarding.step6.types.youtube,
-  ];
+    { id: 'web', label: t.onboarding.step6.types.publishersBloggers },
+    { id: 'instagram', label: t.onboarding.step6.types.instagram },
+    { id: 'tiktok', label: t.onboarding.step6.types.tiktok },
+    { id: 'youtube', label: t.onboarding.step6.types.youtube },
+  ] as const;
 
   // ==========================================================================
   // COUNTRIES & LANGUAGES (January 3rd, 2026)
@@ -2024,15 +2025,16 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
           </p>
         </div>
 
-        {/* Affiliate Types Grid — smoover refresh (April 24th, 2026). 2-col toggle grid: cards adopt hairline border + rounded-xl, hover picks up yellow tint (matches Step 3 suggestion cards). Inline checkbox indicator becomes rounded-sm with hairline border. AFFILIATE_TYPES list + toggleAffiliateType logic unchanged. */}
+        {/* Affiliate type choices reuse the product platform marks while keeping
+            the existing translated labels as the saved values. */}
         <div className="grid grid-cols-2 gap-1.5">
-          {AFFILIATE_TYPES.map((type) => {
-            const isSelected = affiliateTypes.includes(type);
+          {AFFILIATE_TYPES.map((option) => {
+            const isSelected = affiliateTypes.includes(option.label);
             return (
               <button
-                key={type}
+                key={option.id}
                 type="button"
-                onClick={() => toggleAffiliateType(type)}
+                onClick={() => toggleAffiliateType(option.label)}
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-2.5 border rounded-xl text-sm font-semibold transition-all text-left group",
                   isSelected
@@ -2040,16 +2042,23 @@ export const OnboardingScreen = ({ userId, userName, userEmail, initialStep = 1,
                     : "border-[#e6ebf1] dark:border-gray-700 text-[#425466] dark:text-gray-400 hover:border-[#ffbf23] hover:bg-[#ffbf23]/10 hover:text-[#0f172a] dark:hover:text-white"
                 )}
               >
-                {/* Checkbox indicator — hairline border + rounded-sm */}
-                <div className={cn(
-                  "w-3.5 h-3.5 border rounded-sm flex items-center justify-center transition-colors",
+                <span className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors",
                   isSelected
-                    ? "bg-[#ffbf23] border-[#ffbf23] text-[#1A1D21]"
-                    : "border-[#e6ebf1] dark:border-gray-600 group-hover:border-[#ffbf23]"
+                    ? "bg-[#ffbf23] text-[#1A1D21]"
+                    : "bg-[#f6f9fc] text-[#8898aa] dark:bg-gray-800"
                 )}>
-                  {isSelected && <Check size={8} strokeWidth={3} />}
-                </div>
-                <span className="truncate text-[13px]">{type}</span>
+                  <PlatformLogo platform={option.id} size={15} />
+                </span>
+                <span className="min-w-0 flex-1 text-[13px]">{option.label}</span>
+                <span className={cn(
+                  "flex size-3.5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                  isSelected
+                    ? "border-[#ffbf23] bg-[#ffbf23] text-[#1A1D21]"
+                    : "border-[#c7d1dc] text-transparent dark:border-gray-600"
+                )}>
+                  <Check size={8} strokeWidth={3} />
+                </span>
               </button>
             );
           })}

@@ -61,6 +61,7 @@ import Link from 'next/link';
 // Removed: import { toast } from 'sonner'; 
 // January 17, 2026: Now using custom neo-brutalist toast component (see showToast function)
 import { ScanCountdown } from '../../components/ScanCountdown';
+import { PlatformLogo } from '../../components/PlatformLogo';
 import { CreditsDisplay } from '../../components/CreditsDisplay';
 import { Modal } from '../../components/Modal';
 import { useSavedAffiliates } from '../../hooks/useAffiliates';
@@ -76,9 +77,6 @@ import {
   Check,
   RefreshCw,
   Globe,
-  Youtube,
-  Instagram,
-  Music,
   MessageSquare,
   ExternalLink,
   User,
@@ -635,9 +633,9 @@ export default function OutreachPage() {
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
     { id: 'Web', icon: <Globe size={14} className="text-blue-500" />, count: counts.Web },
-    { id: 'YouTube', icon: <Youtube size={14} className="text-red-600" />, count: counts.YouTube },
-    { id: 'Instagram', icon: <Instagram size={14} className="text-pink-600" />, count: counts.Instagram },
-    { id: 'TikTok', icon: <Music size={14} className="text-cyan-500" />, count: counts.TikTok },
+    { id: 'YouTube', icon: <PlatformLogo platform="youtube" size={14} label="YouTube" />, count: counts.YouTube },
+    { id: 'Instagram', icon: <PlatformLogo platform="instagram" size={14} label="Instagram" />, count: counts.Instagram },
+    { id: 'TikTok', icon: <PlatformLogo platform="tiktok" size={14} label="TikTok" />, count: counts.TikTok },
   ];
 
   const handleSelectAffiliate = (id: number) => {
@@ -1406,9 +1404,9 @@ export default function OutreachPage() {
 
   const getSourceIcon = (source: string) => {
     switch (source) {
-      case 'YouTube': return <Youtube size={16} className="text-red-600" />;
-      case 'Instagram': return <Instagram size={16} className="text-pink-600" />;
-      case 'TikTok': return <Music size={16} className="text-cyan-500" />;
+      case 'YouTube': return <PlatformLogo platform="youtube" size={16} label="YouTube" />;
+      case 'Instagram': return <PlatformLogo platform="instagram" size={16} label="Instagram" />;
+      case 'TikTok': return <PlatformLogo platform="tiktok" size={16} label="TikTok" className="text-slate-900 dark:text-white" />;
       default: return <Globe size={16} className="text-blue-500" />;
     }
   };

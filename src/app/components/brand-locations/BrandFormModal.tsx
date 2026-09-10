@@ -1,8 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Check, Loader2, Sparkles } from 'lucide-react';
+import {
+  Building2,
+  Check,
+  FileText,
+  Globe2,
+  Loader2,
+  Sparkles,
+  UsersRound,
+} from 'lucide-react';
 import { Modal } from '@/app/components/Modal';
+import { PlatformLogo } from '@/app/components/PlatformLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   readBrandAffiliateTypeIds,
@@ -144,8 +153,11 @@ export function BrandFormModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#8898aa]">
-            {copy.brandName}
+          <label className="space-y-1.5">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
+              <Building2 size={14} className="text-[#ffbf23]" strokeWidth={2.25} />
+              {copy.brandName}
+            </span>
             <input
               required
               maxLength={255}
@@ -155,8 +167,11 @@ export function BrandFormModal({
               className={inputClassName}
             />
           </label>
-          <label className="space-y-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#8898aa]">
-            {copy.brandDomain}
+          <label className="space-y-1.5">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
+              <Globe2 size={14} className="text-[#ffbf23]" strokeWidth={2.25} />
+              {copy.brandDomain}
+            </span>
             <input
               required
               type="text"
@@ -171,7 +186,8 @@ export function BrandFormModal({
         </div>
         <label className="block space-y-1.5">
           <span className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8898aa]">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
+              <FileText size={14} className="text-[#ffbf23]" strokeWidth={2.25} />
               {copy.brandBio}
             </span>
             <button
@@ -207,21 +223,22 @@ export function BrandFormModal({
           </p>
         )}
 
-        <fieldset className="space-y-2">
-          <legend className="text-[11px] font-semibold uppercase tracking-wider text-[#8898aa]">
+        <fieldset className="space-y-2.5">
+          <legend className="flex items-center gap-1.5 text-xs font-semibold text-[#425466] dark:text-gray-300">
+            <UsersRound size={14} className="text-[#ffbf23]" strokeWidth={2.25} />
             {copy.affiliateTypes}
           </legend>
-          <p className="text-xs leading-4 text-[#8898aa] dark:text-gray-500">
+          <p className="text-xs leading-5 text-[#8898aa] dark:text-gray-500">
             {copy.affiliateTypesHint}
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {affiliateTypeOptions.map((option) => {
               const isSelected = affiliateTypeIds.includes(option.id);
               return (
                 <label
                   key={option.id}
                   className={cn(
-                    'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm font-semibold outline-none transition-[background-color,border-color,color,box-shadow,scale] duration-150 focus-within:ring-2 focus-within:ring-[#ffbf23]/25 active:scale-[0.96]',
+                    'group flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold outline-none transition-[background-color,border-color,color,box-shadow,scale] duration-150 focus-within:ring-2 focus-within:ring-[#ffbf23]/25 active:scale-[0.98]',
                     isSelected
                       ? 'border-[#ffbf23] bg-[#ffbf23]/10 text-[#0f172a] dark:text-white'
                       : 'border-[#e6ebf1] bg-white text-[#425466] hover:border-[#ffbf23] hover:bg-[#ffbf23]/5 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300',
@@ -238,15 +255,26 @@ export function BrandFormModal({
                   <span
                     aria-hidden="true"
                     className={cn(
-                      'flex size-4 shrink-0 items-center justify-center rounded border transition-[background-color,border-color] duration-150',
+                      'flex size-8 shrink-0 items-center justify-center rounded-lg transition-[background-color,color] duration-150',
                       isSelected
-                        ? 'border-[#ffbf23] bg-[#ffbf23] text-[#0f172a]'
-                        : 'border-[#c7d1dc] bg-white dark:border-gray-600 dark:bg-gray-900',
+                        ? 'bg-[#ffbf23] text-[#0f172a]'
+                        : 'bg-[#f6f9fc] text-[#8898aa] group-hover:text-[#c48a00] dark:bg-gray-800 dark:text-gray-500',
                     )}
                   >
-                    {isSelected && <Check size={10} strokeWidth={3} />}
+                    <PlatformLogo platform={option.id} size={16} />
                   </span>
-                  <span className="truncate">{option.label}</span>
+                  <span className="min-w-0 flex-1">{option.label}</span>
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'flex size-4 shrink-0 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-150',
+                      isSelected
+                        ? 'border-[#ffbf23] bg-[#ffbf23] text-[#0f172a]'
+                        : 'border-[#c7d1dc] bg-white text-transparent dark:border-gray-600 dark:bg-gray-900',
+                    )}
+                  >
+                    <Check size={10} strokeWidth={3} />
+                  </span>
                 </label>
               );
             })}
@@ -257,7 +285,7 @@ export function BrandFormModal({
             {error}
           </p>
         )}
-        <div className="flex justify-end gap-3 border-t border-[#e6ebf1] pt-4 dark:border-gray-800">
+        <div className="flex flex-col-reverse gap-3 border-t border-[#e6ebf1] pt-4 sm:flex-row sm:justify-end dark:border-gray-800">
           <button
             type="button"
             onClick={onClose}

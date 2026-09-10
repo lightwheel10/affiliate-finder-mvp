@@ -14,8 +14,9 @@
 
 import React from 'react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
-import { Instagram, Youtube, Music, CheckCircle2, MoreVertical } from 'lucide-react';
+import { CheckCircle2, MoreVertical } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { PlatformLogo } from './PlatformLogo';
 
 interface AffiliateCardProps {
   id: string;
@@ -69,32 +70,9 @@ export const AffiliateCard: React.FC<AffiliateCardProps> = ({
   };
 
   // Get platform icon
-  const getPlatformIcon = () => {
-    switch (platform) {
-      case 'Instagram':
-        return <Instagram size={10} className="text-white" />;
-      case 'TikTok':
-        return <Music size={10} className="text-white" />;
-      case 'YouTube':
-        return <Youtube size={10} className="text-white" />;
-      default:
-        return null;
-    }
-  };
-
-  // Get platform badge color
-  const getPlatformColor = () => {
-    switch (platform) {
-      case 'Instagram':
-        return 'bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737]';
-      case 'TikTok':
-        return 'bg-black';
-      case 'YouTube':
-        return 'bg-[#FF0000]';
-      default:
-        return 'bg-slate-500';
-    }
-  };
+  const platformIcon = (
+    <PlatformLogo platform={platform} size={10} label={platform} className="text-slate-900" />
+  );
 
   // Transform sparkline data for recharts
   const chartData = sparklineData.map((value, index) => ({ value, index }));
@@ -111,8 +89,8 @@ export const AffiliateCard: React.FC<AffiliateCardProps> = ({
               alt={name}
               className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
             />
-            <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ${getPlatformColor()} flex items-center justify-center shadow-sm border-[1.5px] border-white`}>
-              {getPlatformIcon()}
+            <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full border-[1.5px] border-white bg-white shadow-sm">
+              {platformIcon}
             </div>
           </div>
           

@@ -29,6 +29,7 @@ import { motion } from 'framer-motion';
 import { Loader2, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { PlatformLogo } from '@/app/components/PlatformLogo';
 
 interface DiscoveryGraphicProps {
   isHovered?: boolean;
@@ -183,11 +184,12 @@ const ProfileRow = ({ index, isHovered, candidate, followersLabel }: ProfileRowP
           </span>
           {/* Platform Badge — rounded pill (April 23rd, 2026) */}
           <span className={cn(
-            "text-[8px] font-semibold uppercase tracking-[0.1em] shrink-0 px-2 py-0.5 rounded-full border",
+            "inline-flex items-center gap-1 text-[8px] font-semibold shrink-0 px-2 py-0.5 rounded-full border",
             isHovered
               ? "bg-[#ffbf23]/10 text-[#0f172a] dark:text-white border-[#ffbf23]/50"
               : "text-[#8898aa] dark:text-gray-500 bg-[#f6f9fc] dark:bg-gray-800 border-[#e6ebf1] dark:border-gray-700"
           )}>
+            <PlatformLogo platform={candidate.platform} size={9} />
             {candidate.platform}
           </span>
         </div>

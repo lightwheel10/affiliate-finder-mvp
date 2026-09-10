@@ -23,11 +23,17 @@
  */
 
 import React from 'react';
+import { PlatformLogo } from '@/app/components/PlatformLogo';
 
 export const LogoMarquee = () => {
   // Platform logos (January 13th, 2026)
   const logos = [
-    "Serper", "OpenAI", "YouTube", "Instagram", "TikTok", "Lusha"
+    { name: 'Serper' },
+    { name: 'OpenAI' },
+    { name: 'YouTube', platform: 'youtube' },
+    { name: 'Instagram', platform: 'instagram' },
+    { name: 'TikTok', platform: 'tiktok' },
+    { name: 'Lusha' },
   ];
 
   return (
@@ -40,7 +46,10 @@ export const LogoMarquee = () => {
             key={i}
             className="text-sm font-semibold text-[#8898aa] dark:text-gray-400 font-mono whitespace-nowrap uppercase tracking-[0.18em]"
           >
-            {logo}
+            <span className="inline-flex items-center gap-2">
+              {logo.platform && <PlatformLogo platform={logo.platform} size={16} />}
+              {logo.name}
+            </span>
           </span>
         ))}
       </div>

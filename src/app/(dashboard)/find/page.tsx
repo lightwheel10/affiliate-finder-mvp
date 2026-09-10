@@ -44,6 +44,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner'; // January 5th, 2026: Global toast notifications
 import { AffiliateRow } from '../../components/AffiliateRow';
+import { PlatformLogo } from '../../components/PlatformLogo';
 import { AffiliateRowSkeleton } from '../../components/AffiliateRowSkeleton';
 import { Modal } from '../../components/Modal';
 import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
@@ -54,9 +55,6 @@ import {
   Plus, 
   Search, 
   Globe, 
-  Youtube, 
-  Instagram,
-  Music,
   ChevronLeft,
   ChevronRight,
   Check,
@@ -1045,9 +1043,9 @@ export default function FindNewPage() {
   const filterTabs = [
     { id: 'All', label: 'All', count: counts.All },
     { id: 'Web', icon: <Globe size={14} className="text-blue-500" />, count: counts.Web },
-    { id: 'YouTube', icon: <Youtube size={14} className="text-red-600" />, count: counts.YouTube },
-    { id: 'Instagram', icon: <Instagram size={14} className="text-pink-600" />, count: counts.Instagram },
-    { id: 'TikTok', icon: <Music size={14} className="text-cyan-500" />, count: counts.TikTok },
+    { id: 'YouTube', icon: <PlatformLogo platform="youtube" size={14} label="YouTube" />, count: counts.YouTube },
+    { id: 'Instagram', icon: <PlatformLogo platform="instagram" size={14} label="Instagram" />, count: counts.Instagram },
+    { id: 'TikTok', icon: <PlatformLogo platform="tiktok" size={14} label="TikTok" />, count: counts.TikTok },
   ];
 
   // Filter results based on active filter, search query, AND advanced filters

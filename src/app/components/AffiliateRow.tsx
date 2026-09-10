@@ -33,8 +33,9 @@
  */
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ExternalLink, Trash2, Eye, Save, Globe, Youtube, Instagram, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User, BarChart2, TrendingUp, MapPin, Clock, MousePointer, FileText, ArrowUpRight, Info } from 'lucide-react';
+import { ExternalLink, Trash2, Eye, Save, Globe, Mail, ChevronDown, CheckCircle2, Users, Play, Loader2, Search, X, Copy, Check, RotateCw, AlertCircle, Linkedin, Phone, Briefcase, User, BarChart2, TrendingUp, MapPin, Clock, MousePointer, FileText, ArrowUpRight, Info } from 'lucide-react';
 import { Modal } from './Modal';
+import { PlatformLogo } from './PlatformLogo';
 import { ResultItem, YouTubeChannelInfo } from '../types';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { SupabaseUserData } from '../hooks/useSupabaseUser';
@@ -42,13 +43,6 @@ import { getDiscoveryReasons } from '../utils/discovery';
 // April 28, 2026: Subtle in-row highlighting for the dashboard search-box query.
 import { HighlightMatch } from './HighlightMatch';
 import { AffiliateLocationBadge } from './AffiliateLocationBadge';
-
-// TikTok icon component
-const TikTokIcon = ({ size = 14, className = "" }: { size?: number; className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-  </svg>
-);
 
 /**
  * AffiliateRowProps Interface
@@ -318,28 +312,12 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   };
 
   // Determine icon based on source
-  const getSourceIcon = (size: number = 14) => {
+  const getSourceIcon = (size: number = 14, label?: string) => {
     switch(source.toLowerCase()) {
-      case 'youtube': return <Youtube size={size} className="text-red-600" />;
-      case 'instagram': return <Instagram size={size} className="text-pink-600" />;
-      case 'tiktok': return <TikTokIcon size={size} className="text-slate-900 dark:text-white" />;
+      case 'youtube': return <PlatformLogo platform="youtube" size={size} label={label} />;
+      case 'instagram': return <PlatformLogo platform="instagram" size={size} label={label} />;
+      case 'tiktok': return <PlatformLogo platform="tiktok" size={size} label={label} className="text-slate-900 dark:text-white" />;
       default: return <Globe size={size} className="text-[#1A1D21] dark:text-white" />;
-    }
-  };
-
-  // Platform-specific colors for the tiny circular pin that floats over the
-  // avatar bottom-left corner.
-  //   January 6, 2026  — introduced for the original neo-brutalist row.
-  //   April 23, 2026   — only `bg` is consumed by the JSX now (see row render);
-  //                      the Phase 2e render overrides border + shadow inline,
-  //                      so `border`/`text` here are legacy no-ops kept for
-  //                      backwards-compat in case anything else reaches in.
-  const getPlatformColors = () => {
-    switch(source.toLowerCase()) {
-      case 'youtube': return { bg: 'bg-red-500', border: 'border-black', text: 'text-white' };
-      case 'instagram': return { bg: 'bg-pink-500', border: 'border-black', text: 'text-white' };
-      case 'tiktok': return { bg: 'bg-black', border: 'border-white', text: 'text-white' };
-      default: return { bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-black dark:border-gray-600', text: 'text-gray-700 dark:text-gray-300' };
     }
   };
 
@@ -484,13 +462,13 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       case 'youtube':
         return {
           text: t.affiliateRow.viewModal.visitChannel,
-          icon: <Youtube size={12} />,
+          icon: <PlatformLogo platform="youtube" size={12} label="YouTube" />,
           link: channel?.link || link,
         };
       case 'instagram':
         return {
           text: t.affiliateRow.viewModal.visitAccount,
-          icon: <Instagram size={12} />,
+          icon: <PlatformLogo platform="instagram" size={12} label="Instagram" />,
           link: affiliateData?.instagramUsername 
             ? `https://instagram.com/${affiliateData.instagramUsername}` 
             : link,
@@ -498,7 +476,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       case 'tiktok':
         return {
           text: t.affiliateRow.viewModal.visitAccount,
-          icon: <TikTokIcon size={12} />,
+          icon: <PlatformLogo platform="tiktok" size={12} label="TikTok" />,
           link: affiliateData?.tiktokUsername 
             ? `https://tiktok.com/@${affiliateData.tiktokUsername}` 
             : link,
@@ -533,8 +511,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
       <div className="space-y-4">
         {/* Header — smoover */}
         <div className="flex items-center gap-2 pb-3 border-b border-[#e6ebf1] dark:border-gray-800">
-          <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shadow-soft-sm">
-            <Youtube size={16} className="text-white" strokeWidth={2} />
+          <div className="flex size-8 items-center justify-center rounded-lg border border-[#e6ebf1] bg-white shadow-soft-sm dark:border-gray-700 dark:bg-gray-800">
+            <PlatformLogo platform="youtube" size={18} label="YouTube" />
           </div>
           <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white">{channel?.name || personName || domain}</h3>
           {channel?.verified && (
@@ -658,8 +636,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-[#e6ebf1] dark:border-gray-800">
-          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 rounded-full flex items-center justify-center shadow-soft-sm">
-            <Instagram size={16} className="text-white" strokeWidth={2} />
+          <div className="flex size-8 items-center justify-center rounded-lg border border-[#e6ebf1] bg-white shadow-soft-sm dark:border-gray-700 dark:bg-gray-800">
+            <PlatformLogo platform="instagram" size={18} label="Instagram" />
           </div>
           <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white">
             {username.startsWith('@') ? username : `@${username}`}
@@ -770,8 +748,8 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-[#e6ebf1] dark:border-gray-800">
-          <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center shadow-soft-sm">
-            <TikTokIcon size={16} className="text-white" />
+          <div className="flex size-8 items-center justify-center rounded-lg border border-[#e6ebf1] bg-white shadow-soft-sm dark:border-gray-700 dark:bg-gray-800">
+            <PlatformLogo platform="tiktok" size={18} label="TikTok" className="text-slate-900 dark:text-white" />
           </div>
           <h3 className="text-sm font-semibold text-[#0f172a] dark:text-white">
             {username.startsWith('@') ? username : `@${username}`}
@@ -1208,7 +1186,6 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
   
   const gridClass = "grid grid-cols-12 gap-4";
 
-  const platformColors = getPlatformColors();
 
   return (
     // Row container.
@@ -1249,7 +1226,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {/* Platform badge pin - floats over avatar bottom-left
                 Ring color = page bg so the pin reads as "punched out" of the row. */}
             {isSocialMedia && (
-              <div className={`absolute -bottom-1 -left-1 w-5 h-5 rounded-full ${platformColors.bg} border-2 border-white dark:border-[#0f0f0f] shadow-soft-sm flex items-center justify-center`}>
+              <div className="absolute -bottom-1 -left-1 flex size-5 items-center justify-center rounded-full border-2 border-white bg-white shadow-soft-sm dark:border-[#0f0f0f] dark:bg-gray-800">
                 {getSourceIcon(10)}
               </div>
             )}
@@ -1259,7 +1236,7 @@ export const AffiliateRow: React.FC<AffiliateRowProps> = ({
             {/* Row 1: Creator/Channel Name + badges */}
             {/* January 22nd, 2026: Fixed dark mode text visibility */}
             <div className="flex items-center gap-2">
-              {getSourceIcon(14)}
+              {getSourceIcon(14, source)}
               <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
                 {/* Apr 28, 2026: highlight search-box matches inside the resolved name. */}
                 <HighlightMatch text={channel?.name || personName || domain} query={searchQuery} />

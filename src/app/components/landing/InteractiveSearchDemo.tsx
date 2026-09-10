@@ -28,9 +28,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Search, Mail, Check, Globe, Youtube, Instagram, ArrowRight, Loader2, Music } from 'lucide-react';
+import { Search, Mail, Check, Globe, ArrowRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { PlatformLogo } from '@/app/components/PlatformLogo';
 
 type Step = 'IDLE' | 'TYPING' | 'SEARCHING' | 'ANALYZING' | 'COMPLETE';
 type Tab = 'All' | 'Web' | 'YouTube' | 'Instagram' | 'TikTok';
@@ -348,10 +349,10 @@ export const InteractiveSearchDemo = () => {
                         {result.initials}
                       </div>
                       <div className="absolute -bottom-1 -right-1 bg-white dark:bg-[#222] rounded-full ring-1 ring-[#e6ebf1] dark:ring-gray-700 p-0.5 z-10">
-                        {result.platform === 'Instagram' && <Instagram size={10} className="text-pink-600" />}
-                        {result.platform === 'YouTube' && <Youtube size={10} className="text-red-600" />}
+                        {result.platform === 'Instagram' && <PlatformLogo platform="instagram" size={10} label="Instagram" />}
+                        {result.platform === 'YouTube' && <PlatformLogo platform="youtube" size={10} label="YouTube" />}
                         {result.platform === 'Web' && <Globe size={10} className="text-blue-600" />}
-                        {result.platform === 'TikTok' && <Music size={10} className="text-pink-500" />}
+                        {result.platform === 'TikTok' && <PlatformLogo platform="tiktok" size={10} label="TikTok" className="text-slate-900 dark:text-white" />}
                       </div>
                     </div>
 

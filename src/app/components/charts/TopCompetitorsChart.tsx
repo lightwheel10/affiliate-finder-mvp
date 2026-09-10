@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
+import { getPlatformLogoAsset } from '@/app/components/PlatformLogo';
 
 interface CompetitorData {
   name: string;
@@ -24,29 +25,30 @@ interface TopCompetitorsChartProps {
   data: CompetitorData[];
 }
 
+interface CustomXAxisTickProps {
+  x?: number;
+  y?: number;
+  payload?: {
+    index?: number;
+    value?: string;
+  };
+  data: CompetitorData[];
+}
+
 // Custom X-axis tick with avatar and platform badge
-const CustomXAxisTick = ({ x, y, payload, data }: any) => {
+const CustomXAxisTick = ({ x = 0, y = 0, payload, data }: CustomXAxisTickProps) => {
+  if (!payload?.value) return null;
+
   const competitor = data.find((d: CompetitorData) => d.name === payload.value);
   if (!competitor) return null;
 
-  const getPlatformColor = (platform: string) => {
-    switch (platform) {
-      case 'instagram':
-        return '#E1306C';
-      case 'tiktok':
-        return '#000000';
-      case 'youtube':
-        return '#FF0000';
-      default:
-        return '#6B7280';
-    }
-  };
+  const platformAsset = getPlatformLogoAsset(competitor.platform);
 
   return (
     <g transform={`translate(${x},${y + 4})`}>
       {/* Avatar circle */}
       <defs>
-        <clipPath id={`avatar-clip-${payload.index}`}>
+        <clipPath id={`avatar-clip-${payload.index ?? 0}`}>
           <circle cx="0" cy="12" r="12" />
         </clipPath>
       </defs>
@@ -56,17 +58,28 @@ const CustomXAxisTick = ({ x, y, payload, data }: any) => {
         width="24"
         height="24"
         href={competitor.avatar}
-        clipPath={`url(#avatar-clip-${payload.index})`}
+        clipPath={`url(#avatar-clip-${payload.index ?? 0})`}
       />
       {/* Platform badge - small circle at bottom right */}
-      <circle 
-        cx="7" 
-        cy="19" 
-        r="5" 
-        fill={getPlatformColor(competitor.platform)} 
+      <circle
+        cx="7"
+        cy="19"
+        r="6"
+        fill="white"
         stroke="white"
         strokeWidth="1.5"
       />
+      {platformAsset && (
+        <image
+          role="img"
+          aria-label={competitor.platform}
+          x="2"
+          y="14"
+          width="10"
+          height="10"
+          href={platformAsset}
+        />
+      )}
     </g>
   );
 };
