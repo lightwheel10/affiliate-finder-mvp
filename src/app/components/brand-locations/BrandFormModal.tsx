@@ -194,7 +194,7 @@ export function BrandFormModal({
               type="button"
               onClick={() => void handleGenerateDescription()}
               disabled={isSaving || isGeneratingDescription || !isValidBrandDomainInput(domain)}
-              className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-[#d89b00] bg-[#ffbf23] px-3 py-1.5 text-xs font-semibold text-[#0f172a] shadow-yellow-glow-sm outline-none transition-[background-color,border-color,box-shadow,scale] duration-150 hover:bg-[#e5ac20] focus-visible:ring-2 focus-visible:ring-[#ffbf23]/40 focus-visible:ring-offset-2 active:scale-[0.96] disabled:cursor-not-allowed disabled:border-[#e6ebf1] disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none disabled:active:scale-100 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-[#d89b00] bg-[#ffbf23] px-3 py-1.5 text-xs font-semibold text-[#0f172a] shadow-yellow-glow-sm outline-hidden transition-[background-color,border-color,box-shadow,scale] duration-150 hover:bg-[#e5ac20] focus-visible:ring-2 focus-visible:ring-[#a15c00] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.96] disabled:cursor-not-allowed disabled:border-[#e6ebf1] disabled:bg-[#f6f9fc] disabled:text-[#8898aa] disabled:shadow-none disabled:active:scale-100 dark:focus-visible:ring-[#ffbf23] dark:focus-visible:ring-offset-[#101010] dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
             >
               {isGeneratingDescription
                 ? <Loader2 size={13} className="animate-spin" />
