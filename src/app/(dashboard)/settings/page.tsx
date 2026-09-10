@@ -104,6 +104,7 @@ import { useBrandLocation } from '@/contexts/BrandLocationContext';
 import { useBlockedDomains } from '../../hooks/useBlockedDomains';
 import { formatCreditValue, useCredits } from '../../hooks/useCredits';
 import { BrandSettingsSkeleton, SettingsPanelSkeleton } from '../../components/LoadingSkeletons';
+import { SettingsPageChrome } from '../../components/SettingsPageChrome';
 
 // Keep the ordinary Profile/Billing Settings path light. The larger portfolio
 // editor is downloaded only after the user opens its dedicated tab.
@@ -299,20 +300,13 @@ export default function SettingsPage() {
   // ==========================================================================
   return (
     <>
-      {/* Header — SMOOVER REFRESH (April 23rd, 2026 · Phase 2d): unified with other dashboard pages */}
-      <header className="h-16 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b border-[#e6ebf1] dark:border-gray-800">
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">{t.dashboard.settings.pageTitle}</h1>
-        </div>
-      </header>
-
+      <SettingsPageChrome title={t.dashboard.settings.pageTitle}>
         {/* Main Content — smoover refresh (April 25th, 2026). Left nav matches Sidebar.tsx NavItem pattern; right panel container matches onboarding card shell + Message Viewer modal. */}
-        <div className="flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-6 max-w-[1600px] mx-auto w-full">
-          <div className="flex flex-col items-start gap-6 md:flex-row lg:gap-8">
+        <div className="flex flex-col items-start gap-6 md:flex-row lg:gap-8">
 
-            {/* Left Panel — smoover refresh (April 25th, 2026). Tab buttons use soft-yellow-tint active state (bg-[#fff4d1]) matching Sidebar NavItem, not solid yellow (that treatment is reserved for primary CTAs). Indicator dot dropped — the tint is enough signal. */}
-            <div className="w-full md:w-64 shrink-0">
-              <div className="sticky top-24 space-y-1">
+          {/* Left Panel — smoover refresh (April 25th, 2026). Tab buttons use soft-yellow-tint active state (bg-[#fff4d1]) matching Sidebar NavItem, not solid yellow (that treatment is reserved for primary CTAs). Indicator dot dropped — the tint is enough signal. */}
+          <div className="w-full md:w-64 shrink-0">
+            <div className="sticky top-5 space-y-1 lg:top-6">
                 <h3 className="px-3 text-xs font-semibold text-[#8898aa] dark:text-gray-500 uppercase tracking-wider mb-3">{t.dashboard.settings.accountLabel}</h3>
                 {tabs.map((tab) => (
                   <button
@@ -334,16 +328,16 @@ export default function SettingsPage() {
                     <span className="flex-1 text-left">{tab.label}</span>
                   </button>
                 ))}
-              </div>
             </div>
+          </div>
 
-            {/* Right Panel — smoover refresh (April 25th, 2026). Hairline #e6ebf1 border + rounded-2xl + shadow-soft-sm (matches onboarding card shell + Message Viewer modal). */}
-            <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e6ebf1] bg-white shadow-soft-sm dark:border-gray-800 dark:bg-[#0f0f0f]">
-              <div className="p-5 sm:p-6 lg:p-8">
-                <div className={cn(
-                  (activeTab === 'brands' || activeTab === 'plan' || activeTab === 'buy_credits') && 'max-w-none',
-                  activeTab !== 'brands' && activeTab !== 'plan' && activeTab !== 'buy_credits' && 'max-w-2xl',
-                )}>
+          {/* Right Panel — smoover refresh (April 25th, 2026). Hairline #e6ebf1 border + rounded-2xl + shadow-soft-sm (matches onboarding card shell + Message Viewer modal). */}
+          <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[#e6ebf1] bg-white shadow-soft-sm dark:border-gray-800 dark:bg-[#0f0f0f]">
+            <div className="p-5 sm:p-6 lg:p-8">
+              <div className={cn(
+                (activeTab === 'brands' || activeTab === 'plan' || activeTab === 'buy_credits') && 'max-w-none',
+                activeTab !== 'brands' && activeTab !== 'plan' && activeTab !== 'buy_credits' && 'max-w-2xl',
+              )}>
                   <h2 className="sr-only">
                     {tabs.find((tab) => tab.id === activeTab)?.label}
                   </h2>
@@ -405,12 +399,11 @@ export default function SettingsPage() {
                   )}
                   {activeTab === 'blocked_domains' && <BlockedDomainsSettings />}
                   {activeTab === 'security' && <SecuritySettings user={supabaseUser} />}
-                </div>
               </div>
             </div>
-
           </div>
         </div>
+      </SettingsPageChrome>
       
       {/* Pricing Modal - Pass subscription context for plan changes */}
       {/* Updated December 2025 to support in-app plan upgrades/downgrades */}

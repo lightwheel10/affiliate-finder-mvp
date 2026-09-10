@@ -55,3 +55,11 @@ test('dashboard route fallbacks announce loading and do not expose placeholder b
     if (page === 'settings') assert.doesNotMatch(html, /grid-cols-12/);
   }
 });
+
+test('Settings loading keeps the header fixed and gives scrolling to the content region', () => {
+  const html = renderDashboard(createElement(DashboardPageSkeleton, { page: 'settings' }));
+
+  assert.match(html, /data-settings-page-header="true"[^>]*class="[^"]*h-16[^"]*shrink-0/);
+  assert.match(html, /data-settings-scroll-region="true"[^>]*class="[^"]*min-h-0[^"]*flex-1[^"]*overflow-y-auto/);
+  assert.doesNotMatch(html, /h-\[calc\(100vh-8rem\)\]/);
+});

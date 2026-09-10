@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { AffiliateRowSkeleton } from './AffiliateRowSkeleton';
+import { SettingsPageChrome } from './SettingsPageChrome';
 
 // Presentation only: these components never fetch data or decide access.
 function Skeleton({ className = '' }: { className?: string }) {
@@ -161,47 +162,50 @@ export function DashboardPageSkeleton({ page }: { page: DashboardLoadingPage }) 
   const columns = isOutreach
     ? ['col-span-1', 'col-span-2', 'col-span-2', 'col-span-3', 'col-span-2', 'col-span-2']
     : ['col-span-1', 'col-span-3', 'col-span-3', 'col-span-2', 'col-span-1', 'col-span-2'];
+
+  if (isSettings) {
+    return (
+      <SettingsPageChrome title={title}>
+        <div className="flex flex-col items-start gap-6 md:flex-row lg:gap-8">
+          <div aria-hidden="true" className="w-full shrink-0 space-y-3 md:sticky md:top-5 md:w-64 lg:top-6">
+            <Skeleton className="mb-4 h-3 w-20" />
+            {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-10 w-full rounded-lg" />)}
+          </div>
+          <div className="min-w-0 flex-1 rounded-2xl border border-[#e6ebf1] bg-white p-5 shadow-soft-sm dark:border-gray-800 dark:bg-[#0f0f0f] sm:p-6 lg:p-8">
+            <div className="max-w-2xl"><SettingsPanelSkeleton /></div>
+          </div>
+        </div>
+      </SettingsPageChrome>
+    );
+  }
+
   return (
     <>
       <header className="h-16 shrink-0 px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 bg-white dark:bg-[#0a0a0a] border-b border-[#e6ebf1] dark:border-gray-800">
         <h1 className="font-display text-xl font-bold tracking-tight text-[#0f172a] dark:text-white">{title}</h1>
-        {!isSettings && (
-          <div aria-hidden="true" className="flex items-center gap-4">
-            <Skeleton className="hidden md:block h-8 w-56 rounded-full" />
-            <div className="hidden lg:flex gap-3">
-              {[95, 100, 75].map((width) => <div key={width} style={{ width }}><Skeleton className="h-8 rounded-full" /></div>)}
-            </div>
-            <Skeleton className="h-9 w-36 rounded-full" />
+        <div aria-hidden="true" className="flex items-center gap-4">
+          <Skeleton className="hidden md:block h-8 w-56 rounded-full" />
+          <div className="hidden lg:flex gap-3">
+            {[95, 100, 75].map((width) => <div key={width} style={{ width }}><Skeleton className="h-8 rounded-full" /></div>)}
           </div>
-        )}
+          <Skeleton className="h-9 w-36 rounded-full" />
+        </div>
       </header>
-      {isSettings ? (
-        <div className="flex-1 px-6 lg:px-8 py-6 max-w-[1600px] mx-auto w-full">
-          <div className="flex flex-col md:flex-row gap-8 h-[calc(100vh-8rem)]">
-            <div aria-hidden="true" className="w-full md:w-64 shrink-0 space-y-3">
-              <Skeleton className="h-3 w-20 mb-4" />
-              {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-10 w-full rounded-lg" />)}
-            </div>
-            <div className="flex-1 min-w-0 rounded-2xl border border-[#e6ebf1] bg-white p-6 lg:p-8 shadow-soft-sm dark:border-gray-800 dark:bg-[#0f0f0f]"><div className="max-w-2xl"><SettingsPanelSkeleton /></div></div>
+      <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
+        <div aria-hidden="true" className="flex justify-between items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 min-w-0">
+            <Skeleton className="h-10 w-64 max-w-full rounded-full" />
+            <Skeleton className="hidden md:block h-10 w-80 rounded-full" />
           </div>
+          <Skeleton className="h-10 w-24 shrink-0 rounded-full" />
         </div>
-      ) : (
-        <div className="flex-1 p-8 overflow-y-auto overflow-x-hidden">
-          <div aria-hidden="true" className="flex justify-between items-center gap-4 mb-8">
-            <div className="flex items-center gap-4 min-w-0">
-              <Skeleton className="h-10 w-64 max-w-full rounded-full" />
-              <Skeleton className="hidden md:block h-10 w-80 rounded-full" />
-            </div>
-            <Skeleton className="h-10 w-24 shrink-0 rounded-full" />
+        <div className={`bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm min-h-[500px] overflow-hidden ${isOutreach ? 'rounded-2xl' : 'rounded-xl'}`}>
+          <div aria-hidden="true" className={`grid grid-cols-12 gap-4 border-b border-[#e6ebf1] dark:border-gray-800 ${isOutreach ? 'p-4' : 'px-4 py-3 bg-[#f6f9fc] dark:bg-gray-800/50'}`}>
+            {columns.map((column, index) => <div key={index} className={column}><Skeleton className="h-4 w-3/4" /></div>)}
           </div>
-          <div className={`bg-white dark:bg-[#0f0f0f] border border-[#e6ebf1] dark:border-gray-800 shadow-soft-sm min-h-[500px] overflow-hidden ${isOutreach ? 'rounded-2xl' : 'rounded-xl'}`}>
-            <div aria-hidden="true" className={`grid grid-cols-12 gap-4 border-b border-[#e6ebf1] dark:border-gray-800 ${isOutreach ? 'p-4' : 'px-4 py-3 bg-[#f6f9fc] dark:bg-gray-800/50'}`}>
-              {columns.map((column, index) => <div key={index} className={column}><Skeleton className="h-4 w-3/4" /></div>)}
-            </div>
-            <AffiliateRowsSkeleton variant={isOutreach ? 'outreach' : 'affiliate'} label={t.common.loading} />
-          </div>
+          <AffiliateRowsSkeleton variant={isOutreach ? 'outreach' : 'affiliate'} label={t.common.loading} />
         </div>
-      )}
+      </div>
     </>
   );
 }
