@@ -482,6 +482,11 @@ export interface Dictionary {
       brandName: string;
       brandDomain: string;
       brandBio: string;
+      brandBioPlaceholder: string;
+      brandBioHint: string;
+      generateDescription: string;
+      regenerateDescription: string;
+      generatingDescription: string;
       affiliateTypes: string;
       affiliateTypesHint: string;
       country: string;
@@ -581,6 +586,8 @@ export interface Dictionary {
       archiveLocationMessage: string;
       archiveSafetyNote: string;
       errors: {
+        descriptionDomainRequired: string;
+        descriptionGenerationFailed: string;
         generic: string;
         planLimit: string;
         subscriptionRequired: string;
